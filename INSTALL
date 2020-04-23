@@ -1,0 +1,56 @@
+Installing pyspex
+=================
+
+Download
+--------
+The latest release of pyspex is available from:
+
+    https://github.com/rmvanhees/pyspex.git
+
+Requires
+--------
+These external packages are required to install pyspex.
+
+**HDF5 library** 1.10.5+ (https://portal.hdfgroup.org/display/support/Downloads)
+
+**netCDF4 C-library** 4.7.4 (https://github.com/Unidata/netcdf-c)
+
+**Python** 3.7 or later (https://www.python.org/)
+
+**numpy** 1.17 or later (http://www.numpy.org/)
+
+**h5py** 2.10  or later (https://www.h5py.org/)
+
+**netCDF4** 1.5 or later (http://unidata.github.io/netcdf4-python/netCDF4)
+
+**pys5p** 1.1 or later (https://github.com/rmvanhees/pys5p.git)
+
+**pytiff** 0.8 or later (https://github.com/FZJ-INM1-BDA/pytiff)
+
+**setuptools-scm** 3.0 or later (https://github.com/pypa/setuptools_scm/)
+
+It is adviced to use 'pip3' to install the Python packages and to use the
+latest versions of the software libraries.
+
+You can easily verify if the packages are installed:
+
+> pip3 list
+
+Any missing package can be installed using:
+
+> pip3 install <package-name>
+or
+> pip3 install <package-name> --user
+
+The installation of pytiff requires libtiff5-dev
+
+> sudo apt-get install libtiff5-dev
+
+
+Install
+-------
+Once you have satisfied the requirements detailed below, simply run:
+
+> python3 setup.py install           # as administrator
+or
+> python3 setup.py install --user    # as user

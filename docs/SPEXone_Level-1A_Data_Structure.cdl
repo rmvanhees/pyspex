@@ -1,0 +1,111 @@
+netcdf example.L1A_SPEXone {
+dimensions:
+	number_of_images = 10000 ; // upper limit, may refine this
+	SC_records = 2970 ; // for half orbit at 1 Hz with 10 seconds of pad
+	samples_per_image = 184000 ; // will be determined from the instrument configuration
+	detector_tlm = 144 ; // current best estimate
+	quaternion_elements = 4 ;
+	vector_elements = 3 ;
+	SC_hkt_block = 2048 ; // placeholder for raw S/C telemetry
+
+// global attributes:
+		:title = "PACE SPEXone Level-1A Data" ;
+		:instrument = "SPEXone" ;
+		:product_name = "SPXyyyydddhhmmss.L1A_PACE.nc" ;
+		:processing_version = "V1.0" ;
+		:Conventions = "CF-1.6" ;
+		:institution = "NASA Goddard Space Flight Center, Ocean Biology Processing Group" ;
+		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
+		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
+		:keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
+		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
+		:creator_name = "NASA/GSFC" ;
+		:creator_email = "data@oceancolor.gsfc.nasa.gov" ;
+		:creator_url = "http://oceancolor.gsfc.nasa.gov" ;
+		:project = "PACE Project" ;
+		:publisher_name = "NASA/GSFC" ;
+		:publisher_email = "data@oceancolor.gsfc.nasa.gov" ;
+		:publisher_url = "http://oceancolor.gsfc.nasa.gov" ;
+		:processing_lsciel = "L1A" ;
+		:cdm_data_type = "swath" ;
+		:orbit_number = 12345 ;
+		:history = "" ;
+		:time_coverage_start = "yyyy-mm-ddThh:mm:ss.sssZ" ;
+		:time_coverage_end = "yyyy-mm-ddThh:mm:ss.sssZ" ;
+		:date_created = "yyyy-mm-ddThh:mm:ss.sssZ" ;
+		:startDirection = "Ascending" ;
+		:endDirection = "Ascending" ;
+		:data_collect_mode = "Earth Collect" ;
+		:CDL_version_date = "2019-02-08" ;
+
+group: image_attributes {
+  variables:
+  	double image_time(number_of_images) ;
+  		image_time:long_name = "image time (seconds of day)" ;
+  		image_time:valid_min = 0.0 ;
+  		image_time:valid_max = 86400.999999 ;
+  		image_time:units = "seconds" ;
+  	ulong image_CCSDS_sec(number_of_images) ;
+  		image_CCSDS_sec:long_name = "image CCSDS time (seconds since 1958)" ;
+  		image_CCSDS_sec:valid_min = 1900000000 ;
+  		image_CCSDS_sec:valid_max = 2400000000 ;
+  		image_CCSDS_sec:units = "seconds" ;
+  	long image_CCSDS_usec(number_of_images) ;
+  		image_CCSDS_usec:long_name = "image CCSDS time (microseconds)" ;
+  		image_CCSDS_usec:valid_min = 0 ;
+  		image_CCSDS_usec:valid_max = 999999 ;
+  		image_CCSDS_usec:units = "microseconds" ;
+	long image_ID(number_of_images) ;
+		image_ID:long_name = "Image counter from power-up" ;
+		image_ID:valid_min = 0 ;
+		image_ID:valid_max = 1000000000 ;
+  } // group image_attributes
+
+group: navigation_data {
+  variables:
+  	double att_time(SC_records) ;
+  		att_time:long_name = "Attitude sample time (seconds of day)" ;
+  		att_time:valid_min = 0. ;
+  		att_time:valid_max = 86400.999999 ;
+  		att_time:units = "seconds" ;
+  	float att_quat(SC_records, quaternion_elements) ;
+  		att_quat:long_name = "Attitude quaternions (J2000 to spacecraft)" ;
+  		att_quat:valid_min = -1.f ;
+  		att_quat:valid_max = 1.f ;
+  		att_quat:units = "seconds" ;
+  	double orb_time(SC_records) ;
+  		orb_time:long_name = "Orbit vector time (seconds of day)" ;
+  		orb_time:valid_min = 0. ;
+  		orb_time:valid_max = 86400.999999 ;
+  		orb_time:units = "seconds" ;
+  	float orb_pos(SC_records, vector_elements) ;
+  		orb_pos:long_name = "Orbit position vectors (ECR)" ;
+  		orb_pos:valid_min = -7200000.f ;
+  		orb_pos:valid_max = 7200000.f ;
+  		orb_pos:units = "meters" ;
+  	float orb_vel(SC_records, vector_elements) ;
+  		orb_vel:long_name = "Orbit velocity vectors (ECR)" ;
+  		orb_vel:valid_min = -7600.f ;
+  		orb_vel:valid_max = 7600.f ;
+  		orb_vel:units = "meters/second" ;
+  	ubyte adstate(SC_records) ; // May or not have something like this
+  		adstate:_FillValue = 255UB ;
+  		adstate:long_name = "Current ADCS State" ;
+  		adstate:flag_values = 0b, 1b, 2b, 3b, 4b, 5b ;
+  		adstate:flag_meanings = "Wait Detumble AcqSun Point DeltaV Earth" ; // or whatscier
+  } // group navigation_data
+
+group: science_data {
+  // group attributes:
+		:binning_table_id = 0U ;
+  variables:
+  	ushort detector_images(number_of_images, samples_per_image) ;
+		detector_images:_FillValue = 0s ;
+		detector_images:long_name = "Image data from detector" ;
+		detector_images:valid_min = 10s ;
+		detector_images:valid_max = 65535s ;
+		detector_images:units = "counts" ;
+	ushort detector_telemetry(number_of_images, detector_tlm) ;
+		detector_telemetry:long_name = "SPEXone detector telemetry" ;
+  } // group science_data
+}

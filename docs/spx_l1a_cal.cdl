@@ -1,0 +1,97 @@
+netcdf SPX_OCAL_fovcalvp0_fov1_20190402T085933_000_L1A {
+dimensions:
+	frame = 3 ;
+	column = 2048 ;
+	row = 2048 ;
+	nv = 3 ;
+	time = 1 ;
+variables:
+	double time(time) ;
+		time:long_name = "reference start time of measurement" ;
+		time:comment = "Reference time of measurement" ;
+		time:units = "seconds since 1970-01-01 00:00:00" ;
+
+// global attributes:
+		:Conventions = "CF-1.6" ;
+		:cdm_data_type = "calibration" ;
+		:creator_email = "r.m.van.hees@sron.nl" ;
+		:creator_name = "SRON/Earth Science" ;
+		:creator_url = "https://www.sron.nl/earth" ;
+		:data_collect_mode = "on-ground" ;
+		:date_created = "2019-04-10T07:49:39.314" ;
+		:dset_list = "time,/image_attributes/delta_time,/science_data/detector_images,/engineering_data/measurement_type,/engineering_data/temperature,/navigation_data/viewport,/navigation_data/swathvector" ;
+		:institution = "SRON Netherlands Institute for Space Research" ;
+		:instrument = "SPEXone" ;
+		:keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
+		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
+		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
+		:orbit_number = -1LL ;
+		:processing_lsciel = "L1A" ;
+		:processing_version = "V1.0" ;
+		:product_name = "SPX_OCAL_fovcalvp0_fov1_20190402T085933_000_L1A.nc" ;
+		:project = "PACE Project" ;
+		:publisher_email = "r.m.van.hees@sron.nl" ;
+		:publisher_name = "SRON/Earth Science" ;
+		:publisher_url = "https://www.sron.nl/earth" ;
+		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
+		:title = "SPEXone Level-1A OCAl product" ;
+		:time_coverage_start = "2019-04-02T08:59:33.000" ;
+		:time_coverage_end = "2019-04-02T08:59:33.666" ;
+
+group: image_attributes {
+  variables:
+  	int64 delta_time(frame) ;
+  		delta_time:long_name = "offset from reference start time of measurement" ;
+  		delta_time:comment = "Time difference with time for each frame" ;
+  		delta_time:valid_min = 0LL ;
+  		delta_time:units = "us" ;
+
+  // group attributes:
+  		:measurement_id = 0LL ;
+  		:history = "SPEXone instrument simulator output" ;
+  } // group image_attributes
+
+group: science_data {
+  variables:
+  	ushort detector_images(frame, row, column) ;
+  		detector_images:_FillValue = 0US ;
+  		detector_images:long_name = "Image data from detector" ;
+  		detector_images:valid_min = 10US ;
+  		detector_images:valid_max = 65535US ;
+  		detector_images:units = "counts" ;
+  } // group science_data
+
+group: engineering_data {
+  variables:
+  	ushort measurement_type ;
+  		measurement_type:long_name = "measurement type" ;
+  		measurement_type:valid_range = 0US, 1US ;
+  		measurement_type:flag_values = 0US, 1US ;
+  		measurement_type:flag_meanings = "dark light_full_detector" ;
+  	float temperature ;
+  		temperature:long_name = "Temperature" ;
+  		temperature:units = "K" ;
+  } // group engineering_data
+
+group: navigation_data {
+  variables:
+  	ubyte viewport ;
+  		viewport:long_name = "viewport status" ;
+  		viewport:valid_range = 0UB, 31UB ;
+  		viewport:comment = "bitmask: 1, 2, 4, 8, 16" ;
+  	double swathvector(nv) ;
+  		swathvector:long_name = "normalized swath vector" ;
+  		swathvector:units = "1" ;
+  		swathvector:comment = "X: to the right, Y: in flying direction, Z: up" ;
+  } // group navigation_data
+
+group: egse_data {
+
+  // group attributes:
+  		:Light_source = "White light source" ;
+  		:DoLP = 0. ;
+  		:AoLP = 0. ;
+  		:FOV_begin = 0.126 ;
+  		:FOV_end = 0.137 ;
+  } // group egse_data
+}
