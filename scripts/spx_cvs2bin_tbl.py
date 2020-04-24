@@ -52,7 +52,7 @@ def main():
 
     # initialize netCDF file with binning tables
     date_created = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-    tbl_name = 'SPX1_TEST_AUX_L1_BIN_TBL_{}_{}.nc'.format(date_created, '00001')
+    tbl_name = 'SPX1_OCAL_L1A_TBL_{}_{}.nc'.format(date_created, '00001')
     fid = Dataset(tbl_name, 'w')
     fid.setncattr('title', 'SPEXone Level-1 binning-tables')
     fid.setncattr('processing_version', sw_version.get())
@@ -94,8 +94,9 @@ def main():
                                   fill_value=fill_value, chunksizes=(128, 128),
                                   zlib=True, complevel=1, shuffle=True)
         dset.comment = 'provide description of this table'
-        dset.valid_range = (0, 0x3FFFFF)
         dset.origin = flpath.name
+        dset.valid_min = np.int32(0)
+        dset.valid_max = np.int32(0x7ffff)
         dset[:] = frame
          
         if args.figure:
