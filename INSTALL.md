@@ -35,12 +35,13 @@ The software is known to work using:
 
 Install
 -------
-Once you have satisfied the requirements, simply run:
+Once you have satisfied the requirements, simply run as administrator:
 
- * `python3 setup.py install`           # as administrator
-or
+ * `python3 setup.py install`
 
- * `python3 setup.py install --user`    # as user
+or as user:
+
+ * `python3 setup.py install --user`
 
 The scripts to convert raw SPEXone data to L1A are installed under
 `/usr/local/bin` or `$USER/.local/bin`.
