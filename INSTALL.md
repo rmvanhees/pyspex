@@ -5,10 +5,8 @@ You can only install pyspex from source.
 
 Download
 --------
-The latest release of pyspex is available from
-[gitHub](https://github.com/rmvanhees/pyspex).
-Here you can download the source code as an tar-file or zipped archive.
-Alternativelly, you can use git do download the repository:
+The latest release of pyspex is available from [gitHub](https://github.com/rmvanhees/pyspex).
+Where you can download the source code as a tar-file or zipped archive. Or you can use git do download the repository:
 
  * `git clone https://github.com/rmvanhees/pyspex.git`
 
@@ -39,10 +37,9 @@ Once you have satisfied the requirements, simply run as administrator:
 
  * `python3 setup.py install`
 
-or as user:
+or as a user:
 
  * `python3 setup.py install --user`
 
-The scripts to convert raw SPEXone data to L1A are installed under
-`/usr/local/bin` or `$USER/.local/bin`.
+The scripts to convert raw SPEXone data to L1A can be found under: `/usr/local/bin` or `$USER/.local/bin`.
 
