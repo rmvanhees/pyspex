@@ -19,6 +19,8 @@ Installation
 ------------
 Installation instructions are provided in the INSTALL file.
 
+We installed the software succesfully on Linux, MaxOS and Windows.
+
 
 Reporting bugs
 --------------
