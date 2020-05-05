@@ -81,7 +81,7 @@ class TIFio():
         return res
 
     # --------------------------------------------------
-    def tags(self, counter=None):
+    def tags(self):
         """
         return TIFF tags as dictionary
         """
@@ -98,7 +98,7 @@ class TIFio():
         return res
 
     # --------------------------------------------------
-    def images(self, n_frame=None, counter=None):
+    def images(self, n_frame=None):
         """
         return TIFF data as numpy array
         """

@@ -322,8 +322,8 @@ def init_l1a(l1a_path: str, dims: dict, inflight=False) -> None:
         sc_records = dims['SC_records']
     if 'hk_packets' in dims:
         hk_packets = dims['hk_packets']
-    if 'viewing_angles' in dims:
-        viewing_angles = dims['viewing_angles']
+    # if 'viewing_angles' in dims:               # for future use?
+    #    viewing_angles = dims['viewing_angles']
     if 'wavelength' in dims:
         n_wave = dims['wavelength']
 

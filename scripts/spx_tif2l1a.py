@@ -27,6 +27,7 @@ from pyspex.l1a_io import L1Aio
 # - local functions --------------------------------
 def header_as_dict(hdr, n_images):
     """
+    Convert header data to Python dictionary
     """
     hdr_dict = {}
     hdr_dict['history'] = {

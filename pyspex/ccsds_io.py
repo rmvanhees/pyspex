@@ -55,7 +55,7 @@ class CCSDSio:
                                     01 first packet-data segment
                                     10 last packet-data segment
                                     11 packet-data unsegmented
-                         (14 bits): Couter per ApID, rollover to 0 at 0x3FFF
+                         (14 bits): Counter per ApID, rollover to 0 at 0x3FFF
         - Packet length  (16 bits): size of packet data in bytes (always odd)
                                     (secondary header + User data) - 1
         """
@@ -79,6 +79,9 @@ class CCSDSio:
 
     @property
     def version_no(self):
+        """
+        Returns CCSDS version number
+        """
         if self.__hdr is None:
             return None
 
@@ -86,13 +89,19 @@ class CCSDSio:
 
     @property
     def type_indicator(self):
+        """
+        Returns type of telemetry packet
+        """
         if self.__hdr is None:
             return None
 
-        return (self.__hdr['type'] >> 12) & 0x1 
+        return (self.__hdr['type'] >> 12) & 0x1
 
     @property
     def secnd_hdr_flag(self):
+        """
+        Returns flag indicating presence of a secondary header
+        """
         if self.__hdr is None:
             return None
 
@@ -100,6 +109,9 @@ class CCSDSio:
 
     @property
     def ap_id(self):
+        """
+        Returns SPEXone ApID
+        """
         if self.__hdr is None:
             return None
 
@@ -107,6 +119,15 @@ class CCSDSio:
 
     @property
     def grouping_flag(self):
+        """
+        Returns grouping flag
+
+        Possible values:
+          00 continuation packet-data segment
+          01 first packet-data segment
+          10 last packet-data segment
+          11 packet-data unsegmented
+        """
         if self.__hdr is None:
             return None
 
@@ -114,6 +135,9 @@ class CCSDSio:
 
     @property
     def sequence_count(self):
+        """
+        Returns sequence counter, rollover to zero at 0x3FFF
+        """
         if self.__hdr is None:
             return None
 
@@ -121,6 +145,10 @@ class CCSDSio:
 
     @property
     def packet_length(self):
+        """
+        Returns size of packet data in bytes
+          Value equals secondary header + user data (always odd)
+        """
         if self.__hdr is None:
             return None
 
@@ -160,7 +188,7 @@ class CCSDSio:
 
             self.__hdr = hdr_one[0]
             if self.verbose:
-                print('ApID: ', self.ap_id, 
+                print('ApID: ', self.ap_id,
                       self.secnd_hdr_flag, self.grouping_flag,
                       self.sequence_count, self.packet_length)
 

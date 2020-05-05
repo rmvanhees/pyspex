@@ -66,18 +66,18 @@ def main():
 
     fid.createDimension('row', 1024)
     fid.createDimension('column', 1024)
-    
+
     # add binning tables
     for table_id, flname in enumerate(args.file_list):
         flpath = Path(flname)
         if not flpath.is_file():
             raise FileNotFoundError(flname)
-        
+
         # read cvs-file
         table = np.loadtxt(flname, delimiter=',', dtype=int)
 
         # determine unique addresses and binning-counts
-        address, count = np.unique(table, return_counts=True)
+        _, count = np.unique(table, return_counts=True)
 
         # no valid binning-counts larger than 6
         indx = np.where(count > 6)[0]
@@ -98,7 +98,7 @@ def main():
         dset.valid_min = np.int32(0)
         dset.valid_max = np.int32(0x7ffff)
         dset[:] = frame
-         
+
         if args.figure:
             plot = S5Pplot(flpath.with_suffix('.pdf').name)
             plot.set_cmap(tol_cmap('rainbow_discrete', 5))
