@@ -48,7 +48,7 @@ def main():
         print(args)
 
     # define FillValue
-    fill_value = 0X7FFFFFFF
+    fill_value = 0xFFFFFFFF  # 0X7FFFFFFF
 
     # initialize netCDF file with binning tables
     date_created = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
@@ -74,7 +74,7 @@ def main():
             raise FileNotFoundError(flname)
 
         # read cvs-file
-        table = np.loadtxt(flname, delimiter=',', dtype=int)
+        table = np.loadtxt(flname, delimiter=',', dtype=np.uint32)
 
         # determine unique addresses and binning-counts
         _, count = np.unique(table, return_counts=True)
@@ -85,24 +85,37 @@ def main():
             table[table == ii] = fill_value
 
         # convert cvs binning table to binning table with FillValues
-        frame = np.full(table.shape, np.nan)
+        frame = np.full(table.shape, 0, dtype='u1')
         frame[table != fill_value] = count[table[table != fill_value]]
 
         # write binning table to netCDF4 file
         gid = fid.createGroup('Table_{:02d}'.format(table_id + 1))
-        dset = gid.createVariable('binning_table', 'i4', ('column', 'row'),
+        dset = gid.createVariable('binning_table', 'u4', ('row', 'column'),
                                   fill_value=fill_value, chunksizes=(128, 128),
                                   zlib=True, complevel=1, shuffle=True)
-        dset.comment = 'provide description of this table'
+        dset.comment = 'binning table'
         dset.origin = flpath.name
-        dset.valid_min = np.int32(0)
-        dset.valid_max = np.int32(0x7ffff)
+        dset.valid_min = np.uint32(0)
+        dset.valid_max = np.uint32(np.max(table[table <= 0x7ffff]))
+        dset[:] = table
+
+        dset = gid.createVariable('coadding_table', 'u1', ('row', 'column'),
+                                  fill_value=0xFF, chunksizes=(128, 128),
+                                  zlib=True, complevel=1, shuffle=True)
+        dset.comment = 'number of coadditions'
+        dset.origin = flpath.name
+        dset.valid_min = np.uint8(0)
+        dset.valid_max = np.uint8(0xff)
         dset[:] = frame
 
         if args.figure:
             plot = S5Pplot(flpath.with_suffix('.pdf').name)
+            plot.draw_signal(table, add_medians=False,
+                             vrange=[0, np.max(table[table <= 0x7ffff])],
+                             title=flpath.name, sub_title='Binning Table')
             plot.set_cmap(tol_cmap('rainbow_discrete', 5))
-            plot.draw_signal(frame, add_medians=False)
+            plot.draw_signal(frame, add_medians=False,
+                             title=flpath.name, sub_title='Number of Coaddings')
             plot.close()
 
     fid.close()
