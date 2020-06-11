@@ -117,7 +117,7 @@ def main():
         table_id += 1
         gid = fid.createGroup('Table_{:02d}'.format(table_id))
         gid.origin = flpath.name
-        gid.enabled_lines = np.uint16(np.sum(np.sum(frame, axis=0) > 0))
+        gid.enabled_lines = np.uint16(np.sum(np.sum(frame, axis=1) > 0))
         gid.flex_binned_pixels = np.uint32(np.sum(frame > 0))
 
         dset = gid.createVariable('binning_table', 'u4', ('row', 'column'),
@@ -177,7 +177,7 @@ def main():
                                   zlib=True, complevel=1, shuffle=True)
         dset.long_name = 'binning table'
         dset.valid_min = np.uint32(0)
-        dset.valid_max = np.uint32(np.max(table[table <= 0x7ffff]))
+        dset.valid_max = np.uint32(np.max(table[table != fill_value]))
         dset[:] = table
 
         dset = gid.createVariable('coadding_table', 'u1', ('row', 'column'),
