@@ -385,7 +385,7 @@ def main():
         for key in hdr_dict:
             if hdr_dict[key]['ds_type'] != 'attr':
                 continue
-            print(hdr_dict[key])
+
             l1a.set_attr(hdr_dict[key]['ds_name'],
                          hdr_dict[key]['ds_value'],
                          ds_name='gse_data')
