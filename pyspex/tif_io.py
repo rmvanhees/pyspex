@@ -29,7 +29,7 @@ class TIFio():
     """
     This class can be used to read SPEXone instrument simulator output
     """
-    def __init__(self, hdr_file: str, inp_tif=False):
+    def __init__(self, hdr_file: str, inp_tif=False, lineskip=False):
         """
         """
         # initialize class-attributes
@@ -38,6 +38,7 @@ class TIFio():
         self.__stem = Path(hdr_file).stem
         self.__header = None
         self.inp_tif = inp_tif
+        self.lineskip = lineskip
         if not Path(hdr_file).is_file():
             raise FileNotFoundError('file {} not found'.format(hdr_file))
 
@@ -131,10 +132,14 @@ class TIFio():
         # convert regular TIFF files
         n_frame = int(self.__header['Number of measurements'])
 
+        if self.lineskip:
+            tif_fmt = str(self.dir_name / '{}_lineskip_{}.tif')
+        else:
+            tif_fmt = str(self.dir_name / '{}_{}.tif')
+
         res = []
         for num in range(n_frame):
-            tif_path = self.dir_name / '{}_{}.tif'.format(self.__stem, num)
-            with pytiff.Tiff(str(tif_path)) as handle:
+            with pytiff.Tiff(tif_fmt.format(self.__stem, num)) as handle:
                 res.append(handle[:])
 
         return np.array(res)

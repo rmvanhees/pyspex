@@ -15,6 +15,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
+import h5py
 import numpy as np
 
 from pyspex import spx_product
@@ -29,7 +30,6 @@ def header_as_dict(hdr, n_images):
     """
     Convert header data to Python dictionary
     """
-    print(hdr)
     hdr_dict = {}
     hdr_dict['history'] = {
         'ds_type': None, 'ds_name': None, 'ds_value': None}
@@ -51,31 +51,31 @@ def header_as_dict(hdr, n_images):
         'ds_type': None, 'ds_name': None, 'ds_value': None}
 
     # keywords for binning (write as attribute
-    hdr_dict['Line-enable-array'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Line_skip_id',
-            'ds_value': ''}
+    hdr_dict['Line_skip_id'] = {
+        'ds_type': 'attr',
+        'ds_name': 'Line_skip_id',
+        'ds_value': ''}
     if 'Line-enable-array' in hdr and hdr['Line-enable-array'] != '':
         hdr_dict['Line_skip_id']['ds_value'] = hdr['Line-enable-array']
 
     hdr_dict['Enabled_lines'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Enabled_lines',
-            'ds_value': np.uint16(2048)}
+        'ds_type': 'attr',
+        'ds_name': 'Enabled_lines',
+        'ds_value': np.uint16(2048)}
     if 'Enabled lines' in hdr:
         hdr_dict['Enabled_lines']['ds_value'] = np.uint16(hdr['Enabled lines'])
 
     hdr_dict['Binning_table'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Binning_table',
-            'ds_value': ''}
+        'ds_type': 'attr',
+        'ds_name': 'Binning_table',
+        'ds_value': ''}
     if 'Flexible binning table' in hdr and hdr['Flexible binning table'] != '':
         hdr_dict['Binning_table']['ds_value'] = hdr['Flexible binning table']
 
     hdr_dict['Binned_pixels'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Binned_pixels',
-            'ds_value': np.uint32(0)}
+        'ds_type': 'attr',
+        'ds_name': 'Binned_pixels',
+        'ds_value': np.uint32(0)}
     if 'Total flex-binned pixels' in hdr:
         hdr_dict['Binned_pixels']['ds_value'] = \
             np.uint32(hdr['Total flex-binned pixels'])
@@ -216,6 +216,32 @@ def header_as_dict(hdr, n_images):
     return hdr_dict
 
 
+def get_table_id(ckd_dir, bin_table_name):
+    """
+    Quick en dirty implementation to obtain table_id from binning-table CKD
+    """
+    if not Path(ckd_dir).is_dir():
+        ckd_dir = '/data/richardh/SPEXone/share/ckd'
+
+    # only read the latest version of the binning-table CKD
+    bin_tables = sorted(list(Path(ckd_dir).glob('SPX1_OCAL_L1A_TBL_*.nc')))
+    if not bin_tables:
+        raise FileNotFoundError('No binning table found')
+
+    table_id = None
+    with h5py.File(bin_tables[-1], 'r') as fid:
+        for grp in [x for x in fid.keys() if x.startswith('Table')]:
+            gid = fid[grp]
+            if 'origin' not in gid.attrs:
+                continue
+
+            if gid.attrs['origin'].decode('ascii') == bin_table_name:
+                table_id = int(grp.split('_')[1])
+                break
+
+    return table_id
+
+
 # - main function ----------------------------------
 def main():
     """
@@ -223,6 +249,8 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description=('create SPEXone L1A product from instrument simulations'))
+    parser.add_argument('--lineskip', default=False, action='store_true',
+                        help='read line-skip data, when available')
     parser.add_argument('--output', default=None,
                         help='define output directory, default=CWD')
     inp_grp = parser.add_argument_group('inp_grp', 'process inp_tif files')
@@ -246,7 +274,7 @@ def main():
     if not args.inp_tif and args.nframe is not None:
         raise RuntimeError('option --nframe works only with "--inp_tif"')
 
-    tif = TIFio(args.ascii_file, inp_tif=args.inp_tif)
+    tif = TIFio(args.ascii_file, inp_tif=args.inp_tif, lineskip=args.lineskip)
     hdr = tif.header()
     tags = tif.tags()[0]
     images = tif.images(n_frame=args.nframe)
@@ -281,8 +309,12 @@ def main():
             n_samples = images.shape[1] * images.shape[2]
     else:
         n_images = int(hdr['Number of measurements'])
-        n_samples = (int(hdr['Row dimension'])
-                     * int(hdr['Column dimension']))
+        if args.lineskip:
+            n_samples = (int(hdr['Enabled lines'])
+                         * int(hdr['Column dimension']))
+        else:
+            n_samples = (int(hdr['Row dimension'])
+                         * int(hdr['Column dimension']))
 
     dims = {'number_of_images': n_images,
             'samples_per_image': n_samples,
@@ -291,6 +323,19 @@ def main():
     if 'Spectral data stimulus' in hdr:
         ds_dict = hdr['Spectral data stimulus']
         dims['wavelength'] = ds_dict['Wavelength (nm)'].size
+
+    # define binning table ID
+    if n_samples == 0x400000:
+        table_id = 0
+    elif n_samples == 0x100000:
+        table_id = 1
+    else:
+        if args.lineskip:
+            table_id = get_table_id('/nfs/SPEXone/share/ckd',
+                                    hdr['Line-enable-array'])
+        else:
+            table_id = get_table_id('/nfs/SPEXone/share/ckd',
+                                    hdr['Flexible binning table'])
 
     # Compute delta_time for each frame (seconds)
     utc_sec = []
@@ -327,7 +372,7 @@ def main():
                          np.full(n_images, 101))
         else:
             l1a.set_dset('/image_attributes/binning_table',
-                         np.zeros(n_images))
+                         np.full(n_images, table_id))
         #
         # Add engineering data
         l1a.fill_hk_time(np.array(utc_sec), np.array(frac_sec))
