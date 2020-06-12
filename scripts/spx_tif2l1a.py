@@ -29,6 +29,7 @@ def header_as_dict(hdr, n_images):
     """
     Convert header data to Python dictionary
     """
+    print(hdr)
     hdr_dict = {}
     hdr_dict['history'] = {
         'ds_type': None, 'ds_name': None, 'ds_value': None}
@@ -48,6 +49,36 @@ def header_as_dict(hdr, n_images):
         'ds_type': None, 'ds_name': None, 'ds_value': None}
     hdr_dict['Co-additions'] = {
         'ds_type': None, 'ds_name': None, 'ds_value': None}
+
+    # keywords for binning (write as attribute
+    hdr_dict['Line-enable-array'] = {
+            'ds_type': 'attr',
+            'ds_name': 'Line_skip_id',
+            'ds_value': ''}
+    if 'Line-enable-array' in hdr and hdr['Line-enable-array'] != '':
+        hdr_dict['Line_skip_id']['ds_value'] = hdr['Line-enable-array']
+
+    hdr_dict['Enabled_lines'] = {
+            'ds_type': 'attr',
+            'ds_name': 'Enabled_lines',
+            'ds_value': np.uint16(2048)}
+    if 'Enabled lines' in hdr:
+        hdr_dict['Enabled_lines']['ds_value'] = np.uint16(hdr['Enabled lines'])
+
+    hdr_dict['Binning_table'] = {
+            'ds_type': 'attr',
+            'ds_name': 'Binning_table',
+            'ds_value': ''}
+    if 'Flexible binning table' in hdr and hdr['Flexible binning table'] != '':
+        hdr_dict['Binning_table']['ds_value'] = hdr['Flexible binning table']
+
+    hdr_dict['Binned_pixels'] = {
+            'ds_type': 'attr',
+            'ds_name': 'Binned_pixels',
+            'ds_value': np.uint32(0)}
+    if 'Total flex-binned pixels' in hdr:
+        hdr_dict['Binned_pixels']['ds_value'] = \
+            np.uint32(hdr['Total flex-binned pixels'])
 
     # Datasets
     hdr_dict['Optics temperature (K)'] = {
@@ -142,20 +173,31 @@ def header_as_dict(hdr, n_images):
             'ds_type': 'attr',
             'ds_name': 'AoLP',
             'ds_value': float(hdr['AoLP input (deg)'])}
+
     if hdr['Detector illumination'] == 'None':
         hdr_dict['Detector illumination'] = {
             'ds_type': None, 'ds_name': None, 'ds_value': None}
         hdr_dict['Det. illumination level'] = {
             'ds_type': None, 'ds_name': None, 'ds_value': None}
     else:
-        hdr_dict['Detector illumination'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Light_source',
-            'ds_value': hdr['Detector illumination']}
-        hdr_dict['Det. illumination level'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Illumination_level',
-            'ds_value': float(hdr['Det. illumination level'])}
+        if 'Det. illumination level' in hdr:
+            hdr_dict['Det. illumination level'] = {
+                'ds_type': 'attr',
+                'ds_name': 'Illumination_level',
+                'ds_value': float(hdr['Det. illumination level'])}
+            hdr_dict['Detector illumination'] = {
+                'ds_type': 'attr',
+                'ds_name': 'Light_source',
+                'ds_value': hdr['Detector illumination']}
+        if 'Detect. illumination e/ms' in hdr:
+            hdr_dict['Det. illumination level'] = {
+                'ds_type': 'attr',
+                'ds_name': 'Illumination_level',
+                'ds_value': float(hdr['Detect. illumination e/ms'])}
+            hdr_dict['Detector illumination'] = {
+                'ds_type': 'attr',
+                'ds_name': 'Light_source',
+                'ds_value': hdr['Detector illumination'] + ' (e.ms-1)'}
 
     if 'Spectral data stimulus' in hdr:
         ds_dict = hdr['Spectral data stimulus']
@@ -298,7 +340,7 @@ def main():
         for key in hdr_dict:
             if hdr_dict[key]['ds_type'] != 'attr':
                 continue
-
+            print(hdr_dict[key])
             l1a.set_attr(hdr_dict[key]['ds_name'],
                          hdr_dict[key]['ds_value'],
                          ds_name='gse_data')
