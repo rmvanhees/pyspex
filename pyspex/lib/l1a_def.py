@@ -125,8 +125,8 @@ def create_group_image_attributes(fid):
     dset = gid.createVariable('image_CCSDS_sec', 'u4',
                               ('number_of_images',))
     dset.long_name = "image CCSDS time (seconds since 1970)"
-    dset.valid_min = np.uint32(1900000000)
-    dset.valid_max = np.uint32(2400000000)
+    dset.valid_min = np.uint32(1577500000) # approx 2020
+    dset.valid_max = np.uint32(2050000000) # approx 2035
     dset.units = "seconds"
 
     dset = gid.createVariable('image_CCSDS_usec', 'i4',

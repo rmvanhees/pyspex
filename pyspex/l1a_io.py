@@ -47,6 +47,9 @@ class L1Aio:
     inflight: boolean, optional
        In-flight data, only affects global attributes of L1A product.
        Default: False
+    append : boolean, optional
+       Open file in append mode, parameter dims and inflight are ignored
+       Defaut: False
 
     Attributes
     ----------
@@ -80,7 +83,8 @@ class L1Aio:
     * temperatures of a.o. detector, FEE, optica, obm, telescope
     * instrument settings: exposure time, dead time, frame time, coadding, ...
     """
-    def __init__(self, l1a_product: str, dims=None, inflight=False):
+    def __init__(self, l1a_product: str,
+                 dims=None, inflight=False, append=False):
         """
         Initialize access to a SPEXone L1a product
         """
@@ -92,9 +96,12 @@ class L1Aio:
         self.written_dset = []
 
         # initialize L1A product
-        if dims is None:
-            dims = {}
-        init_l1a(self.l1a_path, dims, inflight)
+        if not append:
+            if dims is None:
+                dims = {}
+            init_l1a(self.l1a_path, dims, inflight)
+
+        # open L1A product in append mode
         self.fid = Dataset(self.l1a_path, "r+")
 
     def __repr__(self):
@@ -127,7 +134,8 @@ class L1Aio:
             return
 
         # check if atleast one dataset is updated
-        if not self.written_dset:
+        if not self.written_dset \
+           or self.fid.dimensions['number_of_images'].size == 0:
             self.fid.close()
             self.fid = None
             return
@@ -229,6 +237,13 @@ class L1Aio:
             return res.decode('ascii')
 
         return res
+
+    # -------------------------
+    def get_dim(self, name: str):
+        """
+        Get size of dimension
+        """
+        return self.fid.dimensions[name].size
 
     # -------------------------
     def set_dset(self, name: str, value, ibgn=0) -> None:
@@ -337,7 +352,7 @@ class L1Aio:
         self.set_dset('/image_attributes/nr_coadditions',
                       mps_data['REG_NCOADDFRAMES'])
 
-    def fill_time(self, utc_sec, frac_sec, leap_seconds=0) -> None:
+    def fill_time(self, utc_sec, frac_sec, leap_seconds=0, ibgn=0) -> None:
         """
         Write TM time information to L1A product
 
@@ -359,9 +374,9 @@ class L1Aio:
         - utc_sec, frac_sec as /image_attributes/image_time
         """
         self.set_dset('/image_attributes/image_CCSDS_sec',
-                      utc_sec + leap_seconds)
+                      utc_sec + leap_seconds, ibgn)
         self.set_dset('/image_attributes/image_CCSDS_usec',
-                      np.round(1e6 * frac_sec).astype(np.int32))
+                      np.round(1e6 * frac_sec).astype(np.int32), ibgn)
 
         # get seconds since midnight
         utc0 = self.epoch + timedelta(seconds=int(utc_sec[0]))
@@ -374,7 +389,7 @@ class L1Aio:
                 (utc - ref_date) / timedelta(seconds=1) + frac_sec[ii])
 
         ds_name = '/image_attributes/image_time'
-        self.set_dset(ds_name, image_time)
+        self.set_dset(ds_name, image_time, ibgn)
         self.set_attr('reference', ref_date.isoformat(), ds_name=ds_name)
 
     def fill_hk_time(self, utc_sec, frac_sec, leap_seconds=27) -> None:
@@ -408,7 +423,7 @@ class L1Aio:
         self.set_dset(ds_name, hk_time)
         self.set_attr('reference', ref_date.isoformat(), ds_name=ds_name)
 
-    def fill_images(self, images) -> None:
+    def fill_images(self, images, ibgn=0) -> None:
         """
         Write image data to L1A product
 
@@ -421,7 +436,7 @@ class L1Aio:
         -----
         - images as /science_data/detector_images
         """
-        self.set_dset('/science_data/detector_images', images)
+        self.set_dset('/science_data/detector_images', images, ibgn)
 
     def fill_gse(self, reference=None) -> None:
         """
