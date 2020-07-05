@@ -36,11 +36,11 @@ setup(name='pyspex',
           'pyspex.lib',
       ],
       scripts=[
-          'scripts/spx_ccsds2l1a.py',
-          'scripts/cre_orbit_l1a.py',
-          'scripts/spx_csv2bin_tbl.py',
-          'scripts/spx_dem2l1a.py',
-          'scripts/spx_tif2l1a.py'
+          'scripts/spx1_ccsds2l1a.py',
+          'scripts/spx1_cre_orbit_l1a.py',
+          'scripts/spx1_csv2bin_tbl.py',
+          'scripts/spx1_dem2l1a.py',
+          'scripts/spx1_tif2l1a.py'
       ],
       install_requires=[
           'numpy>=1.17',

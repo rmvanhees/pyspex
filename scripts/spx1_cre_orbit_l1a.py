@@ -7,7 +7,7 @@ Generate a L1A product with simulated data
 - one full science orbit (50% van 5900 sec), max 24 Gbit
 - [SPX1_FLIGHT_ideal_202003] 4 scenes (‘ocean_cloud’, ‘ocean_moderate_aot’,
  ‘soil_moderate_aot’ en ‘vegetation_moderate_aot’) at 3 solar zenith angles
- (10, 40 en 70 graden)  
+ (10, 40 en 70 graden)
 - sampling at 3 Hz (at 50 ms, 5x coadding + 16.6 dead-time)
 - binned at 2x2 with lineskipped (1024x645)
 
@@ -44,7 +44,12 @@ FLNAME_OUT = 'SPX1_TEST_L1A_simulated_orbit.nc'
 # --------------------------------------------------
 def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
     """
-    Initialize an L1A product with navigation data 
+    Initialize an L1A product with navigation data
+
+    Parameters
+    ----------
+    l1a_nav_product : string
+    bin_tbl : integer
     """
     ckd_dir = '/nfs/SPEXone/share/ckd'
     if not Path(ckd_dir).is_dir():
@@ -91,11 +96,17 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
         l1a.set_dset('/navigation_data/orb_pos', orb_pos)
         l1a.set_dset('/navigation_data/orb_vel', orb_vel)
         l1a.set_dset('/navigation_data/adstate', adstate)
-    return
 
 
 def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     """
+    Add simulated measurements to L1A product
+
+    Parameters
+    ----------
+    l1a_prod_list : list of strings
+    repeats : integer
+    sampling : integer
     """
     # read data
     coad = []
@@ -117,7 +128,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     images = np.stack(images)
     temp_det = np.stack(temp_det)
     temp_opt = np.stack(temp_opt)
-            
+
     # create random index for sciences
     rng = np.random.default_rng()
     arr = np.arange(sampling * repeats / coad.shape[1], dtype=int)
@@ -132,14 +143,10 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     n_images = images.shape[0]
     temp_det = temp_det[indx[::sampling], :].reshape(-1)
     temp_opt = temp_opt[indx[::sampling], :].reshape(-1)
-    
+
     # generate telemetry data
     telemetry = np.zeros(n_images, dtype=mps_dtype)
-    
-    # generate engineering data at 1Hz
 
-    # ToDo set ibgn
-    ibgn = 0
     with L1Aio(FLNAME_OUT, append=True) as l1a:
         # get offset for datasets in /science_data and /image_attributes
         ibgn = l1a.get_dim('number_of_images')
@@ -152,13 +159,12 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
         utc_time = img_time + (ibgn + np.arange(n_images)) / sampling
         utc_sec = (utc_time).astype(int)
         frac_sec = utc_time % 1
-        
+
         # write datasets in /science_data
         l1a.fill_images(images, ibgn)
         l1a.set_dset('/science_data/detector_telemetry', telemetry, ibgn)
 
         # write datasets in /image_attributes
-        print(ibgn, utc_sec.shape, frac_sec.shape, texp.shape)
         l1a.fill_time(utc_sec, frac_sec, ibgn)
         l1a.set_dset('/image_attributes/exposure_time', texp, ibgn)
         l1a.set_dset('/image_attributes/nr_coadditions', coad, ibgn)
@@ -171,7 +177,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
 
         # get offset for datasets in /engineering_data
         ibgn = l1a.get_dim('hk_packets')
-        
+
         # define timing of house-keeping data
         hk_time = att_time + (ibgn + np.arange(temp_det.size))
 
@@ -179,8 +185,6 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
         l1a.set_dset('/engineering_data/HK_tlm_time', hk_time, ibgn)
         l1a.set_dset('/engineering_data/temp_detector', temp_det, ibgn)
         l1a.set_dset('/engineering_data/temp_optics', temp_opt, ibgn)
-
-    return
 
 
 # - main functions --------------------------------
