@@ -352,7 +352,7 @@ class L1Aio:
         self.set_dset('/image_attributes/nr_coadditions',
                       mps_data['REG_NCOADDFRAMES'])
 
-    def fill_time(self, utc_sec, frac_sec, leap_seconds=0, ibgn=0) -> None:
+    def fill_time(self, utc_sec, frac_sec, ibgn=0, *, leap_seconds=0) -> None:
         """
         Write TM time information to L1A product
 

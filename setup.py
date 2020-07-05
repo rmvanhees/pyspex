@@ -37,6 +37,7 @@ setup(name='pyspex',
       ],
       scripts=[
           'scripts/spx_ccsds2l1a.py',
+          'scripts/cre_orbit_l1a.py',
           'scripts/spx_csv2bin_tbl.py',
           'scripts/spx_dem2l1a.py',
           'scripts/spx_tif2l1a.py'
