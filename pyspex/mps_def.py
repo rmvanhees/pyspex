@@ -115,6 +115,8 @@ License:  BSD-3-Clause
 """
 import numpy as np
 
+from pyspex.lib.tmtc_def import tmtc_def
+
 # - global parameters ------------------------------
 
 
@@ -126,165 +128,17 @@ class MPSdef:
     """
     Defines SPEXone MPS table
 
-    Doc: MPS definition (78), v1.0, 2018-10-19 (section 7)
+    Doc: SPX1-TN-005_12_TMTC_Handbook, issue 12, 2020-05-15 (section 6.1.3)
     """
     def __init__(self):
-        self.__dtype = np.dtype([
-            ('ICUSWVER', '>u2'),            #	0     0x00C
-            ('MPS_ID', 'u1'),               #	2     0x00E
-            ('MPS_VER', 'u1'),              #	3     0x00F
-            ('TS1_DEM_N_T', '>u4'),         #	4     0x010
-            ('TS2_HOUSING_N_T', '>u4'),     #	8     0x014
-            ('TS3_RADIATOR_N_T', '>u4'),    #	12
-            ('TS4_DEM_R_T', '>u4'),	    #	16
-            ('TS5_HOUSING_R_T', '>u4'),     #	20
-            ('TS6_RADIATOR_R_T', '>u4'),    #	24
-            ('ICU_5V_T', '>u2'),	    #	28
-            ('ICU_4V_T', '>u2'),	    #	30
-            ('ICU_HG1_T', '>u2'),	    #	32
-            ('ICU_HG2_T', '>u2'),	    #	34
-            ('ICU_MID_T', '>u2'),	    #	36
-            ('ICU_MCU_T', '>u2'),	    #	38
-            ('ICU_DIGV_T', '>u2'),	    #	40
-            ('ICU_4p0V_V', '>u2'),	    #	42
-            ('ICU_3p3V_V', '>u2'),	    #	44
-            ('ICU_1p2V_V', '>u2'),	    #	46
-            ('ICU_4p0V_I', '>u2'),	    #	48
-            ('ICU_3p3V_I', '>u2'),	    #	50
-            ('ICU_1p2V_I', '>u2'),	    #	52
-            ('ICU_5p0V_V', '>u2'),	    #	54
-            ('ICU_5p0V_I', '>u2'),	    #	56
-            ('DEM_V', '>u2'),	            #	58
-            ('DEM_I', '>u2'),	            #	60
-            ('LED1_ANODE_V', '>u4'),        #	62
-            ('LED1_CATH_V', '>u4'),	    #	66
-            ('LED1_I', '>u4'),	            #	70
-            ('LED2_ANODE_V', '>u4'),        #	74
-            ('LED2_CATH_V', '>u4'),	    #	78
-            ('LED2_I', '>u4'),	            #	82
-            ('ADC1_VCC', '>u4'),	    #	86
-            ('ADC1_REF', '>u4'),	    #	90
-            ('ADC1_T', '>u4'),	            #	94
-            ('ADC2_VCC', '>u4'),	    #	98
-            ('ADC2_REF', '>u4'),	    #	102
-            ('ADC2_T', '>u4'),	            #	106
-            ('REG_FW_VERSION', 'u1'),           #	110   0x7a
-            ('REG_NCOADDFRAMES', 'u1'),         #	111
-            ('REG_IGEN_SELECT', 'u1'),          #	112
-            ('REG_FULL_FRAME', 'u1'),           #	113
-            ('REG_BINNING_TABLE', '>u4'),	#	114
-            ('REG_CMV_OUTPUTMODE', 'u1'),	#	118   0x82
-            ('dummy_01', 'u1'),	                #	119
-            ('REG_COADD_BUF_START', '>u4'),	#	120
-            ('REG_COADD_RESA_START', '>u4'),	#	124
-            ('REG_COADD_RESB_START', '>u4'),	#	124
-            ('REG_FRAME_BUFA_START', '>u4'),	#	128
-            ('REG_FRAME_BUFB_START', '>u4'),	#	132
-            ('REG_LINE_ENABLE_START', '>u4'),	#	136
-            ('DET_REG000', 'u1'),	    #	140
-            ('dummy_02', 'u1'), 	    #	141
-            ('DET_NUMLINES', '>u2'),        #	142
-            ('DET_START1', '>u2'),	    #	144
-            ('DET_START2', '>u2'),	    #	146
-            ('DET_START3', '>u2'),	    #	148
-            ('DET_START4', '>u2'),	    #	150
-            ('DET_START5', '>u2'),	    #	152
-            ('DET_START6', '>u2'),	    #	154
-            ('DET_START7', '>u2'),	    #	156
-            ('DET_START8', '>u2'),	    #	158
-            ('DET_NUMLINES1', '>u2'),       #	160
-            ('DET_NUMLINES2', '>u2'),       #	162
-            ('DET_NUMLINES3', '>u2'),       #	164
-            ('DET_NUMLINES4', '>u2'),       #	166
-            ('DET_NUMLINES5', '>u2'),       #	168
-            ('DET_NUMLINES6', '>u2'),       #	170
-            ('DET_NUMLINES7', '>u2'),       #	172
-            ('DET_NUMLINES8', '>u2'),       #	174
-            ('DET_SUBS', '>u2'),	    #	176
-            ('DET_SUBA', '>u2'),	    #	178
-            ('DET_MONO', 'u1'), 	    #	180
-            ('DET_IMFLIP', 'u1'),	    #	181
-            ('DET_EXPCNTR', 'u1'),	    #	182
-            ('DET_ILVDS', 'u1'), 	    #	183
-            ('DET_EXPTIME', '>u4'),	    #	184
-            ('DET_EXPSTEP', '>u4'),	    #	188
-            ('DET_KP1', '>u4'),	            #	192
-            ('DET_KP2', '>u4'),	            #	196
-            ('DET_NOFSLOPES', 'u1'),        #	200   0x0D4
-            ('DET_EXPSEQ', 'u1'),	    #	201
-            ('DET_EXPTIME2', '>u4'),        #	202
-            ('DET_EXPSTEP2', '>u4'),        #	206
-            ('DET_REG062', 'u1'),	    #	210
-            ('DET_REG063', 'u1'),	    #	211
-            ('DET_REG064', 'u1'),	    #	212
-            ('DET_REG065', 'u1'),	    #	213
-            ('DET_REG066', 'u1'),	    #	214
-            ('DET_REG067', 'u1'),	    #	215
-            ('DET_REG068', 'u1'),	    #	216
-            ('DET_EXP2_SEQ', 'u1'),         #	217
-            ('DET_NOFFRAMES', '>u2'),       #	218
-            ('DET_OUTMODE', 'u1'),	    #	220
-            ('DET_FOTLEN', 'u1'),	    #	221
-            ('DET_ILVDSRCVR', 'u1'),        #	222
-            ('DET_REG075', 'u1'),	    #	224
-            ('DET_REG076', 'u1'),	    #	225
-            ('DET_CALIB', 'u1'),	    #	223
-            ('DET_TRAINPTRN', '>u2'),       #	226
-            ('DET_CHENA', '>u4'),	    #	228
-            ('DET_ICOL', 'u1'), 	    #	232   0x0F4
-            ('DET_ICOLPR', 'u1'),	    #	233
-            ('DET_IADC', 'u1'), 	    #	234
-            ('DET_IAMP', 'u1'), 	    #	235
-            ('DET_VTFL1', 'u1'),	    #	236
-            ('DET_VTFL2', 'u1'),	    #	237
-            ('DET_VTFL3', 'u1'),	    #	238
-            ('DET_VRSTL', 'u1'),	    #	239
-            ('DET_REG092', 'u1'),	    #	240
-            ('DET_REG093', 'u1'),	    #	241
-            ('DET_VPRECH', 'u1'),	    #	242
-            ('DET_VREF', 'u1'), 	    #	243
-            ('DET_REG096', 'u1'),	    #	244
-            ('DET_REG097', 'u1'),	    #	245
-            ('DET_VRAMP1', 'u1'),	    #	246
-            ('DET_VRAMP2', 'u1'),	    #	247
-            ('DET_OFFSET', '>u2'),	    #	248
-            ('DET_PGAGAIN', 'u1'),	    #	250
-            ('DET_ADCGAIN', 'u1'),	    #	251
-            ('DET_REG104', 'u1'),	    #  	252
-            ('DET_REG105', 'u1'),	    #	253
-            ('DET_REG106', 'u1'),	    #	254
-            ('DET_REG107', 'u1'),	    #	255
-            ('DET_TDIG1', 'u1'),	    #	256
-            ('DET_TDIG2', 'u1'),	    #	257
-            ('DET_REG110', 'u1'),	    #	258
-            ('DET_BITMODE', 'u1'),	    #	259
-            ('DET_ADCRES', 'u1'),	    #	260
-            ('DET_PLLENA', 'u1'),	    #	261
-            ('DET_PLLINFRE', 'u1'),	    #	262
-            ('DET_PLLBYP', 'u1'),	    #	263
-            ('DET_PLLRATE', 'u1'),	    #	264
-            ('DET_PLLLOAD', 'u1'),	    #	265
-            ('DET_DETDUM', 'u1'),	    #	266
-            ('DET_REG119', 'u1'),	    #	267
-            ('DET_REG120', 'u1'),	    #	268
-            ('DET_BLACKCOL', 'u1'),         #	269
-            ('DET_REG122', 'u1'),	    #	270
-            ('DET_VBLACKSUN', 'u1'),        #	271
-            ('DET_REG124', 'u1'),	    #	272
-            ('DET_REG125', 'u1'),	    #	273
-            ('DET_T', '>u2'),	            #	274
-            ('FTI', '>u2'),	            #	276
-            ('IMDMODE', 'u1'),	            #   278    0x122
-            ('dummy_03', 'u1'), 	    #	279
-            ('IMRLEN', '>u4')	            #	280    0x124
-        ])
+        pass
 
     @property
     def dtype(self):
         """
         Returns numpy data-type for MPS record
         """
-        return self.__dtype
+        return np.dtype(tmtc_def(0x350))
 
     @staticmethod
     def __fill_hdr(mps, hdr):

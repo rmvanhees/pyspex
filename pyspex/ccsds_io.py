@@ -15,7 +15,7 @@ import argparse
 
 import numpy as np
 
-from pyspex.mps_def import MPSdef
+from pyspex.lib.tmtc_def import tmtc_def
 
 # - global parameters ------------------------------
 
@@ -161,7 +161,7 @@ class CCSDSio:
         return np.zeros(1, dtype=np.dtype([
             ('primary_header', self.__dtype_hdr1()),
             ('secondary_header', self.__dtype_hdr2()),
-            ('mps', MPSdef().dtype),
+            ('mps', np.dtype(tmtc_def(0x350))),
             ('image_data', 'u2', (num_data,))]))
 
     def __rd_tm_packet(self):
@@ -176,7 +176,7 @@ class CCSDSio:
         -------
         TM packet: primary & secondary header, MPS and image-data
         """
-        mps_dtype = MPSdef().dtype
+        mps_dtype = np.dtype(tmtc_def(0x350))
 
         # read parts of one telemetry packet data
         with open(self.filename, 'rb') as fp:
@@ -191,6 +191,8 @@ class CCSDSio:
                 print('ApID: ', self.ap_id,
                       self.secnd_hdr_flag, self.grouping_flag,
                       self.sequence_count, self.packet_length)
+            if self.ap_id != 0x350:
+                continue
 
             if self.secnd_hdr_flag == 1:
                 hdr_two = np.fromfile(fp, count=1,
