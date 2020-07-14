@@ -214,7 +214,7 @@ def tmtc_def(apid):
             ('BOOTCNTGOOD_IM1', '>u4'),         #   42     0x0036
             ('BOOTCNTGOOD_IM2', '>u4'),         #   46     0x003a
             ('BOOTCNTGOOD_IM3', '>u4'),         #   50     0x003e
-            ('BOOTAttempts_CurrIm', 'u1'),      #   54     0x0042
+            ('BOOTATTEMPTS_CURRIM', 'u1'),      #   54     0x0042
             ('dummy_01', 'u1'),                 #   55     0x0043
             ('SWIMG_LOADED', 'u1'),             #   56     0x0044
             ('SWIMG_DEFAULT', 'u1'),            #   57     0x0045
@@ -250,36 +250,36 @@ def tmtc_def(apid):
             ('ICU_MID_T', '>u2'),               #   122    0x0086
             ('ICU_MCU_T', '>u2'),               #   124    0x0088
             ('ICU_DIGV_T', '>u2'),              #   126    0x008a
-            ('ICU_4p0V_V', '>u2'),              #   128    0x008c
-            ('ICU_3p3V_V', '>u2'),              #   130    0x008e
-            ('ICU_1p2V_V', '>u2'),              #   132    0x0090
-            ('ICU_4p0V_I', '>u2'),              #   134    0x0092
-            ('ICU_3p3V_I', '>u2'),              #   136    0x0094
-            ('ICU_1p2V_I', '>u2'),              #   138    0x0096
+            ('ICU_4P0V_V', '>u2'),              #   128    0x008c
+            ('ICU_3P3V_V', '>u2'),              #   130    0x008e
+            ('ICU_1P2V_V', '>u2'),              #   132    0x0090
+            ('ICU_4P0V_I', '>u2'),              #   134    0x0092
+            ('ICU_3P3V_I', '>u2'),              #   136    0x0094
+            ('ICU_1P2V_I', '>u2'),              #   138    0x0096
             ('DEM_STATUS', 'u1'),               #   140    0x0098
             ('dummy_02', 'u1'),                 #   141    0x0099
-            ('ICU_5p0V_V', '>u2'),              #   142    0x009a
-            ('ICU_5p0V_I', '>u2'),              #   144    0x009c
+            ('ICU_5P0V_V', '>u2'),              #   142    0x009a
+            ('ICU_5P0V_I', '>u2'),              #   144    0x009c
             ('DEMSPWSTAT', 'u1'),               #   146    0x009e
-            ('DEMResetCnt', 'u1'),              #   147    0x009f
+            ('DEMRESETCNT', 'u1'),              #   147    0x009f
             ('HTRGRP1_V', '>u2'),               #   148    0x00a0
             ('HTRGRP2_V', '>u2'),               #   150    0x00a2
             ('HTR1_I', '>u2'),                  #   152    0x00a4
             ('HTR2_I', '>u2'),                  #   154    0x00a6
             ('HTR3_I', '>u2'),                  #   156    0x00a8
             ('HTR4_I', '>u2'),                  #   158    0x00aa
-            ('HTR1_CalcPval', '>u4'),           #   160    0x00ac
-            ('HTR2_CalcPval', '>u4'),           #   164    0x00b0
-            ('HTR3_CalcPval', '>u4'),           #   168    0x00b4
-            ('HTR4_CalcPval', '>u4'),           #   172    0x00b8
-            ('HTR1_CalcIval', '>u4'),           #   176    0x00bc
-            ('HTR2_CalcIval', '>u4'),           #   180    0x00c0
-            ('HTR3_CalcIval', '>u4'),           #   184    0x00c4
-            ('HTR4_CalcIval', '>u4'),           #   188    0x00c8
-            ('HTR1_DutyCycl', '>u2'),           #   192    0x00cc
-            ('HTR2_DutyCycl', '>u2'),           #   194    0x00ce
-            ('HTR3_DutyCycl', '>u2'),           #   196    0x00d0
-            ('HTR4_DutyCycl', '>u2'),           #   198    0x00d2
+            ('HTR1_CALCPVAL', '>u4'),           #   160    0x00ac
+            ('HTR2_CALCPVAL', '>u4'),           #   164    0x00b0
+            ('HTR3_CALCPVAL', '>u4'),           #   168    0x00b4
+            ('HTR4_CALCPVAL', '>u4'),           #   172    0x00b8
+            ('HTR1_CALCIVAL', '>u4'),           #   176    0x00bc
+            ('HTR2_CALCIVAL', '>u4'),           #   180    0x00c0
+            ('HTR3_CALCIVAL', '>u4'),           #   184    0x00c4
+            ('HTR4_CALCIVAL', '>u4'),           #   188    0x00c8
+            ('HTR1_DUTYCYCL', '>u2'),           #   192    0x00cc
+            ('HTR2_DUTYCYCL', '>u2'),           #   194    0x00ce
+            ('HTR3_DUTYCYCL', '>u2'),           #   196    0x00d0
+            ('HTR4_DUTYCYCL', '>u2'),           #   198    0x00d2
             ('LED1_ENADIS', 'u1'),              #   200    0x00d4
             ('LED2_ENADIS', 'u1'),              #   201    0x00d5
             # ('FillerByte', 'u1')
@@ -354,7 +354,7 @@ def tmtc_def(apid):
             ('dummy_02', 'u1'),                 #   46     0x003a
             ('REG_FLASH_PAGE_SPR_BYTE', 'u1'),  #   47     0x003b
             ('REG_LINE_ENABLE_START', '>u4'),   #   48     0x003c
-            ('DET_Reg000', 'u1'),               #   52     0x0040
+            ('DET_REG000', 'u1'),               #   52     0x0040
             ('dummy_03', 'u1'),                 #   53     0x0041
             ('DET_NUMLINES', '>u2'),            #   54     0x0042
             ('DET_START1', '>u2'),              #   56     0x0044
@@ -375,85 +375,85 @@ def tmtc_def(apid):
             ('DET_NUMLINES8', '>u2'),           #   86     0x0062
             ('DET_SUBS', '>u2'),                #   88     0x0064
             ('DET_SUBA', '>u2'),                #   90     0x0066
-            ('DET_mono', 'u1'),                 #   92     0x0068
-            ('DET_ImFlip', 'u1'),               #   93     0x0069
-            ('DET_ExpCntr', 'u1'),              #   94     0x006a
+            ('DET_MONO', 'u1'),                 #   92     0x0068
+            ('DET_IMFLIP', 'u1'),               #   93     0x0069
+            ('DET_EXPCNTR', 'u1'),              #   94     0x006a
             ('dummy_04', 'u1'),                 #   95     0x006b
-            ('DET_ExpTime', '>u4'),             #   96     0x006c
+            ('DET_EXPTIME', '>u4'),             #   96     0x006c
             # ('FillerByte', 'u1')
-            ('DET_ExpStep', '>u4'),             #   100    0x0070
+            ('DET_EXPSTEP', '>u4'),             #   100    0x0070
             # ('FillerByte', 'u1')
-            ('DET_Kp1', '>u4'),                 #   104    0x0074
+            ('DET_KP1', '>u4'),                 #   104    0x0074
             # ('FillerByte', 'u1')
-            ('DET_Kp2', '>u4'),                 #   108    0x0078
+            ('DET_KP2', '>u4'),                 #   108    0x0078
             # ('FillerByte', 'u1')
-            ('DET_NofSlopes', 'u1'),            #   112    0x007c
-            ('DET_ExpSeq', 'u1'),               #   113    0x007d
-            ('DET_ExpTime2', '>u4'),            #   114    0x007e
+            ('DET_NOFSLOPES', 'u1'),            #   112    0x007c
+            ('DET_EXPSEQ', 'u1'),               #   113    0x007d
+            ('DET_EXPTIME2', '>u4'),            #   114    0x007e
             # ('FillerByte', 'u1')
-            ('DET_ExpStep2', '>u4'),            #   118    0x0082
+            ('DET_EXPSTEP2', '>u4'),            #   118    0x0082
             # ('FillerByte', 'u1')
-            ('DET_Reg062', 'u1'),               #   122    0x0086
-            ('DET_Reg063', 'u1'),               #   123    0x0087
-            ('DET_Reg064', 'u1'),               #   124    0x0088
-            ('DET_Reg065', 'u1'),               #   125    0x0089
-            ('DET_Reg066', 'u1'),               #   126    0x008a
-            ('DET_Reg067', 'u1'),               #   127    0x008b
-            ('DET_Reg068', 'u1'),               #   128    0x008c
-            ('DET_Exp2_seq', 'u1'),             #   129    0x008d
-            ('DET_NofFrames', '>u2'),           #   130    0x008e
-            ('DET_OutMode', 'u1'),              #   132    0x0090
-            ('DET_FotLen', 'u1'),               #   133    0x0091
-            ('DET_ILvdsRcvr', 'u1'),            #   134    0x0092
-            ('DET_Reg075', 'u1'),               #   135    0x0093
-            ('DET_Reg076', 'u1'),               #   136    0x0094
-            ('DET_Calib', 'u1'),                #   137    0x0095
-            ('DET_TrainPtrn', '>u2'),           #   138    0x0096
-            ('DET_ChEna', '>u4'),               #   140    0x0098
+            ('DET_REG062', 'u1'),               #   122    0x0086
+            ('DET_REG063', 'u1'),               #   123    0x0087
+            ('DET_REG064', 'u1'),               #   124    0x0088
+            ('DET_REG065', 'u1'),               #   125    0x0089
+            ('DET_REG066', 'u1'),               #   126    0x008a
+            ('DET_REG067', 'u1'),               #   127    0x008b
+            ('DET_REG068', 'u1'),               #   128    0x008c
+            ('DET_EXP2_SEQ', 'u1'),             #   129    0x008d
+            ('DET_NOFFRAMES', '>u2'),           #   130    0x008e
+            ('DET_OUTMODE', 'u1'),              #   132    0x0090
+            ('DET_FOTLEN', 'u1'),               #   133    0x0091
+            ('DET_ILVDSRCVR', 'u1'),            #   134    0x0092
+            ('DET_REG075', 'u1'),               #   135    0x0093
+            ('DET_REG076', 'u1'),               #   136    0x0094
+            ('DET_CALIB', 'u1'),                #   137    0x0095
+            ('DET_TRAINPTRN', '>u2'),           #   138    0x0096
+            ('DET_CHENA', '>u4'),               #   140    0x0098
             # ('FillerByte', 'u1')
-            ('DET_ILvds', 'u1'),                #   144    0x009c
-            ('DET_Icol', 'u1'),                 #   145    0x009d
+            ('DET_ILVDS', 'u1'),                #   144    0x009c
+            ('DET_ICOL', 'u1'),                 #   145    0x009d
             ('DET_ICOLPR', 'u1'),               #   146    0x009e
-            ('DET_Iadc', 'u1'),                 #   147    0x009f
-            ('DET_Iamp', 'u1'),                 #   148    0x00a0
+            ('DET_IADC', 'u1'),                 #   147    0x009f
+            ('DET_IAMP', 'u1'),                 #   148    0x00a0
             ('DET_VTFL1', 'u1'),                #   149    0x00a1
             ('DET_VTFL2', 'u1'),                #   150    0x00a2
             ('DET_VTFL3', 'u1'),                #   151    0x00a3
             ('DET_VRSTL', 'u1'),                #   152    0x00a4
-            ('DET_Reg092', 'u1'),               #   153    0x00a5
-            ('DET_Reg093', 'u1'),               #   154    0x00a6
-            ('DET_VPreCh', 'u1'),               #   155    0x00a7
+            ('DET_REG092', 'u1'),               #   153    0x00a5
+            ('DET_REG093', 'u1'),               #   154    0x00a6
+            ('DET_VPRECH', 'u1'),               #   155    0x00a7
             ('DET_VREF', 'u1'),                 #   156    0x00a8
-            ('DET_Reg096', 'u1'),               #   157    0x00a9
-            ('DET_Reg097', 'u1'),               #   158    0x00aa
-            ('DET_Vramp1', 'u1'),               #   159    0x00ab
-            ('DET_Vramp2', 'u1'),               #   160    0x00ac
+            ('DET_REG096', 'u1'),               #   157    0x00a9
+            ('DET_REG097', 'u1'),               #   158    0x00aa
+            ('DET_VRAMP1', 'u1'),               #   159    0x00ab
+            ('DET_VRAMP2', 'u1'),               #   160    0x00ac
             ('dummy_05', 'u1'),                 #   161    0x00ad
             ('DET_OFFSET', '>u2'),              #   162    0x00ae
             ('DET_PGAGAIN', 'u1'),              #   164    0x00b0
             ('DET_ADCGAIN', 'u1'),              #   165    0x00b1
-            ('DET_Reg104', 'u1'),               #   166    0x00b2
-            ('DET_Reg105', 'u1'),               #   167    0x00b3
-            ('DET_Reg106', 'u1'),               #   168    0x00b4
-            ('DET_Reg107', 'u1'),               #   169    0x00b5
+            ('DET_REG104', 'u1'),               #   166    0x00b2
+            ('DET_REG105', 'u1'),               #   167    0x00b3
+            ('DET_REG106', 'u1'),               #   168    0x00b4
+            ('DET_REG107', 'u1'),               #   169    0x00b5
             ('DET_TDIG1', 'u1'),                #   170    0x00b6
             ('DET_TDIG2', 'u1'),                #   171    0x00b7
-            ('DET_Reg110', 'u1'),               #   172    0x00b8
-            ('DET_BitMode', 'u1'),              #   173    0x00b9
-            ('DET_AdcRes', 'u1'),               #   174    0x00ba
+            ('DET_REG110', 'u1'),               #   172    0x00b8
+            ('DET_BITMODE', 'u1'),              #   173    0x00b9
+            ('DET_ADCRES', 'u1'),               #   174    0x00ba
             ('DET_PLLENA', 'u1'),               #   175    0x00bb
-            ('DET_PLLinFRE', 'u1'),             #   176    0x00bc
-            ('DET_PLLByp', 'u1'),               #   177    0x00bd
+            ('DET_PLLINFRE', 'u1'),             #   176    0x00bc
+            ('DET_PLLBYP', 'u1'),               #   177    0x00bd
             ('DET_PLLRATE', 'u1'),              #   178    0x00be
             ('DET_PLLLoad', 'u1'),              #   179    0x00bf
             ('DET_DETDum', 'u1'),               #   180    0x00c0
-            ('DET_Reg119', 'u1'),               #   181    0x00c1
-            ('DET_Reg120', 'u1'),               #   182    0x00c2
-            ('DETT_BLACKCOL', 'u1'),            #   183    0x00c3
-            ('DET_Reg122', 'u1'),               #   184    0x00c4
+            ('DET_REG119', 'u1'),               #   181    0x00c1
+            ('DET_REG120', 'u1'),               #   182    0x00c2
+            ('DET_BLACKCOL', 'u1'),             #   183    0x00c3
+            ('DET_REG122', 'u1'),               #   184    0x00c4
             ('DET_VBLACKSUN', 'u1'),            #   185    0x00c5
-            ('DET_Reg124', 'u1'),               #   186    0x00c6
-            ('DET_Reg125', 'u1')                #   187    0x00c7
+            ('DET_REG124', 'u1'),               #   186    0x00c6
+            ('DET_REG125', 'u1')                #   187    0x00c7
         ]
 
     raise ValueError('Telemetry APID not implemented')
