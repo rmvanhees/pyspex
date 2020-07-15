@@ -167,14 +167,14 @@ def init_l1c(l1c_flname: str, orbit_number=-1, number_of_images=None):
                                chunksizes=chunksizes)
     dset.standard_name = 'altitude'
     dset.long_name = "height above mean sea level"
-    dset.units = "m"
+    dset.units = "meters"
     dset.positive = "up"
     dset.axis = "Z"
     dset = sgrp.createVariable('altitude_variability', 'f4',
                                ('bins_along_track', 'bins_across_track'),
                                chunksizes=chunksizes)
     dset.long_name = 'altitude (stdev)'
-    dset.units = 'm'
+    dset.units = 'meters'
     dset = sgrp.createVariable('solar_azimuth', 'f4',
                                ('bins_along_track', 'bins_across_track'),
                                chunksizes=chunksizes)

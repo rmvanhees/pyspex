@@ -170,7 +170,7 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
                                chunksizes=chunksizes)
     dset.standard_name = 'altitude'
     dset.long_name = "height above mean sea level"
-    dset.units = "m"
+    dset.units = "meters"
     dset.positive = "up"
     dset.axis = "Z"
     dset = sgrp.createVariable('altitude_variability', 'f4',
@@ -178,7 +178,7 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
                                 'spatial_samples_per_image'),
                                chunksizes=chunksizes)
     dset.long_name = 'altitude (stdev)'
-    dset.units = 'm'
+    dset.units = 'meters'
     dset = sgrp.createVariable('sensor_azimuth', 'f4',
                                ('bins_along_track',
                                 'spatial_samples_per_image'),

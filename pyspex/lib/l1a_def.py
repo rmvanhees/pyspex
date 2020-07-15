@@ -84,175 +84,6 @@ def global_attrs(inflight, origin=None) -> dict:
 
 
 # -------------------------
-def create_group_science_data(fid):
-    """
-    Define datasets and attributes in the group /science_data
-    """
-    img_samples = fid.dimensions['samples_per_image'].size
-
-    gid = fid.createGroup('/science_data')
-    dset = gid.createVariable('detector_images', 'u2',
-                              ('number_of_images', 'samples_per_image'),
-                              chunksizes=(1, img_samples),
-                              fill_value=0)
-    dset.long_name = "Image data from detector"
-    dset.valid_min = np.uint16(0)
-    dset.valid_max = np.uint16(0xFFFF)
-    dset.units = "counts"
-
-    # - define compound data-types ----------------
-    mps_dtype = fid.createCompoundType(np.dtype(tmtc_def(0x350)), 'mps_dtype')
-    dset = gid.createVariable('detector_telemetry', mps_dtype,
-                              ('number_of_images',))
-    dset.long_name = "SPEX science telemetry"
-    dset.comment = "Measurement Parameter Settings"
-
-
-# -------------------------
-def create_group_image_attributes(fid):
-    """
-    Define datasets and attributes in the group /image_attributes
-    """
-    gid = fid.createGroup('/image_attributes')
-
-    dset = gid.createVariable('image_time', 'f8',
-                              ('number_of_images',))
-    dset.long_name = "image time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.reference = "yyyy-mm-dd"
-    dset.units = "seconds"
-
-    dset = gid.createVariable('image_CCSDS_sec', 'u4',
-                              ('number_of_images',))
-    dset.long_name = "image CCSDS time (seconds since 1970)"
-    dset.valid_min = np.uint32(1577500000) # approx 2020
-    dset.valid_max = np.uint32(2050000000) # approx 2035
-    dset.units = "seconds"
-
-    dset = gid.createVariable('image_CCSDS_usec', 'i4',
-                              ('number_of_images',))
-    dset.long_name = "image CCSDS time (microseconds)"
-    dset.valid_min = np.int32(0)
-    dset.valid_max = np.int32(999999)
-    dset.units = "microseconds"
-
-    dset = gid.createVariable('image_ID', 'i4',
-                              ('number_of_images',))
-    dset.long_name = "image counter from power-up"
-    dset.valid_min = np.int32(0)
-    dset.valid_max = np.int32(0x7FFFFFFF)
-
-    dset = gid.createVariable('binning_table', 'u1',
-                              ('number_of_images',))
-    dset.long_name = "binning-table ID"
-    dset.valid_min = np.uint8(0)
-    dset.valid_max = np.uint8(0xFF)
-
-
-    dset = gid.createVariable('digital_offset', 'i2',
-                              ('number_of_images',))
-    dset.long_name = "digital offset"
-    dset.units = "1"
-
-    dset = gid.createVariable('nr_coadditions', 'u2',
-                              ('number_of_images',))
-    dset.long_name = "number of coadditions"
-    dset.units = "1"
-
-    dset = gid.createVariable('exposure_time', 'f8',
-                              ('number_of_images',))
-    dset.long_name = "exposure time"
-    dset.units = "s"
-
-    # Can be added in case of on-ground and in-flight calibration measurements.
-    # In-flight this dataset should probably be an array, because
-    # measurements with different purpose and light-sources can be combined
-    # in one L1A product.
-    #
-    # dset = gid.createVariable('measurement_type', 'u2')
-    # dset.long_name = "calibration measurement type"
-    # dset.valid_range = np.array([0, 2], dtype='u2')
-    # dset.flag_values = np.arange(3, dtype='u2')
-    # dset.flag_meanings = "science dark light_full_detector"
-    # dset[:] = 0
-
-
-# -------------------------
-def create_group_engineering_data(fid, apid=0x320):
-    """
-    Define datasets and attributes in the group /engineering_data
-    """
-    gid = fid.createGroup('/engineering_data')
-    dset = gid.createVariable('HK_tlm_time', 'f8', ('hk_packets',))
-    dset.long_name = "HK telemetry packet time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds"
-
-    hk_dtype = fid.createCompoundType(np.dtype(tmtc_def(apid)), 'hk_dtype')
-    dset = gid.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
-    dset.long_name = "SPEX nominal-HK telemetry"
-
-    dset = gid.createVariable('temp_optics', 'f4', ('hk_packets',))
-    dset.long_name = "Optics temperature"
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
-
-    dset = gid.createVariable('temp_detector', 'f4', ('hk_packets',))
-    dset.long_name = "Detector temperature"
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
-
-
-# -------------------------
-def create_group_navigation_data(fid):
-    """
-    Define datasets and attributes in the group /navigation_data
-    """
-    gid = fid.createGroup('/navigation_data')
-    dset = gid.createVariable('att_time', 'f8', ('SC_records',))
-    dset.long_name = "Attitude sample time (seconds of day)"
-    dset.valid_min = 0.0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds"
-
-    dset = gid.createVariable('att_quat', 'f4',
-                              ('SC_records', 'quaternion_elements'))
-    dset.long_name = "Attitude quaternions (J2000 to spacecraft)"
-    dset.valid_min = -1
-    dset.valid_max = 1
-    dset.units = "1"
-
-    dset = gid.createVariable('orb_time', 'f8', ('SC_records',))
-    dset.long_name = "Orbit vector time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds"
-
-    dset = gid.createVariable('orb_pos', 'f4',
-                              ('SC_records', 'vector_elements'))
-    dset.long_name = "Orbit positions vectors (J2000)"
-    dset.valid_min = -7200000
-    dset.valid_max = 7200000
-    dset.units = "meters"
-
-    dset = gid.createVariable('orb_vel', 'f4',
-                              ('SC_records', 'vector_elements'))
-    dset.long_name = "Orbit velocity vectors (J2000)"
-    dset.valid_min = -7600
-    dset.valid_max = 7600
-    dset.units = "meters s-1"
-
-    dset = gid.createVariable('adstate', 'u1',
-                              ('SC_records',), fill_value=255)
-    dset.long_name = "Current ADCS State"
-    dset.flag_values = np.array([0, 1, 2, 3, 4, 5], dtype='u1')
-    dset.flag_meanings = "Wait Detumple AcqSun Point Delta Earth"
-
-# -------------------------
 def create_group_gse_data(fid, n_wave=None):
     """
     Define datasets and attributes in the group /gse_data
@@ -274,7 +105,7 @@ def create_group_gse_data(fid, n_wave=None):
 
         dset = gid.createVariable('signal', 'f8', ('wavelength',))
         dset.long_name = "signal of stimulus"
-        dset.units = 'photons/(s.nm.m^2)'
+        dset.units = 'photons.s-1.nm-1.m-2)'
 
 
 # -------------------------
@@ -323,28 +154,142 @@ def init_l1a(l1a_flname: str, dims: dict,
         sc_records = dims['SC_records']
     if 'hk_packets' in dims:
         hk_packets = dims['hk_packets']
-    # if 'viewing_angles' in dims:               # for future use?
-    #    viewing_angles = dims['viewing_angles']
     if 'wavelength' in dims:
         n_wave = dims['wavelength']
 
     with Dataset(l1a_flname, 'w') as fid:
         # - define dimensions -------------------------
-        fid.createDimension('number_of_images', number_img)
-        fid.createDimension('samples_per_image', img_samples)
-        fid.createDimension('hk_packets', hk_packets)
-        fid.createDimension('SC_records', sc_records)
-        fid.createDimension('quaternion_elements', 4)
-        fid.createDimension('vector_elements', 3)
+        _ = fid.createDimension('number_of_images', number_img)
+        _ = fid.createDimension('samples_per_image', img_samples)
+        _ = fid.createDimension('hk_packets', hk_packets)
+        _ = fid.createDimension('SC_records', sc_records)
+        _ = fid.createDimension('quaternion_elements', 4)
+        _ = fid.createDimension('vector_elements', 3)
 
-        # - define groups and dataset -----------------
-        create_group_image_attributes(fid)
+        # - define group /image_attributs and its datasets
+        gid = fid.createGroup('/image_attributes')
+        dset = gid.createVariable('image_time', 'f8',
+                                  ('number_of_images',))
+        dset.long_name = "image time (seconds of day)"
+        dset.valid_min = 0
+        dset.valid_max = 86400.999999
+        dset.reference = "yyyy-mm-dd"
+        dset.units = "seconds"
+        dset = gid.createVariable('image_CCSDS_sec', 'u4',
+                                  ('number_of_images',))
+        dset.long_name = "image CCSDS time (seconds since 1970)"
+        dset.valid_min = np.uint32(1577500000)  # year 2020
+        dset.valid_max = np.uint32(2050000000)  # year 2035
+        dset.units = "seconds"
+        dset = gid.createVariable('image_CCSDS_usec', 'i4',
+                                  ('number_of_images',))
+        dset.long_name = "image CCSDS time (microseconds)"
+        dset.valid_min = np.int32(0)
+        dset.valid_max = np.int32(999999)
+        dset.units = "microseconds"
+        dset = gid.createVariable('image_ID', 'i4',
+                                  ('number_of_images',))
+        dset.long_name = "image counter from power-up"
+        dset.valid_min = np.int32(0)
+        dset.valid_max = np.int32(0x7FFFFFFF)
+        dset = gid.createVariable('binning_table', 'u1',
+                                  ('number_of_images',))
+        dset.long_name = "binning-table ID"
+        dset.valid_min = np.uint8(0)
+        dset.valid_max = np.uint8(0xFF)
+        dset = gid.createVariable('digital_offset', 'i2',
+                                  ('number_of_images',))
+        dset.long_name = "digital offset"
+        dset.units = "1"
+        dset = gid.createVariable('nr_coadditions', 'u2',
+                                  ('number_of_images',))
+        dset.long_name = "number of coadditions"
+        dset.units = "1"
+        dset = gid.createVariable('exposure_time', 'f8',
+                                  ('number_of_images',))
+        dset.long_name = "exposure time"
+        dset.units = "seconds"
 
-        create_group_engineering_data(fid)
+        # - define group /science_data and its datasets
+        gid = fid.createGroup('/science_data')
+        chunksizes = None if number_img is not None else (1, img_samples)
+        print(chunksizes)
+        dset = gid.createVariable('detector_images', 'u2',
+                                  ('number_of_images', 'samples_per_image'),
+                                  chunksizes=chunksizes, fill_value=0)
+        dset.long_name = "Image data from detector"
+        dset.valid_min = np.uint16(0)
+        dset.valid_max = np.uint16(0xFFFF)
+        dset.units = "counts"
+        mps_dtype = fid.createCompoundType(np.dtype(tmtc_def(0x350)),
+                                           'mps_dtype')
+        dset = gid.createVariable('detector_telemetry', mps_dtype,
+                                  ('number_of_images',))
+        dset.long_name = "SPEX science telemetry"
+        dset.comment = "Measurement Parameter Settings"
 
-        create_group_science_data(fid)
+        # - define group /engineering_data and its datasets
+        gid = fid.createGroup('/engineering_data')
+        dset = gid.createVariable('HK_tlm_time', 'f8', ('hk_packets',))
+        dset.long_name = "HK telemetry packet time (seconds of day)"
+        dset.valid_min = 0
+        dset.valid_max = 86400.999999
+        dset.units = "seconds"
+        hk_dtype = fid.createCompoundType(np.dtype(tmtc_def(0x320)),
+                                          'hk_dtype')
+        dset = gid.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
+        dset.long_name = "SPEX nominal-HK telemetry"
+        dset = gid.createVariable('temp_optics', 'f4', ('hk_packets',))
+        dset.long_name = "Optics temperature"
+        dset.valid_min = 260
+        dset.valid_max = 300
+        dset.units = "K"
+        dset = gid.createVariable('temp_detector', 'f4', ('hk_packets',))
+        dset.long_name = "Detector temperature"
+        dset.valid_min = 260
+        dset.valid_max = 300
+        dset.units = "K"
 
-        create_group_navigation_data(fid)
+        # - define group /navigation_data and its datasets
+        gid = fid.createGroup('/navigation_data')
+        dset = gid.createVariable('adstate', 'u1',
+                                  ('SC_records',), fill_value=255)
+        dset.long_name = "Current ADCS State"
+        dset.flag_values = np.array([0, 1, 2, 3, 4, 5], dtype='u1')
+        dset.flag_meanings = "Wait Detumple AcqSun Point Delta Earth"
+        dset = gid.createVariable('att_time', 'f8', ('SC_records',))
+        dset.long_name = "Attitude sample time (seconds of day)"
+        dset.valid_min = 0.0
+        dset.valid_max = 86400.999999
+        dset.units = "seconds"
+        chunksizes = None if sc_records is not None else (256, 4)
+        dset = gid.createVariable('att_quat', 'f4',
+                                  ('SC_records', 'quaternion_elements'),
+                                  chunksizes=chunksizes)
+        dset.long_name = "Attitude quaternions (J2000 to spacecraft)"
+        dset.valid_min = -1
+        dset.valid_max = 1
+        dset.units = "1"
+        dset = gid.createVariable('orb_time', 'f8', ('SC_records',))
+        dset.long_name = "Orbit vector time (seconds of day)"
+        dset.valid_min = 0
+        dset.valid_max = 86400.999999
+        dset.units = "seconds"
+        chunksizes = None if sc_records is not None else (340, 3)
+        dset = gid.createVariable('orb_pos', 'f4',
+                                  ('SC_records', 'vector_elements'),
+                                  chunksizes=chunksizes)
+        dset.long_name = "Orbit positions vectors (J2000)"
+        dset.valid_min = -7200000
+        dset.valid_max = 7200000
+        dset.units = "meters"
+        dset = gid.createVariable('orb_vel', 'f4',
+                                  ('SC_records', 'vector_elements'),
+                                  chunksizes=chunksizes)
+        dset.long_name = "Orbit velocity vectors (J2000)"
+        dset.valid_min = -7600
+        dset.valid_max = 7600
+        dset.units = "meters s-1"
 
         if not inflight:
             create_group_gse_data(fid, n_wave)
@@ -361,3 +306,7 @@ def init_l1a(l1a_flname: str, dims: dict,
 if __name__ == '__main__':
     init_l1a('PACE_SPEX.20230115T123456.L1A.2.5km.V01.nc', {},
              inflight=True, orbit_number=12345)
+
+    init_l1a('SPX1_OCAL_msm_id_L1A_20190306T123456_20200310T195841_0001.nc',
+             {'samples_per_image': 2048**2, 'wavelength': 2048},
+             inflight=False, orbit_number=-1)
