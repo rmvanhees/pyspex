@@ -192,7 +192,7 @@ class CCSDSio:
                       self.secnd_hdr_flag, self.grouping_flag,
                       self.sequence_count, self.packet_length)
             if self.ap_id != 0x350:
-                continue
+                return None
 
             if self.secnd_hdr_flag == 1:
                 hdr_two = np.fromfile(fp, count=1,
