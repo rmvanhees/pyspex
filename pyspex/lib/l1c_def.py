@@ -101,6 +101,8 @@ def init_l1c(l1c_flname: str, orbit_number=-1, number_of_images=None):
     dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
     dset.long_name = 'along track view zenith angles at sensor'
     dset.units = 'degrees'
+    dset.comment = ('view_angles is defined at the sensor, as it provides'
+                    ' a swath independent value at TOA.')
     dset = sgrp.createVariable('intensity_wavelengths', 'f4',
                                ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'wavelength at center of intensity bands'
@@ -121,13 +123,17 @@ def init_l1c(l1c_flname: str, orbit_number=-1, number_of_images=None):
     dset.units = 'nm'
     dset = sgrp.createVariable('intensity_f0', 'f4',
                                ('number_of_views', 'intensity_bands_per_view'))
-    dset.long_name = 'spectral response function of intensity bands'
+    dset.long_name = 'Solar irradiance on intensity wavelength grid'
     dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each intensity band and view.')
     dset = sgrp.createVariable('polarization_f0', 'f4',
                                ('number_of_views',
                                 'polarization_bands_per_view'))
-    dset.long_name = 'spectral response function of polarization bands'
+    dset.long_name = 'Solar irradiance on polarization wavelength grid'
     dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each polarization band and view.')
 
     sgrp = rootgrp.createGroup('BIN_ATTRIBUTES')
     chunksizes = None if number_of_images is not None else (512,)

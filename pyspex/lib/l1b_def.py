@@ -85,7 +85,6 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
     n_views = 5
     n_bins_intens = 400
     n_bins_polar = 50
-    n_bins_across = 40
 
     # create/overwrite netCDF4 product
     rootgrp = Dataset(l1b_flname, "w")
@@ -95,47 +94,52 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
     _ = rootgrp.createDimension('spatial_samples_per_image', spatial_samples)
     _ = rootgrp.createDimension('intensity_bands_per_view', n_bins_intens)
     _ = rootgrp.createDimension('polarization_bands_per_view', n_bins_polar)
-    _ = rootgrp.createDimension('bins_across_track', n_bins_across)
     _ = rootgrp.createDimension('bins_along_track', number_of_images)
 
     # create groups and all variables with attributes
     sgrp = rootgrp.createGroup('SENSOR_VIEW_BANDS')
-    dset = sgrp.createVariable("spatial_samples_per_image", "u1",
+    dset = sgrp.createVariable("viewport_index", "u1",
                                ("spatial_samples_per_image",))
-    dset.long_name = "spatial samples per image"
+    dset.long_name = "index of viewport"
     dset.valid_min = 0
     dset.valid_max = 4
     dset.comment = "Contains indices to each viewport for all spatial samples."
-
-    #dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
-    #dset.long_name = 'along track view zenith angles at sensor'
-    #dset.units = 'degrees'
-
+    dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
+    dset.long_name = 'along track view zenith angles at sensor'
+    dset.units = 'degrees'
+    dset.comment = ('view_angles is defined at the sensor, as it provides'
+                    ' a swath independent value at TOA.')
     dset = sgrp.createVariable('intensity_wavelengths', 'f4',
-                               ('intensity_bands_per_view'))
+                               ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'wavelength at center of intensity bands'
     dset.units = 'nm'
-    dset = sgrp.createVariable('intensity_bandpasses', 'f4',
-                               ('intensity_bands_per_view'))
-    dset.long_name = 'FWHM of intensity bands'
-    dset.units = 'nm'
+    # dset = sgrp.createVariable('intensity_bandpasses', 'f4',
+    #                            ('intensity_bands_per_view'))
+    # dset.long_name = 'FWHM of intensity bands'
+    # dset.units = 'nm'
     dset = sgrp.createVariable('polarization_wavelengths', 'f4',
-                               ('polarization_bands_per_view'))
-    dset.long_name = 'wavelength at center of polarization bands'
-    dset.units = 'nm'
-    dset = sgrp.createVariable('polarization_bandpasses', 'f4',
                                ('number_of_views',
                                 'polarization_bands_per_view'))
-    dset.long_name = 'FWHM of polarization bands'
+    dset.long_name = 'wavelength at center of polarization bands'
     dset.units = 'nm'
+    # dset = sgrp.createVariable('polarization_bandpasses', 'f4',
+    #                            ('number_of_views',
+    #                             'polarization_bands_per_view'))
+    # dset.long_name = 'FWHM of polarization bands'
+    # dset.units = 'nm'
     dset = sgrp.createVariable('intensity_f0', 'f4',
-                               ('intensity_bands_per_view'))
-    dset.long_name = 'spectral response function of intensity bands'
+                               ('number_of_views', 'intensity_bands_per_view'))
+    dset.long_name = 'Solar irradiance on intensity wavelength grid'
     dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each intensity band and view.')
     dset = sgrp.createVariable('polarization_f0', 'f4',
-                               ('polarization_bands_per_view'))
-    dset.long_name = 'spectral response function of polarization bands'
+                               ('number_of_views',
+                                'polarization_bands_per_view'))
+    dset.long_name = 'Solar irradiance on polarization wavelength grid'
     dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each polarization band and view.')
 
     sgrp = rootgrp.createGroup('BIN_ATTRIBUTES')
     chunksizes = None if number_of_images is not None else (512,)

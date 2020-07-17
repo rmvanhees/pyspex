@@ -99,7 +99,7 @@ class L1Aio:
         if not append:
             if dims is None:
                 dims = {}
-            init_l1a(self.l1a_path, dims, inflight)
+            init_l1a(self.l1a_path, dims, inflight=inflight)
 
         # open L1A product in append mode
         self.fid = Dataset(self.l1a_path, "r+")

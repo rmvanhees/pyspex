@@ -213,7 +213,6 @@ def init_l1a(l1a_flname: str, dims: dict,
         # - define group /science_data and its datasets
         gid = fid.createGroup('/science_data')
         chunksizes = None if number_img is not None else (1, img_samples)
-        print(chunksizes)
         dset = gid.createVariable('detector_images', 'u2',
                                   ('number_of_images', 'samples_per_image'),
                                   chunksizes=chunksizes, fill_value=0)

@@ -76,7 +76,11 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
         att_quat = gid['att_quat'][:]
         orb_time = gid['orb_time'][:]
         orb_pos = gid['orb_pos'][:]
+        if np.mean(np.abs(orb_pos)) < 5000:
+            orb_pos *= 1000              # convert km -> meters
         orb_vel = gid['orb_vel'][:]
+        if np.mean(np.abs(orb_pos)) < 5:
+            orb_vel *= 1000              # convert km -> meters
         adstate = gid['adstate'][:]
 
     # create L1A product
@@ -96,6 +100,8 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
         l1a.set_dset('/navigation_data/orb_pos', orb_pos)
         l1a.set_dset('/navigation_data/orb_vel', orb_vel)
         l1a.set_dset('/navigation_data/adstate', adstate)
+
+    return min(att_time[-1], orb_time[-1]) - max(att_time[0], orb_time[0])
 
 
 def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
@@ -212,7 +218,8 @@ def main():
         print(args)
 
     if args.navigation_data is not None:
-        initialize_l1a_product(args.navigation_data, args.binTableID)
+        duration = initialize_l1a_product(args.navigation_data, args.binTableID)
+        print('Coverage of the navigation data is {} seconds'.format(duration))
 
     if args.measurement_data is not None:
         add_measurements(args.measurement_data, args.repeats, sampling=3)
