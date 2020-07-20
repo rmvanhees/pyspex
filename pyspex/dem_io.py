@@ -179,18 +179,24 @@ class DEMio:
 
         return self.__hdr[0]
 
-    def read_data(self, dat_file):
+    def read_data(self, dat_file, numlines=None):
         """
         Returns data of a detector frame (numpy uint16 array)
-        """
-        if self.hdr is None:
-            self.read_hdr(dat_file.replace('b.bin', 'a.txt'))
 
-        # obtain number of rows
-        numline = self.number_lines()
+        Parameters
+        ----------
+        numlines : int
+           provide number of detector rows when no headerfile is present
+        """
+        if numlines is None:
+            if self.hdr is None:
+                self.read_hdr(dat_file.replace('b.bin', 'a.txt'))
+
+            # obtain number of rows
+            numlines = self.number_lines()
 
         # Read binary big-endian data
-        return np.fromfile(dat_file, dtype='>u2').reshape(numline, 2048)
+        return np.fromfile(dat_file, dtype='>u2').reshape(numlines, -1)
 
     def number_lines(self):
         """
