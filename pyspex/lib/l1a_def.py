@@ -5,85 +5,23 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation of the PACE SPEX Level-1A product (inflight and on-ground)
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 from netCDF4 import Dataset
 
+from pyspex.lib.attrs_def import attrs_def
 from pyspex.lib.tmtc_def import tmtc_def
 
 # - global parameters ------------------------------
 
 
 # - local functions --------------------------------
-def global_attrs(inflight, origin=None) -> dict:
-    """
-    Generate dictionary with all required global attributes
-    """
-    if origin is None:
-        origin = 'NASA' if inflight else 'SRON'
-
-    res = {}
-    if not inflight:
-        res['title'] = "SPEXone Level-1A data"
-        res['cdm_data_type'] = "on-ground calibration"
-        res['data_collect_mode'] = "on-ground"
-    else:
-        res['title'] = "PACE SPEX Level-1A data"
-        res['cdm_data_type'] = "swath"
-        res['startdirection'] = "Ascending"
-        res['enddirection'] = "Ascending"
-        res['data_collect_mode'] = "Earth Collect"
-        res['bin_size_at_nadir'] = '2.5 km'
-
-    # Independed attributes (OCAL/ICAL, NASA/SRON ...)
-    res['instrument'] = "SPEX"
-    res['processing_version'] = "V1.0"
-    res['conventions'] = "CF-1.6"
-    res['cdl_version_date'] = "2020-02-20"
-    res['history'] = ""
-    res['license'] = ("http://science.nasa.gov/earth-science/"
-                      "earth-science-data/data-information-policy/")
-    res['naming_authority'] = "gov.nasa.gsfc.sci.oceancolor"
-    res['keywords_vocabulary'] = ("NASA Global Change Master Directory (GCMD)"
-                                  " Science Keywords")
-    res['stdname_vocabulary'] = ("NetCDF Climate and Forecast (CF)"
-                                 " Metadata Convention")
-    res['project'] = "PACE Project"
-    res['processing_level'] = "L1A"
-
-    if origin == 'SRON':
-        res['institution'] = "SRON Netherlands Institute for Space Research"
-        res['creator_name'] = "SRON/Earth Science"
-        res['creator_email'] = "spex_mpc@sron.nl"
-        res['creator_url'] = "https://www.sron.nl/earth"
-        res['publisher_name'] = "SRON/Earth Science"
-        res['publisher_email'] = "spex_mpc@sron.nl"
-        res['publisher_url'] = "https://www.sron.nl/earth"
-    else:
-        res['institution'] = ("NASA Goddard Space Flight Center,"
-                              " Ocean Biology Processing Group")
-        res['creator_name'] = "NASA/GSFC"
-        res['creator_email'] = "data@oceancolor.gsfc.nasa.gov"
-        res['creator_url'] = "http://oceancolor.gsfc.nasa.gov"
-        res['publisher_name'] = "NASA/GSFC"
-        res['publisher_email'] = "data@oceancolor.gsfc.nasa.gov"
-        res['publisher_url'] = "http://oceancolor.gsfc.nasa.gov"
-
-    res['time_coverage_start'] = 'yyyy-mm-ddThh:mm:ss.sssZ'
-    res['time_coverage_end'] = 'yyyy-mm-ddThh:mm:ss.sssZ'
-    res['date_created'] = datetime.utcnow().isoformat(timespec='milliseconds')
-
-    return res
-
-
-# -------------------------
 def create_group_gse_data(fid, n_wave=None):
     """
     Define datasets and attributes in the group /gse_data
@@ -108,7 +46,7 @@ def create_group_gse_data(fid, n_wave=None):
         dset.units = 'photons.s-1.nm-1.m-2)'
 
 
-# -------------------------
+# - main function ----------------------------------
 def init_l1a(l1a_flname: str, dims: dict,
              orbit_number=-1, inflight=False) -> None:
     """
@@ -294,11 +232,19 @@ def init_l1a(l1a_flname: str, dims: dict,
             create_group_gse_data(fid, n_wave)
 
         # - define global attributes ------------------
-        dict_attrs = global_attrs(inflight)
+        dict_attrs = attrs_def('L1A', inflight)
         dict_attrs['product_name'] = Path(l1a_flname).name
         dict_attrs['orbit_number'] = orbit_number
-        for key in sorted(dict_attrs.keys()):
-            fid.setncattr(key, dict_attrs[key])
+        if inflight:
+            dict_attrs['bin_size_at_nadir'] = "2.5km"
+            dict_attrs['time_coverage_start'] = "2023-01-15T12:34:56.175"
+            dict_attrs['time_coverage_end'] = "2023-01-15T12:54:32.622"
+        else:
+            dict_attrs['time_coverage_start'] = "2020-02-06T12:34:56.175"
+            dict_attrs['time_coverage_end'] = "2020-02-06T12:39:32.622"
+        for key in dict_attrs:
+            if dict_attrs[key] is not None:
+                fid.setncattr(key, dict_attrs[key])
 
 
 # --------------------------------------------------
@@ -306,6 +252,6 @@ if __name__ == '__main__':
     init_l1a('PACE_SPEX.20230115T123456.L1A.2.5km.V01.nc', {},
              inflight=True, orbit_number=12345)
 
-    init_l1a('SPX1_OCAL_msm_id_L1A_20190306T123456_20200310T195841_0001.nc',
+    init_l1a('SPX1_OCAL_msm_id_L1A_20200206T123456_20200310T195841_0001.nc',
              {'samples_per_image': 2048**2, 'wavelength': 2048},
              inflight=False, orbit_number=-1)

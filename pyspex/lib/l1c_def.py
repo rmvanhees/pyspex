@@ -10,58 +10,16 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime
 from pathlib import Path
 
 from netCDF4 import Dataset
+
+from pyspex.lib.attrs_def import attrs_def
 
 # - global parameters ------------------------------
 
 
 # - local functions --------------------------------
-def global_attributes() -> dict:
-    """
-    Return dictionary with required global attributes for the L1C format
-    """
-    return {
-        'title': 'PACE SPEX Level-1C data',
-        'instrument': 'SPEX',
-        'processing_version': 'V1.0',
-        'conventions': 'CF-1.6',
-        'institution': ('NASA Goddard Space Flight Center,'
-                        ' Ocean Biology Processing Group'),
-        'license': ('http://science.nasa.gov/earth-science'
-                    '/earth-science-data/data-information-policy/'),
-        'naming_authority': 'gov.nasa.gsfc.sci.oceancolor',
-        'keyword_vocabulary': ('NASA Global Change Master Directory (GCMD)'
-                               ' Science Keywords'),
-        'stdname_vocabulary': ('NetCDF Climate and Forecast (CF)'
-                               ' Metadata Convention'),
-        'creator_name': 'NASA/GSFC',
-        'creator_email': 'data@oceancolor.gsfc.nasa.gov',
-        'creator_url': 'http://oceancolor.gsfc.nasa.gov',
-        'project': 'PACE Project',
-        'publisher_name': 'NASA/GSFC',
-        'publisher_email': 'data@oceancolor.gsfc.nasa.gov',
-        'publisher_url': 'http://oceancolor.gsfc.nasa.gov',
-        'processing_level': 'L1C',
-        'cdm_data_type': 'swath',
-        'history': '',
-        'cdl_version_date': '2020-02-20',
-        'startdirection': 'Ascending',
-        'enddirection': 'Ascending',
-        'time_coverage_start': 'yyyy-mm-ddThh:mm:ss.sssZ',
-        'time_coverage_end': 'yyyy-mm-ddThh:mm:ss.sssZ',
-        'date_created': datetime.utcnow().isoformat(timespec='milliseconds'),
-        'sun_earth_distance': 1.0,
-        'terrain_data_source': '<Source of terrain data used for aggregation>',
-        'spectral_response_function': ('<Points to documentation'
-                                       ' containing this information>'),
-        'systematic_uncertainty_model': ('<Models (equations) for systematic'
-                                         ' uncertainty for I, DoLP, Q, U>'),
-        'nadir_bin': 200,
-        'bin_size_at_nadir': '5 km'
-    }
 
 
 # - main function ----------------------------------
@@ -320,12 +278,16 @@ def init_l1c(l1c_flname: str, orbit_number=-1, number_of_images=None):
     dset.units = '1'
 
     # add global attributes
-    dict_attrs = global_attributes()
+    dict_attrs = attrs_def('L1C')
     dict_attrs['product_name'] = Path(l1c_flname).name
     dict_attrs['orbit_number'] = orbit_number
     dict_attrs['nadir_bin'] = n_bins_intens // 2
-    for key in sorted(dict_attrs.keys()):
-        rootgrp.setncattr(key, dict_attrs[key])
+    dict_attrs['bin_size_at_nadir'] = "5km"
+    dict_attrs['time_coverage_start'] = "2023-01-15T12:34:56.175"
+    dict_attrs['time_coverage_end'] = "2023-01-15T12:54:32.622"
+    for key in dict_attrs:
+        if dict_attrs[key] is not None:
+            rootgrp.setncattr(key, dict_attrs[key])
 
     rootgrp.close()
 
