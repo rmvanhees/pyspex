@@ -15,8 +15,7 @@ from pathlib import Path
 import numpy as np
 from netCDF4 import Dataset
 
-from pyspex.lib.attrs_def import attrs_def
-from pyspex.lib.tmtc_def import tmtc_def
+from .tmtc_def import tmtc_def
 
 # - global parameters ------------------------------
 
@@ -47,8 +46,7 @@ def create_group_gse_data(fid, n_wave=None):
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict,
-             orbit_number=-1, inflight=False) -> None:
+def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     """
     Create an empty OCAL SPEXone or inflight PACE SPEX Level-1A product
 
@@ -111,7 +109,6 @@ def init_l1a(l1a_flname: str, dims: dict,
         dset.long_name = "image time (seconds of day)"
         dset.valid_min = 0
         dset.valid_max = 86400.999999
-        dset.reference = "yyyy-mm-dd"
         dset.units = "seconds"
         dset = gid.createVariable('image_CCSDS_sec', 'u4',
                                   ('number_of_images',))
@@ -230,28 +227,3 @@ def init_l1a(l1a_flname: str, dims: dict,
 
         if not inflight:
             create_group_gse_data(fid, n_wave)
-
-        # - define global attributes ------------------
-        dict_attrs = attrs_def('L1A', inflight)
-        dict_attrs['product_name'] = Path(l1a_flname).name
-        dict_attrs['orbit_number'] = orbit_number
-        if inflight:
-            dict_attrs['bin_size_at_nadir'] = "2.5km"
-            dict_attrs['time_coverage_start'] = "2023-01-15T12:34:56.175"
-            dict_attrs['time_coverage_end'] = "2023-01-15T12:54:32.622"
-        else:
-            dict_attrs['time_coverage_start'] = "2020-02-06T12:34:56.175"
-            dict_attrs['time_coverage_end'] = "2020-02-06T12:39:32.622"
-        for key in dict_attrs:
-            if dict_attrs[key] is not None:
-                fid.setncattr(key, dict_attrs[key])
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    init_l1a('PACE_SPEX.20230115T123456.L1A.2.5km.V01.nc', {},
-             inflight=True, orbit_number=12345)
-
-    init_l1a('SPX1_OCAL_msm_id_L1A_20200206T123456_20200310T195841_0001.nc',
-             {'samples_per_image': 2048**2, 'wavelength': 2048},
-             inflight=False, orbit_number=-1)

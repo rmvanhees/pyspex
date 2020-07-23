@@ -79,7 +79,7 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
         if np.mean(np.abs(orb_pos)) < 5000:
             orb_pos *= 1000              # convert km -> meters
         orb_vel = gid['orb_vel'][:]
-        if np.mean(np.abs(orb_pos)) < 5:
+        if np.mean(np.linalg.norm(orb_vel, axis=1)) < 8:
             orb_vel *= 1000              # convert km -> meters
         adstate = gid['adstate'][:]
 

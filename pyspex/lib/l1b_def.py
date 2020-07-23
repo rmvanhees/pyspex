@@ -72,20 +72,20 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
                                ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'wavelength at center of intensity bands'
     dset.units = 'nm'
-    # dset = sgrp.createVariable('intensity_bandpasses', 'f4',
-    #                            ('intensity_bands_per_view'))
-    # dset.long_name = 'FWHM of intensity bands'
-    # dset.units = 'nm'
+    dset = sgrp.createVariable('intensity_bandpasses', 'f4',
+                               ('intensity_bands_per_view'))
+    dset.long_name = 'FWHM of intensity bands'
+    dset.units = 'nm'
     dset = sgrp.createVariable('polarization_wavelengths', 'f4',
                                ('number_of_views',
                                 'polarization_bands_per_view'))
     dset.long_name = 'wavelength at center of polarization bands'
     dset.units = 'nm'
-    # dset = sgrp.createVariable('polarization_bandpasses', 'f4',
-    #                            ('number_of_views',
-    #                             'polarization_bands_per_view'))
-    # dset.long_name = 'FWHM of polarization bands'
-    # dset.units = 'nm'
+    dset = sgrp.createVariable('polarization_bandpasses', 'f4',
+                               ('number_of_views',
+                                'polarization_bands_per_view'))
+    dset.long_name = 'FWHM of polarization bands'
+    dset.units = 'nm'
     dset = sgrp.createVariable('intensity_f0', 'f4',
                                ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'Solar irradiance on intensity wavelength grid'
