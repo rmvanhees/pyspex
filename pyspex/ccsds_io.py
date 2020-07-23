@@ -30,11 +30,12 @@ class CCSDSio:
 
     Doc: TMTC_db, v10, 2019-10-17
     """
-    def __init__(self, flname, verbose=False):
+    def __init__(self, flname, mps_version=0, verbose=False):
         # initialize class attributes
         self.filename = flname
         self.offset = 0
         self.__hdr = None
+        self.mps_version = mps_version
         self.verbose = verbose
 
     @staticmethod
@@ -161,7 +162,7 @@ class CCSDSio:
         return np.zeros(1, dtype=np.dtype([
             ('primary_header', self.__dtype_hdr1()),
             ('secondary_header', self.__dtype_hdr2()),
-            ('mps', np.dtype(tmtc_def(0x350))),
+            ('mps', np.dtype(tmtc_def(0x350, self.mps_version))),
             ('image_data', 'u2', (num_data,))]))
 
     def __rd_tm_packet(self):
@@ -176,7 +177,7 @@ class CCSDSio:
         -------
         TM packet: primary & secondary header, MPS and image-data
         """
-        mps_dtype = np.dtype(tmtc_def(0x350))
+        mps_dtype = np.dtype(tmtc_def(0x350, self.mps_version))
 
         # read parts of one telemetry packet data
         with open(self.filename, 'rb') as fp:
