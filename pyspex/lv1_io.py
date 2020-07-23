@@ -20,6 +20,8 @@ from netCDF4 import Dataset
 
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
+from .lib.l1b_def import init_l1b
+from .lib.l1c_def import init_l1c
 
 # - global parameters -------------------
 
@@ -33,20 +35,9 @@ class Lv1io:
     ----------
     lv1_product: string
        Name of the Level-1 product
-    inflight: boolean, optional
-       In-flight data, only affects global attributes of L1A product.
-       Default: False
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
-    dims: dictionary, optional
-       Provide size of various dimensions (Level-1A only).
-       Default values:
-            number_of_images : None     # number of image frames
-            samples_per_image : 184000  # depends on binning table
-            SC_records : None           # space-craft navigation records
-            hk_packets : None           # number of HK tlm-packets
-            wavelength : None
 
     Attributes
     ----------
@@ -102,8 +93,12 @@ class Lv1io:
         if not append:
             if self.processing_level == 'L1A':
                 init_l1a(product, **kwargs)
+            if self.processing_level == 'L1B':
+                init_l1b(product, **kwargs)
+            if self.processing_level == 'L1C':
+                init_l1c(product, **kwargs)
             else:
-                raise RuntimeError('No generic Level-1 defined')
+                raise KeyError('valid processing levels are: L1A, L1B or L1C')
 
         # open Level-1 product in append mode
         self.fid = Dataset(self.product, "r+")
@@ -374,10 +369,7 @@ class L1Aio(Lv1io):
     Parameters
     ----------
     lv1_product: string
-       Name of the Level-1 product
-    inflight: boolean, optional
-       In-flight data, only affects global attributes of L1A product.
-       Default: False
+       Name of the Level-1A product
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
@@ -389,6 +381,9 @@ class L1Aio(Lv1io):
             SC_records : None           # space-craft navigation records
             hk_packets : None           # number of HK tlm-packets
             wavelength : None
+    inflight: boolean, optional
+       In-flight data, only affects global attributes of L1A product.
+       Default: False
     """
     processing_level = 'L1A'
     dset_stored = {
@@ -594,13 +589,47 @@ class L1Bio(Lv1io):
     Parameters
     ----------
     lv1_product: string
-       Name of the Level-1 product
+       Name of the Level-1B product
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
+    orbit_number: int
+       Orbit revolution counter, default=-1
+    number_of_images: int
+       Number of images used as input to generate the L1B product.
+       Default is None, then this dimension is UNLIMITED.
+    spatial_samples: int
+       Total number of spatial samples from all viewports, default is 200
     """
     processing_level = 'L1B'
     dset_stored = {
+        '/SENSOR_VIEW_BANDS/viewport_index': 0,
+        '/SENSOR_VIEW_BANDS/view_angles': 0,
+        '/SENSOR_VIEW_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEW_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEW_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEW_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEW_BANDS/intensity_f0': 0,
+        '/SENSOR_VIEW_BANDS/polarization_f0': 0,
+        '/BIN_ATTRIBUTES/image_time': 0,
+        '/GEOLOCATION_DATA/latitude': 0,
+        '/GEOLOCATION_DATA/longitude': 0,
+        '/GEOLOCATION_DATA/altitude': 0,
+        '/GEOLOCATION_DATA/altitude_variability': 0,
+        '/GEOLOCATION_DATA/sensor_azimuth': 0,
+        '/GEOLOCATION_DATA/sensor_zenith': 0,
+        '/GEOLOCATION_DATA/solar_azimuth': 0,
+        '/GEOLOCATION_DATA/solar_zenith': 0,
+        '/OBSERVATION_DATA/I': 0,
+        '/OBSERVATION_DATA/I_noise': 0,
+        '/OBSERVATION_DATA/q': 0,
+        '/OBSERVATION_DATA/q_noise': 0,
+        '/OBSERVATION_DATA/u': 0,
+        '/OBSERVATION_DATA/u_noise': 0,
+        '/OBSERVATION_DATA/AoLP': 0,
+        '/OBSERVATION_DATA/AoLP_noise': 0,
+        '/OBSERVATION_DATA/DoLP': 0,
+        '/OBSERVATION_DATA/DoLP_noise': 0
     }
 
     # ---------- PUBLIC FUNCTIONS ----------
@@ -614,13 +643,50 @@ class L1Cio(Lv1io):
     Parameters
     ----------
     lv1_product: string
-       Name of the Level-1 product
+       Name of the Level-1C product
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
+    orbit_number: int
+       Orbit revolution counter, default=-1
+    number_of_images: int
+       Number of images used as input to generate the L1B product.
+       Default is None, then this dimension is UNLIMITED.
     """
     processing_level = 'L1C'
     dset_stored = {
+        '/SENSOR_VIEW_BANDS/view_angles': 0,
+        '/SENSOR_VIEW_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEW_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEW_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEW_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEW_BANDS/intensity_f0': 0,
+        '/SENSOR_VIEW_BANDS/polarization_f0': 0,
+        '/BIN_ATTRIBUTES/nadir_view_time': 0,
+        '/BIN_ATTRIBUTES/view_time_offsets': 0,
+        '/GEOLOCATION_DATA/latitude': 0,
+        '/GEOLOCATION_DATA/longitude': 0,
+        '/GEOLOCATION_DATA/altitude': 0,
+        '/GEOLOCATION_DATA/altitude_variability': 0,
+        '/GEOLOCATION_DATA/sensor_azimuth': 0,
+        '/GEOLOCATION_DATA/sensor_zenith': 0,
+        '/GEOLOCATION_DATA/solar_azimuth': 0,
+        '/GEOLOCATION_DATA/solar_zenith': 0,
+        '/OBSERVATION_DATA/obs_per_view': 0,
+        '/OBSERVATION_DATA/I': 0,
+        '/OBSERVATION_DATA/I_noise': 0,
+        '/OBSERVATION_DATA/I_polsample': 0,
+        '/OBSERVATION_DATA/I_polsample_noise': 0,
+        '/OBSERVATION_DATA/Q': 0,
+        '/OBSERVATION_DATA/Q_noise': 0,
+        '/OBSERVATION_DATA/U': 0,
+        '/OBSERVATION_DATA/U_noise': 0,
+        '/OBSERVATION_DATA/q': 0,
+        '/OBSERVATION_DATA/q_noise': 0,
+        '/OBSERVATION_DATA/u': 0,
+        '/OBSERVATION_DATA/u_noise': 0,
+        '/OBSERVATION_DATA/DoLP': 0,
+        '/OBSERVATION_DATA/DoLP_noise': 0
     }
 
     # ---------- PUBLIC FUNCTIONS ----------
