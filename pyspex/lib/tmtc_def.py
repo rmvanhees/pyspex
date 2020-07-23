@@ -12,15 +12,17 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 License:  BSD-3-Clause
 """
 
-def tmtc_def(apid):
+def tmtc_def(apid, version=0):
     """
     Returns definition of a SPEXone telemetry packet structure
 
     Parameters
     ----------
-    apid : integer
+    apid : int
        Telemetry APID range between 0x320 and 0x350 for SPEXone.
        Implemented APIDs are 0x350: Science TM, 0x320: NomHK, 0x322: DemHK
+    version : int
+       Verion of the MPS format, 0=original, 1=appended timestamp (6 bytes)
 
     Returns
     -------
@@ -33,7 +35,7 @@ def tmtc_def(apid):
     >>> mps_dtype = np.dtype(tmtc_def(0x350))
     """
     if apid == 0x350:        # Science TM
-        return [                            #  offs   start in packet
+        res = [                             #  offs   start in packet
             ('ICUSWVER', '>u2'),            #	0     0x000c
             ('MPS_ID', 'u1'),               #	2     0x000e
             ('MPS_VER', 'u1'),              #	3     0x000f
@@ -180,9 +182,11 @@ def tmtc_def(apid):
             ('FTI', '>u2'),	            #	280   0x0124
             ('IMDMODE', 'u1'),	            #   282   0x0126
             ('dummy_03', 'u1'), 	    #	283   0x0127
-            ('IMRLEN', '>u4'),	            #	284   0x0128
-            # ('timestamp', '>u2', (3,))    # additional 6 bytes in latest MPS
+            ('IMRLEN', '>u4')	            #	284   0x0128
         ]                                   #   288
+        if version == 1:
+            res.append(('timestamp', '>u2', (3,)))
+        return res
 
     if apid == 0x320:      # NomHK
         return [                                #  offs   start in packet
