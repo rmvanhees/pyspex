@@ -19,7 +19,7 @@ import numpy as np
 
 from pyspex import spx_product
 from pyspex.ccsds_io import CCSDSio
-from pyspex.l1a_io import L1Aio
+from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
 LEAP_SECONDS = 27
@@ -64,12 +64,12 @@ def main():
 
     utc_sec = np.array(utc_sec, dtype=np.uint32)
     frac_sec = np.array(frac_sec)
+    image_id = np.array(image_id)
     mps_data = np.array(mps_data)
     images = np.array(images)
     if args.verbose:
         print(images.size
               if images.ndim == 1 else images.shape[1], images.shape)
-        print(images[:, 0], images[:, -1])
 
     # generate name of L1A product
     utc_sec_launch = datetime(2022, 11, 2) - datetime(1970, 1, 1)
@@ -91,15 +91,17 @@ def main():
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
-    with L1Aio(prod_name, dims, inflight) as l1a:
-        l1a.set_attr('input_file', Path(args.l0_product).name)
-
-        l1a.fill_time(utc_sec, frac_sec)
-        l1a.fill_hk_time(utc_sec, frac_sec)
-        l1a.fill_images(images)
+    with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
+        l1a.set_dset('/science_data/detector_images', images)
         l1a.fill_mps(mps_data)
+        l1a.fill_time(utc_sec, frac_sec)
 
+        l1a.fill_hk_time(utc_sec, frac_sec)
         l1a.set_dset('/image_attributes/image_ID', image_id)
+
+        # Global attributes
+        l1a.fill_global_attrs()
+        l1a.set_attr('input_file', Path(args.l0_product).name)
 
 
 # --------------------------------------------------

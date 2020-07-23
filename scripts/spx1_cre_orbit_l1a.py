@@ -37,7 +37,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyspex.l1a_io import L1Aio
+from pyspex.lv1_io import L1Aio
 
 FLNAME_OUT = 'SPX1_TEST_L1A_simulated_orbit.nc'
 
@@ -90,9 +90,8 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
             'SC_records': SC_records,
             'hk_packets': None,
             'viewing_angles': vector_elements}
-    with L1Aio(FLNAME_OUT, dims, inflight=True) as l1a:
-        l1a.set_attr('history', 'simulated orbit file')
-
+    
+    with L1Aio(FLNAME_OUT, dims=dims, inflight=True) as l1a:
         # navigation data
         l1a.set_dset('/navigation_data/att_time', att_time)
         l1a.set_dset('/navigation_data/att_quat', att_quat)
@@ -100,6 +99,10 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
         l1a.set_dset('/navigation_data/orb_pos', orb_pos)
         l1a.set_dset('/navigation_data/orb_vel', orb_vel)
         l1a.set_dset('/navigation_data/adstate', adstate)
+
+        # Global attributes
+        l1a.fill_global_attrs(orbit=12345, bin_size='2.5km')
+        l1a.set_attr('history', 'simulated orbit file')
 
     return min(att_time[-1], orb_time[-1]) - max(att_time[0], orb_time[0])
 
@@ -154,8 +157,8 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     telemetry = np.zeros(n_images, dtype=mps_dtype)
 
     with L1Aio(FLNAME_OUT, append=True) as l1a:
-        # get offset for datasets in /science_data and /image_attributes
         ibgn = l1a.get_dim('number_of_images')
+        print('ibgn (images): ', ibgn)
 
         # define timing of image data
         att_time = int(l1a.get_dset('/navigation_data/att_time')[0])
@@ -167,30 +170,29 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
         frac_sec = utc_time % 1
 
         # write datasets in /science_data
-        l1a.fill_images(images, ibgn)
-        l1a.set_dset('/science_data/detector_telemetry', telemetry, ibgn)
+        l1a.set_dset('/science_data/detector_images', images)
+        l1a.set_dset('/science_data/detector_telemetry', telemetry)
 
         # write datasets in /image_attributes
-        l1a.fill_time(utc_sec, frac_sec, ibgn)
-        l1a.set_dset('/image_attributes/exposure_time', texp, ibgn)
-        l1a.set_dset('/image_attributes/nr_coadditions', coad, ibgn)
+        l1a.set_dset('/image_attributes/exposure_time', texp)
+        l1a.set_dset('/image_attributes/nr_coadditions', coad)
         l1a.set_dset('/image_attributes/image_ID',
-                     np.arange(n_images) + ibgn, ibgn)
+                     np.arange(n_images) + ibgn)
         l1a.set_dset('/image_attributes/digital_offset',
-                     np.zeros(n_images), ibgn)
+                     np.zeros(n_images))
         l1a.set_dset('/image_attributes/binning_table',
-                     np.full(n_images, 3), ibgn)     # ToDo determine table ID
-
-        # get offset for datasets in /engineering_data
-        ibgn = l1a.get_dim('hk_packets')
+                     np.full(n_images, 3))
+        l1a.fill_time(utc_sec, frac_sec)
 
         # define timing of house-keeping data
+        ibgn = l1a.get_dim('hk_packets')
+        print('ibgn (engineering): ', ibgn)
         hk_time = att_time + (ibgn + np.arange(temp_det.size))
 
         # write datasets in /engineering_data
-        l1a.set_dset('/engineering_data/HK_tlm_time', hk_time, ibgn)
-        l1a.set_dset('/engineering_data/temp_detector', temp_det, ibgn)
-        l1a.set_dset('/engineering_data/temp_optics', temp_opt, ibgn)
+        l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
+        l1a.set_dset('/engineering_data/temp_detector', temp_det)
+        l1a.set_dset('/engineering_data/temp_optics', temp_opt)
 
 
 # - main functions --------------------------------

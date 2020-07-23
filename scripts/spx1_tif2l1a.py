@@ -20,7 +20,7 @@ import numpy as np
 
 from pyspex import spx_product
 from pyspex.tif_io import TIFio
-from pyspex.l1a_io import L1Aio
+from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
 
@@ -348,16 +348,14 @@ def main():
 
     # Generate L1A product
     hdr_dict = header_as_dict(hdr, n_images)
-    with L1Aio(prod_name, dims, inflight=False) as l1a:
-        l1a.set_attr('history', hdr['OCAL measurement'])
-        #
+    with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
         # Add image data and telemetry
-        l1a.fill_images(images.reshape(n_images, n_samples))
+        l1a.set_dset('/science_data/detector_images',
+                     images.reshape(n_images, -1))
         # -- no detector_telemetry!!
         #
         # Add image attributes
         # - use default values for binning_table, digital_offset, image_ID
-        l1a.fill_time(np.array(utc_sec), np.array(frac_sec))
         l1a.set_dset('/image_attributes/exposure_time',
                      np.full(n_images, float(hdr['Exposure time (s)'])))
         l1a.set_dset('/image_attributes/nr_coadditions',
@@ -373,6 +371,7 @@ def main():
         else:
             l1a.set_dset('/image_attributes/binning_table',
                          np.full(n_images, table_id))
+        l1a.fill_time(np.array(utc_sec), np.array(frac_sec))
         #
         # Add engineering data
         l1a.fill_hk_time(np.array(utc_sec), np.array(frac_sec))
@@ -389,6 +388,9 @@ def main():
             l1a.set_attr(hdr_dict[key]['ds_name'],
                          hdr_dict[key]['ds_value'],
                          ds_name='gse_data')
+        # Global attributes
+        l1a.fill_global_attrs()
+        l1a.set_attr('history', hdr['OCAL measurement'])
 
 
 # --------------------------------------------------

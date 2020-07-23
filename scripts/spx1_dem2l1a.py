@@ -22,7 +22,7 @@ from pys5p.biweight import biweight
 
 from pyspex import spx_product
 from pyspex.dem_io import DEMio
-from pyspex.l1a_io import L1Aio
+from pyspex.lv1_io import L1Aio
 from pyspex.mps_def import MPSdef
 
 # - global parameters ------------------------------
@@ -183,16 +183,12 @@ def main():
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
-    with L1Aio(prod_name, dims, inflight=False) as l1a:
-        l1a.set_attr('history', msm_id)
-        l1a.set_attr('dem_id', args.dem_id)
-        l1a.set_attr('measurements', list_name_msm)
-
+    with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
         # Image data
-        l1a.fill_images(images.reshape(n_images, n_samples))
+        l1a.set_dset('/science_data/detector_images',
+                     images.reshape(n_images, n_samples))
         l1a.fill_mps(mps_data)
-
-        # Image attributes
+        l1a.set_dset('/image_attributes/image_ID', np.arange(n_images))
         l1a.fill_time(utc_sec, frac_sec)
 
         # Engineering data
@@ -204,7 +200,11 @@ def main():
         if args.reference is not None:
             l1a.fill_gse(reference=reference)
 
-        # l1a.set_dset('/image_attributes/image_ID', image_id)
+        # Global attributes
+        l1a.fill_global_attrs()
+        l1a.set_attr('history', msm_id)
+        l1a.set_attr('dem_id', args.dem_id)
+        l1a.set_attr('measurements', list_name_msm)
 
         # ToDo: OGSE and EGSE parameters
         # Add OGSE and EGSE parameters

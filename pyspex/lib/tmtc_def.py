@@ -180,8 +180,9 @@ def tmtc_def(apid):
             ('FTI', '>u2'),	            #	280   0x0124
             ('IMDMODE', 'u1'),	            #   282   0x0126
             ('dummy_03', 'u1'), 	    #	283   0x0127
-            ('IMRLEN', '>u4')	            #	284   0x0128
-        ]
+            ('IMRLEN', '>u4'),	            #	284   0x0128
+            # ('timestamp', '>u2', (3,))    # additional 6 bytes in latest MPS
+        ]                                   #   288
 
     if apid == 0x320:      # NomHK
         return [                                #  offs   start in packet
@@ -326,7 +327,7 @@ def tmtc_def(apid):
             ('REG_PWR_SENS', 'u1'),             #   278    0x0122
             ('REG_FLASH_STATUS', 'u1'),         #   279    0x0123
             ('REG_FLASH_EDAC_BLOCK', '>u2')     #   280    0x0124
-        ]
+        ]                                       #   282
 
     if apid == 0x322:      # DemHK
         return [                                #  offs   start in packet
@@ -454,6 +455,6 @@ def tmtc_def(apid):
             ('DET_VBLACKSUN', 'u1'),            #   185    0x00c5
             ('DET_REG124', 'u1'),               #   186    0x00c6
             ('DET_REG125', 'u1')                #   187    0x00c7
-        ]
+        ]                                       #   188
 
     raise ValueError('Telemetry APID not implemented')

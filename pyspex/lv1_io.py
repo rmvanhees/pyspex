@@ -108,7 +108,12 @@ class Lv1io:
         # open Level-1 product in append mode
         self.fid = Dataset(self.product, "r+")
         if append:
-            self.ref_date = datetime.fromisoformat(self.fid.reference_day)
+            if 'reference_day' in self.fid.ncattrs():
+                self.ref_date = datetime.fromisoformat(self.fid.reference_day)
+
+            # store current length of the first dimension
+            for key in self.dset_stored:
+                self.dset_stored[key] = self.fid[key].shape[0]
 
     def __repr__(self):
         class_name = type(self).__name__
@@ -139,14 +144,15 @@ class Lv1io:
         if self.fid is None:
             return
 
+        if self.ref_date is not None \
+           and 'reference_day' not in self.fid.ncattrs():
+            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
+
         # check if atleast one dataset is updated
         if self.fid.dimensions['number_of_images'].size == 0:
             self.fid.close()
             self.fid = None
             return
-
-        if 'reference_day' not in self.fid.ncattrs():
-            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
 
         # update coverage time
         intg = (self.fid['/image_attributes/exposure_time'][-1].data
@@ -310,11 +316,11 @@ class Lv1io:
             self.fid[name][...] = value
         elif dims[0].isunlimited():
             if ibgn < 0:
-                ibgn = self.dset_stored[var_name]
+                ibgn = self.dset_stored[name]
             self.fid[name][ibgn:, ...] = value
-            self.dset_stored[var_name] += 1
         else:
             self.fid[name][...] = value
+        self.dset_stored[name] += value.shape[0]
 
     # -------------------------
     def sec_of_day(self, utc_sec: int, frac_sec: float) -> float:
@@ -386,26 +392,26 @@ class L1Aio(Lv1io):
     """
     processing_level = 'L1A'
     dset_stored = {
-        'detector_images': 0,
-        'detector_telemetry': 0,
-        'binning_table': 0,
-        'digital_offset': 0,
-        'nr_coadditions': 0,
-        'exposure_time': 0,
-        'image_CCSDS_sec': 0,
-        'image_CCSDS_usec': 0,
-        'image_time': 0,
-        'image_ID': 0,
-        'HK_telemetry': 0,
-        'temp_detector': 0,
-        'temp_optics': 0,
-        'HK_tlm_time': 0,
-        'adstate': 0,
-        'att_quat': 0,
-        'orb_pos': 0,
-        'orb_vel': 0,
-        'att_time': 0,
-        'orb_time': 0
+        '/science_data/detector_images': 0,
+        '/science_data/detector_telemetry': 0,
+        '/image_attributes/binning_table': 0,
+        '/image_attributes/digital_offset': 0,
+        '/image_attributes/nr_coadditions': 0,
+        '/image_attributes/exposure_time': 0,
+        '/image_attributes/image_CCSDS_sec': 0,
+        '/image_attributes/image_CCSDS_usec': 0,
+        '/image_attributes/image_time': 0,
+        '/image_attributes/image_ID': 0,
+        '/engineering_data/HK_telemetry': 0,
+        '/engineering_data/temp_detector': 0,
+        '/engineering_data/temp_optics': 0,
+        '/engineering_data/HK_tlm_time': 0,
+        '/navigation_data/adstate': 0,
+        '/navigation_data/att_quat': 0,
+        '/navigation_data/orb_pos': 0,
+        '/navigation_data/orb_vel': 0,
+        '/navigation_data/att_time': 0,
+        '/navigation_data/orb_time': 0
     }
 
     # ---------- PUBLIC FUNCTIONS ----------
