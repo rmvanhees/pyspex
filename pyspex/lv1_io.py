@@ -104,7 +104,7 @@ class Lv1io:
                 init_l1a(product, **kwargs)
             else:
                 raise RuntimeError('No generic Level-1 defined')
-                
+
         # open Level-1 product in append mode
         self.fid = Dataset(self.product, "r+")
         if append:

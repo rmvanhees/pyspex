@@ -62,15 +62,15 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
     # read binning table information
     with h5py.File(bin_tbl_fl[-1], 'r') as fid:
         gid = fid['Table_{:02d}'.format(bin_tbl)]
-        enabled_lines = gid.attrs['enabled_lines']
+        # enabled_lines = gid.attrs['enabled_lines']
         n_samples = gid['binning_table'].attrs['valid_max'] + 1
 
     # read navigation file information
     with h5py.File(l1a_nav_product, 'r') as fid:
-        SC_hkt_block = fid['SC_hkt_block'].size
-        SC_records = fid['SC_records'].size
-        quaternion_elements = fid['quaternion_elements'].size
-        vector_elements = fid['vector_elements'].size
+        # SC_hkt_block = fid['SC_hkt_block'].size
+        nav_records = fid['SC_records'].size
+        # quaternion_elements = fid['quaternion_elements'].size
+        # vector_elements = fid['vector_elements'].size
         gid = fid['navigation_data']
         att_time = gid['att_time'][:]
         att_quat = gid['att_quat'][:]
@@ -87,10 +87,9 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
     # ToDo fix the output product name
     dims = {'number_of_images': None,
             'samples_per_image': n_samples,
-            'SC_records': SC_records,
-            'hk_packets': None,
-            'viewing_angles': vector_elements}
-    
+            'SC_records': nav_records,
+            'hk_packets': None}
+
     with L1Aio(FLNAME_OUT, dims=dims, inflight=True) as l1a:
         # navigation data
         l1a.set_dset('/navigation_data/att_time', att_time)

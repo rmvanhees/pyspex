@@ -89,13 +89,13 @@ def main():
     dset.valid_min = np.uint8(0)
     dset.valid_max = np.uint8(0xff)
     dset[:] = np.ones((1024, 1024), dtype='u1')
-    
+
     # add binning tables
     for flname in args.file_list:
         flpath = Path(flname)
         if not flpath.is_file():
             raise FileNotFoundError(flname)
-        if not flpath.suffix == '.csv':
+        if flpath.suffix != '.csv':
             continue
 
         # read csv-file
@@ -151,7 +151,7 @@ def main():
         flpath = Path(flname)
         if not flpath.is_file():
             raise FileNotFoundError(flname)
-        if not flpath.suffix == '.dat':
+        if flpath.suffix != '.dat':
             continue
 
         # read line-skip definition

@@ -10,8 +10,6 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from pathlib import Path
-
 import numpy as np
 from netCDF4 import Dataset
 
