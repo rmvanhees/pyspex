@@ -44,7 +44,7 @@ def create_group_gse_data(fid, n_wave=None):
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
+def init_l1a(l1a_flname: str, dims: dict, inflight, mps_version=0) -> None:
     """
     Create an empty OCAL SPEXone or inflight PACE SPEX Level-1A product
 
@@ -153,8 +153,8 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
         dset.valid_min = np.uint16(0)
         dset.valid_max = np.uint16(0xFFFF)
         dset.units = "counts"
-        mps_dtype = fid.createCompoundType(np.dtype(tmtc_def(0x350)),
-                                           'mps_dtype')
+        mps_dtype = fid.createCompoundType(
+            np.dtype(tmtc_def(0x350, version=mps_version)), 'mps_dtype')
         dset = gid.createVariable('detector_telemetry', mps_dtype,
                                   ('number_of_images',))
         dset.long_name = "SPEX science telemetry"

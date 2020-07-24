@@ -35,9 +35,15 @@ def main():
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser(
-        description='create SPEXone L1A product from CCSDS packages (L0)')
+        formatter_class=argparse.RawTextHelpFormatter,
+        description='create SPEXone Level-1A product from CCSDS packages (L0)')
     parser.add_argument('l0_product', default=None,
-                        help='name of SPEXone DEM L0 product')
+                        help='name of SPEXone ICU Level-0 product')
+    parser.add_argument('--mps_version', default=0, type=int,
+                        help=('Specify version of the MPS format, default=0\n'
+                              ' 0: MPS format before 23-July-2020\n'
+                              ' 1: append 6 bytes for timestamp [23-July-2020]')
+    )
     parser.add_argument('--verbose', action='store_true', default=False)
     args = parser.parse_args()
     if args.verbose:
@@ -47,7 +53,8 @@ def main():
         raise FileNotFoundError(
             'File {} does not exist'.format(args.l0_product))
 
-    ccsds = CCSDSio(args.l0_product, verbose=args.verbose)
+    ccsds = CCSDSio(args.l0_product, mps_version=args.mps_version,
+                    verbose=args.verbose)
     packet_list = ccsds.read()
 
     utc_sec = []
@@ -91,7 +98,8 @@ def main():
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
-    with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
+    with L1Aio(prod_name, dims=dims, inflight=inflight,
+               mps_version=args.mps_version) as l1a:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.fill_mps(mps_data)
         l1a.fill_time(utc_sec, frac_sec)

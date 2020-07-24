@@ -93,9 +93,9 @@ class Lv1io:
         if not append:
             if self.processing_level == 'L1A':
                 init_l1a(product, **kwargs)
-            if self.processing_level == 'L1B':
+            elif self.processing_level == 'L1B':
                 init_l1b(product, **kwargs)
-            if self.processing_level == 'L1C':
+            elif self.processing_level == 'L1C':
                 init_l1c(product, **kwargs)
             else:
                 raise KeyError('valid processing levels are: L1A, L1B or L1C')
