@@ -39,11 +39,10 @@ def main():
         description='create SPEXone Level-1A product from CCSDS packages (L0)')
     parser.add_argument('l0_product', default=None,
                         help='name of SPEXone ICU Level-0 product')
-    parser.add_argument('--mps_version', default=0, type=int,
-                        help=('Specify version of the MPS format, default=0\n'
-                              ' 0: MPS format before 23-July-2020\n'
-                              ' 1: append 6 bytes for timestamp [23-July-2020]')
-    )
+    parser.add_argument('--mps_version', default=0, type=int, help=(
+        'Specify version of the MPS format, default=0\n'
+        ' 0: MPS format before 23-July-2020\n'
+        ' 1: append 6 bytes for a timestamp [23-July-2020]'))
     parser.add_argument('--verbose', action='store_true', default=False)
     args = parser.parse_args()
     if args.verbose:
