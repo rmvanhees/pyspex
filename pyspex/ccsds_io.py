@@ -28,18 +28,29 @@ class CCSDSio:
     """
     Defines SPEXone L0 data package
 
-    Doc: TMTC_db, v10, 2019-10-17
+    Doc: TMTC handbook (SPX1-TN-005), issue 12, 2020-05-15
     """
-    def __init__(self, flname, mps_version=0, verbose=False):
+    def __init__(self, flname, tmtc_issue=12, verbose=False):
+        """
+        Parameters
+        ----------
+        flname: str
+           Name of the file with SPEXone ICU packages
+        tmtc_issue: int
+           Issue of the TMTC handbook which contains the definition of the
+           Science Data Header format. Default: 12
+        verbose: bool
+           Be verbose. Default: be not verbose
+        """
         # initialize class attributes
         self.filename = flname
         self.offset = 0
         self.__hdr = None
-        self.mps_version = mps_version
+        self.tmtc_issue = tmtc_issue
         self.verbose = verbose
 
     @staticmethod
-    def __dtype_hdr1():
+    def __hdr1_def():
         """
         Defines parameters of Primary header
         - Packet type     (3 bits): Version No.
@@ -60,23 +71,23 @@ class CCSDSio:
         - Packet length  (16 bits): size of packet data in bytes (always odd)
                                     (secondary header + User data) - 1
         """
-        return np.dtype([
-            ('type', '>u2'),   # 0x000
-            ('sequence', '>u2'),      # 0x002
-            ('length', '>u2')     # 0x004
-        ])
+        return [
+            ('type', '>u2'),         # 0x000
+            ('sequence', '>u2'),     # 0x002
+            ('length', '>u2')        # 0x004
+        ]
 
     @staticmethod
-    def __dtype_hdr2():
+    def __timestamp():
         """
-        Defines parameters of Secondary header
-        - Seconds     (32 bits): Seconds (TAI)
+        Defines parameters of a timestamp
+        - Seconds     (32 bits): seconds (TAI)
         - Sub-seconds (16 bits): sub-seconds (1/2 ** 16)
         """
-        return np.dtype([
+        return [
             ('tai_sec', '>u4'),      # 0x006
             ('sub_sec', '>u2')       # 0x00A
-        ])
+        ]
 
     @property
     def version_no(self):
@@ -160,9 +171,10 @@ class CCSDSio:
         Return empty telemetry packet
         """
         return np.zeros(1, dtype=np.dtype([
-            ('primary_header', self.__dtype_hdr1()),
-            ('secondary_header', self.__dtype_hdr2()),
-            ('mps', np.dtype(tmtc_def(0x350, self.mps_version))),
+            ('primary_header', np.dtype(self.__hdr1_def())),
+            ('secondary_header', np.dtype(self.__timestamp())),
+            ('mps', np.dtype(tmtc_def(0x350))),
+            ('icu_time', np.dtype(self.__timestamp())),
             ('image_data', 'u2', (num_data,))]))
 
     def __rd_tm_packet(self):
@@ -177,12 +189,14 @@ class CCSDSio:
         -------
         TM packet: primary & secondary header, MPS and image-data
         """
-        mps_dtype = np.dtype(tmtc_def(0x350, self.mps_version))
+        hdr1_dtype = np.dtype(self.__hdr1_def())
+        hdr2_dtype = np.dtype(self.__timestamp())
+        mps_dtype = np.dtype(tmtc_def(0x350))
 
         # read parts of one telemetry packet data
         with open(self.filename, 'rb') as fp:
-            hdr_one = np.fromfile(fp, dtype=self.__dtype_hdr1(), count=1,
-                                  offset=self.offset)
+            hdr_one = np.fromfile(fp, dtype=hdr1_dtype,
+                                  count=1, offset=self.offset)
             if hdr_one.size == 0:
                 self.offset = 0
                 return None
@@ -195,17 +209,22 @@ class CCSDSio:
             if self.ap_id != 0x350:
                 return None
 
+            hdr_two = None
+            mps = None
+            icu_time = None
+            num_bytes = self.packet_length + 1
             if self.secnd_hdr_flag == 1:
-                hdr_two = np.fromfile(fp, count=1,
-                                      dtype=self.__dtype_hdr2())[0]
-            else:
-                hdr_two = None
+                hdr_two = np.fromfile(fp, dtype=hdr2_dtype, count=1)[0]
+                num_bytes -= hdr2_dtype.itemsize
 
             # MPS is provided in first segement or unsegmented data packet
+            mps = None
             if self.grouping_flag in (1, 3):
-                num_bytes = (self.packet_length + 1
-                             - (hdr_two.nbytes + mps_dtype.itemsize))
                 mps = np.fromfile(fp, dtype=mps_dtype, count=1)[0]
+                num_bytes -= mps_dtype.itemsize
+                if self.tmtc_issue == 12:
+                    icu_time = np.fromfile(fp, dtype=hdr2_dtype, count=1)[0]
+                    num_bytes -= hdr2_dtype.itemsize
 
                 # Correct 32-bit integers which originate from 24-bit
                 # Necessary due to an allignment problem, in addition,
@@ -216,24 +235,20 @@ class CCSDSio:
                 mps['DET_ILVDS'] = mps['DET_CHENA'] & 0xf
                 for key in key_list:
                     mps[key] = mps[key] >> 8
-            else:
-                num_bytes = self.packet_length + 1 - hdr_two.nbytes
-                mps = None
 
             # remainder is image data
             data = np.fromfile(fp, dtype='>u2', count=num_bytes // 2)
             if self.verbose:
                 if mps is None:
                     print(self.secnd_hdr_flag, self.grouping_flag,
-                          self.ap_id, self.sequence_count,
-                          hdr_two['tai_sec'], hdr_two['sub_sec'],
+                          self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
                           fp.tell() - self.offset, data.nbytes,
                           self.packet_length, fp.tell())
                 else:
                     print(self.secnd_hdr_flag, self.grouping_flag,
-                          self.ap_id, self.sequence_count,
-                          hdr_two['tai_sec'], hdr_two['sub_sec'],
+                          self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
                           fp.tell() - self.offset, data.nbytes,
+                          self.packet_length,
                           mps['MPS_ID'], mps['IMRLEN'], fp.tell())
 
         # combine parts to telemetry packet
@@ -243,6 +258,8 @@ class CCSDSio:
             tm_packet[0]['secondary_header'] = hdr_two
         if mps is not None:
             tm_packet[0]['mps'] = mps
+        if icu_time is not None:
+            tm_packet[0]['icu_time'] = icu_time
         tm_packet[0]['image_data'] = data
 
         # move offset to next telemetry packet

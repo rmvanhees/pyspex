@@ -39,10 +39,10 @@ def main():
         description='create SPEXone Level-1A product from CCSDS packages (L0)')
     parser.add_argument('l0_product', default=None,
                         help='name of SPEXone ICU Level-0 product')
-    parser.add_argument('--mps_version', default=0, type=int, help=(
-        'Specify version of the MPS format, default=0\n'
-        ' 0: MPS format before 23-July-2020\n'
-        ' 1: append 6 bytes for a timestamp [23-July-2020]'))
+    parser.add_argument('--tmtc_issue', default=12, type=int, help=(
+        'Specify issue of the TMTC handbook which defines the science data header format, default=12\n'
+        ' < 12: Science data header format before 15-May-2020\n'
+        ' 12: append 6 bytes timestamp after MPS data [15-May-2020]'))
     parser.add_argument('--verbose', action='store_true', default=False)
     args = parser.parse_args()
     if args.verbose:
@@ -52,7 +52,7 @@ def main():
         raise FileNotFoundError(
             'File {} does not exist'.format(args.l0_product))
 
-    ccsds = CCSDSio(args.l0_product, mps_version=args.mps_version,
+    ccsds = CCSDSio(args.l0_product, tmtc_issue=args.tmtc_issue,
                     verbose=args.verbose)
     packet_list = ccsds.read()
 
@@ -97,8 +97,7 @@ def main():
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
-    with L1Aio(prod_name, dims=dims, inflight=inflight,
-               mps_version=args.mps_version) as l1a:
+    with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.fill_mps(mps_data)
         l1a.fill_time(utc_sec, frac_sec)
