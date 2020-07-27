@@ -149,6 +149,9 @@ class Lv1io:
             self.fid = None
             return
 
+        # check of all required dataset their sizes
+        self.check_stored()
+
         # update coverage time
         intg = (self.fid['/image_attributes/exposure_time'][-1].data
                 * self.fid['/image_attributes/nr_coadditions'][-1].data)
@@ -165,7 +168,6 @@ class Lv1io:
                  + timedelta(seconds=int(img_sec[-1]))
                  + timedelta(microseconds=int(img_usec[-1])))
 
-        # print('Check if all required dataset are filled with data')
         self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
         self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
 
@@ -295,6 +297,7 @@ class Lv1io:
            Index of the first (unlimited) dimension where to store the new data
            Default is to append the data
         """
+        value = np.asarray(value)
         grp_name = str(PurePosixPath(name).parent)
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
@@ -326,8 +329,6 @@ class Lv1io:
           seconds since 1970-01-01 (integer)
         frac_sec : numpy array
           fractional seconds (double)
-        leap_second : integer
-          leap seconds since 1970
 
         Returns
         -------
@@ -408,6 +409,50 @@ class L1Aio(Lv1io):
         '/navigation_data/att_time': 0,
         '/navigation_data/orb_time': 0
     }
+
+    # -------------------------
+    def check_stored(self):
+        """
+        Check variables with the same first dimension have equal sizes
+        """
+        warn_str = 'Warning variable "{:s}" wrong number of {:d} elements'
+        
+        # check image datasets
+        dim_sz = self.get_dim('number_of_images')
+        res = []
+        key_list = [x for x in self.dset_stored
+                    if (x.startswith('/science_data')
+                        or x.startswith('/image_attributes'))]
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
+        # check house-keeping datasets
+        dim_sz = self.get_dim('hk_packets')
+        key_list = [x for x in self.dset_stored
+                    if x.startswith('/engineering_data')]
+        res = []
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
+        # check navigation datasets
+        dim_sz = self.get_dim('SC_records')
+        key_list = [x for x in self.dset_stored
+                    if x.startswith('/navigation_data')]
+        res = []
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
     def fill_mps(self, mps_data) -> None:
@@ -497,8 +542,6 @@ class L1Aio(Lv1io):
           seconds since 1970-01-01 (integer)
         frac_sec : numpy array
           fractional seconds (double)
-        leap_second : integer
-          leap seconds since 1970
 
         Stores
         ------
@@ -520,8 +563,6 @@ class L1Aio(Lv1io):
           seconds since 1970-01-01 (integer)
         frac_sec : numpy array
           fractional seconds (double)
-        leap_second : integer
-          leap seconds since 1970
 
         Stores
         ------
@@ -543,8 +584,6 @@ class L1Aio(Lv1io):
           seconds since 1970-01-01 (integer)
         frac_sec : numpy array
           fractional seconds (double)
-        leap_second : integer
-          leap seconds since 1970
 
         Stores
         ------
@@ -632,6 +671,13 @@ class L1Bio(Lv1io):
         '/OBSERVATION_DATA/DoLP_noise': 0
     }
 
+    # -------------------------
+    def check_stored(self):
+        """
+        """
+        for ii, key in enumerate(self.dset_stored):
+            print(ii, key, self.dset_stored[key])
+
     # ---------- PUBLIC FUNCTIONS ----------
 
 
@@ -688,5 +734,12 @@ class L1Cio(Lv1io):
         '/OBSERVATION_DATA/DoLP': 0,
         '/OBSERVATION_DATA/DoLP_noise': 0
     }
+
+    # -------------------------
+    def check_stored(self):
+        """
+        """
+        for ii, key in enumerate(self.dset_stored):
+            print(ii, key, self.dset_stored[key])
 
     # ---------- PUBLIC FUNCTIONS ----------
