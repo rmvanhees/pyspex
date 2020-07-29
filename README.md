@@ -2,7 +2,7 @@ pyspex
 ======
 
 Python package pyspex contains software to access and create
-SPEXone L1A and L1B products.
+SPEXone L1A, L1B and L1C products.
 
 For more information on PACE mission visit:
  * https://pace.gsfc.nasa.gov

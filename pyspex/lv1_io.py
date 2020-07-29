@@ -10,9 +10,8 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
-
-from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -78,8 +77,15 @@ class Lv1io:
     def __init__(self, product: str, append=False, **kwargs):
         """
         Initialize access to a SPEXone Level-1 product
+
+        Parameters
+        ----------
+        product : str
+           name of the SPEXone Level-1 product
+        append : bool
+           do no clobber, but add new data to existing product
         """
-        self.__epoch = datetime(1970, 1, 1)
+        self.__epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         # initialize private class-attributes
         self.product = Path(product)
@@ -92,19 +98,20 @@ class Lv1io:
         # initialize Level-1 product
         if not append:
             if self.processing_level == 'L1A':
-                init_l1a(product, **kwargs)
+                self.fid = init_l1a(product, **kwargs)
             elif self.processing_level == 'L1B':
-                init_l1b(product, **kwargs)
+                self.fid = init_l1b(product, **kwargs)
             elif self.processing_level == 'L1C':
-                init_l1c(product, **kwargs)
+                self.fid = init_l1c(product, **kwargs)
             else:
                 raise KeyError('valid processing levels are: L1A, L1B or L1C')
+        else:
+            # open Level-1 product in append mode
+            self.fid = Dataset(self.product, "r+")
 
-        # open Level-1 product in append mode
-        self.fid = Dataset(self.product, "r+")
-        if append:
             if 'reference_day' in self.fid.ncattrs():
-                self.ref_date = datetime.fromisoformat(self.fid.reference_day)
+                self.ref_date = datetime.fromisoformat(
+                    self.fid.reference_day, tzinfo=timezone.utc)
 
             # store current length of the first dimension
             for key in self.dset_stored:
@@ -133,46 +140,8 @@ class Lv1io:
         return False  # any exception is raised by the with statement.
 
     def close(self):
-        """
-        close product and check if required datasets are filled with data
-        """
-        if self.fid is None:
-            return
-
-        if self.ref_date is not None \
-           and 'reference_day' not in self.fid.ncattrs():
-            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
-
-        # check if atleast one dataset is updated
-        if self.fid.dimensions['number_of_images'].size == 0:
-            self.fid.close()
-            self.fid = None
-            return
-
-        # check of all required dataset their sizes
-        self.check_stored()
-
-        # update coverage time
-        intg = (self.fid['/image_attributes/exposure_time'][-1].data
-                * self.fid['/image_attributes/nr_coadditions'][-1].data)
-
-        img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
-        img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
-
-        time0 = (self.epoch
-                 + timedelta(seconds=int(img_sec[0]))
-                 + timedelta(microseconds=int(img_usec[0]))
-                 - timedelta(seconds=intg))
-
-        time1 = (self.epoch
-                 + timedelta(seconds=int(img_sec[-1]))
-                 + timedelta(microseconds=int(img_usec[-1])))
-
-        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
-        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
-
-        self.fid.close()
-        self.fid = None
+        # placeholder
+        pass
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
@@ -341,7 +310,7 @@ class Lv1io:
         if self.ref_date is None:
             self.ref_date = datetime(year=utc0.year,
                                      month=utc0.month,
-                                     day=utc0.day)
+                                     day=utc0.day, tzinfo=timezone.utc)
 
         # return seconds since midnight
         return (utc0 - self.ref_date) / timedelta(seconds=1) + frac_sec
@@ -350,6 +319,13 @@ class Lv1io:
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
         """
         Define global attributes in the SPEXone Level-1 products
+
+        Parameters
+        ----------
+        orbit_number: int
+           Orbit revolution counter, default=-1
+        bin_size: str, optional
+           Size of the nadir footprint (cross-track), include unit: e.g. '5km'
         """
         dict_attrs = attrs_def(self.processing_level, self.inflight)
         dict_attrs['product_name'] = self.product.name
@@ -410,13 +386,56 @@ class L1Aio(Lv1io):
         '/navigation_data/orb_time': 0
     }
 
+    def close(self):
+        """
+        close product and check if required datasets are filled with data
+        """
+        if self.fid is None:
+            return
+
+        if self.ref_date is not None \
+           and 'reference_day' not in self.fid.ncattrs():
+            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
+
+        # check if atleast one dataset is updated
+        if self.fid.dimensions['number_of_images'].size == 0:
+            self.fid.close()
+            self.fid = None
+            return
+
+        # check of all required dataset their sizes
+        self.check_stored()
+
+        # update coverage time
+        # ToDo replace intg by master clock cycle or frame rate (FTI)
+        intg = (self.fid['/image_attributes/exposure_time'][-1].data
+                * self.fid['/image_attributes/nr_coadditions'][-1].data)
+
+        img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
+        img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
+
+        time0 = (self.epoch
+                 + timedelta(seconds=int(img_sec[0]))
+                 + timedelta(microseconds=int(img_usec[0]))
+                 - timedelta(seconds=intg))
+
+        time1 = (self.epoch
+                 + timedelta(seconds=int(img_sec[-1]))
+                 + timedelta(microseconds=int(img_usec[-1])))
+
+        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
+        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
+
+        self.fid.close()
+        self.fid = None
+
     # -------------------------
     def check_stored(self):
         """
         Check variables with the same first dimension have equal sizes
         """
         warn_str = 'Warning variable "{:s}" wrong number of {:d} elements'
-        
+
         # check image datasets
         dim_sz = self.get_dim('number_of_images')
         res = []
@@ -500,100 +519,27 @@ class L1Aio(Lv1io):
         self.set_dset('/image_attributes/nr_coadditions',
                       mps_data['REG_NCOADDFRAMES'])
 
-    def fill_time(self, utc_sec, frac_sec, ibgn=-1, *, leap_seconds=0) -> None:
+    def fill_time(self, sec_of_day, reference_day, *, leap_seconds=0) -> None:
         """
         Write TM time information to L1A product
 
         Parameters
         ----------
-        utc_sec : numpy array
-          seconds since 1970-01-01 (integer)
-        frac_sec : numpy array
-          fractional seconds (double)
+        sec_of_day : numpy array (float)
+           seconds since midnight
+        reference_day : datetime.datetime
+           midnight
         leap_second : integer
           leap seconds since 1970, use only when input are TAI seconds
-
-        Stores
-        ------
-        - utc_sec + leap_seconds as /image_attributes/image_CCSDS_sec
-        - frac_sec as /image_attributes/image_CCSDS_usec
-
-        User friendly parameter 'image_time' as seconds since midnight:
-        - utc_sec, frac_sec as /image_attributes/image_time
         """
-        self.set_dset('/image_attributes/image_CCSDS_sec',
-                      utc_sec + leap_seconds, ibgn)
-        self.set_dset('/image_attributes/image_CCSDS_usec',
-                      np.round(1e6 * frac_sec).astype(np.int32), ibgn)
+        self.set_dset('/image_attributes/image_time', sec_of_day)
 
-        image_time = np.empty((utc_sec.size,), dtype=float)
-        for ii in range(utc_sec.size):
-            image_time[ii] = self.sec_of_day(utc_sec[ii], frac_sec[ii])
+        utc_sec = sec_of_day.astype('u4') + leap_seconds \
+            + (reference_day - self.epoch).total_seconds()
+        frac_sec = np.round(1e6 * (sec_of_day % 1)).astype('i4')
 
-        self.set_dset('/image_attributes/image_time', image_time, ibgn)
-
-    def fill_hk_time(self, utc_sec, frac_sec) -> None:
-        """
-        Write house-keeping timestamps
-
-        Parameters
-        ----------
-        utc_sec : numpy array
-          seconds since 1970-01-01 (integer)
-        frac_sec : numpy array
-          fractional seconds (double)
-
-        Stores
-        ------
-        - utc_sec, frac_sec as /engineering_data/HK_tlm_time
-        """
-        hk_time = np.empty((utc_sec.size,), dtype=float)
-        for ii in range(utc_sec.size):
-            hk_time[ii] = self.sec_of_day(utc_sec[ii], frac_sec[ii])
-
-        self.set_dset('/engineering_data/HK_tlm_time', hk_time)
-
-    def fill_att_time(self, utc_sec, frac_sec) -> None:
-        """
-        Write attitude timestamps
-
-        Parameters
-        ----------
-        utc_sec : numpy array
-          seconds since 1970-01-01 (integer)
-        frac_sec : numpy array
-          fractional seconds (double)
-
-        Stores
-        ------
-        - utc_sec, frac_sec as /navigation_data/att_time
-        """
-        att_time = np.empty((utc_sec.size,), dtype=float)
-        for ii in range(utc_sec.size):
-            att_time[ii] = self.sec_of_day(utc_sec[ii], frac_sec[ii])
-
-        self.set_dset('/navigation_data/att_time', att_time)
-
-    def fill_orb_time(self, utc_sec, frac_sec) -> None:
-        """
-        Write orbit vector timestamps
-
-        Parameters
-        ----------
-        utc_sec : numpy array
-          seconds since 1970-01-01 (integer)
-        frac_sec : numpy array
-          fractional seconds (double)
-
-        Stores
-        ------
-        - utc_sec, frac_sec as /navigation_data/orb_time
-        """
-        orb_time = np.empty((utc_sec.size,), dtype=float)
-        for ii in range(utc_sec.size):
-            orb_time[ii] = self.sec_of_day(utc_sec[ii], frac_sec[ii])
-
-        self.set_dset('/navigation_data/orb_time', orb_time)
+        self.set_dset('/image_attributes/image_CCSDS_sec', utc_sec)
+        self.set_dset('/image_attributes/image_CCSDS_usec', frac_sec)
 
     def fill_gse(self, reference=None) -> None:
         """
@@ -620,6 +566,7 @@ class L1Aio(Lv1io):
             dset.units = 'A'
             dset[:] = reference['error']
 
+
 # - class L1Bio -------------------------
 class L1Bio(Lv1io):
     """
@@ -632,8 +579,6 @@ class L1Bio(Lv1io):
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
-    orbit_number: int
-       Orbit revolution counter, default=-1
     number_of_images: int
        Number of images used as input to generate the L1B product.
        Default is None, then this dimension is UNLIMITED.
@@ -642,14 +587,14 @@ class L1Bio(Lv1io):
     """
     processing_level = 'L1B'
     dset_stored = {
-        '/SENSOR_VIEW_BANDS/viewport_index': 0,
-        '/SENSOR_VIEW_BANDS/view_angles': 0,
-        '/SENSOR_VIEW_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEW_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEW_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEW_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEW_BANDS/intensity_f0': 0,
-        '/SENSOR_VIEW_BANDS/polarization_f0': 0,
+        '/SENSOR_VIEWS_BANDS/viewport_index': 0,
+        '/SENSOR_VIEWS_BANDS/view_angles': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_f0': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_f0': 0,
         '/BIN_ATTRIBUTES/image_time': 0,
         '/GEOLOCATION_DATA/latitude': 0,
         '/GEOLOCATION_DATA/longitude': 0,
@@ -671,10 +616,77 @@ class L1Bio(Lv1io):
         '/OBSERVATION_DATA/DoLP_noise': 0
     }
 
+    def close(self):
+        """
+        close product and check if required datasets are filled with data
+        """
+        if self.fid is None:
+            return
+
+        if self.ref_date is not None \
+           and 'reference_day' not in self.fid.ncattrs():
+            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
+
+        # check if atleast one dataset is updated
+        if self.fid.dimensions['bins_along_track'].size == 0:
+            self.fid.close()
+            self.fid = None
+            return
+
+        # check of all required dataset their sizes
+        self.check_stored()
+
+        # update coverage time
+        # ToDo epoch should be reference_day
+        secnd = self.fid['/BIN_ATTRIBUTES/image_time'][0].data
+        time0 = (self.epoch
+                 + timedelta(seconds=int(secnd))
+                 + timedelta(microseconds=int(secnd % 1)))
+
+        secnd = self.fid['/BIN_ATTRIBUTES/image_time'][-1].data
+        time1 = (self.epoch
+                 + timedelta(seconds=int(secnd))
+                 + timedelta(microseconds=int(secnd % 1)))
+
+        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
+        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
+
+        self.fid.close()
+        self.fid = None
+
     # -------------------------
     def check_stored(self):
         """
+        Check variables with the same first dimension have equal sizes
         """
+        warn_str = 'Warning variable "{:s}" wrong number of {:d} elements'
+
+        # check datasets in group /SENSOR_VIEWS_BANDS
+        dim_sz = self.get_dim('number_of_views')
+        res = []
+        key_list = [x for x in self.dset_stored
+                    if x.startswith('/SENSOR_VIEWS_BANDS')]
+        for key in key_list:
+            if key == '/SENSOR_VIEWS_BANDS/viewport_index':
+                continue
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
+        # check datasets in all other groups
+        dim_sz = self.get_dim('bins_along_track')
+        res = []
+        key_list = [x for x in self.dset_stored
+                    if not x.startswith('/SENSOR_VIEWS_BANDS')]
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
         for ii, key in enumerate(self.dset_stored):
             print(ii, key, self.dset_stored[key])
 
@@ -693,21 +705,19 @@ class L1Cio(Lv1io):
     append : boolean, optional
        Open file in append mode, parameter dims and inflight are ignored
        Default: False
-    orbit_number: int
-       Orbit revolution counter, default=-1
     number_of_images: int
        Number of images used as input to generate the L1B product.
        Default is None, then this dimension is UNLIMITED.
     """
     processing_level = 'L1C'
     dset_stored = {
-        '/SENSOR_VIEW_BANDS/view_angles': 0,
-        '/SENSOR_VIEW_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEW_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEW_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEW_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEW_BANDS/intensity_f0': 0,
-        '/SENSOR_VIEW_BANDS/polarization_f0': 0,
+        '/SENSOR_VIEWS_BANDS/view_angles': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_f0': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_f0': 0,
         '/BIN_ATTRIBUTES/nadir_view_time': 0,
         '/BIN_ATTRIBUTES/view_time_offsets': 0,
         '/GEOLOCATION_DATA/latitude': 0,
@@ -735,9 +745,48 @@ class L1Cio(Lv1io):
         '/OBSERVATION_DATA/DoLP_noise': 0
     }
 
+    def close(self):
+        """
+        close product and check if required datasets are filled with data
+        """
+        if self.fid is None:
+            return
+
+        if self.ref_date is not None \
+           and 'reference_day' not in self.fid.ncattrs():
+            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
+
+        # check if atleast one dataset is updated
+        if self.fid.dimensions['bins_along_track'].size == 0:
+            self.fid.close()
+            self.fid = None
+            return
+
+        # check of all required dataset their sizes
+        self.check_stored()
+
+        # update coverage time
+        # ToDo epoch should be reference_day
+        secnd = self.fid['/BIN_ATTRIBUTES/nadir_view_time'][0].data
+        time0 = (self.epoch
+                 + timedelta(seconds=int(secnd))
+                 + timedelta(microseconds=int(secnd % 1)))
+
+        secnd = self.fid['/BIN_ATTRIBUTES/nadir_view_time'][-1].data
+        time1 = (self.epoch
+                 + timedelta(seconds=int(secnd))
+                 + timedelta(microseconds=int(secnd % 1)))
+
+        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
+        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
+
+        self.fid.close()
+        self.fid = None
+
     # -------------------------
     def check_stored(self):
         """
+        Check variables with the same first dimension have equal sizes
         """
         for ii, key in enumerate(self.dset_stored):
             print(ii, key, self.dset_stored[key])

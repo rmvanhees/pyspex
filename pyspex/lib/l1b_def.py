@@ -10,11 +10,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from pathlib import Path
-
 from netCDF4 import Dataset
-
-from pyspex.lib.attrs_def import attrs_def
 
 # - global parameters ------------------------------
 
@@ -23,27 +19,35 @@ from pyspex.lib.attrs_def import attrs_def
 
 
 # - main function ----------------------------------
-def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
-             *, spatial_samples=200) -> None:
+def init_l1b(l1b_flname: str, dims: dict):
     """
     Create an empty PACE SPEX Level-1B product
 
     Parameters
     ----------
     l1b_flname : string
-       Name of Level-1C product
-    orbit_number: int
-       Orbit revolution counter, default=-1
-    number_of_images: int
-       Number of images used as input to generate the L1B product.
-       Default is None, then this dimension is UNLIMITED.
-    spatial_samples: int
-       Total number of spatial samples from all viewports, default is 200
+       Name of Level-1B product
+    dims :   dictionary
+       Provide length of the Level-1B dimensions
+       Default values:
+            number_of_images : None     # number of image frames
+            spatial_samples : 200     # sum spatial bins of all viewports
     """
-    # size of the fixed dimensions
+    # check function parameters
+    if not isinstance(dims, dict):
+        raise TypeError("dims should be a dictionary")
+
+    # initialize dimensions
+    number_of_images = None
+    spatial_samples = 200
     n_views = 5
     n_bins_intens = 400
     n_bins_polar = 50
+
+    if 'number_of_images' in dims:
+        number_of_images = dims['number_of_images']
+    if 'samples_per_image' in dims:
+        spatial_samples = dims['spatial_samples']
 
     # create/overwrite netCDF4 product
     rootgrp = Dataset(l1b_flname, "w")
@@ -56,7 +60,7 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
     _ = rootgrp.createDimension('bins_along_track', number_of_images)
 
     # create groups and all variables with attributes
-    sgrp = rootgrp.createGroup('SENSOR_VIEW_BANDS')
+    sgrp = rootgrp.createGroup('SENSOR_VIEWS_BANDS')
     dset = sgrp.createVariable("viewport_index", "u1",
                                ("spatial_samples_per_image",))
     dset.long_name = "index of viewport"
@@ -73,7 +77,7 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
     dset.long_name = 'wavelength at center of intensity bands'
     dset.units = 'nm'
     dset = sgrp.createVariable('intensity_bandpasses', 'f4',
-                               ('intensity_bands_per_view'))
+                               ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'FWHM of intensity bands'
     dset.units = 'nm'
     dset = sgrp.createVariable('polarization_wavelengths', 'f4',
@@ -234,20 +238,10 @@ def init_l1b(l1b_flname: str, orbit_number=-1, number_of_images=None,
     dset.long_name = 'noise of DoLP'
     dset.units = '1'
 
-    # add global attributes
-    dict_attrs = attrs_def('L1B')
-    dict_attrs['product_name'] = Path(l1b_flname).name
-    dict_attrs['orbit_number'] = orbit_number
-    dict_attrs['nadir_bin'] = n_bins_intens // 2
-    dict_attrs['bin_size_at_nadir'] = "2.5km"
-    dict_attrs['time_coverage_start'] = "2023-01-15T12:34:56.175"
-    dict_attrs['time_coverage_end'] = "2023-01-15T12:54:32.622"
-    for key in dict_attrs:
-        if dict_attrs[key] is not None:
-            rootgrp.setncattr(key, dict_attrs[key])
-
-    rootgrp.close()
+    return rootgrp
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    init_l1b('PACE_SPEX.20230115T123456.L1B.2.5km.V01.nc', orbit_number=12345)
+    fid = init_l1b('PACE_SPEX.20230115T123456.L1B.2.5km.V01.nc', {})
+    fid.fill_global_attrs(orbit=12345, bin_size='2.5km')
+    fid.close()

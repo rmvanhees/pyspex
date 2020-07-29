@@ -10,7 +10,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 def attrs_def(level: str, inflight=True, origin=None) -> dict:
     """
@@ -63,7 +63,8 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
-        "date_created": datetime.utcnow().isoformat(timespec='milliseconds'),
+        "date_created": datetime.now(timezone.utc).isoformat(
+            timespec='milliseconds'),
         "sun_earth_distance": None,
         "terrain_data_source": None,
         "spectral_response_function": None,
@@ -73,7 +74,7 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
     }
 
     if origin == 'SRON':
-        res['title'] = "SPEXone Level-1A data"
+        res['title'] = "SPEXone Level-{:s} data".format(level[1:])
         res['instrument'] = "SPEXone"
         res['institution'] = "SRON Netherlands Institute for Space Research"
         res['creator_name'] = "SRON/Earth Science"
