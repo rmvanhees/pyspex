@@ -12,7 +12,7 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import h5py
@@ -23,6 +23,7 @@ from pyspex.tif_io import TIFio
 from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
@@ -284,11 +285,11 @@ def main():
     for key in tags:
         if key.name == 'datetime':
             str_date, str_time = tags[key.value].split(' ')
-            ref_time = str_date.replace(':', '-') + 'T' + str_time
-            ref_sec = int((datetime.fromisoformat(ref_time)
-                           - datetime(1970, 1, 1)).total_seconds())
+            utc_start = datetime.fromisoformat(
+                str_date.replace(':', '-') + 'T' + str_time + '+00:00')
+            break
 
-    prod_name = spx_product.prod_name(ref_sec, msm_id=msm_id)
+    prod_name = spx_product.prod_name(utc_start, msm_id=msm_id)
     if args.inp_tif:
         prod_name = prod_name.replace('_L1A_', '_inp_L1A_')
     if args.output is not None:
@@ -338,13 +339,12 @@ def main():
                                     hdr['Flexible binning table'])
 
     # Compute delta_time for each frame (seconds)
-    utc_sec = []
-    frac_sec = []
+    # convert timestamps to seconds per day
+    midnight = utc_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    secnds = np.full(len(n_images), (utc_start - midnight).total_seconds())
     for ii in range(n_images):
-        seconds = (ii * int(hdr['Co-additions'])
-                   * float(hdr['Exposure time (s)']))
-        utc_sec.append(ref_sec + int(seconds))
-        frac_sec.append(seconds % 1)
+        secnds[ii] += (ii * int(hdr['Co-additions'])
+                       * float(hdr['Exposure time (s)']))
 
     # Generate L1A product
     hdr_dict = header_as_dict(hdr, n_images)
@@ -371,10 +371,10 @@ def main():
         else:
             l1a.set_dset('/image_attributes/binning_table',
                          np.full(n_images, table_id))
-        l1a.fill_time(np.array(utc_sec), np.array(frac_sec))
+        l1a.fill_time(secnds, midnight)
         #
         # Add engineering data
-        l1a.fill_hk_time(np.array(utc_sec), np.array(frac_sec))
+        l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
         for key in hdr_dict:
             if hdr_dict[key]['ds_type'] != 'dset':
                 continue

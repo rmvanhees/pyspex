@@ -5,13 +5,13 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation to convert SPEXone DEM measurements to L1A format
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import os
 
@@ -21,9 +21,9 @@ import numpy as np
 from pys5p.biweight import biweight
 
 from pyspex import spx_product
+from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.dem_io import DEMio
 from pyspex.lv1_io import L1Aio
-from pyspex.mps_def import MPSdef
 
 # - global parameters ------------------------------
 
@@ -82,8 +82,11 @@ def main():
     image_list = []
 
     # Measurement Parameters Settings
-    mps_data = np.zeros(len(args.file_list), dtype=MPSdef().dtype)
-    texp = np.empty(len(args.file_list), dtype=float)
+    mps_data = np.zeros(len(args.file_list), dtype=np.dtype(tmtc_def(0x350)))
+    hk_data = np.zeros(len(args.file_list), dtype=np.dtype(tmtc_def(0x320)))
+    t_exp = np.empty(len(args.file_list), dtype=float)
+    t_frm = np.empty(len(args.file_list), dtype=float)
+    offset = np.empty(len(args.file_list), dtype=float)
     temp = np.empty(len(args.file_list), dtype=float)
 
     for ii, flname in enumerate(args.file_list):
@@ -97,16 +100,16 @@ def main():
         parts = dem_file.name.split('_')
         if len(parts) == 8:
             _id = '_'.join(parts[:4])
-            tstamp.append(datetime.strptime(parts[5] + parts[6],
-                                            '%Y%m%d%H%M%S.%f'))
+            tstamp.append(datetime.strptime(parts[5] + parts[6] + '+0000',
+                                            '%Y%m%d%H%M%S.%f%z'))
         elif len(parts) == 10:
             _id = '_'.join(parts[:6])
-            tstamp.append(datetime.strptime(parts[7] + parts[8],
-                                            '%Y%m%d%H%M%S.%f'))
+            tstamp.append(datetime.strptime(parts[7] + parts[8] + '+0000',
+                                            '%Y%m%d%H%M%S.%f%z'))
         elif len(parts) == 7:
             _id = '_'.join(parts[:3])
-            tstamp.append(datetime.strptime(parts[4] + parts[5],
-                                            '%Y%m%d%H%M%S.%f'))
+            tstamp.append(datetime.strptime(parts[4] + parts[5] + '+0000',
+                                            '%Y%m%d%H%M%S.%f%z'))
         else:
             raise ValueError("Invalid format of data-product name")
 
@@ -117,13 +120,14 @@ def main():
 
         dem = DEMio()
         # obtain MPS information from header file (ASCII)
-        dem.read_hdr(flname.replace('b.bin', 'a.txt'))
-        mps_data[ii] = MPSdef().fill(dem.hdr)
+        mps_data[ii] = dem.read_hdr(flname.replace('b.bin', 'a.txt'))
         # get nr_coaddings from file name
         coad_str = [x for x in parts if x.startswith('coad')][0]
         mps_data[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
         # determine exposure time
-        texp[ii] = dem.exposure_time(mcp=1e-7)
+        t_exp[ii] = dem.t_exp()
+        t_frm[ii] = dem.t_frm(int(coad_str[-2:]))
+        offset[ii] = dem.offset()
         # determine detector temperature
         # temp[ii] = float(dem.temp_detector())
         temp[ii] = 293.0
@@ -138,22 +142,23 @@ def main():
         indx = sorted(range(len(tstamp)), key=tstamp.__getitem__)
         mps_data = mps_data[indx]
         tstamp = [tstamp[k] for k in indx]
-        texp = texp[indx]
+        t_exp = t_exp[indx]
+        t_frm = t_frm[indx]
+        offset = offset[indx]
         temp = temp[indx]
         images = images[indx]
 
-    # convert timestamps to CCSDS time (UTC and fraction of a second)
-    utc_sec = np.zeros(len(tstamp), dtype=np.uint32)
-    frac_sec = np.zeros(len(tstamp), dtype=float)
+    # convert timestamps to seconds per day
+    secnds = np.empty(len(tstamp), dtype=float)
+    midnight = tstamp[0].replace(hour=0, minute=0, second=0, microsecond=0)
     for ii, tval in enumerate(tstamp):
-        secnd = (tval - datetime(1970, 1, 1)).total_seconds()
+        secnd = (tval - midnight).total_seconds()
         # time-of-measurement provided at end of integration time
-        secnd -= texp[ii] * mps_data[ii]['REG_NCOADDFRAMES']
-        utc_sec[ii] = int(secnd)
-        frac_sec[ii] = secnd % 1
+        secnd -= t_frm[ii]
+        secnds[ii] = secnd
 
     # generate name of L1A product
-    prod_name = spx_product.prod_name(utc_sec[0], msm_id=msm_id.strip(' '))
+    prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
     if args.output is not None:
         dest_dir = Path(args.output)
         if not dest_dir.is_dir():
@@ -175,9 +180,12 @@ def main():
             'nv': 1}
 
     if args.reference is not None:
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        utc_start = int((tstamp[0] - epoch).total_seconds())
+        utc_stop = round((tstamp[-1] - epoch).total_seconds())
         with h5py.File(args.reference, 'r') as fid:
             secnd = fid['sec'][:]
-            mask = ((secnd >= utc_sec[0]) & (secnd <= utc_sec[-1]))
+            mask = ((secnd >= utc_start) & (secnd <= utc_stop))
             median, spread = biweight(fid['amps'][mask], spread=True)
         reference = {'value': median, 'error': spread}
     #
@@ -188,11 +196,13 @@ def main():
         l1a.set_dset('/science_data/detector_images',
                      images.reshape(n_images, n_samples))
         l1a.fill_mps(mps_data)
+
+        l1a.fill_time(secnds, midnight)
         l1a.set_dset('/image_attributes/image_ID', np.arange(n_images))
-        l1a.fill_time(utc_sec, frac_sec)
 
         # Engineering data
-        l1a.fill_hk_time(utc_sec, frac_sec)
+        l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
+        l1a.set_dset('/engineering_data/HK_telemetry', hk_data)
         l1a.set_dset('/engineering_data/temp_detector', temp)
         l1a.set_dset('/engineering_data/temp_optics', temp)
 

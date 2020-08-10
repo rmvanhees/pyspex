@@ -45,8 +45,7 @@ def create_group_gse_data(rootgrp, n_wave=None):
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict, inflight,
-             *, mps_version=0) -> None:
+def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 
@@ -150,7 +149,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight,
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "counts"
     mps_dtype = rootgrp.createCompoundType(
-        np.dtype(tmtc_def(0x350, version=mps_version)), 'mps_dtype')
+        np.dtype(tmtc_def(0x350)), 'mps_dtype')
     dset = sgrp.createVariable('detector_telemetry', mps_dtype,
                                ('number_of_images',))
     dset.long_name = "SPEX science telemetry"

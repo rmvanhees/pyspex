@@ -10,7 +10,7 @@ Copyright (c) 2019 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import re
 
@@ -22,7 +22,7 @@ import re
 
 # - main functions ---------------------------------
 # pylint: disable=too-many-arguments
-def prod_name(utc_sensing_start: int, msm_id=None,
+def prod_name(utc_sensing_start, msm_id=None,
               file_class='TEST', data_type='CA', level='L1A',
               orbit=None, version_number=1):
     """
@@ -30,8 +30,8 @@ def prod_name(utc_sensing_start: int, msm_id=None,
 
     Parameters
     ----------
-    utc_sensing_start: integer
-       Sensing/Validity start in seconds since 1970-01-01
+    utc_sensing_start: datetime.datetime
+       Sensing/Validity start
     msm_id : string, optional
        Provide identifier for measurement, OCAL only
     file_class : string
@@ -80,8 +80,7 @@ def prod_name(utc_sensing_start: int, msm_id=None,
         product_id = 'SPX1_OCAL_{:s}_L1A'.format(msm_id)
 
     # define string of sensing start as yyyymmddThhmmss
-    utc = datetime(1970, 1, 1) + timedelta(seconds=int(utc_sensing_start))
-    sensing_start = utc.strftime("%Y%m%dT%H%M%S")
+    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
     # define instance ID
     return '{}_{:15s}_{:15s}_{:04d}.nc'.format(

@@ -31,7 +31,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 License:  BSD-3-Clause
 """
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 import h5py
@@ -40,6 +40,13 @@ import numpy as np
 from pyspex.lv1_io import L1Aio
 
 FLNAME_OUT = 'SPX1_TEST_L1A_simulated_orbit.nc'
+
+# - global parameters ------------------------------
+MIDNIGHT = datetime(2020, 7, 4, tzinfo=timezone.utc)
+
+
+# - local functions --------------------------------
+
 
 # --------------------------------------------------
 def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
@@ -156,17 +163,12 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     telemetry = np.zeros(n_images, dtype=mps_dtype)
 
     with L1Aio(FLNAME_OUT, append=True) as l1a:
-        ibgn = l1a.get_dim('number_of_images')
-        print('ibgn (images): ', ibgn)
+        att_time = int(l1a.get_dset('/navigation_data/att_time')[0])
 
         # define timing of image data
-        att_time = int(l1a.get_dset('/navigation_data/att_time')[0])
-        img_time = (datetime(2020, 7, 4)
-                    + timedelta(seconds=att_time)
-                    - datetime(1970, 1, 1)).total_seconds()
-        utc_time = img_time + (ibgn + np.arange(n_images)) / sampling
-        utc_sec = (utc_time).astype(int)
-        frac_sec = utc_time % 1
+        ibgn = l1a.get_dim('number_of_images')
+        print('ibgn (images): ', ibgn)
+        img_time = att_time + (ibgn + np.arange(n_images)) / sampling
 
         # write datasets in /science_data
         l1a.set_dset('/science_data/detector_images', images)
@@ -181,7 +183,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
                      np.zeros(n_images))
         l1a.set_dset('/image_attributes/binning_table',
                      np.full(n_images, 3))
-        l1a.fill_time(utc_sec, frac_sec)
+        l1a.fill_time(img_time, MIDNIGHT)
 
         # define timing of house-keeping data
         ibgn = l1a.get_dim('hk_packets')

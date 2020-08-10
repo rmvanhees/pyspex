@@ -5,12 +5,15 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation to read SPEXone DEM output
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
 import numpy as np
+
+from .lib.tmtc_def import tmtc_def
+
 
 # - global parameters ------------------------------
 
@@ -18,7 +21,7 @@ import numpy as np
 # - local functions --------------------------------
 def det_dtype():
     """
-    Returns numpy dtype of SPEXone detector registers
+    Returns numpy dtype with the registers of the SPEXone CMV4000 detector
     """
     return np.dtype([
         ('UNUSED_000', 'u1'),
@@ -133,16 +136,30 @@ class DEMio:
 
         return self.__hdr[0]
 
-    def read_hdr(self, hdr_file):
+    def read_hdr(self, hdr_file: str):
         """
-        Read DEM header data into numpy structured array
+        Read DEM header data into MPS record
 
-        Return
-        ------
+        Parameters
+        ----------
+        hdr_file : str
+           Name of the (ASCII) header file
+
+        Returns
+        -------
         numpy array
         """
-        self.__hdr = np.zeros((1,), dtype=det_dtype())
+        def convert_val(key):
+            """
+            Convert byte array to integer
+            """
+            val = 0
+            for ii, bval in enumerate(self.__hdr[0][key]):
+                val += bval << (ii * 8)
 
+            return val
+
+        self.__hdr = np.zeros((1,), dtype=det_dtype())
         with open(hdr_file, 'r') as fp:
             for line in fp:
                 columns = line[:-1].split(',')
@@ -177,16 +194,93 @@ class DEMio:
                 else:
                     self.__hdr[0][key] = value
 
-        return self.__hdr[0]
+        # convert original detector parameter values to MPS parameters
+        convert_det_params = {
+            'DET_NUMLINES': convert_val('NUMBER_LINES'),
+            'DET_START1': convert_val('START1'),
+            'DET_START2': convert_val('START2'),
+            'DET_START3': convert_val('START3'),
+            'DET_START4': convert_val('START4'),
+            'DET_START5': convert_val('START5'),
+            'DET_START6': convert_val('START6'),
+            'DET_START7': convert_val('START7'),
+            'DET_START8': convert_val('START8'),
+            'DET_NUMLINES1': convert_val('NUMBER_LINES1'),
+            'DET_NUMLINES2': convert_val('NUMBER_LINES2'),
+            'DET_NUMLINES3': convert_val('NUMBER_LINES3'),
+            'DET_NUMLINES4': convert_val('NUMBER_LINES4'),
+            'DET_NUMLINES5': convert_val('NUMBER_LINES5'),
+            'DET_NUMLINES6': convert_val('NUMBER_LINES6'),
+            'DET_NUMLINES7': convert_val('NUMBER_LINES7'),
+            'DET_NUMLINES8': convert_val('NUMBER_LINES8'),
+            'DET_SUBS': convert_val('SUB_S'),
+            'DET_SUBA': convert_val('SUB_A'),
+            'DET_MONO': self.__hdr[0]['MONO'],
+            'DET_IMFLIP': self.__hdr[0]['IMAGE_FLIPPING'],
+            'DET_EXPCNTR': self.__hdr[0]['INTE_SYNC'],
+            'DET_EXPTIME': convert_val('EXP_TIME'),
+            'DET_EXPSTEP': convert_val('EXP_STEP'),
+            'DET_KP1': convert_val('EXP_KP1'),
+            'DET_KP2': convert_val('EXP_KP2'),
+            'DET_NOFSLOPES': self.__hdr[0]['NR_SLOPES'],
+            'DET_EXPSEQ': self.__hdr[0]['EXP_SEQ'],
+            'DET_EXPTIME2': convert_val('EXP_TIME2'),
+            'DET_EXPSTEP2': convert_val('EXP_STEP2'),
+            'DET_EXP2_SEQ': self.__hdr[0]['EXP2_SEQ'],
+            'DET_NOFFRAMES': convert_val('NUMBER_FRAMES'),
+            'DET_OUTMODE': self.__hdr[0]['OUTPUT_MODE'],
+            'DET_FOTLEN': self.__hdr[0]['FOT_LENGTH'],
+            'DET_ILVDSRCVR': self.__hdr[0]['I_LVDS_REC'],
+            'DET_CALIB': self.__hdr[0]['COL_CALIB'],
+            'DET_TRAINPTRN': convert_val('TRAINING_PATTERN'),
+            'DET_CHENA': convert_val('CHANNEL_EN'),
+            'DET_ILVDS': self.__hdr[0]['I_LVDS'],
+            'DET_ICOL': self.__hdr[0]['I_COL'],
+            'DET_ICOLPR': self.__hdr[0]['I_COL_PRECH'],
+            'DET_IADC': self.__hdr[0]['I_ADC'],
+            'DET_IAMP': self.__hdr[0]['I_AMP'],
+            'DET_VTFL1': self.__hdr[0]['VTF_L1'],
+            'DET_VTFL2': self.__hdr[0]['VLOW2'],
+            'DET_VTFL3': self.__hdr[0]['VLOW3'],
+            'DET_VRSTL': self.__hdr[0]['VRES_LOW'],
+            'DET_VPRECH': self.__hdr[0]['V_PRECH'],
+            'DET_VREF': self.__hdr[0]['V_REF'],
+            'DET_VRAMP1': self.__hdr[0]['VRAMP1'],
+            'DET_VRAMP2': self.__hdr[0]['VRAMP2'],
+            'DET_OFFSET': convert_val('OFFSET'),
+            'DET_PGAGAIN': self.__hdr[0]['PGA_GAIN'],
+            'DET_ADCGAIN': self.__hdr[0]['ADC_GAIN'],
+            'DET_TDIG1': self.__hdr[0]['T_DIG1'],
+            'DET_TDIG2': self.__hdr[0]['T_DIG2'],
+            'DET_BITMODE': self.__hdr[0]['BIT_MODE'],
+            'DET_ADCRES': self.__hdr[0]['ADC_RESOLUTION'],
+            'DET_PLLENA': self.__hdr[0]['PLL_ENABLE'],
+            'DET_PLLINFRE': self.__hdr[0]['PLL_IN_FRE'],
+            'DET_PLLBYP': self.__hdr[0]['PLL_BYPASS'],
+            'DET_PLLRATE': self.__hdr[0]['PLL_RANGE'],
+            'DET_PLLLOAD': self.__hdr[0]['PLL_LOAD'],
+            'DET_DETDUM': self.__hdr[0]['DUMMY'],
+            'DET_BLACKCOL': self.__hdr[0]['BLACK_COL_EN'],
+            'DET_VBLACKSUN': self.__hdr[0]['V_BLACKSUN'],
+            'DET_T': convert_val('TEMP')
+        }
 
-    def read_data(self, dat_file, numlines=None):
+        mps = np.zeros((1,), dtype=np.dtype(tmtc_def(0x350)))
+        for key in convert_det_params:
+            mps[0][key] = convert_det_params[key]
+
+        return mps
+
+    def read_data(self, dat_file: str, numlines=None):
         """
         Returns data of a detector frame (numpy uint16 array)
 
         Parameters
         ----------
+        dat_file : str
+           Name of the (binary) data file
         numlines : int
-           provide number of detector rows when no headerfile is present
+           Provide number of detector rows when no headerfile is present
         """
         if numlines is None:
             if self.hdr is None:
@@ -243,31 +337,6 @@ class DEMio:
 
         return (inte_sync, exp_dual, exp_ext)
 
-    def exposure_time(self, mcp=None):
-        """
-        Return exposure time (MCP or seconds)
-
-        Parameters
-        ----------
-        mcp : float, optional
-           master clock period (nominal 10 MHz). Default, exposure time in MCP
-
-        Register address: [42, 43, 44]
-        """
-        reg_exptime = ((self.hdr['EXP_TIME'][2] << 16)
-                       + (self.hdr['EXP_TIME'][1] << 8)
-                       + self.hdr['EXP_TIME'][0])
-
-        # Nominal fot_length = 20, except for very short exposure_time
-        reg_fot = self.hdr['FOT_LENGTH']
-
-        # Convert register value to exposure time
-        exptime = 129 * (0.43 * reg_fot + reg_exptime)
-        if mcp is None:
-            return exptime
-
-        return mcp * exptime
-
     def offset(self):
         """
         Return digital offset including ADC offset
@@ -296,3 +365,37 @@ class DEMio:
         equation: ((1184-1066) * 0.3 * 40 / 40Mhz) + offs [K]
         """
         return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
+
+    def t_exp(self, t_mcp=1e-7):
+        """
+        Return image-pixel exposure time (s)
+        """
+        # Nominal fot_length = 20, except for very short exposure_time
+        reg_fot = self.hdr['FOT_LENGTH']
+
+        reg_exptime = ((self.hdr['EXP_TIME'][2] << 16)
+                       + (self.hdr['EXP_TIME'][1] << 8)
+                       + self.hdr['EXP_TIME'][0])
+
+        return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
+
+    def t_fot(self, t_mcp=1e-7, n_ch=2):
+        """
+        Returns frame overhead time (s)
+        """
+        # Nominal fot_length = 20, except for very short exposure_time
+        reg_fot = self.hdr['FOT_LENGTH']
+
+        return 129 * t_mcp * (reg_fot + 2 * (16  // n_ch))
+
+    def t_rot(self, t_mcp=1e-7, n_ch=2):
+        """
+        Returns image read-out time (s)
+        """
+        return 129 * t_mcp * (16 // n_ch) * 2048
+
+    def t_frm(self, n_coad=1):
+        """
+        Returns frame period (s)
+        """
+        return n_coad * (self.t_exp() + self.t_fot() + self.t_rot()) + 2.38
