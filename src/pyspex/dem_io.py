@@ -44,14 +44,14 @@ def det_dtype():
         ('NUMBER_LINES8', 'u1', (2)),
         ('SUB_S', 'u1', (2)),
         ('SUB_A', 'u1', (2)),
-        ('MONO', 'u1'),                # 1 bits
-        ('IMAGE_FLIPPING', 'u1'),      # 2 bits
-        ('INTE_SYNC', 'u1'),           # 3 bits: Inte_sync, Exp_dual, Exp_ext
+        ('MONO', 'u1'),                   # 1 bits
+        ('IMAGE_FLIPPING', 'u1'),         # 2 bits
+        ('INTE_SYNC', 'u1'),              # 3 bits: Int_sync, Exp_dual, Exp_ext
         ('EXP_TIME', 'u1', (3)),
         ('EXP_STEP', 'u1', (3)),
         ('EXP_KP1', 'u1', (3)),
         ('EXP_KP2', 'u1', (3)),
-        ('NR_SLOPES', 'u1'),           # 2 bits
+        ('NR_SLOPES', 'u1'),              # 2 bits
         ('EXP_SEQ', 'u1'),
         ('EXP_TIME2', 'u1', (3)),
         ('EXP_STEP2', 'u1', (3)),
@@ -64,54 +64,54 @@ def det_dtype():
         ('UNUSED_068', 'u1'),
         ('EXP2_SEQ', 'u1'),
         ('NUMBER_FRAMES', 'u1', (2)),
-        ('OUTPUT_MODE', 'u1'),         # 2 bits
+        ('OUTPUT_MODE', 'u1'),            # 2 bits
         ('FOT_LENGTH', 'u1'),
-        ('I_LVDS_REC', 'u1'),          # 4 bits
+        ('I_LVDS_REC', 'u1'),             # 4 bits
         ('UNUSED_075', 'u1'),
         ('UNUSED_076', 'u1'),
-        ('COL_CALIB', 'u1'),           # 2 bits: Col_calib, ADC_calib
-        ('TRAINING_PATTERN', 'u1', (2)), # 12 bits
-        ('CHANNEL_EN', 'u1', (3)),       # 19 bits
-        ('I_LVDS', 'u1'),              # 4 bits
-        ('I_COL', 'u1'),               # 4 bits
-        ('I_COL_PRECH', 'u1'),         # 4 bits
-        ('I_ADC', 'u1'),               # 4 bits
-        ('I_AMP', 'u1'),               # 4 bits
-        ('VTF_L1', 'u1'),              # 7 bits
-        ('VLOW2', 'u1'),               # 7 bits
-        ('VLOW3', 'u1'),               # 7 bits
-        ('VRES_LOW', 'u1'),            # 7 bits
+        ('COL_CALIB', 'u1'),              # 2 bits: Col_calib, ADC_calib
+        ('TRAINING_PATTERN', 'u1', (2)),  # 12 bits
+        ('CHANNEL_EN', 'u1', (3)),        # 19 bits
+        ('I_LVDS', 'u1'),                 # 4 bits
+        ('I_COL', 'u1'),                  # 4 bits
+        ('I_COL_PRECH', 'u1'),            # 4 bits
+        ('I_ADC', 'u1'),                  # 4 bits
+        ('I_AMP', 'u1'),                  # 4 bits
+        ('VTF_L1', 'u1'),                 # 7 bits
+        ('VLOW2', 'u1'),                  # 7 bits
+        ('VLOW3', 'u1'),                  # 7 bits
+        ('VRES_LOW', 'u1'),               # 7 bits
         ('UNUSED_092', 'u1'),
         ('UNUSED_093', 'u1'),
-        ('V_PRECH', 'u1'),             # 7 bits
-        ('V_REF', 'u1'),               # 7 bits
+        ('V_PRECH', 'u1'),                # 7 bits
+        ('V_REF', 'u1'),                  # 7 bits
         ('UNUSED_096', 'u1'),
         ('UNUSED_097', 'u1'),
-        ('VRAMP1', 'u1'),              # 7 bits
-        ('VRAMP2', 'u1'),              # 7 bits
-        ('OFFSET', 'u1', (2)),         # 14 bits
-        ('PGA_GAIN', 'u1'),            # 2 bits
+        ('VRAMP1', 'u1'),                 # 7 bits
+        ('VRAMP2', 'u1'),                 # 7 bits
+        ('OFFSET', 'u1', (2)),            # 14 bits
+        ('PGA_GAIN', 'u1'),               # 2 bits
         ('ADC_GAIN', 'u1'),
         ('UNUSED_104', 'u1'),
         ('UNUSED_105', 'u1'),
         ('UNUSED_106', 'u1'),
         ('UNUSED_107', 'u1'),
-        ('T_DIG1', 'u1'),              # 4 bits
-        ('T_DIG2', 'u1'),              # 4 bits
+        ('T_DIG1', 'u1'),                 # 4 bits
+        ('T_DIG2', 'u1'),                 # 4 bits
         ('UNUSED_110', 'u1'),
-        ('BIT_MODE', 'u1'),            # 1 bits
-        ('ADC_RESOLUTION', 'u1'),      # 2 bits
-        ('PLL_ENABLE', 'u1'),          # 1 bits
-        ('PLL_IN_FRE', 'u1'),          # 2 bits
-        ('PLL_BYPASS', 'u1'),          # 1 bits
-        ('PLL_RANGE', 'u1'), # 8 bits: PLL_range(1), PLL_out_fre(3), PLL_div(4)
+        ('BIT_MODE', 'u1'),               # 1 bits
+        ('ADC_RESOLUTION', 'u1'),         # 2 bits
+        ('PLL_ENABLE', 'u1'),             # 1 bits
+        ('PLL_IN_FRE', 'u1'),             # 2 bits
+        ('PLL_BYPASS', 'u1'),             # 1 bits
+        ('PLL_RANGE', 'u1'),      # 8 bits: PLL range(1), out_fre(3), div(4)
         ('PLL_LOAD', 'u1'),
         ('DUMMY', 'u1'),
         ('UNUSED_119', 'u1'),
         ('UNUSED_120', 'u1'),
-        ('BLACK_COL_EN', 'u1'),        # 2 bits: Black_col_en, PGA_gain
+        ('BLACK_COL_EN', 'u1'),           # 2 bits: Black_col_en, PGA_gain
         ('UNUSED_122', 'u1'),
-        ('V_BLACKSUN', 'u1'),          # 6 bits
+        ('V_BLACKSUN', 'u1'),             # 6 bits
         ('UNUSED_124', 'u1'),
         ('UNUSED_125', 'u1'),
         ('TEMP', 'u1', (2))
@@ -319,9 +319,9 @@ class DEMio:
 
         Register address: 116
         """
-        pll_div = self.hdr['PLL_RANGE'] & 0xF            # bit [0:4]
-        pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7 # bit [4:7]
-        pll_range = (self.hdr['PLL_RANGE'] >> 7)         # bit [7]
+        pll_div = self.hdr['PLL_RANGE'] & 0xF             # bit [0:4]
+        pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7  # bit [4:7]
+        pll_range = (self.hdr['PLL_RANGE'] >> 7)          # bit [7]
 
         return (pll_range, pll_out_fre, pll_div)
 
@@ -331,7 +331,7 @@ class DEMio:
 
         Register address: 41
         """
-        inte_sync = (self.hdr['INTE_SYNC'] >> 2)  & 0x1
+        inte_sync = (self.hdr['INTE_SYNC'] >> 2) & 0x1
         exp_dual = (self.hdr['INTE_SYNC'] >> 1) & 0x1
         exp_ext = self.hdr['INTE_SYNC'] & 0x1
 
@@ -386,7 +386,7 @@ class DEMio:
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
 
-        return 129 * t_mcp * (reg_fot + 2 * (16  // n_ch))
+        return 129 * t_mcp * (reg_fot + 2 * (16 // n_ch))
 
     def t_rot(self, t_mcp=1e-7, n_ch=2):
         """

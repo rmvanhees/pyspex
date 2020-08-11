@@ -115,7 +115,8 @@ def init_l1b(l1b_flname: str, dims: dict):
     dset.reference = 'yyyy-mm-ddT00:00:00'
 
     sgrp = rootgrp.createGroup('GEOLOCATION_DATA')
-    chunksizes = None if number_of_images is not None else (128, spatial_samples)
+    chunksizes = (None if number_of_images is not None
+                  else (128, spatial_samples))
     dset = sgrp.createVariable('latitude', 'f4', ('bins_along_track',
                                                   'spatial_samples_per_image'),
                                chunksizes=chunksizes)
@@ -239,6 +240,7 @@ def init_l1b(l1b_flname: str, dims: dict):
     dset.units = '1'
 
     return rootgrp
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

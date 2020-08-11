@@ -19,6 +19,7 @@ import h5py
 import numpy as np
 
 from pyspex import spx_product
+from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.tif_io import TIFio
 from pyspex.lv1_io import L1Aio
 
@@ -341,7 +342,7 @@ def main():
     # Compute delta_time for each frame (seconds)
     # convert timestamps to seconds per day
     midnight = utc_start.replace(hour=0, minute=0, second=0, microsecond=0)
-    secnds = np.full(len(n_images), (utc_start - midnight).total_seconds())
+    secnds = np.full((n_images,), (utc_start - midnight).total_seconds())
     for ii in range(n_images):
         secnds[ii] += (ii * int(hdr['Co-additions'])
                        * float(hdr['Exposure time (s)']))
@@ -352,6 +353,8 @@ def main():
         # Add image data and telemetry
         l1a.set_dset('/science_data/detector_images',
                      images.reshape(n_images, -1))
+        mps_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
+        l1a.set_dset('/science_data/detector_telemetry', mps_data)
         # -- no detector_telemetry!!
         #
         # Add image attributes
@@ -374,6 +377,8 @@ def main():
         l1a.fill_time(secnds, midnight)
         #
         # Add engineering data
+        hk_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))
+        l1a.set_dset('/engineering_data/HK_telemetry', hk_data)
         l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
         for key in hdr_dict:
             if hdr_dict[key]['ds_type'] != 'dset':

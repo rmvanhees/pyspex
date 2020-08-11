@@ -144,6 +144,7 @@ class TIFio():
 
         return np.array(res)
 
+
 # - main function ----------------------------------
 def main():
     """
@@ -155,6 +156,7 @@ def main():
         print(tif.header())
         print(tif.tags()[0])
         print(tif.images().shape)
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

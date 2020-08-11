@@ -281,6 +281,7 @@ def init_l1c(l1c_flname: str, dims: dict):
 
     return rootgrp
 
+
 # --------------------------------------------------
 if __name__ == '__main__':
     fid = init_l1c('PACE_SPEX.20230115T123456.L1C.5km.V01.nc', {})

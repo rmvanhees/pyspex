@@ -24,8 +24,7 @@ from pyspex.lv1_io import L1Aio
 # - global parameters ------------------------------
 LAUNCH_DATE = datetime(2022, 11, 2, tzinfo=timezone.utc)
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-LEAP_SECONDS = 27 # ToDo use package leapseconds.py
-
+LEAP_SECONDS = 27                          # ToDo use package leapseconds.py
 
 # - local functions --------------------------------
 
@@ -90,10 +89,10 @@ def main():
     # pylint: disable=unsubscriptable-object
     n_frame = 1 if images.ndim == 1 else images.shape[0]
     n_sample = images.size if images.ndim == 1 else images.shape[1]
-    dims = {'number_of_images' : n_frame,
-            'samples_per_image' : n_sample,
-            'SC_records' : None,
-            'tlm_packets' : None}
+    dims = {'number_of_images': n_frame,
+            'samples_per_image': n_sample,
+            'SC_records': None,
+            'tlm_packets': None}
 
     # convert timestamps to seconds per day
     secnds = np.empty(len(tstamp), dtype=float)

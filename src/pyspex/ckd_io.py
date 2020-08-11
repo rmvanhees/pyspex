@@ -23,12 +23,14 @@ from pyspex.lib import sw_version
 # - global parameters ------------------------------
 VERSION = '000100'
 
+
 # - local functions --------------------------------
 def str_netcdf():
     """
     return string to identify a netCDF dimension
     """
     return 'This is a netCDF dimension but not a netCDF variable.'
+
 
 # - class CKDio -------------------------
 class CKDio:
@@ -94,7 +96,6 @@ class CKDio:
 
             _ = fid.create_group('/BINNING_00')
             # create dimensions of default binning scheme
-
 
     def add_offset(self, values, binning=-1):
         """
@@ -268,6 +269,7 @@ def main():
     print(np.mean(ckd.get_offset()))
     print(np.mean(ckd.get_darkflux()))
     print(np.mean(ckd.get_prnu()))
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

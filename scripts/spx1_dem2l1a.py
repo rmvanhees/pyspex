@@ -175,8 +175,8 @@ def main():
 
     dims = {'number_of_images': n_images,
             'samples_per_image': n_samples,
-            'SC_records' : None,
-            'tlm_packets' : None,
+            'SC_records': None,
+            'tlm_packets': None,
             'nv': 1}
 
     if args.reference is not None:

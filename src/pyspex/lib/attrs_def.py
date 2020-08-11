@@ -12,6 +12,7 @@ License:  BSD-3-Clause
 """
 from datetime import datetime, timezone
 
+
 def attrs_def(level: str, inflight=True, origin=None) -> dict:
     """
     Defines all global attributes for SPEXone Level-1 products
