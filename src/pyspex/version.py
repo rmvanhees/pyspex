@@ -8,7 +8,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from ..version import __version__
+from pyspex import __version__
 
 def get(full=False):
     """

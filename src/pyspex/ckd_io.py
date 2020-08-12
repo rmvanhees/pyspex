@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 Python implementation to create the SPEXone CKD product, or update/read CKD
 parameters
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause

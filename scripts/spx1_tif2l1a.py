@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation SPEXone instrument simulator output to L1A
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause

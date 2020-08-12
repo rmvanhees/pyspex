@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Class to read SPEXone ICU packages
 
-Copyright (c) 2019 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
