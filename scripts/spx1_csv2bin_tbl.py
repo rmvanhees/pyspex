@@ -20,7 +20,7 @@ from netCDF4 import Dataset
 from pys5p.s5p_plot import S5Pplot
 from pys5p.tol_colors import tol_cmap
 
-from pyspex.lib import sw_version
+from pyspex import version
 
 
 # - global parameters ------------------------------
@@ -55,7 +55,7 @@ def main():
     tbl_name = 'SPX1_OCAL_L1A_TBL_{}_{}.nc'.format(date_created, '00001')
     fid = Dataset(tbl_name, 'w')
     fid.setncattr('title', 'SPEXone Level-1 binning-tables')
-    fid.setncattr('processing_version', sw_version.get())
+    fid.setncattr('processing_version', version.get())
     fid.setncattr('date_created',
                   datetime.utcnow().isoformat(timespec='seconds'))
     fid.setncattr('Convensions', 'CF-1.6')

@@ -18,7 +18,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyspex.lib import sw_version
+from pyspex import version
 
 # - global parameters ------------------------------
 VERSION = '000100'
@@ -78,7 +78,7 @@ class CKDio:
                 'SRON Netherlands Institute for Space Research'
             fid.attrs['creator_date'] = creation_date
             fid.attrs['creator_version'] = VERSION
-            fid.attrs['sw_version'] = sw_version.get()
+            fid.attrs['sw_version'] = version.get()
             fid.attrs['valitity_start'] = valid_date
             fid.attrs['validity_stop'] = '20500101T000000'
 
