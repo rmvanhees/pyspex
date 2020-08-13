@@ -136,14 +136,16 @@ class DEMio:
 
         return self.__hdr[0]
 
-    def read_hdr(self, hdr_file: str):
+    def read_hdr(self, hdr_file: str, return_mps=False):
         """
-        Read DEM header data into MPS record
+        Read DEM header data
 
         Parameters
         ----------
         hdr_file : str
            Name of the (ASCII) header file
+        return_mps : bool
+           Return DEM header info in MPS record
 
         Returns
         -------
@@ -193,6 +195,9 @@ class DEMio:
                     self.__hdr[0][key][indx] = value
                 else:
                     self.__hdr[0][key] = value
+
+        if not return_mps:
+            return self.__hdr[0]
 
         # convert original detector parameter values to MPS parameters
         convert_det_params = {
@@ -392,7 +397,7 @@ class DEMio:
         """
         Returns image read-out time (s)
         """
-        return 129 * t_mcp * (16 // n_ch) * 2048
+        return 129 * t_mcp * (16 // n_ch) * self.number_lines()
 
     def t_frm(self, n_coad=1):
         """

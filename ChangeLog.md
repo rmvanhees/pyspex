@@ -1,3 +1,8 @@
+Version 1.1.4
+=============
+  * Method DEMio::read_hdr can now return the raw detector header register data, or this info written to a MPS records
+  * Fixed: replaced depreciated pyspex.lib.sw_version with pyspex.version
+
 Version 1.1.3
 =============
 
@@ -10,4 +15,3 @@ Version 1.1.3
  * Updated Copyright line in all modules
  * Updated LICENSE file
  * Added ChangeLog.md
- 

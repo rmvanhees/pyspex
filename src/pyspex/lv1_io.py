@@ -3,7 +3,7 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Python class to create a SPEXone Level-1 products
+Python class to create SPEXone Level-1 products
 
 Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -140,7 +140,9 @@ class Lv1io:
         return False  # any exception is raised by the with statement.
 
     def close(self):
-        # placeholder
+        """
+        Close all resources (currently a placeholder function)
+        """
         pass
 
     # ---------- PUBLIC FUNCTIONS ----------
