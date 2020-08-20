@@ -234,17 +234,21 @@ class CCSDSio:
             # remainder is image data
             data = np.fromfile(fp, dtype='>u2', count=num_bytes // 2)
             if self.verbose:
+                msg = '{:d} {:d} {:3d} {:d} {:5d} {:d} {:d} {:d}  {:9d}'
                 if mps is None:
-                    print(self.secnd_hdr_flag, self.grouping_flag,
-                          self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
-                          fp.tell() - self.offset, data.nbytes,
-                          self.packet_length, fp.tell())
+                    print(msg.format(
+                        self.secnd_hdr_flag, self.grouping_flag,
+                        self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
+                        fp.tell() - self.offset, data.nbytes,
+                        self.packet_length, fp.tell()))
                 else:
-                    print(self.secnd_hdr_flag, self.grouping_flag,
-                          self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
-                          fp.tell() - self.offset, data.nbytes,
-                          self.packet_length,
-                          mps['MPS_ID'], mps['IMRLEN'], fp.tell())
+                    msg += ' {:3d} {:9d}'
+                    print(msg.format(
+                        self.secnd_hdr_flag, self.grouping_flag,
+                        self.ap_id, hdr_two['tai_sec'], hdr_two['sub_sec'],
+                        fp.tell() - self.offset, data.nbytes,
+                        self.packet_length, fp.tell(),
+                        mps['MPS_ID'], mps['IMRLEN']))
 
         # combine parts to telemetry packet
         tm_packet = self.__tm(data.size)
@@ -315,43 +319,58 @@ class CCSDSio:
         if not self.segmented:
             return packets
 
+        if ((packets[0]['primary_header']['sequence'] >> 14) & 0x0003) != 1:
+            msg = '[WARNING]: removed {:d} segments of incomplete first image'
+            ii = 0
+            for buff in packets:
+                flag = (buff['primary_header']['sequence'] >> 14) & 0x0003
+                if flag == 1:
+                    break
+                ii += 1
+
+            print(msg.format(ii))
+            packets = packets[ii:]
+
+        if ((packets[-1]['primary_header']['sequence'] >> 14) & 0x0003) != 2:
+            msg = '[WARNING]: removed {:d} segments of incomplete last image'
+
+            ii = len(packets)
+            while ii > 0:
+                ii -= 1
+                flag = (packets[ii]['primary_header']['sequence'] >> 14) \
+                       & 0x0003
+                if flag == 2:
+                    break
+
+            print(msg.format(len(packets) - (ii + 1)))
+            packets = packets[:ii+1]
+
         res = ()
-        prev_grp_flag = None
+        prev_grp_flag = 2
         for buff in packets:
             # get grouping flag of current package
             new_grp_flag = (buff['primary_header']['sequence'] >> 14) & 0x0003
-
-            # handle special case of the first telemetry packet
-            if prev_grp_flag is None:
-                if new_grp_flag == 1:
-                    prev_grp_flag = 2
-                else:
-                    print('Warning first grouping flag not equal to 1')
-                    continue
 
             # handle segmented data
             if new_grp_flag == 1:
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
-                    print('Warning first segment, but previous not closed?')
+                    print('[WARNING]: first segment, but previous not closed?')
 
-                data = buff['image_data']
+                data_buffer = buff['image_data']
                 buff0 = self.__tm(buff['mps']['IMRLEN'] // 2)[0]
                 buff0['primary_header'] = buff['primary_header']
                 buff0['secondary_header'] = buff['secondary_header']
                 buff0['mps'] = buff['mps']
-                # buff0['image_data'][0:data.size] = data
                 res += (buff0,)
             elif new_grp_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
                 if prev_grp_flag not in (0, 1):
-                    print('Warning previous packet not closed?')
+                    print('[WARNING]: previous packet not closed?')
 
+                data_buffer = np.concatenate((data_buffer, buff['image_data']))
                 if new_grp_flag == 2:
-                    data = np.concatenate((data, buff['image_data']))
-                    res[-1]['image_data'] = data
-                else:
-                    data = np.concatenate((data, buff['image_data']))
+                    res[-1]['image_data'] = data_buffer
 
             # keep current group flag for next read
             prev_grp_flag = new_grp_flag

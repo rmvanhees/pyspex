@@ -57,13 +57,13 @@ def main():
             raise FileNotFoundError(
                 'File {} does not exist'.format(flname))
         if Path(flname).suffix == '.H':
-            print('INFO: skip CCSDS header file')
+            print('[INFO]: skip CCSDS header file')
             continue
 
         packet_list += ccsds.read(flname)
 
     if not packet_list:
-        print('Warning: no CCSDS packets found')
+        print('[WARNING]: no CCSDS packets found')
         return
 
     # combine segmented packages

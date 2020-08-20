@@ -436,7 +436,8 @@ class L1Aio(Lv1io):
         """
         Check variables with the same first dimension have equal sizes
         """
-        warn_str = 'Warning variable "{:s}" wrong number of {:d} elements'
+        warn_str = ('SPEX Level-1 format check [WARNING]:'
+                    ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check image datasets
         dim_sz = self.get_dim('number_of_images')
@@ -661,7 +662,8 @@ class L1Bio(Lv1io):
         """
         Check variables with the same first dimension have equal sizes
         """
-        warn_str = 'Warning variable "{:s}" wrong number of {:d} elements'
+        warn_str = ('SPEX Level-1 format check [WARNING]:'
+                    ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check datasets in group /SENSOR_VIEWS_BANDS
         dim_sz = self.get_dim('number_of_views')
@@ -790,6 +792,35 @@ class L1Cio(Lv1io):
         """
         Check variables with the same first dimension have equal sizes
         """
+        warn_str = ('SPEX Level-1 format check [WARNING]:'
+                    ' size of variable "{:s}" is wrong, only {:d} elements')
+
+        # check datasets in group /SENSOR_VIEWS_BANDS
+        dim_sz = self.get_dim('number_of_views')
+        res = []
+        key_list = [x for x in self.dset_stored
+                    if x.startswith('/SENSOR_VIEWS_BANDS')]
+        for key in key_list:
+            if key == '/SENSOR_VIEWS_BANDS/viewport_index':
+                continue
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
+        # check datasets in all other groups
+        dim_sz = self.get_dim('bins_along_track')
+        res = []
+        key_list = [x for x in self.dset_stored
+                    if not x.startswith('/SENSOR_VIEWS_BANDS')]
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        indx = np.where(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
         for ii, key in enumerate(self.dset_stored):
             print(ii, key, self.dset_stored[key])
 
