@@ -38,30 +38,42 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='create SPEXone Level-1A product from CCSDS packages (L0)')
-    parser.add_argument('l0_product', default=None,
-                        help='name of SPEXone ICU Level-0 product')
     parser.add_argument('--tmtc_issue', default=12, type=int, help=(
         'Specify issue of the TMTC handbook, default=12\n'
         ' < 12: Science data header format before 15-May-2020\n'
         ' 12: append 6 bytes timestamp after MPS data [15-May-2020]'))
     parser.add_argument('--verbose', action='store_true', default=False)
+    parser.add_argument('file_list', nargs='+',
+                        help=("provide names of one or more files with"
+                              " CCSDS packages of the same measurement"))
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    if not Path(args.l0_product).is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.l0_product))
+    packet_list = ()
+    ccsds = CCSDSio(tmtc_issue=args.tmtc_issue, verbose=args.verbose)
+    for flname in sorted(args.file_list):
+        if not Path(flname).is_file():
+            raise FileNotFoundError(
+                'File {} does not exist'.format(flname))
+        if Path(flname).suffix == '.H':
+            print('INFO: skip CCSDS header file')
+            continue
 
-    ccsds = CCSDSio(args.l0_product, tmtc_issue=args.tmtc_issue,
-                    verbose=args.verbose)
-    packet_list = ccsds.read()
+        packet_list += ccsds.read(flname)
+
+    if not packet_list:
+        print('Warning: no CCSDS packets found')
+        return
+
+    # combine segmented packages
+    packets = ccsds.group(packet_list)
 
     tstamp = []
     mps_data = []
     image_id = []
     images = []
-    for packet in packet_list:
+    for packet in packets:
         utc_sec = packet['secondary_header']['tai_sec'] - LEAP_SECONDS
         frac_sec = packet['secondary_header']['sub_sec'] / 2**16
         tstamp.append(EPOCH + timedelta(seconds=utc_sec + frac_sec))
@@ -80,7 +92,7 @@ def main():
     # generate name of L1A product
     if tstamp[0] < LAUNCH_DATE:
         prod_name = spx_product.prod_name(
-            tstamp[0], msm_id=Path(args.l0_product).stem)
+            tstamp[0], msm_id=Path(args.file_list[0]).stem)
         inflight = False
     else:
         prod_name = spx_product.prod_name(tstamp[0])
@@ -117,7 +129,8 @@ def main():
 
         # Global attributes
         l1a.fill_global_attrs()
-        l1a.set_attr('input_file', Path(args.l0_product).name)
+        l1a.set_attr('input_files',
+                     [Path(x).name for x in args.file_list])
 
 
 # --------------------------------------------------

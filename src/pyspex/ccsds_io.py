@@ -10,9 +10,6 @@ Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from pathlib import Path
-import argparse
-
 import numpy as np
 
 from pyspex.lib.tmtc_def import tmtc_def
@@ -30,12 +27,10 @@ class CCSDSio:
 
     Doc: TMTC handbook (SPX1-TN-005), issue 12, 2020-05-15
     """
-    def __init__(self, flname, tmtc_issue=12, verbose=False):
+    def __init__(self, tmtc_issue=12, verbose=False):
         """
         Parameters
         ----------
-        flname: str
-           Name of the file with SPEXone ICU packages
         tmtc_issue: int
            Issue of the TMTC handbook which contains the definition of the
            Science Data Header format. Default: 12
@@ -43,9 +38,9 @@ class CCSDSio:
            Be verbose. Default: be not verbose
         """
         # initialize class attributes
-        self.filename = flname
         self.offset = 0
         self.__hdr = None
+        self.segmented = True
         self.tmtc_issue = tmtc_issue
         self.verbose = verbose
 
@@ -177,7 +172,7 @@ class CCSDSio:
             ('icu_time', np.dtype(self.__timestamp())),
             ('image_data', 'u2', (num_data,))]))
 
-    def __rd_tm_packet(self):
+    def __rd_tm_packet(self, flname):
         """
         Read next telemetry packet
 
@@ -194,7 +189,7 @@ class CCSDSio:
         mps_dtype = np.dtype(tmtc_def(0x350))
 
         # read parts of one telemetry packet data
-        with open(self.filename, 'rb') as fp:
+        with open(flname, 'rb') as fp:
             hdr_one = np.fromfile(fp, dtype=hdr1_dtype,
                                   count=1, offset=self.offset)
             if hdr_one.size == 0:
@@ -266,23 +261,25 @@ class CCSDSio:
         self.offset += self.__hdr.nbytes + self.packet_length + 1
         return tm_packet[0]
 
-    def read(self, raw=False):
+    def read(self, flname):
         """
-        Read Telemetry packages
+        Read science or house-keeping telemetry packages
 
         Parameters
         ----------
-        raw : boolean
-          raw=True: return all TM packets
-          raw=False: combine packages using grouping flags (default)
+        flname: str
+           Name of the file with SPEXone ICU packages
+
+        Returns
+        -------
+        tuple with data packages
         """
         # We should check that segmented packages consist of a sequence
         # with grouping flags {1, N * 0, 2}. I need to clean-up this code!
-        group_flag = None
         packets = ()
         while True:
             try:
-                buff = self.__rd_tm_packet()
+                buff = self.__rd_tm_packet(flname)
             except (IOError, EOFError) as msg:
                 print(msg)
                 return None
@@ -291,36 +288,51 @@ class CCSDSio:
             if buff is None:
                 break
 
-            # raw processing of packages
-            if raw:
-                packets += (buff,)
-                continue
+            # check if data is segmented
+            if not packets:
+                self.segmented = (self.grouping_flag != 3)
 
+            if self.segmented == (self.grouping_flag == 3):
+                print("FATAL: mixing segmented and unsegmented packages")
+
+            packets += (buff,)
+
+        return packets
+
+    def group(self, packets):
+        """
+        Combine segmented data-packages
+
+        Parameters
+        ----------
+        packets: tuple
+           Tuple with science or house-keeping telemetry packages
+
+        Returns
+        -------
+        tuple with unsegmented or house-keeping telemetry packages
+        """
+        if not self.segmented:
+            return packets
+
+        res = ()
+        prev_grp_flag = None
+        for buff in packets:
             # get grouping flag of current package
-            flag = (buff['primary_header']['sequence'] >> 14) & 0x0003
+            new_grp_flag = (buff['primary_header']['sequence'] >> 14) & 0x0003
 
             # handle special case of the first telemetry packet
-            if group_flag is None:
-                if flag == 1:
-                    group_flag = 2
-                elif flag == 3:
-                    group_flag = 3
+            if prev_grp_flag is None:
+                if new_grp_flag == 1:
+                    prev_grp_flag = 2
                 else:
-                    print('Warning first grouping flag not equal to 1 or 3')
+                    print('Warning first grouping flag not equal to 1')
                     continue
 
-            # handle unsegmented data
-            if flag == 3:
-                if group_flag != 3:
-                    print('Warning mix of segmented and unsegmented packages')
-                    continue
-                packets += (buff,)
-                continue
-
-            # handle unsegmented data
-            if flag == 1:
-                # group_flag should be 2
-                if group_flag != 2:
+            # handle segmented data
+            if new_grp_flag == 1:
+                # group_flag of previous package should be 2
+                if prev_grp_flag != 2:
                     print('Warning first segment, but previous not closed?')
 
                 data = buff['image_data']
@@ -329,55 +341,19 @@ class CCSDSio:
                 buff0['secondary_header'] = buff['secondary_header']
                 buff0['mps'] = buff['mps']
                 # buff0['image_data'][0:data.size] = data
-                packets += (buff0,)
-            elif flag in (0, 2):
-                # group_flag should be 0 or 1
-                if group_flag not in (0, 1):
+                res += (buff0,)
+            elif new_grp_flag in (0, 2):
+                # group_flag of previous package should be 0 or 1
+                if prev_grp_flag not in (0, 1):
                     print('Warning previous packet not closed?')
 
-                if flag == 2:
+                if new_grp_flag == 2:
                     data = np.concatenate((data, buff['image_data']))
-                    packets[-1]['image_data'] = data
+                    res[-1]['image_data'] = data
                 else:
                     data = np.concatenate((data, buff['image_data']))
 
-            # keep current grouping-flag for next read
-            group_flag = flag
+            # keep current group flag for next read
+            prev_grp_flag = new_grp_flag
 
-        return packets
-
-
-# -------------------------
-def main():
-    """
-    main function
-    """
-    # parse command-line parameters
-    parser = argparse.ArgumentParser(
-        description='Read CCSDS product (SPEXone level 0)')
-    parser.add_argument('l0_product', default=None,
-                        help='name of SPEXone DEM L0 product')
-    parser.add_argument('--combine_segemented', action='store_true',
-                        default=False)
-    parser.add_argument('--verbose', action='store_true', default=False)
-    args = parser.parse_args()
-    if args.verbose:
-        print(args)
-
-    if not Path(args.l0_product).is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.l0_product))
-
-    ccsds = CCSDSio(args.l0_product, verbose=args.verbose)
-    packets = ccsds.read(raw=(not args.combine_segemented))
-
-    if args.verbose:
-        print('Number of TM packages: ', len(packets))
-        mps = packets[0]['mps']
-        for key in mps.dtype.names:
-            print('MPS [{}] = 0x{:04X}'.format(key, mps[key]))
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    main()
+        return res
