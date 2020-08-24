@@ -1,6 +1,11 @@
+Version 1.1.5
+=============
+ * spx1_ccsds2l1a.py: you can now combine multiple files with CCSDS packages from the same measurement into one Level-1A product
+ * CCSDS: improved verbosity and ignore incomplete images
+ 
 Version 1.1.4
 =============
-  * Method DEMio::read_hdr can now return the raw detector header register data, or this info written to a MPS records
+  * Method DEMio::read_hdr can now return the raw detector header register data, or return this info written into a MPS record
   * Fixed: replaced depreciated pyspex.lib.sw_version with pyspex.version
 
 Version 1.1.3
