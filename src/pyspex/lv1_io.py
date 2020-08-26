@@ -559,9 +559,12 @@ class L1Aio(Lv1io):
             dset = self.fid.createVariable('/gse_data/reference_signal',
                                            'f8', ())
             dset.long_name = "biweight median of reference-detector signal"
-            dset.comment = "t_sat = min([2.28e-9 / S_reference, 30])"
+            dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
             dset.units = 'A'
             dset[:] = reference['value']
+            self.set_attr('Illumination_level',
+                          reference['value'] * 5e9 / 1.602176634,
+                          ds_name='/gse_data')
 
             dset = self.fid.createVariable('/gse_data/reference_error',
                                            'f8', ())
