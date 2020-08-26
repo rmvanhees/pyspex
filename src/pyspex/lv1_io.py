@@ -201,6 +201,7 @@ class Lv1io:
            value or values to be written
         ds_name : string
            name of group or dataset to which the attribute is attached
+           **Use group name without starting '/'**
         """
         if ds_name is None:
             if isinstance(value, str):
@@ -564,7 +565,7 @@ class L1Aio(Lv1io):
             dset[:] = reference['value']
             self.set_attr('Illumination_level',
                           reference['value'] * 5e9 / 1.602176634,
-                          ds_name='/gse_data')
+                          ds_name='gse_data')
 
             dset = self.fid.createVariable('/gse_data/reference_error',
                                            'f8', ())

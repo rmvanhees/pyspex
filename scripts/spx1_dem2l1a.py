@@ -121,7 +121,7 @@ def main():
         dem = DEMio()
         # obtain MPS information from header file (ASCII)
         mps_data[ii] = dem.read_hdr(flname.replace('b.bin', 'a.txt'),
-                                    read_mps=True)
+                                    return_mps=True)
         # get nr_coaddings from file name
         coad_str = [x for x in parts if x.startswith('coad')][0]
         mps_data[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
