@@ -12,7 +12,10 @@ License:  BSD-3-Clause
 """
 from datetime import datetime, timezone
 
+from pyspex import version
 
+
+# - local functions --------------------------------
 def attrs_def(level: str, inflight=True, origin=None) -> dict:
     """
     Defines all global attributes for SPEXone Level-1 products
@@ -66,12 +69,14 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
         "date_created": datetime.now(timezone.utc).isoformat(
             timespec='milliseconds'),
+        "software_name": 'https://github.com/rmvanhees/pyspex',
+        "software_version": version.get(),
         "sun_earth_distance": None,
         "terrain_data_source": None,
         "spectral_response_function": None,
         "systematic_uncertainty_model": None,
         "nadir_bin": None,
-        "bin_size_at_nadir": None,
+        "bin_size_at_nadir": None
     }
 
     if origin == 'SRON':
