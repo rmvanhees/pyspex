@@ -68,6 +68,8 @@ def main():
 
     # combine segmented packages
     packets = ccsds.group(packet_list)
+    if args.verbose:
+        print('[INFO]: number of packets', len(packets))
 
     tstamp = []
     mps_data = []
@@ -86,7 +88,7 @@ def main():
     mps_data = np.array(mps_data)
     images = np.array(images)
     if args.verbose:
-        print(images.size
+        print('[INFO]: ', images.size
               if images.ndim == 1 else images.shape[1], images.shape)
 
     # generate name of L1A product

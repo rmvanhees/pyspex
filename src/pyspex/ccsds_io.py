@@ -38,7 +38,7 @@ class CCSDSio:
            Be verbose. Default: be not verbose
         """
         # initialize class attributes
-        self.offset = 0
+        self.offset = None
         self.__hdr = None
         self.segmented = True
         self.tmtc_issue = tmtc_issue
@@ -193,12 +193,11 @@ class CCSDSio:
             hdr_one = np.fromfile(fp, dtype=hdr1_dtype,
                                   count=1, offset=self.offset)
             if hdr_one.size == 0:
-                self.offset = 0
                 return None
 
             self.__hdr = hdr_one[0]
             if self.verbose:
-                print('ApID: ', self.ap_id,
+                print('[DEBUG] ApID: ', self.ap_id,
                       self.secnd_hdr_flag, self.grouping_flag,
                       self.sequence_count, self.packet_length)
             if self.ap_id != 0x350:
@@ -234,7 +233,7 @@ class CCSDSio:
             # remainder is image data
             data = np.fromfile(fp, dtype='>u2', count=num_bytes // 2)
             if self.verbose:
-                msg = '{:d} {:d} {:3d} {:d} {:5d} {:d} {:d} {:d}  {:9d}'
+                msg = '[INFO]: {:d} {:d} {:3d} {:d} {:5d} {:d} {:d} {:d}  {:9d}'
                 if mps is None:
                     print(msg.format(
                         self.secnd_hdr_flag, self.grouping_flag,
@@ -278,14 +277,16 @@ class CCSDSio:
         -------
         tuple with data packages
         """
+        packets = ()
+        self.offset = 0
+
         # We should check that segmented packages consist of a sequence
         # with grouping flags {1, N * 0, 2}. I need to clean-up this code!
-        packets = ()
         while True:
             try:
                 buff = self.__rd_tm_packet(flname)
             except (IOError, EOFError) as msg:
-                print(msg)
+                print('[ERROR]: ', msg)
                 return None
 
             # end of loop
@@ -297,7 +298,7 @@ class CCSDSio:
                 self.segmented = (self.grouping_flag != 3)
 
             if self.segmented == (self.grouping_flag == 3):
-                print("FATAL: mixing segmented and unsegmented packages")
+                print("[FATAL]: mixing segmented and unsegmented packages")
 
             packets += (buff,)
 
@@ -370,7 +371,10 @@ class CCSDSio:
 
                 data_buffer = np.concatenate((data_buffer, buff['image_data']))
                 if new_grp_flag == 2:
-                    res[-1]['image_data'] = data_buffer
+                    if res[-1]['image_data'].size == data_buffer.size:
+                        res[-1]['image_data'] = data_buffer
+                    else:
+                        print('[WARNING]: rejected incomplete data-buffer')
 
             # keep current group flag for next read
             prev_grp_flag = new_grp_flag
