@@ -11,6 +11,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+import numpy as np
 
 
 def tmtc_def(apid):
@@ -458,3 +459,9 @@ def tmtc_def(apid):
         ]                                       # 188
 
     raise ValueError('Telemetry APID not implemented')
+
+def tmtc_dtype(apid):
+    """
+    Returns Telemetry packet structure as a numpy data-type
+    """
+    return np.dtype(tmtc_def(apid))

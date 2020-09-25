@@ -38,44 +38,43 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='create SPEXone Level-1A product from CCSDS packages (L0)')
-    parser.add_argument('--tmtc_issue', default=12, type=int, help=(
-        'Specify issue of the TMTC handbook, default=12\n'
-        ' < 12: Science data header format before 15-May-2020\n'
-        ' 12: append 6 bytes timestamp after MPS data [15-May-2020]'))
-    parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('file_list', nargs='+',
                         help=("provide names of one or more files with"
                               " CCSDS packages of the same measurement"))
+    parser.add_argument('--debug', action='store_true', default=False)
+    parser.add_argument('--verbose', action='store_true', default=False)
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    packet_list = ()
-    ccsds = CCSDSio(tmtc_issue=args.tmtc_issue, verbose=args.verbose)
-    for flname in sorted(args.file_list):
-        if not Path(flname).is_file():
-            raise FileNotFoundError(
-                'File {} does not exist'.format(flname))
-        if Path(flname).suffix == '.H':
-            print('[INFO]: skip CCSDS header file')
-            continue
+    args.file_list = [x for x in args.file_list if not x.endswith('.H')]
+        
+    packets = ()
+    with CCSDSio(args.file_list) as ccsds:
+        while True:
+            packet = ccsds.read_packet()
+            if packet is None:
+                break
 
-        packet_list += ccsds.read(flname)
+            packets += (packet[0],)
+            if args.debug:
+                print(ccsds)
 
-    if not packet_list:
-        print('[WARNING]: no CCSDS packets found')
+        # combine segmented packages
+        science_tm = ccsds.group_tm(packets)
+        if args.debug or args.verbose:
+            print('[INFO]: number of CCSDS packets ', len(packets))
+            print('[INFO]: number of Science images ', len(science_tm))
+        del packets
+
+    if args.debug:
         return
-
-    # combine segmented packages
-    packets = ccsds.group(packet_list)
-    if args.verbose:
-        print('[INFO]: number of packets', len(packets))
-
+        
     tstamp = []
     mps_data = []
     image_id = []
     images = []
-    for packet in packets:
+    for packet in science_tm:
         utc_sec = packet['secondary_header']['tai_sec'] - LEAP_SECONDS
         frac_sec = packet['secondary_header']['sub_sec'] / 2**16
         tstamp.append(EPOCH + timedelta(seconds=utc_sec + frac_sec))
@@ -88,7 +87,7 @@ def main():
     mps_data = np.array(mps_data)
     images = np.array(images)
     if args.verbose:
-        print('[INFO]: ', images.size
+        print('[INFO]: dimension of image ', images.size
               if images.ndim == 1 else images.shape[1], images.shape)
 
     # generate name of L1A product
