@@ -83,6 +83,7 @@ class CCSDSio:
         """
         # initialize class attributes
         self.__hdr = None
+        self.found_invalid_apid = False
         self.file_list = iter(sorted(file_list))
         self.fp = None
 
@@ -117,6 +118,10 @@ class CCSDSio:
         Close all resources (currently a placeholder function)
         """
         if self.fp is not None:
+            if self.found_invalid_apid:
+                print('[WARNING]: found one or more telemetry packages'
+                      ' with an invalid APID')
+            self.found_invalid_apid = False
             self.fp.close()
 
     # ---------- define some class properties ----------
@@ -310,6 +315,9 @@ class CCSDSio:
             packet['detector_hk'] = np.fromfile(self.fp, count=1,
                                                 dtype=tmtc_dtype(0x322))
         else:
+            if not 0x320 <= self.ap_id <= 0x350:
+                self.found_invalid_apid = True
+
             packet = hdr
             # move to the next telemetry packet
             self.fp.seek(num_bytes, 1)
@@ -377,25 +385,26 @@ class CCSDSio:
             if self.grouping_flag == 1:
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
-                    print('[WARNING]: first segment, but previous not closed?')
+                    print('[WARNING]: current segment has APID = 1,'
+                          'however, previous APID != 2, skip previous image')
 
-                data = packet['image_data']
                 packet0 = self.__tm(packet['mps']['IMRLEN'] // 2)[0]
                 packet0['primary_header'] = packet['primary_header']
                 packet0['secondary_header'] = packet['secondary_header']
                 packet0['mps'] = packet['mps']
-                res += (packet0,)
+                img_buff = packet['image_data']
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
                 if prev_grp_flag not in (0, 1):
                     print('[WARNING]: previous packet not closed?')
 
-                data = np.concatenate((data, packet['image_data']))
+                img_buff = np.concatenate((img_buff, packet['image_data']))
                 if self.grouping_flag == 2:
-                    if res[-1]['image_data'].size == data.size:
-                        res[-1]['image_data'] = data
+                    if packet0['image_data'].size == img_buff.size:
+                        packet0['image_data'] = img_buff
+                        res += (packet0,)
                     else:
-                        print('[WARNING]: rejected incomplete data-buffer')
+                        print('[WARNING]: incomplete data-buffer, skip image')
 
             # keep current group flag for next read
             prev_grp_flag = self.grouping_flag
