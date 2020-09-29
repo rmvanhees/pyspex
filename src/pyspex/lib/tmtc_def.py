@@ -45,13 +45,13 @@ def tmtc_def(apid):
             ('TS4_DEM_R_T', '>u4'),             # 16    0x001c
             ('TS5_HOUSING_R_T', '>u4'),         # 20    0x0020
             ('TS6_RADIATOR_R_T', '>u4'),        # 24    0x0024
-            ('ICU_5V_T', '>u2'),                # 28    0x0028
-            ('ICU_4V_T', '>u2'),                # 30    0x002a
-            ('ICU_HG1_T', '>u2'),               # 32    0x002c
-            ('ICU_HG2_T', '>u2'),               # 34    0x002e
-            ('ICU_MID_T', '>u2'),               # 36    0x0030
-            ('ICU_MCU_T', '>u2'),               # 38    0x0032
-            ('ICU_DIGV_T', '>u2'),              # 40    0x0034
+            ('ICU_5V_T', '>i2'),                # 28    0x0028
+            ('ICU_4V_T', '>i2'),                # 30    0x002a
+            ('ICU_HG1_T', '>i2'),               # 32    0x002c
+            ('ICU_HG2_T', '>i2'),               # 34    0x002e
+            ('ICU_MID_T', '>i2'),               # 36    0x0030
+            ('ICU_MCU_T', '>i2'),               # 38    0x0032
+            ('ICU_DIGV_T', '>i2'),              # 40    0x0034
             ('ICU_4p0V_V', '>u2'),              # 42    0x0036
             ('ICU_3p3V_V', '>u2'),              # 44    0x0038
             ('ICU_1p2V_V', '>u2'),              # 46    0x003a
