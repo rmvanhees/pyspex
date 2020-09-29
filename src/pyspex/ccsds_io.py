@@ -241,6 +241,28 @@ class CCSDSio:
 
         raise KeyError('unknown APID: {:d}'.format(self.ap_id))
 
+    @staticmethod
+    def fix_mps24(mps):
+        """
+        Correct 32-bit integers in the MPS which originate from 24-bit integers
+        in the detector register values
+
+        In addition, copy the first 4 bytes of DET_CHENA to DET_ILVDS
+        """
+        mps['DET_ILVDS'] = mps['DET_CHENA'] & 0xf
+
+        for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
+                    'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
+                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I', 'LED2_ANODE_V',
+                    'LED2_CATH_V', 'LED2_I', 'ADC1_VCC', 'ADC1_REF',
+                    'ADC1_T', 'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
+                    'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
+                    'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
+                    'DET_CHENA']:
+            mps[key] = mps[key] >> 8
+
+        return mps
+
     def open_next_file(self):
         """
         Open next file from file_list
@@ -299,7 +321,7 @@ class CCSDSio:
             packet['primary_header'] = hdr
             packet['secondary_header'] = time_tm
             if self.grouping_flag in (1, 3):
-                packet['mps'] = mps
+                packet['mps'] = self.fix_mps24(mps)
                 packet['icu_time'] = time_icu
             packet['image_data'] = data
         elif self.ap_id == 0x320:        # NomHK telemetry packet
@@ -335,7 +357,7 @@ class CCSDSio:
 
         Returns
         -------
-           Tuple with unsegmented or house-keeping telemetry packages
+           Tuple with unsegmented telemetry packages
         """
         # reject none Science telemetry packages and non-segmented packages
         packets = ()
@@ -388,10 +410,10 @@ class CCSDSio:
                     print('[WARNING]: current segment has APID = 1,'
                           'however, previous APID != 2, skip previous image')
 
-                packet0 = self.__tm(packet['mps']['IMRLEN'] // 2)[0]
-                packet0['primary_header'] = packet['primary_header']
-                packet0['secondary_header'] = packet['secondary_header']
-                packet0['mps'] = packet['mps']
+                rec_buff = self.__tm(packet['mps']['IMRLEN'] // 2)[0]
+                rec_buff['primary_header'] = packet['primary_header']
+                rec_buff['secondary_header'] = packet['secondary_header']
+                rec_buff['mps'] = packet['mps']
                 img_buff = packet['image_data']
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
@@ -400,9 +422,9 @@ class CCSDSio:
 
                 img_buff = np.concatenate((img_buff, packet['image_data']))
                 if self.grouping_flag == 2:
-                    if packet0['image_data'].size == img_buff.size:
-                        packet0['image_data'] = img_buff
-                        res += (packet0,)
+                    if rec_buff['image_data'].size == img_buff.size:
+                        rec_buff['image_data'] = img_buff
+                        res += (rec_buff,)
                     else:
                         print('[WARNING]: incomplete data-buffer, skip image')
 
