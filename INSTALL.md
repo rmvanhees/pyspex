@@ -7,6 +7,8 @@ Python Distributions
 If you use a Python Distribution, the installation of pyspex can be done on
 the command line via:
 
+>  `conda install pytiff` [optional]
+>  `conda install pys5p`
 >  `conda install pyspex`
 
 for [Anaconda](https://www.anaconda.com/)/[MiniConda](http://conda.pydata.org/miniconda.html).
