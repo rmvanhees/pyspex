@@ -58,7 +58,7 @@ class Lv1io:
     get_dset(ds_name)
        Read data of a netCDF4 variable.
     set_dset(ds_name, value)
-       Write data to a netCDF4 variable.
+       Write/append data to a netCDF4 variable.
     sec_of_day(self, utc_sec, frac_sec)
        Convert timestamp to second of day.
     fill_global_attrs(level, orbit=-1, bin_size=None)
@@ -256,7 +256,7 @@ class Lv1io:
 
     def set_dset(self, name: str, value, ibgn=-1) -> None:
         """
-        Read data of a netCDF4 variable
+        Write/append data to a netCDF4 variable
 
         Parameters
         ----------
@@ -394,7 +394,7 @@ class L1Aio(Lv1io):
     get_dset(ds_name)
        Read data of a netCDF4 variable.
     set_dset(ds_name, value)
-       Write data to a netCDF4 variable.
+       Write/append data to a netCDF4 variable.
     sec_of_day(self, utc_sec, frac_sec)
        Convert timestamp to second of day.
     fill_global_attrs(level, orbit=-1, bin_size=None)
@@ -663,7 +663,7 @@ class L1Bio(Lv1io):
     get_dset(ds_name)
        Read data of a netCDF4 variable.
     set_dset(ds_name, value)
-       Write data to a netCDF4 variable.
+       Write/append data to a netCDF4 variable.
     sec_of_day(self, utc_sec, frac_sec)
        Convert timestamp to second of day.
     fill_global_attrs(level, orbit=-1, bin_size=None)
@@ -824,7 +824,7 @@ class L1Cio(Lv1io):
     get_dset(ds_name)
        Read data of a netCDF4 variable.
     set_dset(ds_name, value)
-       Write data to a netCDF4 variable.
+       Write/append data to a netCDF4 variable.
     sec_of_day(self, utc_sec, frac_sec)
        Convert timestamp to second of day.
     fill_global_attrs(level, orbit=-1, bin_size=None)
