@@ -15,8 +15,8 @@ from pathlib import Path
 import numpy as np
 try:
     import pytiff
-except ModuleNotFoundError:
-    raise ModuleNotFoundError('Module pytiff is required to run this module')
+except Exception as exc:
+    raise RuntimeError('Module pytiff is required to run this module') from exc
 
 # - global parameters ------------------------------
 
@@ -28,10 +28,47 @@ except ModuleNotFoundError:
 class TIFio():
     """
     This class can be used to read SPEXone instrument simulator output
+
+    Attributes
+    ----------
+    dir_name :  pathlib.Path
+    filename :  str
+    inp_tif :  bool
+    lineskip :  bool
+
+    Methods
+    -------
+    header()
+       Read header as dictionary.
+    tags()
+       Return TIFF tags as dictionary.
+    images(n_frame=None)
+       Return TIFF data as numpy array.
+
+    Notes
+    -----
+
+    Examples
+    --------
+    >>>  tif = TIFio(filename)
+    >>>  print(tif.header())
+    >>>  print(tif.tags()[0])
+    >>>  print(tif.images().shape)
     """
     def __init__(self, hdr_file: str, inp_tif=False, lineskip=False):
         """
+        Initialize class TIFio
+
+        Parameters
+        ----------
+        hdr_file : str
+        inp_tif : bool
+        lineskip : bool
+
         """
+        if not Path(hdr_file).is_file():
+            raise FileNotFoundError('file {} not found'.format(hdr_file))
+
         # initialize class-attributes
         self.filename = hdr_file
         self.dir_name = Path(hdr_file).parent
@@ -39,17 +76,15 @@ class TIFio():
         self.__header = None
         self.inp_tif = inp_tif
         self.lineskip = lineskip
-        if not Path(hdr_file).is_file():
-            raise FileNotFoundError('file {} not found'.format(hdr_file))
 
     def __repr__(self):
         class_name = type(self).__name__
         return '{}({!r})'.format(class_name, self.filename)
 
     # --------------------------------------------------
-    def header(self):
+    def header(self) -> dict:
         """
-        read header as dictionary
+        Read header as dictionary
         """
         res = {}
         with Path(self.filename).open() as fp:
@@ -82,7 +117,7 @@ class TIFio():
         return res
 
     # --------------------------------------------------
-    def tags(self):
+    def tags(self) -> dict:
         """
         return TIFF tags as dictionary
         """
@@ -101,7 +136,12 @@ class TIFio():
     # --------------------------------------------------
     def images(self, n_frame=None):
         """
-        return TIFF data as numpy array
+        Return TIFF data as numpy array
+
+        Parameters
+        ----------
+        n_frame :  int, optional
+           Distribute coadded signal (32-bit) over n_frame images (16-bit)
         """
         if self.__header is None:
             self.header()
@@ -143,21 +183,3 @@ class TIFio():
                 res.append(handle[:])
 
         return np.array(res)
-
-
-# - main function ----------------------------------
-def main():
-    """
-    main program to illustate how to read SPEXone instrument simulator output
-    """
-    for name in sorted(Path('/stage/EPSstorage/MPC/CalSim').glob('*.dat')):
-        print(name)
-        tif = TIFio(name)
-        print(tif.header())
-        print(tif.tags()[0])
-        print(tif.images().shape)
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    main()

@@ -30,14 +30,6 @@ class Lv1io:
     """
     Generic class to create SPEXone Level-1 products
 
-    Parameters
-    ----------
-    lv1_product: string
-       Name of the Level-1 product
-    append : boolean, optional
-       Open file in append mode, parameter dims and inflight are ignored
-       Default: False
-
     Attributes
     ----------
     product: pathlib.Path object
@@ -53,17 +45,24 @@ class Lv1io:
 
     Methods
     -------
-    get_dims(ds_name)
-       Returns size of dimension
+    close()
+       Close all resources (currently a placeholder function).
+    epoch()
+       Provide epoch for SPEXone.
+    get_dim(ds_name)
+       Returns size of dimension.
     get_attr(attr_name, ds_name=None)
-       Read data of an attribute, global or attached to a group or variable
+       Read data of an attribute, global or attached to a group or variable.
     set_attr(attr_name, value, ds_name=None)
-       Write data to an attribute, global or attached to a group or variable
+       Write data to an attribute, global or attached to a group or variable.
     get_dset(ds_name)
-       Read data of a netCDF4 variable
+       Read data of a netCDF4 variable.
     set_dset(ds_name, value)
-       Write data to a netCDF4 variable
+       Write data to a netCDF4 variable.
+    sec_of_day(self, utc_sec, frac_sec)
+       Convert timestamp to second of day.
     fill_global_attrs(level, orbit=-1, bin_size=None)
+       Define global attributes in the SPEXone Level-1 products.
 
     Notes
     -----
@@ -117,7 +116,7 @@ class Lv1io:
             for key in self.dset_stored:
                 self.dset_stored[key] = self.fid[key].shape[0]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         class_name = type(self).__name__
         return '{}({!r})'.format(class_name, self.product)
 
@@ -132,18 +131,18 @@ class Lv1io:
         """
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
         """
         method called when exiting the context manager
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self):
+    def close(self) -> None:
         """
         Close all resources (currently a placeholder function)
         """
-        pass
+        return
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
@@ -295,6 +294,8 @@ class Lv1io:
     # -------------------------
     def sec_of_day(self, utc_sec: int, frac_sec: float) -> float:
         """
+        Convert timestamp to second of day
+
         Parameters
         ----------
         utc_sec : numpy array
@@ -364,6 +365,48 @@ class L1Aio(Lv1io):
     inflight: boolean, optional
        In-flight data, only affects global attributes of L1A product.
        Default: False
+
+    Attributes
+    ----------
+    product: pathlib.Path object
+       Concrete path object to SPEXone Level-1 product
+    inflight: boolean
+       Flag to indicate data collected during in-flight of on-ground
+    fid: netCDF5.Dataset object
+       NetCDF4 Pointer to SPEXone Level-1 product
+    ref_date: datetime.date object
+       Reference date for 'seconds of day' parameters
+    dset_stored: dict
+       Number of items stored for all required netCDF4 variables
+
+    Methods
+    -------
+    close()
+       Close product and check if required datasets are filled with data.
+    epoch()
+       Provide epoch for SPEXone.
+    get_dim(ds_name)
+       Returns size of dimension.
+    get_attr(attr_name, ds_name=None)
+       Read data of an attribute, global or attached to a group or variable.
+    set_attr(attr_name, value, ds_name=None)
+       Write data to an attribute, global or attached to a group or variable.
+    get_dset(ds_name)
+       Read data of a netCDF4 variable.
+    set_dset(ds_name, value)
+       Write data to a netCDF4 variable.
+    sec_of_day(self, utc_sec, frac_sec)
+       Convert timestamp to second of day.
+    fill_global_attrs(level, orbit=-1, bin_size=None)
+       Define global attributes in the SPEXone Level-1 products.
+    check_stored()
+       Check variables with the same first dimension have equal sizes.
+    fill_mps(mps_data)
+       Write MPS information to L1A product.
+    fill_time(sec_of_day, reference_day, leap_seconds=0)
+       Write TM time information to L1A product.
+    fill_gse(reference=None)
+       Write EGSE/OGSE data to L1A product.
     """
     processing_level = 'L1A'
     dset_stored = {
@@ -391,7 +434,7 @@ class L1Aio(Lv1io):
 
     def close(self):
         """
-        close product and check if required datasets are filled with data
+        Close product and check if required datasets are filled with data
         """
         if self.fid is None:
             return
@@ -591,6 +634,42 @@ class L1Bio(Lv1io):
        Default is None, then this dimension is UNLIMITED.
     spatial_samples: int
        Total number of spatial samples from all viewports, default is 200
+
+    Attributes
+    ----------
+    product: pathlib.Path object
+       Concrete path object to SPEXone Level-1 product
+    inflight: boolean
+       Flag to indicate data collected during in-flight of on-ground
+    fid: netCDF5.Dataset object
+       NetCDF4 Pointer to SPEXone Level-1 product
+    ref_date: datetime.date object
+       Reference date for 'seconds of day' parameters
+    dset_stored: dict
+       Number of items stored for all required netCDF4 variables
+
+    Methods
+    -------
+    close()
+       Close product and check if required datasets are filled with data.
+    epoch()
+       Provide epoch for SPEXone.
+    get_dim(ds_name)
+       Returns size of dimension.
+    get_attr(attr_name, ds_name=None)
+       Read data of an attribute, global or attached to a group or variable.
+    set_attr(attr_name, value, ds_name=None)
+       Write data to an attribute, global or attached to a group or variable.
+    get_dset(ds_name)
+       Read data of a netCDF4 variable.
+    set_dset(ds_name, value)
+       Write data to a netCDF4 variable.
+    sec_of_day(self, utc_sec, frac_sec)
+       Convert timestamp to second of day.
+    fill_global_attrs(level, orbit=-1, bin_size=None)
+       Define global attributes in the SPEXone Level-1 products.
+    check_stored()
+       Check variables with the same first dimension have equal sizes.
     """
     processing_level = 'L1B'
     dset_stored = {
@@ -625,7 +704,7 @@ class L1Bio(Lv1io):
 
     def close(self):
         """
-        close product and check if required datasets are filled with data
+        Close product and check if required datasets are filled with data
         """
         if self.fid is None:
             return
@@ -716,6 +795,42 @@ class L1Cio(Lv1io):
     number_of_images: int
        Number of images used as input to generate the L1B product.
        Default is None, then this dimension is UNLIMITED.
+
+    Attributes
+    ----------
+    product: pathlib.Path object
+       Concrete path object to SPEXone Level-1 product
+    inflight: boolean
+       Flag to indicate data collected during in-flight of on-ground
+    fid: netCDF5.Dataset object
+       NetCDF4 Pointer to SPEXone Level-1 product
+    ref_date: datetime.date object
+       Reference date for 'seconds of day' parameters
+    dset_stored: dict
+       Number of items stored for all required netCDF4 variables
+
+    Methods
+    -------
+    close()
+       Close product and check if required datasets are filled with data.
+    epoch()
+       Provide epoch for SPEXone.
+    get_dim(ds_name)
+       Returns size of dimension.
+    get_attr(attr_name, ds_name=None)
+       Read data of an attribute, global or attached to a group or variable.
+    set_attr(attr_name, value, ds_name=None)
+       Write data to an attribute, global or attached to a group or variable.
+    get_dset(ds_name)
+       Read data of a netCDF4 variable.
+    set_dset(ds_name, value)
+       Write data to a netCDF4 variable.
+    sec_of_day(self, utc_sec, frac_sec)
+       Convert timestamp to second of day.
+    fill_global_attrs(level, orbit=-1, bin_size=None)
+       Define global attributes in the SPEXone Level-1 products.
+    check_stored()
+       Check variables with the same first dimension have equal sizes.
     """
     processing_level = 'L1C'
     dset_stored = {
@@ -755,7 +870,7 @@ class L1Cio(Lv1io):
 
     def close(self):
         """
-        close product and check if required datasets are filled with data
+        Close product and check if required datasets are filled with data
         """
         if self.fid is None:
             return

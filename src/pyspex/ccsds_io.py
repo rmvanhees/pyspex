@@ -60,6 +60,42 @@ class CCSDSio:
     """
     Read SPEXone telemetry packets.
 
+    Attributes
+    ----------
+    found_invalid_apid :  bool
+    file_list :  iter
+    fp :  file pointer
+
+    Methods
+    -------
+    close()
+       Close resources.
+    version_no()
+       Returns CCSDS version number.
+    type_indicator()
+       Returns type of telemetry packet.
+    secnd_hdr_flag()
+       Returns flag indicating presence of a secondary header.
+    ap_id()
+       Returns SPEXone ApID.
+    grouping_flag()
+       Returns grouping flag.
+    sequence_count()
+       Returns sequence counter, rollover to zero at 0x3FFF.
+    packet_length()
+       Returns size of packet data in bytes.
+    open_next_file()
+       Open next file from file_list.
+    fix_mps24(mps)
+       Correct 32-bit integers in the MPS which originate from 24-bit integers
+       in the detector register values.
+    read_packet()
+       Read next telemetry packet.
+    group_tm(packets_in)
+       Combine segmented telemetry packages.
+
+    Notes
+    -----
     The formats of the PACE telemetry packets are following the standards:
     CCSDS-131.0-B-3, CCSDS-132.0-B-2 and CCSDS-133.0-B-1.
 
@@ -71,15 +107,32 @@ class CCSDSio:
     packet data.
 
     Doc: TMTC handbook (SPX1-TN-005), issue 12, 15-May-2020
+
+    Examples
+    --------
+    >>> packets = ()
+    >>> with CCSDSio(file_list) as ccsds:
+    >>>     while True:
+    >>>         # read one telemetry packet at a time
+    >>>         packet = ccsds.read_packet()
+    >>>         if packet is None:
+    >>>             # now we have read all files
+    >>>             break
+    >>>
+    >>>         packets += (packet[0],)
+    >>>
+    >>>     # combine segmented Science packages
+    >>>     science_tm = ccsds.group_tm(packets)
+    >>>     # now you may want to collect the engineering packages
     """
-    def __init__(self, file_list: str):
+    def __init__(self, file_list: str) -> None:
         """
         Initialize access to a SPEXone Level-0 product (CCSDS format)
 
         Parameters
         ----------
         file_list: list of strings
-           name of file(s) with CCSDS data
+           list of file-names, where each file contains parts of a measurement
         """
         # initialize class attributes
         self.__hdr = None
@@ -89,7 +142,7 @@ class CCSDSio:
 
         self.open_next_file()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '{:03d} {} {} 0x{:x} {} {:5d} {:5d} {}'.format(
             self.version_no, self.type_indicator, self.secnd_hdr_flag,
             self.ap_id, self.grouping_flag, self.sequence_count,
@@ -106,16 +159,16 @@ class CCSDSio:
         """
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
         """
         method called when exiting the context manager
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self):
+    def close(self) -> None:
         """
-        Close all resources (currently a placeholder function)
+        Close resources
         """
         if self.fp is not None:
             if self.found_invalid_apid:
@@ -126,7 +179,7 @@ class CCSDSio:
 
     # ---------- define some class properties ----------
     @property
-    def version_no(self):
+    def version_no(self) -> int:
         """
         Returns CCSDS version number
         """
@@ -136,7 +189,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 13) & 0x7
 
     @property
-    def type_indicator(self):
+    def type_indicator(self) -> int:
         """
         Returns type of telemetry packet
         """
@@ -146,7 +199,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 12) & 0x1
 
     @property
-    def secnd_hdr_flag(self):
+    def secnd_hdr_flag(self) -> bool:
         """
         Returns flag indicating presence of a secondary header
         """
@@ -156,7 +209,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 11) & 0x1
 
     @property
-    def ap_id(self):
+    def ap_id(self) -> int:
         """
         Returns SPEXone ApID
         """
@@ -166,7 +219,7 @@ class CCSDSio:
         return self.__hdr['type'] & 0x7FF
 
     @property
-    def grouping_flag(self):
+    def grouping_flag(self) -> int:
         """
         Returns grouping flag
 
@@ -182,7 +235,7 @@ class CCSDSio:
         return (self.__hdr['sequence'] >> 14) & 0x3
 
     @property
-    def sequence_count(self):
+    def sequence_count(self) -> int:
         """
         Returns sequence counter, rollover to zero at 0x3FFF
         """
@@ -192,10 +245,13 @@ class CCSDSio:
         return self.__hdr['sequence'] & 0x3FFF
 
     @property
-    def packet_length(self):
+    def packet_length(self) -> int:
         """
         Returns size of packet data in bytes
-          Value equals secondary header + user data (always odd)
+
+        Notes
+        -----
+        Value equals secondary header + user data (always odd)
         """
         if self.__hdr is None:
             return None
@@ -203,6 +259,39 @@ class CCSDSio:
         return self.__hdr['length']
 
     # ---------- define empty telemetry packet ----------
+    def open_next_file(self):
+        """
+        Open next file from file_list
+        """
+        flname = next(self.file_list)
+        if not Path(flname).is_file():
+            raise FileNotFoundError('{} does not exist'.format(flname))
+
+        self.close()
+        self.fp = open(flname, 'rb')
+
+    @staticmethod
+    def fix_mps24(mps):
+        """
+        Correct 32-bit integers in the MPS which originate from 24-bit integers
+        in the detector register values
+
+        In addition, copy the first 4 bytes of DET_CHENA to DET_ILVDS
+        """
+        mps['DET_ILVDS'] = mps['DET_CHENA'] & 0xf
+
+        for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
+                    'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
+                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I', 'LED2_ANODE_V',
+                    'LED2_CATH_V', 'LED2_I', 'ADC1_VCC', 'ADC1_REF',
+                    'ADC1_T', 'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
+                    'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
+                    'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
+                    'DET_CHENA']:
+            mps[key] = mps[key] >> 8
+
+        return mps
+
     def __tm(self, num_data=None):
         """
         Returns empty Science telemetry packet
@@ -214,7 +303,7 @@ class CCSDSio:
 
         Returns
         -------
-        numpy data-type object
+        ndarray
         """
         # NomHK telemetry packet
         if self.ap_id == 0x320:
@@ -241,46 +330,13 @@ class CCSDSio:
 
         raise KeyError('unknown APID: {:d}'.format(self.ap_id))
 
-    @staticmethod
-    def fix_mps24(mps):
-        """
-        Correct 32-bit integers in the MPS which originate from 24-bit integers
-        in the detector register values
-
-        In addition, copy the first 4 bytes of DET_CHENA to DET_ILVDS
-        """
-        mps['DET_ILVDS'] = mps['DET_CHENA'] & 0xf
-
-        for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
-                    'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
-                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I', 'LED2_ANODE_V',
-                    'LED2_CATH_V', 'LED2_I', 'ADC1_VCC', 'ADC1_REF',
-                    'ADC1_T', 'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
-                    'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
-                    'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
-                    'DET_CHENA']:
-            mps[key] = mps[key] >> 8
-
-        return mps
-
-    def open_next_file(self):
-        """
-        Open next file from file_list
-        """
-        flname = next(self.file_list)
-        if not Path(flname).is_file():
-            raise FileNotFoundError('{} does not exist'.format(flname))
-
-        self.close()
-        self.fp = open(flname, 'rb')
-
     def read_packet(self):
         """
         Read next telemetry packet
 
         Returns
         -------
-        tuple with numpy objects
+        ndarray
         """
         # read primary header
         hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
@@ -346,7 +402,7 @@ class CCSDSio:
 
         return packet
 
-    def group_tm(self, packets_in):
+    def group_tm(self, packets_in: tuple):
         """
         Combine segmented telemetry packages
 
@@ -357,7 +413,7 @@ class CCSDSio:
 
         Returns
         -------
-           Tuple with unsegmented telemetry packages
+        Tuple with unsegmented telemetry packages
         """
         # reject none Science telemetry packages and non-segmented packages
         packets = ()

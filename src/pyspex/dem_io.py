@@ -122,6 +122,50 @@ def det_dtype():
 class DEMio:
     """
     This class can be used to read SPEXone DEM output
+
+    Methods
+    -------
+    hdr()
+       Return DEM header as numpy compound array.
+    read_hdr(hdr_file, return_mps=False)
+       Read DEM header data.
+    read_data(dat_file, numlines=None)
+       Returns data of a detector frame (numpy uint16 array).
+    number_lines()
+       Return number of lines (rows).
+    lvds_clock()
+       Return LVDS clock input (0: disable, 1: enable).
+    pll_control()
+       Returns PLL control parameters: pll_range, pll_out_fre, pll_div.
+    exp_control()
+       Exposure time control.
+    offset()
+       Return digital offset including ADC offset
+    pga_gain()
+       Returns PGA gain (Volt)
+    temp_detector()
+       Returns detector temperature as raw  counts
+    t_exp(t_mcp=1e-7)
+       Returns pixel exposure time (s).
+    t_fot(t_mcp=1e-7, n_ch=2)
+       Returns frame overhead time (s).
+    t_rot(t_mcp=1e-7, n_ch=2)
+       Returns image read-out time (s).
+    t_frm(n_coad=1)
+       Returns frame period (s).
+
+    Notes
+    -----
+
+    Examples
+    --------
+    >>> dem = DEMio()
+
+    Obtain MPS information from header file (ASCII)
+
+    >>> mps_data = dem.read_hdr(flname.replace('b.bin', 'a.txt'),
+    >>>                         return_mps=True)
+    >>> image_data = dem.read_data(flname)
     """
     def __init__(self):
         self.__hdr = None
@@ -297,7 +341,7 @@ class DEMio:
         # Read binary big-endian data
         return np.fromfile(dat_file, dtype='>u2').reshape(numlines, -1)
 
-    def number_lines(self):
+    def number_lines(self) -> int:
         """
         Return number of lines (rows)
 
@@ -306,7 +350,7 @@ class DEMio:
         return ((self.hdr['NUMBER_LINES'][1] << 8)
                 + self.hdr['NUMBER_LINES'][0])
 
-    def lvds_clock(self):
+    def lvds_clock(self) -> bool:
         """
         Return LVDS clock input (0: disable, 1: enable)
 
@@ -314,7 +358,7 @@ class DEMio:
         """
         return (self.hdr['CHANNEL_EN'] >> 2) & 0x1
 
-    def pll_control(self):
+    def pll_control(self) -> tuple:
         """
         Returns PLL control parameters: pll_range, pll_out_fre, pll_div
 
@@ -330,7 +374,7 @@ class DEMio:
 
         return (pll_range, pll_out_fre, pll_div)
 
-    def exp_control(self):
+    def exp_control(self) -> tuple:
         """
         Exposure time control
 
@@ -342,7 +386,7 @@ class DEMio:
 
         return (inte_sync, exp_dual, exp_ext)
 
-    def offset(self):
+    def offset(self) -> int:
         """
         Return digital offset including ADC offset
 
@@ -353,7 +397,7 @@ class DEMio:
 
         return 70 + (val if val < 8192 else val - 16384)
 
-    def pga_gain(self):
+    def pga_gain(self) -> float:
         """
         Returns PGA gain (Volt)
 
@@ -365,15 +409,19 @@ class DEMio:
 
         return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
 
-    def temp_detector(self):
+    def temp_detector(self) -> int:
         """
-        equation: ((1184-1066) * 0.3 * 40 / 40Mhz) + offs [K]
+        Returns detector temperature as raw  counts
+
+        Notes
+        -----
+        Uncalibrated conversion: ((1184 - 1066) * 0.3 * 40 / 40Mhz) + offs [K]
         """
         return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
 
     def t_exp(self, t_mcp=1e-7):
         """
-        Return image-pixel exposure time (s)
+        Returns pixel exposure time (s)
         """
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']

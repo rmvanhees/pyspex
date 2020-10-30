@@ -36,10 +36,48 @@ def str_netcdf():
 class CKDio:
     """
     Defines class to read SPEXone CKD parameters
+
+    Attributes
+    ----------
+    filename :  str
+    offset : int
+    verbose : bool
+
+    Methods
+    -------
+    add_offset(values, binning=-1)
+       Add Offset CKD to CKD product.
+    add_darkflux(values, binning=-1)
+       Add Dark-flux CKD to CKD product.
+    add_non_linearity(values, binning=-1)
+       Add non-linearity CKD to CKD product.
+    add_prnu(values, binning=-1)
+       Add PRNU CKD to CKD product.
+    get_offset(binning=-1)
+       Read Offset CKD.
+    get_darkflux(binning=-1)
+       Read Dark-flux CKD.
+    get_non_linearity(values, binning=-1)
+       Read non-Linearity CKD.
+    get_prnu(binning=-1)
+       Read PRNU CKD.
+
+    Notes
+    -----
+
+    Examples
+    --------
     """
     def __init__(self, ckd_file, verbose=False):
         """
         Initialize class attributes
+
+        Parameters
+        ----------
+        ckd_file :  str
+           Name of CKD file
+        verbose :  bool
+           Be verbose
         """
         self.filename = ckd_file
         self.offset = 0
@@ -193,7 +231,7 @@ class CKDio:
 
     def get_offset(self, binning=-1):
         """
-        read Offset CKD
+        Read Offset CKD
         """
         with h5py.File(self.filename, 'r') as fid:
             if binning == -1:
