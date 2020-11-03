@@ -49,17 +49,17 @@ def main():
         print(args)
 
     args.file_list = [x for x in args.file_list if not x.endswith('.H')]
-        
+
     packets = ()
     with CCSDSio(args.file_list) as ccsds:
         while True:
             packet = ccsds.read_packet()
-            if packet is None:
+            if packet is None or ccsds.packet_length == 0:
                 break
 
             packets += (packet[0],)
             if args.debug:
-                print(ccsds)
+                print('[DEBUG]: ', ccsds)
 
         # combine segmented packages
         science_tm = ccsds.group_tm(packets)
@@ -70,7 +70,7 @@ def main():
 
     if args.debug:
         return
-        
+
     tstamp = []
     mps_data = []
     image_id = []
