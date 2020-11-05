@@ -142,7 +142,11 @@ class Lv1io:
         """
         Close all resources (currently a placeholder function)
         """
-        return
+        if self.fid is None:
+            return
+
+        self.fid.close()
+        self.fid = None
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
@@ -420,9 +424,9 @@ class L1Aio(Lv1io):
         '/image_attributes/image_CCSDS_usec': 0,
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
-        # '/engineering_data/HK_telemetry': 0,
-        # '/engineering_data/temp_detector': 0,
-        # '/engineering_data/temp_optics': 0,
+        '/engineering_data/HK_telemetry': 0,
+        '/engineering_data/temp_detector': 0,
+        '/engineering_data/temp_optics': 0,
         '/engineering_data/HK_tlm_time': 0,
         '/navigation_data/adstate': 0,
         '/navigation_data/att_quat': 0,
@@ -450,7 +454,7 @@ class L1Aio(Lv1io):
             return
 
         # check of all required dataset their sizes
-        self.check_stored()
+        self.check_stored(allow_empty=True)
 
         # update coverage time
         # ToDo replace intg by master clock cycle or frame rate (FTI)
@@ -476,7 +480,7 @@ class L1Aio(Lv1io):
         self.fid = None
 
     # -------------------------
-    def check_stored(self):
+    def check_stored(self, allow_empty=False):
         """
         Check variables with the same first dimension have equal sizes
         """
@@ -492,7 +496,10 @@ class L1Aio(Lv1io):
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        if allow_empty:
+            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+        else:
+            indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -504,7 +511,10 @@ class L1Aio(Lv1io):
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        if allow_empty:
+            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+        else:
+            indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -516,7 +526,10 @@ class L1Aio(Lv1io):
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        if allow_empty:
+            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+        else:
+            indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -758,7 +771,7 @@ class L1Bio(Lv1io):
                 continue
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -770,7 +783,7 @@ class L1Bio(Lv1io):
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -924,7 +937,7 @@ class L1Cio(Lv1io):
                 continue
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -936,7 +949,7 @@ class L1Cio(Lv1io):
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
-        indx = np.where(res != dim_sz)[0]
+        indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 

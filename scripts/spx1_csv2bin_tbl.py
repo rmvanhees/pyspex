@@ -106,7 +106,7 @@ def main():
         _, count = np.unique(table, return_counts=True)
 
         # no valid binning-counts larger than 6
-        indx = np.where(count > 6)[0]
+        indx = (count > 6).nonzero()[0]
         for ii in indx:
             table[table == ii] = fill_value
 
@@ -157,7 +157,7 @@ def main():
 
         # read line-skip definition
         data = np.loadtxt(flname, delimiter=',', dtype=np.uint8)
-        line_indx = np.where(data == 1)[0]
+        line_indx = (data == 1).nonzero()[0]
         indx = np.arange(1024 * line_indx.size).reshape(line_indx.size, -1)
 
         table = np.full((1024, 1024), fill_value, dtype='u4')
