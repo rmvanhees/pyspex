@@ -119,22 +119,21 @@ def main():
         elif msm_id != _id:
             raise ValueError("Do not combine different kind of measurements")
 
-        dem = DEMio()
+        dem = DEMio(flname)
         # obtain MPS information from header file (ASCII)
-        mps_data[ii] = dem.read_hdr(flname.replace('b.bin', 'a.txt'),
-                                    return_mps=True)
+        mps_data[ii] = dem.get_mps()
         # get nr_coaddings from file name
         coad_str = [x for x in parts if x.startswith('coad')][0]
         mps_data[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
         # determine exposure time
         t_exp[ii] = dem.t_exp()
         t_frm[ii] = dem.t_frm(int(coad_str[-2:]))
-        offset[ii] = dem.offset()
+        offset[ii] = dem.offset
         # determine detector temperature
         # temp[ii] = float(dem.temp_detector())
         temp[ii] = 293.0
         # read image data
-        image_list.append(dem.read_data(flname))
+        image_list.append(dem.get_data())
 
     images = np.array(image_list)
     del image_list

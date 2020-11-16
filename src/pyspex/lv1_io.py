@@ -25,6 +25,134 @@ from .lib.l1c_def import init_l1c
 # - global parameters -------------------
 
 
+# - class LV1mps -------------------------
+class LV1mps:
+    """
+    blah blah blah
+    """
+    def __init__(self, mps_data):
+        """
+        Initialize class L1A_mps
+
+        Parameters
+        mps_data :  ndarray
+        """
+        self.__mps = mps_data
+
+    def get(self, key):
+        """
+        Return (raw) MPS parameter
+        """
+        return self.__mps[key] if key in self.__mps.dtype.names else None
+
+    @property
+    def number_channels(self) -> int:
+        """
+        Return number of LVDS channels used
+        """
+        return 2 ** (4 - (self.__mps['DET_OUTMODE'] & 0x3))
+
+    @property
+    def lvds_clock(self) -> bool:
+        """
+        Return flag for LVDS clock (0: disable, 1: enable)
+
+        Register address: 82
+        """
+        return ((self.__mps['DET_PLLENA'] & 0x3) == 0
+                and (self.__mps['DET_PLLBYP'] & 0x3) != 0
+                and (self.__mps['DET_CHENA'] & 0x40000) != 0)
+
+    @property
+    def offset(self) -> int:
+        """
+        Return digital offset including ADC offset
+        """
+        buff = self.__mps['DET_OFFSET'].astype('i4')
+        if np.isscalar(buff):
+            if buff >= 8192:
+                buff -= 16384
+        else:
+            buff[buff >= 8192] -= 16384
+
+        return buff + 70
+
+    @property
+    def pga_gain(self) -> float:
+        """
+        Returns PGA gain (Volt)
+        """
+        # need first bit of address 121
+        reg_pgagainfactor = self.__mps['DET_BLACKCOL'] & 0x1
+
+        reg_pgagain = self.__mps['DET_PGAGAIN']
+
+        return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
+
+    @property
+    def exp_time(self):
+        """
+        Returns pixel exposure time [number of master clock periods]
+        """
+        return 129 * (0.43 * self.__mps['DET_FOTLEN']
+                      + self.__mps['DET_EXPTIME'])
+
+    @property
+    def fot_time(self):
+        """
+        Returns frame overhead time [number of master clock periods]
+        """
+        return 129 * (self.__mps['DET_FOTLEN']
+                      + 2 * (16 // self.number_channels))
+
+    @property
+    def rot_time(self):
+        """
+        Returns image read-out time [number of master clock periods]
+        """
+        return 129 * (16 // self.number_channels) * self.get('NUMBER_LINES')
+
+    @property
+    def frame_period(self):
+        """
+        Returns frame period [number of master clock periods]
+        """
+        offs = 2.38e-7
+
+        return offs + (self.__mps['REG_NCOADDFRAMES']
+                       * (self.exp_time + self.fot_time + self.rot_time))
+
+    @property
+    def pll_control(self) -> tuple:
+        """
+        Returns PLL control parameters: pll_range, pll_out_fre, pll_div
+
+        Notes
+        -----
+        PLL_range:    bits [7], valid values: 0 or 1
+        PLL_out_fre:  bits [4:7], valid values:  0, 1, 2 or 5
+        PLL_div:      bits [0:3], valid values 9 (10-bit) or 11 (12-bit)
+
+        Other PLL registers are: PLL_enable, PLL_in_fre, PLL_bypass, PLL_load
+        """
+        pll_div = self.__mps['DET_PLLRATE'] & 0xF             # bit [0:4]
+        pll_out_fre = (self.__mps['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
+        pll_range = (self.__mps['DET_PLLRATE'] >> 7)          # bit [7]
+
+        return (pll_range, pll_out_fre, pll_div)
+
+    @property
+    def exp_control(self) -> tuple:
+        """
+        Exposure time control
+        """
+        inte_sync = (self.__mps['INTE_SYNC'] >> 2) & 0x1
+        exp_dual = (self.__mps['INTE_SYNC'] >> 1) & 0x1
+        exp_ext = self.__mps['INTE_SYNC'] & 0x1
+
+        return (inte_sync, exp_dual, exp_ext)
+
+
 # - class LV1io -------------------------
 class Lv1io:
     """
@@ -457,9 +585,7 @@ class L1Aio(Lv1io):
         self.check_stored(allow_empty=True)
 
         # update coverage time
-        # ToDo replace intg by master clock cycle or frame rate (FTI)
-        intg = (self.fid['/image_attributes/exposure_time'][-1].data
-                * self.fid['/image_attributes/nr_coadditions'][-1].data)
+        mps = LV1mps(self.get_dset('/science_data/detector_telemetry')[-1])
 
         img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
         img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
@@ -467,7 +593,7 @@ class L1Aio(Lv1io):
         time0 = (self.epoch
                  + timedelta(seconds=int(img_sec[0]))
                  + timedelta(microseconds=int(img_usec[0]))
-                 - timedelta(seconds=intg))
+                 - timedelta(seconds=mps.frame_period))
 
         time1 = (self.epoch
                  + timedelta(seconds=int(img_sec[-1]))
@@ -551,33 +677,17 @@ class L1Aio(Lv1io):
         - exposure time as /image_attributes/exposure_time
         - nr_coadditions as /image_attributes/nr_coadditions
         """
-        def digital_offset(mps) -> int:
-            """
-            Return digital offset including ADC offset
-            """
-            buff = mps['DET_OFFSET'].astype('i4')
-            buff[buff >= 8192] -= 16384
-
-            return buff + 70
-
-        def exposure_time(mps, mcp=1e-7) -> float:
-            """
-            Return detector exposure_time
-            """
-            exptime = 129 * (0.43 * mps['DET_FOTLEN'] + mps['DET_EXPTIME'])
-
-            return mcp * exptime
-
         self.set_dset('/science_data/detector_telemetry', mps_data)
 
+        mps = LV1mps(mps_data)
         self.set_dset('/image_attributes/binning_table',
-                      mps_data['REG_BINNING_TABLE'])
+                      mps.get('REG_BINNING_TABLE'))
         self.set_dset('/image_attributes/digital_offset',
-                      digital_offset(mps_data))
+                      mps.offset)
         self.set_dset('/image_attributes/exposure_time',
-                      exposure_time(mps_data))
+                      1e-7 * mps.exp_time)
         self.set_dset('/image_attributes/nr_coadditions',
-                      mps_data['REG_NCOADDFRAMES'])
+                      mps.get('REG_NCOADDFRAMES'))
 
     def fill_time(self, sec_of_day, reference_day, *, leap_seconds=0) -> None:
         """

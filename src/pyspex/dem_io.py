@@ -10,6 +10,8 @@ Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+from pathlib import Path
+
 import numpy as np
 
 from .lib.tmtc_def import tmtc_def
@@ -167,46 +169,32 @@ class DEMio:
     >>>                         return_mps=True)
     >>> image_data = dem.read_data(flname)
     """
-    def __init__(self):
-        self.__hdr = None
-
-    @property
-    def hdr(self):
+    def __init__(self, flname: str) -> None:
         """
-        Return DEM header as numpy compound array
-        """
-        if self.__hdr is None:
-            return None
-
-        return self.__hdr[0]
-
-    def read_hdr(self, hdr_file: str, return_mps=False):
-        """
-        Read DEM header data
-
         Parameters
         ----------
-        hdr_file : str
-           Name of the (ASCII) header file
-        return_mps : bool
-           Return DEM header info in MPS record
-
-        Returns
-        -------
-        numpy array
+        flname :  str
+           filename with header or binary data of DEM measurement
         """
-        def convert_val(key):
-            """
-            Convert byte array to integer
-            """
-            val = 0
-            for ii, bval in enumerate(self.__hdr[0][key]):
-                val += bval << (ii * 8)
+        self.__hdr = None
+        if flname.endswith('a.txt'):
+            self.bin_file = flname.replace('a.txt', 'b.bin')
+            self.hdr_file = flname
+        elif flname.endswith('b.bin'):
+            self.bin_file = flname
+            self.hdr_file = flname.replace('b.bin', 'a.txt')
+        else:
+            raise RuntimeError('invalid filename: {}'.format(flname))
 
-            return val
+        if Path(self.hdr_file).is_file():
+            self.__get_hdr()
 
+    def __get_hdr(self) -> None:
+        """
+        Read DEM header data
+        """
         self.__hdr = np.zeros((1,), dtype=det_dtype())
-        with open(hdr_file, 'r') as fp:
+        with open(self.hdr_file, 'r') as fp:
             for line in fp:
                 columns = line[:-1].split(',')
                 if columns[0] == 'Reg':
@@ -240,8 +228,161 @@ class DEMio:
                 else:
                     self.__hdr[0][key] = value
 
-        if not return_mps:
-            return self.__hdr[0]
+    @property
+    def hdr(self):
+        """
+        Return DEM header as numpy compound array
+        """
+        if self.__hdr is None:
+            return None
+
+        return self.__hdr[0]
+
+    @property
+    def number_lines(self) -> int:
+        """
+        Return number of lines (rows)
+
+        Register address: [1, 2]
+        """
+        return (self.hdr['NUMBER_LINES'][0]
+                + (self.hdr['NUMBER_LINES'][1] << 8))
+
+    @property
+    def number_channels(self) -> int:
+        """
+        Return number of LVDS channels used
+        """
+        return 2 ** (4 - (self.hdr['OUTPUT_MODE'] & 0x3))
+
+    @property
+    def lvds_clock(self) -> bool:
+        """
+        Return flag for LVDS clock (0: disable, 1: enable)
+
+        Register address: 82
+        """
+        return ((self.hdr['PLL_ENABLE'] & 0x3) == 0
+                and (self.hdr['PLL_BYPASS'] & 0x3) != 0
+                and (self.hdr['CHANNEL_EN'][2] & 0x4) != 0)
+
+    def pll_control(self) -> tuple:
+        """
+        Returns PLL control parameters: pll_range, pll_out_fre, pll_div
+
+        PLL_range:    range (0 or 1)
+        PLL_out_fre:  output frequency (0, 1, 2 or 5)
+        PLL_div:      9 (10 bit) or 11 (12 bit)
+
+        Register address: 116
+        """
+        pll_div = self.hdr['PLL_RANGE'] & 0xF             # bit [0:4]
+        pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7  # bit [4:7]
+        pll_range = (self.hdr['PLL_RANGE'] >> 7)          # bit [7]
+
+        return (pll_range, pll_out_fre, pll_div)
+
+    @property
+    def exp_control(self) -> tuple:
+        """
+        Exposure time control
+
+        Register address: 41
+        """
+        inte_sync = (self.hdr['INTE_SYNC'] >> 2) & 0x1
+        exp_dual = (self.hdr['INTE_SYNC'] >> 1) & 0x1
+        exp_ext = self.hdr['INTE_SYNC'] & 0x1
+
+        return (inte_sync, exp_dual, exp_ext)
+
+    @property
+    def offset(self) -> int:
+        """
+        Return digital offset including ADC offset
+
+        Register address: [100, 101]
+        """
+        val = ((self.hdr['OFFSET'][1] << 8)
+               + self.hdr['OFFSET'][0])
+
+        return 70 + (val if val < 8192 else val - 16384)
+
+    @property
+    def pga_gain(self) -> float:
+        """
+        Returns PGA gain (Volt)
+
+        Register address: 102
+        """
+        reg_pgagain = self.hdr['PGA_GAIN']
+        # need first bit of address 121
+        reg_pgagainfactor = self.hdr['BLACK_COL_EN'] & 0x1
+
+        return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
+
+    @property
+    def temp_detector(self) -> int:
+        """
+        Returns detector temperature as raw  counts
+
+        Notes
+        -----
+        Uncalibrated conversion: ((1184 - 1066) * 0.3 * 40 / 40Mhz) + offs [K]
+        """
+        return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
+
+    def exp_time(self, t_mcp=1e-7):
+        """
+        Returns pixel exposure time (s)
+        """
+        # Nominal fot_length = 20, except for very short exposure_time
+        reg_fot = self.hdr['FOT_LENGTH']
+
+        reg_exptime = ((self.hdr['EXP_TIME'][2] << 16)
+                       + (self.hdr['EXP_TIME'][1] << 8)
+                       + self.hdr['EXP_TIME'][0])
+
+        return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
+
+    def fot_time(self, t_mcp=1e-7, n_ch=2):
+        """
+        Returns frame overhead time (s)
+        """
+        # Nominal fot_length = 20, except for very short exposure_time
+        reg_fot = self.hdr['FOT_LENGTH']
+
+        return 129 * t_mcp * (reg_fot + 2 * (16 // n_ch))
+
+    def rot_time(self, t_mcp=1e-7, n_ch=2):
+        """
+        Returns image read-out time (s)
+        """
+        return 129 * t_mcp * (16 // n_ch) * self.number_lines
+
+    def frame_period(self, n_coad=1):
+        """
+        Returns frame period (s)
+        """
+        return 2.38 + (n_coad
+                       * (self.exp_time() + self.fot_time() + self.rot_time()))
+
+    def get_mps(self):
+        """
+        Returns MPS of DEM measurement
+
+        Returns
+        -------
+        numpy array
+        """
+        def convert_val(key):
+            """
+            Convert byte array to integer
+            """
+            val = 0
+            for ii, bval in enumerate(self.__hdr[0][key]):
+                val += bval << (ii * 8)
+
+            return val
 
         # convert original detector parameter values to MPS parameters
         convert_det_params = {
@@ -320,135 +461,18 @@ class DEMio:
 
         return mps
 
-    def read_data(self, dat_file: str, numlines=None):
+    def get_data(self, numlines=None):
         """
         Returns data of a detector frame (numpy uint16 array)
 
         Parameters
         ----------
-        dat_file : str
-           Name of the (binary) data file
-        numlines : int
+        numlines : int, optional
            Provide number of detector rows when no headerfile is present
         """
         if numlines is None:
-            if self.hdr is None:
-                self.read_hdr(dat_file.replace('b.bin', 'a.txt'))
-
             # obtain number of rows
-            numlines = self.number_lines()
+            numlines = self.number_lines
 
         # Read binary big-endian data
-        return np.fromfile(dat_file, dtype='>u2').reshape(numlines, -1)
-
-    def number_lines(self) -> int:
-        """
-        Return number of lines (rows)
-
-        Register address: [1, 2]
-        """
-        return ((self.hdr['NUMBER_LINES'][1] << 8)
-                + self.hdr['NUMBER_LINES'][0])
-
-    def lvds_clock(self) -> bool:
-        """
-        Return LVDS clock input (0: disable, 1: enable)
-
-        Register address: 82
-        """
-        return (self.hdr['CHANNEL_EN'] >> 2) & 0x1
-
-    def pll_control(self) -> tuple:
-        """
-        Returns PLL control parameters: pll_range, pll_out_fre, pll_div
-
-        PLL_range:    range (0 or 1)
-        PLL_out_fre:  output frequency (0, 1, 2 or 5)
-        PLL_div:      9 (10 bit) or 11 (12 bit)
-
-        Register address: 116
-        """
-        pll_div = self.hdr['PLL_RANGE'] & 0xF             # bit [0:4]
-        pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7  # bit [4:7]
-        pll_range = (self.hdr['PLL_RANGE'] >> 7)          # bit [7]
-
-        return (pll_range, pll_out_fre, pll_div)
-
-    def exp_control(self) -> tuple:
-        """
-        Exposure time control
-
-        Register address: 41
-        """
-        inte_sync = (self.hdr['INTE_SYNC'] >> 2) & 0x1
-        exp_dual = (self.hdr['INTE_SYNC'] >> 1) & 0x1
-        exp_ext = self.hdr['INTE_SYNC'] & 0x1
-
-        return (inte_sync, exp_dual, exp_ext)
-
-    def offset(self) -> int:
-        """
-        Return digital offset including ADC offset
-
-        Register address: [100, 101]
-        """
-        val = ((self.hdr['OFFSET'][1] << 8)
-               + self.hdr['OFFSET'][0])
-
-        return 70 + (val if val < 8192 else val - 16384)
-
-    def pga_gain(self) -> float:
-        """
-        Returns PGA gain (Volt)
-
-        Register address: 102
-        """
-        reg_pgagain = self.hdr['PGA_GAIN']
-        # need first bit of address 121
-        reg_pgagainfactor = self.hdr['BLACK_COL_EN'] & 0x1
-
-        return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
-
-    def temp_detector(self) -> int:
-        """
-        Returns detector temperature as raw  counts
-
-        Notes
-        -----
-        Uncalibrated conversion: ((1184 - 1066) * 0.3 * 40 / 40Mhz) + offs [K]
-        """
-        return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
-
-    def t_exp(self, t_mcp=1e-7):
-        """
-        Returns pixel exposure time (s)
-        """
-        # Nominal fot_length = 20, except for very short exposure_time
-        reg_fot = self.hdr['FOT_LENGTH']
-
-        reg_exptime = ((self.hdr['EXP_TIME'][2] << 16)
-                       + (self.hdr['EXP_TIME'][1] << 8)
-                       + self.hdr['EXP_TIME'][0])
-
-        return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
-
-    def t_fot(self, t_mcp=1e-7, n_ch=2):
-        """
-        Returns frame overhead time (s)
-        """
-        # Nominal fot_length = 20, except for very short exposure_time
-        reg_fot = self.hdr['FOT_LENGTH']
-
-        return 129 * t_mcp * (reg_fot + 2 * (16 // n_ch))
-
-    def t_rot(self, t_mcp=1e-7, n_ch=2):
-        """
-        Returns image read-out time (s)
-        """
-        return 129 * t_mcp * (16 // n_ch) * self.number_lines()
-
-    def t_frm(self, n_coad=1):
-        """
-        Returns frame period (s)
-        """
-        return n_coad * (self.t_exp() + self.t_fot() + self.t_rot()) + 2.38
+        return np.fromfile(self.bin_file, dtype='>u2').reshape(numlines, -1)
