@@ -425,6 +425,9 @@ class CCSDSio:
             if self.ap_id == 0x350 and self.grouping_flag != 3:
                 packets += (packet,)
 
+        if not packets:
+            return packets
+
         # first telemetry package must have grouping flag equals 1
         self.__hdr = packets[0]['primary_header']
         if self.grouping_flag != 1:

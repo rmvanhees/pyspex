@@ -327,8 +327,9 @@ def tmtc_def(apid):
             ('REG_OCD_STICKY', 'u1'),           # 277    0x0121
             ('REG_PWR_SENS', 'u1'),             # 278    0x0122
             ('REG_FLASH_STATUS', 'u1'),         # 279    0x0123
-            ('REG_FLASH_EDAC_BLOCK', '>u2')     # 280    0x0124
-        ]                                       # 282
+            ('REG_FLASH_EDAC_BLOCK', '>u2'),    # 280    0x0124
+            ('SW_MAIN_LOOP_COUNT', '>u4')       # 282    0x0126
+        ]                                       # 286
 
     if apid == 0x322:                           # ***** DemHK *****
         return [                                # offs   start in packet

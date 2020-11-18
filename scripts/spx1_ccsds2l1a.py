@@ -61,16 +61,24 @@ def main():
             if args.debug:
                 print('[DEBUG]: ', ccsds)
 
-        # combine segmented packages
-        science_tm = ccsds.group_tm(packets)
-        if args.debug or args.verbose:
-            print('[INFO]: number of CCSDS packets ', len(packets))
-            print('[INFO]: number of Science images ', len(science_tm))
-        del packets
+    # combine segmented packages
+    science_tm = ccsds.group_tm(packets)
+    # ToDo select NomHK packages
+    if args.debug or args.verbose:
+        print('[INFO]: number of CCSDS packets ', len(packets))
+        print('[INFO]: number of Science images ', len(science_tm))
+        # print('[INFO]: number of NomHK packages ', len(nomhk_tm))
+    del packets
 
     if args.debug:
         return
 
+    # Exit because we need Science data to create a valid L1A product
+    if not science_tm:
+        print('[WARNING]: no science data found, exit')
+        return
+
+    # extract timestaps, image data & attributes from Science packages
     tstamp = []
     mps_data = []
     image_id = []
@@ -83,6 +91,8 @@ def main():
         image_id.append(packet['primary_header']['sequence'] & 0x3fff)
         mps_data.append(packet['mps'])
         images.append(packet['image_data'])
+
+    # ToDo select house-keeping data for coverage Science data
 
     image_id = np.array(image_id)
     mps_data = np.array(mps_data)
