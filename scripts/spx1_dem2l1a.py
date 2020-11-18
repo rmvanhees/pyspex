@@ -126,8 +126,8 @@ def main():
         coad_str = [x for x in parts if x.startswith('coad')][0]
         mps_data[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
         # determine exposure time
-        t_exp[ii] = dem.t_exp()
-        t_frm[ii] = dem.t_frm(int(coad_str[-2:]))
+        t_exp[ii] = dem.exp_time()
+        t_frm[ii] = dem.frame_period(int(coad_str[-2:]))
         offset[ii] = dem.offset
         # determine detector temperature
         # temp[ii] = float(dem.temp_detector())

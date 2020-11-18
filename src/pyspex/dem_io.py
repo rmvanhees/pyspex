@@ -127,34 +127,36 @@ class DEMio:
 
     Methods
     -------
-    hdr()
-       Return DEM header as numpy compound array.
-    read_hdr(hdr_file, return_mps=False)
-       Read DEM header data.
-    read_data(dat_file, numlines=None)
+    hdr
+       Returns DEM header as numpy compound array.
+    number_lines
+       Returns number of lines (rows).
+    number_channels
+       Returns number of LVDS channels used.
+    lvds_clock
+       Returns flag for LVDS clock, as 0: disable, 1: enable)
+    pll_control
+       Returns PLL control parameters: (pll_range, pll_out_fre, pll_div).
+    exp_control
+       Exposure time control parameters: (inte_sync, exp_dual, exp_ext).
+    offset
+       Returns digital offset including ADC offset
+    pga_gain
+       Returns PGA gain (Volt).
+    temp_detector
+       Returns detector temperature as raw  counts.
+    exp_time(t_mcp=1e-7)
+       Returns pixel exposure time [s].
+    fot_time(t_mcp=1e-7)
+       Returns frame overhead time [s].
+    rot_time(t_mcp=1e-7)
+       Returns image read-out time [s].
+    frame_period(n_coad=1)
+       Returns frame period [s].
+    get_mps()
+       Returns MPS of DEM measurement.
+    get_data(numlines=None)
        Returns data of a detector frame (numpy uint16 array).
-    number_lines()
-       Return number of lines (rows).
-    lvds_clock()
-       Return LVDS clock input (0: disable, 1: enable).
-    pll_control()
-       Returns PLL control parameters: pll_range, pll_out_fre, pll_div.
-    exp_control()
-       Exposure time control.
-    offset()
-       Return digital offset including ADC offset
-    pga_gain()
-       Returns PGA gain (Volt)
-    temp_detector()
-       Returns detector temperature as raw  counts
-    t_exp(t_mcp=1e-7)
-       Returns pixel exposure time (s).
-    t_fot(t_mcp=1e-7, n_ch=2)
-       Returns frame overhead time (s).
-    t_rot(t_mcp=1e-7, n_ch=2)
-       Returns image read-out time (s).
-    t_frm(n_coad=1)
-       Returns frame period (s).
 
     Notes
     -----
@@ -285,7 +287,7 @@ class DEMio:
     @property
     def exp_control(self) -> tuple:
         """
-        Exposure time control
+        Exposure time control parameters: (inte_sync, exp_dual, exp_ext)
 
         Register address: 41
         """
@@ -298,7 +300,7 @@ class DEMio:
     @property
     def offset(self) -> int:
         """
-        Return digital offset including ADC offset
+        Returns digital offset including ADC offset
 
         Register address: [100, 101]
         """
@@ -333,7 +335,7 @@ class DEMio:
 
     def exp_time(self, t_mcp=1e-7):
         """
-        Returns pixel exposure time (s)
+        Returns pixel exposure time [s].
         """
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
@@ -344,24 +346,24 @@ class DEMio:
 
         return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
 
-    def fot_time(self, t_mcp=1e-7, n_ch=2):
+    def fot_time(self, t_mcp=1e-7):
         """
-        Returns frame overhead time (s)
+        Returns frame overhead time [s]
         """
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
 
-        return 129 * t_mcp * (reg_fot + 2 * (16 // n_ch))
+        return 129 * t_mcp * (reg_fot + 2 * (16 // self.number_channels))
 
-    def rot_time(self, t_mcp=1e-7, n_ch=2):
+    def rot_time(self, t_mcp=1e-7):
         """
-        Returns image read-out time (s)
+        Returns image read-out time [s]
         """
-        return 129 * t_mcp * (16 // n_ch) * self.number_lines
+        return 129 * t_mcp * (16 // self.number_channels) * self.number_lines
 
     def frame_period(self, n_coad=1):
         """
-        Returns frame period (s)
+        Returns frame period [s]
         """
         return 2.38 + (n_coad
                        * (self.exp_time() + self.fot_time() + self.rot_time()))

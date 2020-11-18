@@ -110,7 +110,7 @@ class LV1mps:
         """
         Returns image read-out time [number of master clock periods]
         """
-        return 129 * (16 // self.number_channels) * self.get('NUMBER_LINES')
+        return 129 * (16 // self.number_channels) * self.__mps['DET_NUMLINES']
 
     @property
     def frame_period(self):
