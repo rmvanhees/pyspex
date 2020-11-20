@@ -28,7 +28,32 @@ from .lib.l1c_def import init_l1c
 # - class LV1mps -------------------------
 class LV1mps:
     """
-    blah blah blah
+    Class to convert raw register settings from the MPS
+
+    Methods
+    -------
+    get(key)
+       Return (raw) MPS parameter.
+    number_channels
+       Return number of LVDS channels used.
+    lvds_clock
+       Returns flag for LVDS clock: False: disabled & True: enabled.
+    offset
+       Returns digital offset including ADC offset [counts].
+    pga_gain
+       Returns PGA gain [Volt].
+    exp_time
+       Returns pixel exposure time [master clock periods].
+    fot_time
+       Returns frame overhead time [master clock periods].
+    rot_time
+       Returns image read-out time [master clock periods]
+    frame_period
+       Returns frame period [master clock periods].
+    pll_control
+       Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
+    exp_control
+       Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
     """
     def __init__(self, mps_data):
         """
@@ -39,7 +64,7 @@ class LV1mps:
         """
         self.__mps = mps_data
 
-    def get(self, key):
+    def get(self, key: str):
         """
         Return (raw) MPS parameter
         """
@@ -55,9 +80,7 @@ class LV1mps:
     @property
     def lvds_clock(self) -> bool:
         """
-        Return flag for LVDS clock (0: disable, 1: enable)
-
-        Register address: 82
+        Returns flag for LVDS clock: False: disabled & True: enabled
         """
         return ((self.__mps['DET_PLLENA'] & 0x3) == 0
                 and (self.__mps['DET_PLLBYP'] & 0x3) != 0
@@ -66,7 +89,7 @@ class LV1mps:
     @property
     def offset(self) -> int:
         """
-        Return digital offset including ADC offset
+        Returns digital offset including ADC offset
         """
         buff = self.__mps['DET_OFFSET'].astype('i4')
         if np.isscalar(buff):
@@ -80,7 +103,7 @@ class LV1mps:
     @property
     def pga_gain(self) -> float:
         """
-        Returns PGA gain (Volt)
+        Returns PGA gain [Volt]
         """
         # need first bit of address 121
         reg_pgagainfactor = self.__mps['DET_BLACKCOL'] & 0x1
@@ -90,9 +113,9 @@ class LV1mps:
         return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
 
     @property
-    def exp_time(self):
+    def exp_time(self) -> float:
         """
-        Returns pixel exposure time [number of master clock periods]
+        Returns pixel exposure time [master clock periods]
         """
         return 129 * (0.43 * self.__mps['DET_FOTLEN']
                       + self.__mps['DET_EXPTIME'])
@@ -100,22 +123,22 @@ class LV1mps:
     @property
     def fot_time(self):
         """
-        Returns frame overhead time [number of master clock periods]
+        Returns frame overhead time [master clock periods]
         """
         return 129 * (self.__mps['DET_FOTLEN']
                       + 2 * (16 // self.number_channels))
 
     @property
-    def rot_time(self):
+    def rot_time(self) -> int:
         """
-        Returns image read-out time [number of master clock periods]
+        Returns image read-out time [master clock periods]
         """
         return 129 * (16 // self.number_channels) * self.__mps['DET_NUMLINES']
 
     @property
-    def frame_period(self):
+    def frame_period(self) -> float:
         """
-        Returns frame period [number of master clock periods]
+        Returns frame period [master clock periods]
         """
         offs = 2.38e-7
 
@@ -125,7 +148,7 @@ class LV1mps:
     @property
     def pll_control(self) -> tuple:
         """
-        Returns PLL control parameters: pll_range, pll_out_fre, pll_div
+        Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div
 
         Notes
         -----
@@ -144,7 +167,7 @@ class LV1mps:
     @property
     def exp_control(self) -> tuple:
         """
-        Exposure time control
+        Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
         """
         inte_sync = (self.__mps['INTE_SYNC'] >> 2) & 0x1
         exp_dual = (self.__mps['INTE_SYNC'] >> 1) & 0x1
@@ -175,7 +198,7 @@ class Lv1io:
     -------
     close()
        Close all resources (currently a placeholder function).
-    epoch()
+    epoch
        Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
@@ -515,7 +538,7 @@ class L1Aio(Lv1io):
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch()
+    epoch
        Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
@@ -775,7 +798,7 @@ class L1Bio(Lv1io):
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch()
+    epoch
        Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
@@ -936,7 +959,7 @@ class L1Cio(Lv1io):
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch()
+    epoch
        Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
