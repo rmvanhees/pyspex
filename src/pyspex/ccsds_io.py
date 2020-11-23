@@ -68,22 +68,23 @@ class CCSDSio:
 
     Methods
     -------
+    version_no
+       Returns CCSDS version number.
+    type_indicator
+       Returns type of telemetry packet.
+    secnd_hdr_flag
+       Returns flag indicating presence of a secondary header.
+    ap_id
+       Returns SPEXone ApID.
+    grouping_flag
+       Returns grouping flag.
+    sequence_count
+       Returns sequence counter, rollover to zero at 0x3FFF.
+    packet_length
+       Returns size of packet data in bytes.
+
     close()
        Close resources.
-    version_no()
-       Returns CCSDS version number.
-    type_indicator()
-       Returns type of telemetry packet.
-    secnd_hdr_flag()
-       Returns flag indicating presence of a secondary header.
-    ap_id()
-       Returns SPEXone ApID.
-    grouping_flag()
-       Returns grouping flag.
-    sequence_count()
-       Returns sequence counter, rollover to zero at 0x3FFF.
-    packet_length()
-       Returns size of packet data in bytes.
     open_next_file()
        Open next file from file_list.
     fix_mps24(mps)
@@ -91,8 +92,10 @@ class CCSDSio:
        in the detector register values.
     read_packet()
        Read next telemetry packet.
-    group_tm(packets_in)
-       Combine segmented telemetry packages.
+    nomhk_tm(packets_in)
+       Select NomHK telemetry packages
+    science_tm(packets_in)
+       Combine segmented Science telemetry packages.
 
     Notes
     -----
@@ -402,9 +405,9 @@ class CCSDSio:
 
         return packet
 
-    def group_tm(self, packets_in: tuple):
+    def nomhk_tm(self, packets_in: tuple):
         """
-        Combine segmented telemetry packages
+        Select NomHK telemetry packages
 
         Parameters
         ----------
@@ -413,9 +416,40 @@ class CCSDSio:
 
         Returns
         -------
-        Tuple with unsegmented telemetry packages
+        Tuple with NomHK telemetry packages (chronological)
         """
-        # reject none Science telemetry packages and non-segmented packages
+        # reject non-NomHK telemetry packages
+        tstamp = []
+        packets = ()
+        for packet in packets_in:
+            if 'primary_header' not in packet.dtype.names:
+                continue
+
+            self.__hdr = packet['primary_header']
+            if self.ap_id == 0x320:
+                packets += (packet,)
+                tstamp.append(packet['secondary_header']['tai_sec']
+                              + packet['secondary_header']['sub_sec'] / 2**16)
+
+        if not packets:
+            return ()
+
+        return packets
+
+    def science_tm(self, packets_in: tuple):
+        """
+        Combine segmented Science telemetry packages
+
+        Parameters
+        ----------
+        packets: tuple
+           Tuple with science or house-keeping telemetry packages
+
+        Returns
+        -------
+        Tuple with unsegmented Science telemetry packages (chronological)
+        """
+        # reject non-Science telemetry packages and non-segmented packages
         packets = ()
         for packet in packets_in:
             if 'primary_header' not in packet.dtype.names:
@@ -426,7 +460,7 @@ class CCSDSio:
                 packets += (packet,)
 
         if not packets:
-            return packets
+            return ()
 
         # first telemetry package must have grouping flag equals 1
         self.__hdr = packets[0]['primary_header']
