@@ -694,11 +694,10 @@ class L1Aio(Lv1io):
 
         Notes
         -----
-        - mps_data as /science_data/detector_telemetry
+        Writes mps_data as detector_telemetry in group /science_data
 
-        User friendly parameters:
-        - exposure time as /image_attributes/exposure_time
-        - nr_coadditions as /image_attributes/nr_coadditions
+        And writes binning_table, digital_offset, exposure_time and nr_coadding
+        in group /image_attributes
         """
         self.set_dset('/science_data/detector_telemetry', mps_data)
 
@@ -724,6 +723,11 @@ class L1Aio(Lv1io):
            midnight
         leap_second : integer
           leap seconds since 1970, use only when input are TAI seconds
+
+        Note
+        ----
+        Writes datasets image_time, image_CCSDS_sec, image_CCSDS_usec
+        in group /image_attributes
         """
         self.set_dset('/image_attributes/image_time', sec_of_day)
 
