@@ -61,13 +61,14 @@ def main():
             if args.debug:
                 print('[DEBUG]: ', ccsds)
 
+    # select NomHK packages
+    nomhk_tm = ccsds.nomhk_tm(packets)
     # combine segmented packages
-    science_tm = ccsds.group_tm(packets)
-    # ToDo select NomHK packages
+    science_tm = ccsds.science_tm(packets)
     if args.debug or args.verbose:
         print('[INFO]: number of CCSDS packets ', len(packets))
         print('[INFO]: number of Science images ', len(science_tm))
-        # print('[INFO]: number of NomHK packages ', len(nomhk_tm))
+        print('[INFO]: number of NomHK packages ', len(nomhk_tm))
     del packets
 
     if args.debug:
@@ -92,8 +93,6 @@ def main():
         mps_data.append(packet['mps'])
         images.append(packet['image_data'])
 
-    # ToDo select house-keeping data for coverage Science data
-
     image_id = np.array(image_id)
     mps_data = np.array(mps_data)
     images = np.array(images)
@@ -103,8 +102,16 @@ def main():
 
     # generate name of L1A product
     if tstamp[0] < LAUNCH_DATE:
-        prod_name = spx_product.prod_name(
-            tstamp[0], msm_id=Path(args.file_list[0]).stem)
+        msm_id = Path(args.file_list[0]).stem
+        try:
+            new_date = datetime.strptime(
+                msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
+        except ValueError:
+            pass
+        else:
+            msm_id = msm_id[:-22] + new_date
+
+        prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id)
         inflight = False
     else:
         prod_name = spx_product.prod_name(tstamp[0])
@@ -115,29 +122,39 @@ def main():
     n_sample = images.size if images.ndim == 1 else images.shape[1]
     dims = {'number_of_images': n_frame,
             'samples_per_image': n_sample,
-            'SC_records': None,
-            'tlm_packets': None}
+            'hk_packets': len(nomhk_tm),
+            'SC_records': None}
 
-    # convert timestamps to seconds per day
-    secnds = np.empty(len(tstamp), dtype=float)
+    # convert timestamps Science to seconds-per-day
+    science_sec = np.empty(len(tstamp), dtype=float)
     midnight = tstamp[0].replace(hour=0, minute=0, second=0, microsecond=0)
     for ii, tval in enumerate(tstamp):
-        secnd = (tval - midnight).total_seconds()
-        # time-of-measurement provided at end of integration time
-        # secnd -= texp[ii] * mps_data[ii]['REG_NCOADDFRAMES']
-        secnds[ii] = secnd
+        science_sec[ii] = (tval - midnight).total_seconds()
 
-    #
+    # convert timestamps NomHK to seconds-per-day
+    nomhk_sec = np.empty(len(nomhk_tm), dtype=float)
+    nomhk_data = []
+    for ii, packet in enumerate(nomhk_tm):
+        utc_sec = packet['secondary_header']['tai_sec'] - LEAP_SECONDS
+        frac_sec = packet['secondary_header']['sub_sec'] / 2**16
+        tval = EPOCH + timedelta(seconds=utc_sec + frac_sec)
+        nomhk_sec[ii] = (tval - midnight).total_seconds()
+        nomhk_data.append(packet['nominal_hk'])
+    nomhk_data = np.array(nomhk_data)
+
     # Generate L1A product
-    #   ToDo: correct value for measurement_type & viewport
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
         l1a.set_dset('/science_data/detector_images', images)
+        # writes datasets detector_telemetry in group /science_data
+        # and datasets exposure_time, nr_coadditions in group /image_attributes
         l1a.fill_mps(mps_data)
-
-        l1a.fill_time(secnds, midnight)
         l1a.set_dset('/image_attributes/image_ID', image_id)
+        # writes datasets: image_time, image_CCSDS_sec & image_CCSDS_usec
+        # in group /image_attributes
+        l1a.fill_time(science_sec, midnight)
 
-        l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
+        l1a.set_dset('/engineering_data/HK_tlm_time', nomhk_sec)
+        l1a.set_dset('/engineering_data/HK_telemetry', nomhk_data)
 
         # Global attributes
         l1a.fill_global_attrs()
