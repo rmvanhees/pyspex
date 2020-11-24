@@ -1,5 +1,3 @@
-import sys
-#!/usr/bin/env python3
 """
 This file is part of pyspex
 
@@ -12,7 +10,8 @@ Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from collections import OrderedDict
+import sys
+
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -23,6 +22,9 @@ from pys5p.tol_colors import tol_cmap
 from pys5p.s5p_plot import S5Pplot
 
 def main():
+    """
+    Main function of this module
+    """
     if len(sys.argv) > 1:
         file_list = [Path(xx) for xx in sys.argv[1:]]
     else:
@@ -32,7 +34,7 @@ def main():
         print(flname)
 
         with h5py.File(flname, 'r') as fid:
-            n_img = fid['number_of_images'].size
+            # n_img = fid['number_of_images'].size
             # n_row = fid['number_of_images']
             # n_col = fid['number_of_images']
             date_start = fid.attrs['time_coverage_start']
