@@ -50,7 +50,10 @@ def main():
         else:
             date_start = date_start.split('+')[0]
 
-        plot = S5Pplot(flname.with_suffix('.pdf'))
+        data_dir = flname.parent / 'QuickLook'
+        if not data_dir.is_dir():
+            data_dir.mkdir(mode=0o755)
+        plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
         for ii, img in enumerate(images):
             time_str = (
