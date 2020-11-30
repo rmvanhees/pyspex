@@ -23,6 +23,7 @@ from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
 
 # - global parameters -------------------
+MCP_TO_SEC = 1e-7
 
 
 # - class LV1mps -------------------------
@@ -121,7 +122,7 @@ class LV1mps:
                       + self.__mps['DET_EXPTIME'])
 
     @property
-    def fot_time(self):
+    def fot_time(self) -> int:
         """
         Returns frame overhead time [master clock periods]
         """
@@ -140,10 +141,8 @@ class LV1mps:
         """
         Returns frame period [master clock periods]
         """
-        offs = 2.38e-7
-
-        return offs + (self.__mps['REG_NCOADDFRAMES']
-                       * (self.exp_time + self.fot_time + self.rot_time))
+        return 2.38e-7 + (self.__mps['REG_NCOADDFRAMES']
+                          * (self.exp_time + self.fot_time + self.rot_time))
 
     @property
     def pll_control(self) -> tuple:
@@ -616,7 +615,7 @@ class L1Aio(Lv1io):
         time0 = (self.epoch
                  + timedelta(seconds=int(img_sec[0]))
                  + timedelta(microseconds=int(img_usec[0]))
-                 - timedelta(seconds=mps.frame_period))
+                 - timedelta(milliseconds=mps.frame_period * 1e-4))
 
         time1 = (self.epoch
                  + timedelta(seconds=int(img_sec[-1]))
@@ -707,7 +706,7 @@ class L1Aio(Lv1io):
         self.set_dset('/image_attributes/digital_offset',
                       mps.offset)
         self.set_dset('/image_attributes/exposure_time',
-                      1e-7 * mps.exp_time)
+                      MCP_TO_SEC * mps.exp_time)
         self.set_dset('/image_attributes/nr_coadditions',
                       mps.get('REG_NCOADDFRAMES'))
 
