@@ -25,7 +25,7 @@ from pyspex.lv1_io import L1Aio
 # - global parameters ------------------------------
 LAUNCH_DATE = datetime(2022, 11, 2, tzinfo=timezone.utc)
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-LEAP_SECONDS = 27                          # ToDo use package leapseconds.py
+LEAP_SECONDS = 0  # only in-flight the CCSDS packages have TAI timestamps
 
 # - local functions --------------------------------
 
