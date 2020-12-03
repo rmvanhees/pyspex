@@ -13,12 +13,14 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 # from pathlib import Path
 
 import h5py
 from netCDF4 import Dataset
 import numpy as np
+
+from pyspex.lv1_io import LV1mps
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -85,7 +87,31 @@ def read_egse(egse_file: str, verbose=False):
     return {'values': data, 'units': units,
             'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
 
-def select_egse():
+def select_egse(l1a_file: str, egse, verbose=False):
+    """
+    Return indices EGSE records during the measurement in the Level-1A product
+    """
+    with h5py.File(l1a_file, 'r') as fid:
+        ccsds_sec = fid['image_attributes/image_CCSDS_sec'][()]
+        ccsds_usec = fid['image_attributes/image_CCSDS_usec'][()]
+        ccsds_time = [datetime(1970, 1, 1, tzinfo=timezone.utc)
+                      + timedelta(seconds=int(ccsds_sec[0]))
+                      + timedelta(microseconds=int(ccsds_usec[0])),
+                      datetime(1970, 1, 1, tzinfo=timezone.utc)
+                      + timedelta(seconds=int(ccsds_sec[-1]))
+                      + timedelta(microseconds=int(ccsds_usec[-1]))]
+        image_time = fid['image_attributes/image_time'][()]
+        image_time = [datetime(2020, 11, 28, tzinfo=timezone.utc)
+                      + timedelta(seconds=float(image_time[0])),
+                      datetime(2020, 11, 28, tzinfo=timezone.utc)
+                      + timedelta(seconds=float(image_time[-1]))]
+        mps = LV1mps(fid['/science_data/detector_telemetry'][0])
+
+    print(ccsds_time)
+    print(image_time)
+    print(1e-1 * mps.get('REG_NCOADDFRAMES') * mps.get('FTI'))
+    print(mps.frame_period * 1e-7)
+    print(image_time[0] - timedelta(seconds=float(mps.frame_period * 1e-7)))
     return
 
 def write_egse(l1a_file: str, egse, verbose=False):
@@ -140,17 +166,21 @@ def main():
         with h5py.File(args.l1a_file, 'r') as fid:
             buff = datetime.fromisoformat(
                 fid.attrs['time_coverage_start'].decode('ascii'))
-            print(buff.timestamp())
+            print(buff, buff.timestamp())
             buff = datetime.fromisoformat(
                 fid.attrs['time_coverage_end'].decode('ascii'))
-            print(buff.timestamp())
+            print(buff, buff.timestamp())
 
     # loop over files with EGSE info until we find a match
     for egse_file in args.file_list:
         egse = read_egse(egse_file, verbose=args.verbose)
     print(egse['values']['time'].min(), egse['values']['time'].max())
 
-    write_egse(None, egse, verbose=args.verbose)
+    if args.l1a_file is not None:
+        select_egse(args.l1a_file, egse, verbose=args.verbose)
+        return
+
+    write_egse(args.l1a_file, egse, verbose=args.verbose)
 
 
 # --------------------------------------------------

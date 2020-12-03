@@ -188,8 +188,6 @@ class Lv1io:
        Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
-    ref_date: datetime.date object
-       Reference date for 'seconds of day' parameters
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
 
@@ -242,7 +240,6 @@ class Lv1io:
         if 'inflight' in kwargs:
             self.inflight = kwargs['inflight']
         self.fid = None
-        self.ref_date = None
 
         # initialize Level-1 product
         if not append:
@@ -257,10 +254,6 @@ class Lv1io:
         else:
             # open Level-1 product in append mode
             self.fid = Dataset(self.product, "r+")
-
-            if 'reference_day' in self.fid.ncattrs():
-                self.ref_date = datetime.fromisoformat(
-                    self.fid.reference_day, tzinfo=timezone.utc)
 
             # store current length of the first dimension
             for key in self.dset_stored:
@@ -465,13 +458,12 @@ class Lv1io:
         utc0 = self.epoch + timedelta(seconds=int(utc_sec))
 
         # get seconds between midnight and epoch
-        if self.ref_date is None:
-            self.ref_date = datetime(year=utc0.year,
-                                     month=utc0.month,
-                                     day=utc0.day, tzinfo=timezone.utc)
+        midnight = datetime(year=utc0.year,
+                            month=utc0.month,
+                            day=utc0.day, tzinfo=timezone.utc)
 
         # return seconds since midnight
-        return (utc0 - self.ref_date) / timedelta(seconds=1) + frac_sec
+        return (utc0 - midnight) / timedelta(seconds=1) + frac_sec
 
     # -------------------------
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
@@ -528,8 +520,6 @@ class L1Aio(Lv1io):
        Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
-    ref_date: datetime.date object
-       Reference date for 'seconds of day' parameters
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
 
@@ -556,9 +546,11 @@ class L1Aio(Lv1io):
     check_stored()
        Check variables with the same first dimension have equal sizes.
     fill_mps(mps_data)
-       Write MPS information to L1A product.
+       Write Science telemtry packets (MPS) to L1A product.
     fill_time(sec_of_day, reference_day, leap_seconds=0)
-       Write TM time information to L1A product.
+       Write time of Science telemtry packets (UTC/TAI) to L1A product.
+    fill_nomhk(nomhk_data)
+       Write nominal house-keeping telemtry packets (NomHK) to L1A product.
     fill_gse(reference=None)
        Write EGSE/OGSE data to L1A product.
     """
@@ -593,10 +585,6 @@ class L1Aio(Lv1io):
         if self.fid is None:
             return
 
-        if self.ref_date is not None \
-           and 'reference_day' not in self.fid.ncattrs():
-            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
-
         # check if atleast one dataset is updated
         if self.fid.dimensions['number_of_images'].size == 0:
             self.fid.close()
@@ -609,13 +597,16 @@ class L1Aio(Lv1io):
         # update coverage time
         mps = LV1mps(self.get_dset('/science_data/detector_telemetry')[-1])
 
+        # determine the masterclock cycle
+        mcycl = 1e-1 * mps.get('REG_NCOADDFRAMES') * mps.get('FTI')
+
         img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
         img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
 
         time0 = (self.epoch
                  + timedelta(seconds=int(img_sec[0]))
                  + timedelta(microseconds=int(img_usec[0]))
-                 - timedelta(milliseconds=mps.frame_period * 1e-4))
+                 - timedelta(milliseconds=mcycl))
 
         time1 = (self.epoch
                  + timedelta(seconds=int(img_sec[-1]))
@@ -682,21 +673,51 @@ class L1Aio(Lv1io):
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
+    def fill_time(self, sec_of_day, reference_day, *, leap_seconds=0) -> None:
+        """
+        Write time of Science telemtry packets (UTC/TAI) to L1A product
+
+        Parameters
+        ----------
+        sec_of_day : numpy array (float)
+           seconds since midnight
+        reference_day : datetime.datetime
+           midnight
+        leap_second : integer
+          leap seconds since 1970, use only when input are TAI seconds
+
+        Note
+        ----
+        Writes parameters: image_CCSDS_sec, image_CCSDS_usec and image_time
+        in the group /image_attributes
+        """
+        self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
+
+        self.set_dset('/image_attributes/image_time', sec_of_day)
+
+        utc_sec = sec_of_day.astype('u4') + leap_seconds \
+            + (reference_day - self.epoch).total_seconds()
+        frac_sec = np.round(1e6 * (sec_of_day % 1)).astype('i4')
+
+        self.set_dset('/image_attributes/image_CCSDS_sec', utc_sec)
+        self.set_dset('/image_attributes/image_CCSDS_usec', frac_sec)
+
     def fill_mps(self, mps_data) -> None:
         """
-        Write MPS information to L1A product
+        Write Science telemtry packets (MPS) to L1A product
 
         Parameters
         ----------
         mps_data : numpy array
-          Structured array with all MPS parameters
+           Structured array with all Science telemtry parameters
 
         Notes
         -----
-        Writes mps_data as detector_telemetry in group /science_data
+        Writes mps_data as detector_telemetry in the group /science_data
 
-        And writes binning_table, digital_offset, exposure_time and nr_coadding
-        in group /image_attributes
+        Parameters: binning_table, digital_offset, exposure_time
+        and nr_coadding are extracted from the telemtry packets and writen
+        in the group /image_attributes
         """
         self.set_dset('/science_data/detector_telemetry', mps_data)
 
@@ -710,32 +731,28 @@ class L1Aio(Lv1io):
         self.set_dset('/image_attributes/nr_coadditions',
                       mps.get('REG_NCOADDFRAMES'))
 
-    def fill_time(self, sec_of_day, reference_day, *, leap_seconds=0) -> None:
+    def fill_nomhk(self, nomhk_data):
         """
-        Write TM time information to L1A product
+        Write nominal house-keeping telemtry packets (NomHK) to L1A product
 
         Parameters
         ----------
-        sec_of_day : numpy array (float)
-           seconds since midnight
-        reference_day : datetime.datetime
-           midnight
-        leap_second : integer
-          leap seconds since 1970, use only when input are TAI seconds
+        nomhk_data : numpy array
+           Structured array with all NomHK telemetry parameters
 
-        Note
-        ----
-        Writes datasets image_time, image_CCSDS_sec, image_CCSDS_usec
-        in group /image_attributes
+        Notes
+        -----
+        Writes nomhk_data as TM_telemetry in group /engineering_data
+
+        Parameters: temp_detector and temp_housing are extracted and converted
+        to degrees Celsius and writen to the group /engineering_data
         """
-        self.set_dset('/image_attributes/image_time', sec_of_day)
+        self.set_dset('/engineering_data/HK_telemetry', nomhk_data)
 
-        utc_sec = sec_of_day.astype('u4') + leap_seconds \
-            + (reference_day - self.epoch).total_seconds()
-        frac_sec = np.round(1e6 * (sec_of_day % 1)).astype('i4')
-
-        self.set_dset('/image_attributes/image_CCSDS_sec', utc_sec)
-        self.set_dset('/image_attributes/image_CCSDS_usec', frac_sec)
+        self.set_dset('/engineering_data/temp_detector',
+                      nomhk_data['TS1_DEM_N_T'])
+        self.set_dset('/engineering_data/temp_housing',
+                      nomhk_data['TS2_HOUSING_N_T'])
 
     def fill_gse(self, reference=None) -> None:
         """
@@ -792,8 +809,6 @@ class L1Bio(Lv1io):
        Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
-    ref_date: datetime.date object
-       Reference date for 'seconds of day' parameters
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
 
@@ -819,6 +834,10 @@ class L1Bio(Lv1io):
        Define global attributes in the SPEXone Level-1 products.
     check_stored()
        Check variables with the same first dimension have equal sizes.
+
+    Notes
+    -----
+    ToDo: make sure we store the reference date for image_time
     """
     processing_level = 'L1B'
     dset_stored = {
@@ -858,10 +877,6 @@ class L1Bio(Lv1io):
         if self.fid is None:
             return
 
-        if self.ref_date is not None \
-           and 'reference_day' not in self.fid.ncattrs():
-            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
-
         # check if atleast one dataset is updated
         if self.fid.dimensions['bins_along_track'].size == 0:
             self.fid.close()
@@ -872,7 +887,6 @@ class L1Bio(Lv1io):
         self.check_stored()
 
         # update coverage time
-        # ToDo epoch should be reference_day
         secnd = self.fid['/BIN_ATTRIBUTES/image_time'][0].data
         time0 = (self.epoch
                  + timedelta(seconds=int(secnd))
@@ -953,8 +967,6 @@ class L1Cio(Lv1io):
        Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
-    ref_date: datetime.date object
-       Reference date for 'seconds of day' parameters
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
 
@@ -980,6 +992,10 @@ class L1Cio(Lv1io):
        Define global attributes in the SPEXone Level-1 products.
     check_stored()
        Check variables with the same first dimension have equal sizes.
+
+    Notes
+    -----
+    ToDo: make sure we store the reference date for image_time
     """
     processing_level = 'L1C'
     dset_stored = {
@@ -1024,10 +1040,6 @@ class L1Cio(Lv1io):
         if self.fid is None:
             return
 
-        if self.ref_date is not None \
-           and 'reference_day' not in self.fid.ncattrs():
-            self.fid.reference_day = self.ref_date.strftime('%Y-%m-%d')
-
         # check if atleast one dataset is updated
         if self.fid.dimensions['bins_along_track'].size == 0:
             self.fid.close()
@@ -1038,7 +1050,6 @@ class L1Cio(Lv1io):
         self.check_stored()
 
         # update coverage time
-        # ToDo epoch should be reference_day
         secnd = self.fid['/BIN_ATTRIBUTES/nadir_view_time'][0].data
         time0 = (self.epoch
                  + timedelta(seconds=int(secnd))

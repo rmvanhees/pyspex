@@ -166,13 +166,15 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
                                           'hk_dtype')
     dset = sgrp.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
     dset.long_name = "SPEX nominal-HK telemetry"
-    dset = sgrp.createVariable('temp_optics', 'f4', ('hk_packets',))
-    dset.long_name = "Optics temperature"
+    dset = sgrp.createVariable('temp_detector', 'f4', ('hk_packets',))
+    dset.long_name = "Detector temperature"
+    dset.comment = "TS1 DEM Nominal Temperature"
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
-    dset = sgrp.createVariable('temp_detector', 'f4', ('hk_packets',))
-    dset.long_name = "Detector temperature"
+    dset = sgrp.createVariable('temp_housing', 'f4', ('hk_packets',))
+    dset.long_name = "Housing temperature"
+    dset.comment = "TS2 Housing Nominal Temperature"
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"

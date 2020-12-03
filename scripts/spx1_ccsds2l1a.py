@@ -155,6 +155,10 @@ def main():
 
         l1a.set_dset('/engineering_data/HK_tlm_time', nomhk_sec)
         l1a.set_dset('/engineering_data/HK_telemetry', nomhk_data)
+        l1a.set_dset('/engineering_data/temp_detector',
+                     nomhk_data['TS1_DEM_N_T'])
+        l1a.set_dset('/engineering_data/temp_optics',
+                     nomhk_data['TS2_HOUSING_N_T'])
 
         # Global attributes
         l1a.fill_global_attrs()
