@@ -439,31 +439,33 @@ class Lv1io:
         self.dset_stored[name] += value.shape[0]
 
     # -------------------------
-    def sec_of_day(self, utc_sec: int, frac_sec: float) -> float:
+    def sec_of_day(self, ccsds_sec, ccsds_usec):
         """
         Convert timestamp to second of day
 
         Parameters
         ----------
-        utc_sec : numpy array
-          seconds since 1970-01-01 (integer)
-        frac_sec : numpy array
-          fractional seconds (double)
+        ccsds_sec : numpy array (dtype='u4')
+          seconds since 1970-01-01
+        ccsds_usec : numpy array (dtype='i2')
+          microseconds seconds
 
         Returns
         -------
-        - second of day
+        tuple(reference_day, sec_of_day)
         """
-        # get seconds since epoch
-        utc0 = self.epoch + timedelta(seconds=int(utc_sec))
+        # determine midnight before start measurement
+        tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
+        reference_day = datetime(year=tstamp0.year,
+                                 month=tstamp0.month,
+                                 day=tstamp0.day, tzinfo=timezone.utc)
 
-        # get seconds between midnight and epoch
-        midnight = datetime(year=utc0.year,
-                            month=utc0.month,
-                            day=utc0.day, tzinfo=timezone.utc)
+        # store seconds since midnight
+        sec_of_day = (ccsds_sec + ccsds_usec / 2**16)\
+                     - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return (utc0 - midnight) / timedelta(seconds=1) + frac_sec
+        return (reference_day, sec_of_day)
 
     # -------------------------
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
@@ -546,11 +548,11 @@ class L1Aio(Lv1io):
     check_stored()
        Check variables with the same first dimension have equal sizes.
     fill_mps(mps_data)
-       Write Science telemtry packets (MPS) to L1A product.
+       Write Science telemetry packets (MPS) to L1A product.
     fill_time(sec_of_day, reference_day, leap_seconds=0)
-       Write time of Science telemtry packets (UTC/TAI) to L1A product.
+       Write time of Science telemetry packets (UTC/TAI) to L1A product.
     fill_nomhk(nomhk_data)
-       Write nominal house-keeping telemtry packets (NomHK) to L1A product.
+       Write nominal house-keeping telemetry packets (NomHK) to L1A product.
     fill_gse(reference=None)
        Write EGSE/OGSE data to L1A product.
     """
@@ -568,7 +570,7 @@ class L1Aio(Lv1io):
         '/image_attributes/image_ID': 0,
         '/engineering_data/HK_telemetry': 0,
         '/engineering_data/temp_detector': 0,
-        '/engineering_data/temp_optics': 0,
+        '/engineering_data/temp_housing': 0,
         '/engineering_data/HK_tlm_time': 0,
         '/navigation_data/adstate': 0,
         '/navigation_data/att_quat': 0,
@@ -673,50 +675,50 @@ class L1Aio(Lv1io):
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def fill_time(self, sec_of_day, reference_day, *, leap_seconds=0) -> None:
+    def fill_time(self, ccsds_sec, ccsds_usec, group=None) -> None:
         """
-        Write time of Science telemtry packets (UTC/TAI) to L1A product
+        Write time of Science telemetry packets (UTC/TAI) to L1A product
 
         Parameters
         ----------
-        sec_of_day : numpy array (float)
-           seconds since midnight
-        reference_day : datetime.datetime
-           midnight
-        leap_second : integer
-          leap seconds since 1970, use only when input are TAI seconds
+        ccsds_sec : numpy array (dtype='u4')
+          seconds since 1970-01-01
+        ccsds_usec : numpy array (dtype='u2')
+          microseconds seconds
 
         Note
         ----
         Writes parameters: image_CCSDS_sec, image_CCSDS_usec and image_time
-        in the group /image_attributes
         """
-        self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
+        if group is None:
+            group = 'image_attributes'
 
-        self.set_dset('/image_attributes/image_time', sec_of_day)
+        reference_day, sec_of_day = self.sec_of_day(ccsds_sec, ccsds_usec)
 
-        utc_sec = sec_of_day.astype('u4') + leap_seconds \
-            + (reference_day - self.epoch).total_seconds()
-        frac_sec = np.round(1e6 * (sec_of_day % 1)).astype('i4')
+        if group in ('image_attributes', '/image_attributes'):
+            self.set_dset('/image_attributes/image_CCSDS_sec', ccsds_sec)
+            self.set_dset('/image_attributes/image_CCSDS_usec', ccsds_usec)
 
-        self.set_dset('/image_attributes/image_CCSDS_sec', utc_sec)
-        self.set_dset('/image_attributes/image_CCSDS_usec', frac_sec)
+            self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
+            self.set_dset('/image_attributes/image_time', sec_of_day)
+        elif group in ('engineering_data', '/engineering_data'):
+            self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
 
     def fill_mps(self, mps_data) -> None:
         """
-        Write Science telemtry packets (MPS) to L1A product
+        Write Science telemetry packets (MPS) to L1A product
 
         Parameters
         ----------
         mps_data : numpy array
-           Structured array with all Science telemtry parameters
+           Structured array with all Science telemetry parameters
 
         Notes
         -----
         Writes mps_data as detector_telemetry in the group /science_data
 
         Parameters: binning_table, digital_offset, exposure_time
-        and nr_coadding are extracted from the telemtry packets and writen
+        and nr_coadding are extracted from the telemetry packets and writen
         in the group /image_attributes
         """
         self.set_dset('/science_data/detector_telemetry', mps_data)
@@ -733,7 +735,7 @@ class L1Aio(Lv1io):
 
     def fill_nomhk(self, nomhk_data):
         """
-        Write nominal house-keeping telemtry packets (NomHK) to L1A product
+        Write nominal house-keeping telemetry packets (NomHK) to L1A product
 
         Parameters
         ----------
@@ -749,10 +751,19 @@ class L1Aio(Lv1io):
         """
         self.set_dset('/engineering_data/HK_telemetry', nomhk_data)
 
-        self.set_dset('/engineering_data/temp_detector',
-                      nomhk_data['TS1_DEM_N_T'])
-        self.set_dset('/engineering_data/temp_housing',
-                      nomhk_data['TS2_HOUSING_N_T'])
+        if np.all(nomhk_data['TS1_DEM_N_T'] == 0):
+            self.set_dset('/engineering_data/temp_detector',
+                          np.full(nomhk_data.size, 273))
+        else:
+            self.set_dset('/engineering_data/temp_detector',
+                          nomhk_data['TS1_DEM_N_T'])
+
+        if np.all(nomhk_data['TS2_HOUSING_N_T'] == 0):
+            self.set_dset('/engineering_data/temp_housing',
+                          np.full(nomhk_data.size, 293))
+        else:
+            self.set_dset('/engineering_data/temp_housing',
+                          nomhk_data['TS2_HOUSING_N_T'])
 
     def fill_gse(self, reference=None) -> None:
         """

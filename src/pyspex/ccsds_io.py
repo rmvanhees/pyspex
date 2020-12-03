@@ -419,7 +419,6 @@ class CCSDSio:
         Tuple with NomHK telemetry packages (chronological)
         """
         # reject non-NomHK telemetry packages
-        tstamp = []
         packets = ()
         for packet in packets_in:
             if 'primary_header' not in packet.dtype.names:
@@ -428,8 +427,6 @@ class CCSDSio:
             self.__hdr = packet['primary_header']
             if self.ap_id == 0x320:
                 packets += (packet,)
-                tstamp.append(packet['secondary_header']['tai_sec']
-                              + packet['secondary_header']['sub_sec'] / 2**16)
 
         if not packets:
             return ()

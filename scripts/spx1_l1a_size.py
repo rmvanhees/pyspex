@@ -78,7 +78,7 @@ def main():
         for _ in range(duration):
             l1a.set_dset('/engineering_data/HK_telemetry', hk_data)
             l1a.set_dset('/engineering_data/temp_detector', [293.])
-            l1a.set_dset('/engineering_data/temp_optics', [294.])
+            l1a.set_dset('/engineering_data/temp_housing', [294.])
 
         # Navigation data
         secnds = 2 * np.arange(duration // 2, dtype=float) \

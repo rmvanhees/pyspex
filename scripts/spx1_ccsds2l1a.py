@@ -80,20 +80,22 @@ def main():
         return
 
     # extract timestaps, image data & attributes from Science packages
-    tstamp = []
-    mps_data = []
-    image_id = []
+    img_sec = []
+    img_usec = []
+    img_id = []
     images = []
+    mps_data = []
     for packet in science_tm:
-        utc_sec = packet['secondary_header']['tai_sec'] - LEAP_SECONDS
-        frac_sec = packet['secondary_header']['sub_sec'] / 2**16
-        tstamp.append(EPOCH + timedelta(seconds=utc_sec + frac_sec))
+        img_sec.append(packet['secondary_header']['tai_sec'])
+        img_usec.append(packet['secondary_header']['sub_sec'])
+        img_id.append(packet['primary_header']['sequence'] & 0x3fff)
 
-        image_id.append(packet['primary_header']['sequence'] & 0x3fff)
         mps_data.append(packet['mps'])
         images.append(packet['image_data'])
 
-    image_id = np.array(image_id)
+    img_sec = np.array(img_sec)
+    img_usec = np.array(img_usec)
+    img_id = np.array(img_id)
     mps_data = np.array(mps_data)
     images = np.array(images)
     if args.verbose:
@@ -101,7 +103,9 @@ def main():
               if images.ndim == 1 else images.shape[1], images.shape)
 
     # generate name of L1A product
-    if tstamp[0] < LAUNCH_DATE:
+    tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
+    print(tstamp0, LAUNCH_DATE)
+    if tstamp0 < LAUNCH_DATE:
         msm_id = Path(args.file_list[0]).stem
         try:
             new_date = datetime.strptime(
@@ -111,10 +115,10 @@ def main():
         else:
             msm_id = msm_id[:-22] + new_date
 
-        prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id)
+        prod_name = spx_product.prod_name(tstamp0, msm_id=msm_id)
         inflight = False
     else:
-        prod_name = spx_product.prod_name(tstamp[0])
+        prod_name = spx_product.prod_name(tstamp0)
         inflight = True
 
     # pylint: disable=unsubscriptable-object
@@ -125,42 +129,34 @@ def main():
             'hk_packets': len(nomhk_tm),
             'SC_records': None}
 
-    # convert timestamps Science to seconds-per-day
-    science_sec = np.empty(len(tstamp), dtype=float)
-    midnight = tstamp[0].replace(hour=0, minute=0, second=0, microsecond=0)
-    for ii, tval in enumerate(tstamp):
-        science_sec[ii] = (tval - midnight).total_seconds()
-
     # convert timestamps NomHK to seconds-per-day
-    nomhk_sec = np.empty(len(nomhk_tm), dtype=float)
-    nomhk_data = []
-    for ii, packet in enumerate(nomhk_tm):
-        utc_sec = packet['secondary_header']['tai_sec'] - LEAP_SECONDS
-        frac_sec = packet['secondary_header']['sub_sec'] / 2**16
-        tval = EPOCH + timedelta(seconds=utc_sec + frac_sec)
-        nomhk_sec[ii] = (tval - midnight).total_seconds()
-        nomhk_data.append(packet['nominal_hk'])
-    nomhk_data = np.array(nomhk_data)
+    hk_sec = []
+    hk_usec = []
+    hk_data = []
+    for packet in nomhk_tm:
+        hk_sec.append(packet['secondary_header']['tai_sec'])
+        hk_usec.append(packet['secondary_header']['sub_sec'])
+        hk_data.append(packet['nominal_hk'])
+
+    hk_sec = np.array(hk_sec)
+    hk_usec = np.array(hk_usec)
+    hk_data = np.array(hk_data)
 
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
+        # write image data
         l1a.set_dset('/science_data/detector_images', images)
-        # writes datasets detector_telemetry in group /science_data
-        # and datasets exposure_time, nr_coadditions in group /image_attributes
+
+        # write detector telemetry and image attributes
         l1a.fill_mps(mps_data)
-        l1a.set_dset('/image_attributes/image_ID', image_id)
-        # writes datasets: image_time, image_CCSDS_sec & image_CCSDS_usec
-        # in group /image_attributes
-        l1a.fill_time(science_sec, midnight)
+        l1a.fill_time(img_sec, img_usec, group='image_attributes')
+        l1a.set_dset('/image_attributes/image_ID', img_id)
 
-        l1a.set_dset('/engineering_data/HK_tlm_time', nomhk_sec)
-        l1a.set_dset('/engineering_data/HK_telemetry', nomhk_data)
-        l1a.set_dset('/engineering_data/temp_detector',
-                     nomhk_data['TS1_DEM_N_T'])
-        l1a.set_dset('/engineering_data/temp_optics',
-                     nomhk_data['TS2_HOUSING_N_T'])
+        # write engineering data
+        l1a.fill_time(hk_sec, hk_usec, group='engineering_data')
+        l1a.fill_nomhk(hk_data)
 
-        # Global attributes
+        # write global attributes
         l1a.fill_global_attrs()
         l1a.set_attr('input_files',
                      [Path(x).name for x in args.file_list])

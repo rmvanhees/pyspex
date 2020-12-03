@@ -129,7 +129,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     texp = []
     images = []
     temp_det = []
-    temp_opt = []
+    temp_house = []
     for flname in l1a_prod_list:
         with h5py.File(flname, 'r') as fid:
             mps_dtype = fid['/science_data/detector_telemetry'].dtype
@@ -137,13 +137,13 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
             texp.append(fid['/image_attributes/exposure_time'][:])
             images.append(fid['/science_data/detector_images'][:])
             temp_det.append(fid['/engineering_data/temp_detector'][:])
-            temp_opt.append(fid['/engineering_data/temp_optics'][:])
+            temp_house.append(fid['/engineering_data/temp_housing'][:])
 
     coad = np.stack(coad)
     texp = np.stack(texp)
     images = np.stack(images)
     temp_det = np.stack(temp_det)
-    temp_opt = np.stack(temp_opt)
+    temp_house = np.stack(temp_house)
 
     # create random index for sciences
     rng = np.random.default_rng()
@@ -158,7 +158,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     images = images[indx, :, :].reshape(-1, samples_per_image)
     n_images = images.shape[0]
     temp_det = temp_det[indx[::sampling], :].reshape(-1)
-    temp_opt = temp_opt[indx[::sampling], :].reshape(-1)
+    temp_house = temp_house[indx[::sampling], :].reshape(-1)
 
     # generate telemetry data
     telemetry = np.zeros(n_images, dtype=mps_dtype)
@@ -194,7 +194,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
         # write datasets in /engineering_data
         l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
         l1a.set_dset('/engineering_data/temp_detector', temp_det)
-        l1a.set_dset('/engineering_data/temp_optics', temp_opt)
+        l1a.set_dset('/engineering_data/temp_housing', temp_house)
 
 
 # - main functions --------------------------------

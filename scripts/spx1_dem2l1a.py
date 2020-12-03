@@ -27,6 +27,7 @@ from pyspex.dem_io import DEMio
 from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
@@ -129,9 +130,6 @@ def main():
         t_exp[ii] = dem.exp_time()
         t_frm[ii] = dem.frame_period(int(coad_str[-2:]))
         offset[ii] = dem.offset
-        # determine detector temperature
-        # temp[ii] = float(dem.temp_detector())
-        temp[ii] = 293.0
         # read image data
         image_list.append(dem.get_data())
 
@@ -150,13 +148,14 @@ def main():
         images = images[indx]
 
     # convert timestamps to seconds per day
-    secnds = np.empty(len(tstamp), dtype=float)
-    midnight = tstamp[0].replace(hour=0, minute=0, second=0, microsecond=0)
+    img_sec = []
+    img_usec = []
     for ii, tval in enumerate(tstamp):
-        secnd = (tval - midnight).total_seconds()
-        # time-of-measurement provided at end of integration time
-        secnd -= t_frm[ii]
-        secnds[ii] = secnd
+        tdiff = (tval - EPOCH)
+        img_sec.append(tdiff.seconds)
+        img_usec.append(tdiff.microseconds * 2**16 // 1000000)
+    img_sec = np.array(img_sec)
+    img_usec = np.array(img_usec)
 
     # generate name of L1A product
     prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
@@ -181,9 +180,8 @@ def main():
             'nv': 1}
 
     if args.reference is not None:
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-        utc_start = int((tstamp[0] - epoch).total_seconds())
-        utc_stop = round((tstamp[-1] - epoch).total_seconds())
+        utc_start = int((tstamp[0] - EPOCH).total_seconds())
+        utc_stop = round((tstamp[-1] - EPOCH).total_seconds())
         with h5py.File(args.reference, 'r') as fid:
             secnd = fid['sec'][:]
             mask = ((secnd >= utc_start) & (secnd <= utc_stop))
@@ -193,19 +191,18 @@ def main():
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
     with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
-        # Image data
+        # write image data
         l1a.set_dset('/science_data/detector_images',
                      images.reshape(n_images, n_samples))
-        l1a.fill_mps(mps_data)
 
-        l1a.fill_time(secnds, midnight)
+        # write detector telemetry and image attributes
+        l1a.fill_mps(mps_data)
+        l1a.fill_time(img_sec, img_usec, group='image_attributes')
         l1a.set_dset('/image_attributes/image_ID', np.arange(n_images))
 
         # Engineering data
-        l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
-        l1a.set_dset('/engineering_data/HK_telemetry', hk_data)
-        l1a.set_dset('/engineering_data/temp_detector', temp)
-        l1a.set_dset('/engineering_data/temp_optics', temp)
+        l1a.fill_time(img_sec, img_usec, group='engineering_data')
+        l1a.fill_nomhk(hk_data)
 
         # GSE data
         if args.reference is not None:

@@ -86,9 +86,9 @@ def header_as_dict(hdr, n_images):
     # Datasets
     hdr_dict['Optics temperature (K)'] = {
         'ds_type': 'dset',
-        'ds_name': '/engineering_data/temp_optics',
+        'ds_name': '/engineering_data/temp_housing',
         'ds_value': np.full(n_images,
-                            float(hdr['Optics temperature (K)']))}
+                            float(hdr['Housing temperature (K)']))}
     hdr_dict['Detector temperature (K)'] = {
         'ds_type': 'dset',
         'ds_name': '/engineering_data/temp_detector',
