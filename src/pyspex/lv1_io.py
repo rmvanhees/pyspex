@@ -205,10 +205,10 @@ class Lv1io:
        Write data to an attribute, global or attached to a group or variable.
     get_dset(ds_name)
        Read data of a netCDF4 variable.
-    set_dset(ds_name, value)
+    set_dset(ds_name, value, ibgn=-1)
        Write/append data to a netCDF4 variable.
-    sec_of_day(self, utc_sec, frac_sec)
-       Convert timestamp to second of day.
+    sec_of_day(ccsds_sec, ccsds_usec)
+       Convert CCSDS timestamp to seconds after midnight.
     fill_global_attrs(level, orbit=-1, bin_size=None)
        Define global attributes in the SPEXone Level-1 products.
 
@@ -441,31 +441,36 @@ class Lv1io:
     # -------------------------
     def sec_of_day(self, ccsds_sec, ccsds_usec):
         """
-        Convert timestamp to second of day
+        Convert CCSDS timestamp to seconds after midnight
 
         Parameters
         ----------
         ccsds_sec : numpy array (dtype='u4')
           seconds since 1970-01-01
-        ccsds_usec : numpy array (dtype='i2')
+        ccsds_usec : numpy array (dtype='u2')
           microseconds seconds
 
         Returns
         -------
-        tuple(reference_day, sec_of_day)
+        numpy.ndarray with sec_of_day
         """
         # determine midnight before start measurement
-        tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
-        reference_day = datetime(year=tstamp0.year,
-                                 month=tstamp0.month,
-                                 day=tstamp0.day, tzinfo=timezone.utc)
+        if 'reference_day' in self.fid.ncattrs():
+            reference_day = datetime.fromisoformat(self.fid.reference_day,
+                                                   tzinfo=timezone.utc)
+        else:
+            tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
+            reference_day = datetime(year=tstamp0.year,
+                                     month=tstamp0.month,
+                                     day=tstamp0.day, tzinfo=timezone.utc)
+            self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
 
         # store seconds since midnight
         sec_of_day = (ccsds_sec + ccsds_usec / 2**16)\
                      - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return (reference_day, sec_of_day)
+        return sec_of_day
 
     # -------------------------
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
@@ -539,18 +544,18 @@ class L1Aio(Lv1io):
        Write data to an attribute, global or attached to a group or variable.
     get_dset(ds_name)
        Read data of a netCDF4 variable.
-    set_dset(ds_name, value)
+    set_dset(ds_name, valu, ibgn=-1e)
        Write/append data to a netCDF4 variable.
-    sec_of_day(self, utc_sec, frac_sec)
-       Convert timestamp to second of day.
+    sec_of_day(ccsds_sec, ccsds_usec)
+       Convert CCSDS timestamp to seconds after midnight.
     fill_global_attrs(level, orbit=-1, bin_size=None)
        Define global attributes in the SPEXone Level-1 products.
-    check_stored()
+    check_stored(allow_empty=False)
        Check variables with the same first dimension have equal sizes.
+    fill_time(ccsds_sec, ccsds_usec, group=None)
+       Write time of Science telemetry packets (UTC/TAI) to L1A product.
     fill_mps(mps_data)
        Write Science telemetry packets (MPS) to L1A product.
-    fill_time(sec_of_day, reference_day, leap_seconds=0)
-       Write time of Science telemetry packets (UTC/TAI) to L1A product.
     fill_nomhk(nomhk_data)
        Write nominal house-keeping telemetry packets (NomHK) to L1A product.
     fill_gse(reference=None)
@@ -693,13 +698,11 @@ class L1Aio(Lv1io):
         if group is None:
             group = 'image_attributes'
 
-        reference_day, sec_of_day = self.sec_of_day(ccsds_sec, ccsds_usec)
+        sec_of_day = self.sec_of_day(ccsds_sec, ccsds_usec)
 
         if group in ('image_attributes', '/image_attributes'):
             self.set_dset('/image_attributes/image_CCSDS_sec', ccsds_sec)
             self.set_dset('/image_attributes/image_CCSDS_usec', ccsds_usec)
-
-            self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
             self.set_dset('/image_attributes/image_time', sec_of_day)
         elif group in ('engineering_data', '/engineering_data'):
             self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
@@ -837,10 +840,10 @@ class L1Bio(Lv1io):
        Write data to an attribute, global or attached to a group or variable.
     get_dset(ds_name)
        Read data of a netCDF4 variable.
-    set_dset(ds_name, value)
+    set_dset(ds_name, value, ibgn=-1)
        Write/append data to a netCDF4 variable.
-    sec_of_day(self, utc_sec, frac_sec)
-       Convert timestamp to second of day.
+    sec_of_day(ccsds_sec, ccsds_usec)
+       Convert CCSDS timestamp to seconds after midnight.
     fill_global_attrs(level, orbit=-1, bin_size=None)
        Define global attributes in the SPEXone Level-1 products.
     check_stored()
@@ -997,8 +1000,8 @@ class L1Cio(Lv1io):
        Read data of a netCDF4 variable.
     set_dset(ds_name, value)
        Write/append data to a netCDF4 variable.
-    sec_of_day(self, utc_sec, frac_sec)
-       Convert timestamp to second of day.
+    sec_of_day(ccsds_sec, ccsds_usec)
+       Convert CCSDS timestamp to seconds after midnight.
     fill_global_attrs(level, orbit=-1, bin_size=None)
        Define global attributes in the SPEXone Level-1 products.
     check_stored()
