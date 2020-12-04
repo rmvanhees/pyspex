@@ -33,10 +33,10 @@ def byte_to_timestamp(str_date: str):
     Helper function for numpy.loadtxt() to convert byte-string to timestamp
     """
     buff = str_date.strip().decode('ascii')
-    return datetime.strptime(buff, '%Y-%j-%H:%M:%S.%f').timestamp()
+    return datetime.strptime(buff, '%Y%m%dT%H%M%S.%f').timestamp()
 
 
-def read_egse(egse_file: str, verbose=False):
+def read_egse_old(egse_file: str, verbose=False):
     """
     Read EGSE data to numpy compound array
     """
@@ -84,6 +84,55 @@ def read_egse(egse_file: str, verbose=False):
                           converters={0: byte_to_timestamp,
                                       15: lambda s: ldls_dict[s.strip()],
                                       34: lambda s: shutter_dict[s.strip()]})
+    return {'values': data, 'units': units,
+            'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
+
+
+def read_egse(egse_file: str, verbose=False):
+    """
+    Read EGSE data (tab separated values) to numpy compound array
+    """
+    # enumerate source status
+    ldls_dict = {b'UNPLUGGED': 0, b'Controller Fault': 1, b'Idle': 2,
+                 b'Laser ON': 3, b'Lamp ON': 4, b'MISSING': 255}
+
+    # enumerate shutter positions
+    shutter_dict = {b'CLOSED': 0, b'OPEN': 1, b'PARTIAL': 255}
+
+    # define dtype of the data 
+    formats = ('f8',) + 14 * ('f4',) + ('u1',) + 2 * ('i4',)\
+        + ('f4', 'u1',) + 2 * ('u1',) + 3 * ('f4', 'u1',) + 7 * ('u1',)
+    if verbose:
+        print(len(formats), formats)
+
+    with open(egse_file, 'r') as fid:
+        line = None
+        while not line:
+            line = fid.readline().strip()
+            fields = line.split('\t')
+            names = []
+            units = []
+            for field in fields:
+                if field == '':
+                    continue
+                res = field.strip().split(' [')
+                names.append(res[0].replace(' nm', 'nm'))
+                if len(res) == 2:
+                    units.append(res[1].replace('[', '').replace(']', ''))
+                else:
+                    units.append('')
+
+        if verbose:
+            print(len(names), names)
+            print(len(units), units)
+
+        data = np.loadtxt(fid, delimiter='\t',
+                          dtype={'names': names, 'formats': formats},
+                          converters={0: byte_to_timestamp,
+                                      15: lambda s: ldls_dict.get(s.strip(),
+                                                                  255),
+                                      20: lambda s: shutter_dict.get(s.strip(),
+                                                                     255)})
     return {'values': data, 'units': units,
             'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
 
