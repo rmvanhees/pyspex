@@ -456,14 +456,13 @@ class Lv1io:
         """
         # determine midnight before start measurement
         if 'reference_day' in self.fid.ncattrs():
-            reference_day = datetime.fromisoformat(self.fid.reference_day,
-                                                   tzinfo=timezone.utc)
+            reference_day = datetime.fromisoformat(self.fid.reference_day)
         else:
             tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
             reference_day = datetime(year=tstamp0.year,
                                      month=tstamp0.month,
                                      day=tstamp0.day, tzinfo=timezone.utc)
-            self.fid.reference_day = reference_day.strftime('%Y-%m-%d')
+            self.fid.reference_day = reference_day.isoformat()
 
         # store seconds since midnight
         sec_of_day = (ccsds_sec + ccsds_usec / 2**16)\
