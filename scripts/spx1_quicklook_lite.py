@@ -65,6 +65,7 @@ def main():
             figinfo.add('image_time', time_str)
             figinfo.add('nr_coadditions', nr_coadditions[ii], fmt='{:d}')
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
+            figinfo.add('signal_range', [img.min(), img.max()], fmt='{}')
             plot.draw_signal(img.reshape(2048, 2048), vperc=[.1, 100.],
                              fig_info=figinfo,
                              sub_title='frame: {}'.format(ii))

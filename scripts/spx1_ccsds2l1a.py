@@ -106,7 +106,7 @@ def main():
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
     print(tstamp0, LAUNCH_DATE)
     if tstamp0 < LAUNCH_DATE:
-        msm_id = Path(args.file_list[0]).stem
+        msm_id = Path(args.file_list[0]).stem.replace('_hk', '')
         try:
             new_date = datetime.strptime(
                 msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')

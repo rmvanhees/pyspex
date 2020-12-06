@@ -723,6 +723,9 @@ class L1Aio(Lv1io):
         and nr_coadding are extracted from the telemetry packets and writen
         in the group /image_attributes
         """
+        if len(mps_data) == 0:
+            return
+
         self.set_dset('/science_data/detector_telemetry', mps_data)
 
         mps = LV1mps(mps_data)
@@ -751,6 +754,9 @@ class L1Aio(Lv1io):
         Parameters: temp_detector and temp_housing are extracted and converted
         to degrees Celsius and writen to the group /engineering_data
         """
+        if len(nomhk_data) == 0:
+            return
+
         self.set_dset('/engineering_data/HK_telemetry', nomhk_data)
 
         if np.all(nomhk_data['TS1_DEM_N_T'] == 0):
