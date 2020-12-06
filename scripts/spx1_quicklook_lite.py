@@ -34,14 +34,12 @@ def main():
         print(flname)
 
         with h5py.File(flname, 'r') as fid:
-            # n_img = fid['number_of_images'].size
-            # n_row = fid['number_of_images']
-            # n_col = fid['number_of_images']
             date_start = fid.attrs['time_coverage_start']
             image_time = fid['image_attributes/image_time'][:]
             nr_coadditions = fid['image_attributes/nr_coadditions'][:]
             exposure_time = fid['image_attributes/exposure_time'][:]
-            images = fid['science_data/detector_images'][:]
+            images = fid['science_data/detector_images'][:] \
+                / nr_coadditions[:, None]
 
         try:
             date_start = date_start.decode()
@@ -53,6 +51,7 @@ def main():
         data_dir = flname.parent / 'QuickLook'
         if not data_dir.is_dir():
             data_dir.mkdir(mode=0o755)
+
         plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
         for ii, img in enumerate(images):
@@ -63,12 +62,11 @@ def main():
             figinfo = FIGinfo()
             figinfo.add('coverage_start', date_start)
             figinfo.add('image_time', time_str)
-            figinfo.add('nr_coadditions', nr_coadditions[ii], fmt='{:d}')
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
-            figinfo.add('signal_range', [img.min(), img.max()], fmt='{}')
+            figinfo.add('signal_range', [int(img.min()), int(img.max())],
+                        fmt='{}')
             plot.draw_signal(img.reshape(2048, 2048), vperc=[1, 99],
-                             fig_info=figinfo,
-                             sub_title='frame: {}'.format(ii))
+                             fig_info=figinfo, sub_title='frame: {}'.format(ii))
 
         plot.close()
 
