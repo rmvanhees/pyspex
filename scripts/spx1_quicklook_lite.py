@@ -55,6 +55,9 @@ def main():
         plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
         for ii, img in enumerate(images):
+            if img.size !== 4194304:
+                continue
+
             time_str = (
                 datetime(year=2020, month=1, day=1)
                 + timedelta(seconds=image_time[ii])).strftime('%H:%M:%S.%f')
