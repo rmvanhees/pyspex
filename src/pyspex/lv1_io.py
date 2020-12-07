@@ -465,11 +465,10 @@ class Lv1io:
             self.fid.reference_day = reference_day.isoformat()
 
         # store seconds since midnight
-        sec_of_day = (ccsds_sec + ccsds_usec / 2**16)\
-                     - (reference_day - self.epoch).total_seconds()
+        sec_of_day = ccsds_sec - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return sec_of_day
+        return sec_of_day + ccsds_usec / 2**16
 
     # -------------------------
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
@@ -603,8 +602,9 @@ class L1Aio(Lv1io):
         # update coverage time
         mps = LV1mps(self.get_dset('/science_data/detector_telemetry')[-1])
 
-        # determine the masterclock cycle
-        mcycl = 1e-1 * mps.get('REG_NCOADDFRAMES') * mps.get('FTI')
+        # determine duration master clock cycle
+        imro =  1e-1 * mps.get('FTI') * 2
+        mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
 
         img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
         img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
@@ -612,11 +612,12 @@ class L1Aio(Lv1io):
         time0 = (self.epoch
                  + timedelta(seconds=int(img_sec[0]))
                  + timedelta(microseconds=int(img_usec[0]))
-                 - timedelta(milliseconds=mcycl))
+                 - timedelta(milliseconds=mcycl + imro))
 
         time1 = (self.epoch
                  + timedelta(seconds=int(img_sec[-1]))
-                 + timedelta(microseconds=int(img_usec[-1])))
+                 + timedelta(microseconds=int(img_usec[-1]))
+                 - timedelta(milliseconds=imro))
 
         self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
         self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
@@ -697,6 +698,7 @@ class L1Aio(Lv1io):
         if group is None:
             group = 'image_attributes'
 
+        # calculate seconds of day
         sec_of_day = self.sec_of_day(ccsds_sec, ccsds_usec)
 
         if group in ('image_attributes', '/image_attributes'):
