@@ -104,7 +104,6 @@ def main():
 
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
-    print(tstamp0, LAUNCH_DATE)
     if tstamp0 < LAUNCH_DATE:
         msm_id = Path(args.file_list[0]).stem.replace('_hk', '')
         try:
@@ -141,6 +140,23 @@ def main():
     hk_sec = np.array(hk_sec)
     hk_usec = np.array(hk_usec)
     hk_data = np.array(hk_data)
+
+    # ToDo Remove these temporary fixes
+    us100 = np.round(10000 * img_usec.astype(np.float) / 65536)
+    buff = us100 + img_sec - 10000
+    us100 = buff.astype('u8') % 10000
+    img_usec = (us100 << 16) // 10000
+    img_usec = img_usec.astype('u2')
+
+    us100 = np.round(10000 * hk_usec.astype(np.float) / 65536)
+    buff = us100 + hk_sec - 10000
+    us100 = buff.astype('u8') % 10000
+    hk_usec = (us100 << 16) // 10000
+    med = np.median(hk_usec)
+    indx = np.where(np.abs(hk_usec - med) > 1000)[0]
+    hk_usec[indx] = med
+    hk_usec = hk_usec.astype('u2')
+
 
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
