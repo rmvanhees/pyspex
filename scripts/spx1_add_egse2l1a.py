@@ -179,7 +179,7 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     # perform sanity check
     egse['values'] = egse['values'][indx]
     for param in ['ALT_ANGLE', 'ACT_ANGLE']:
-        res_sanity = np.all(np.diff(egse['values'][param]) < 0.001)
+        res_sanity = np.all(np.diff(egse['values'][param]) < 0.01)
         if not res_sanity:
             print('[WARNING] ', param, egse['values'][param])
 

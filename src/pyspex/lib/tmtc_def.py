@@ -229,9 +229,7 @@ def tmtc_def(apid):
             ('LAST_CRC', '>u4'),                # 70     0x0052
             ('SCITM_PKTINTVL', '>u2'),          # 74     0x0056
             ('SCITM_BUFFREE', '>u4'),           # 76     0x0058
-            ('SWEXECTIMEWC', '>u4'),            # 80     0x005c
-            ('ERRCNT_PLACEHOLDER_01', '>u2'),   # 84     0x0060
-            ('ERRCNT_PLACEHOLDER_02', '>u2'),   # 86     0x0062
+            ('SWEXECTIMEWC', '>u8'),            # 80     0x005c
             ('ERRCNT_PLACEHOLDER_03', '>u2'),   # 88     0x0064
             # ('FillerByte', 'u1')
             ('TS1_DEM_N_T', '>u4'),             # 90     0x0066
