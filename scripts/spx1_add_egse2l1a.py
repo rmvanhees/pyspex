@@ -13,7 +13,7 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import h5py
@@ -45,7 +45,7 @@ def get_offs_egse_time(sron_sec: float):
     #      int(data[indx]['SRON'] - data[indx]['EGSE']),
     #      int(data[indx]['SRON'] - data[indx]['ITOS']))
     return int(data[indx]['EGSE'] - data[indx]['ITOS'])
-    
+
 
 def byte_to_timestamp(str_date: str):
     """
@@ -160,6 +160,7 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     Return indices EGSE records during the measurement in the Level-1A product
     """
     with h5py.File(l1a_file, 'r') as fid:
+        # pylint: disable=no-member
         coverage_start = datetime.fromisoformat(
             fid.attrs['time_coverage_start'].decode('ascii'))
         coverage_stop = datetime.fromisoformat(
@@ -173,6 +174,7 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     indx = np.where((egse['values']['time'] >= coverage_start.timestamp())
                     & (egse['values']['time'] <= coverage_stop.timestamp()))[0]
     if indx.size == 0:
+        print('[WARNING] could not find EGSE information for the measurements')
         return None
 
     # perform sanity check
@@ -184,7 +186,7 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
 
     return egse
 
-def write_egse(l1a_file: str, egse, verbose=False):
+def write_egse(l1a_file: str, egse):
     """
     Read EGSE data to SPEXone Level-1A product
     """
@@ -218,11 +220,11 @@ def write_egse(l1a_file: str, egse, verbose=False):
     parts = l1a_file.split('_')
     act_angle = [x.replace('act', '') for x in parts if x.startswith('act')]
     alt_angle = [x.replace('alt', '') for x in parts if x.startswith('alt')]
-    
+
     view_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8, 'P50DEG': 16}
     parts_type = parts[2].split('-')
     gid['viewport'][:] = view_dict.get(parts_type[min(2, len(parts_type))], 255)
-    
+
     # write EGSE settings as attributes
     gid.Line_skip_id = ""
     gid.Enabled_lines = 2048
@@ -266,7 +268,8 @@ def main():
     if args.l1a_file is not None:
         egse = select_egse(args.l1a_file, egse, verbose=args.verbose)
 
-    write_egse(args.l1a_file, egse, verbose=args.verbose)
+    if egse is not None:
+        write_egse(args.l1a_file, egse)
 
 
 # --------------------------------------------------
