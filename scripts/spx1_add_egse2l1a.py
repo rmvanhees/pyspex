@@ -174,7 +174,6 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     indx = np.where((egse['values']['time'] >= coverage_start.timestamp())
                     & (egse['values']['time'] <= coverage_stop.timestamp()))[0]
     if indx.size == 0:
-        print('[WARNING] could not find EGSE information for the measurements')
         return None
 
     # perform sanity check
@@ -267,9 +266,11 @@ def main():
 
     if args.l1a_file is not None:
         egse = select_egse(args.l1a_file, egse, verbose=args.verbose)
+        if egse is None:
+            raise FileNotFoundError(
+                'could not find EGSE information for the measurements')
 
-    if egse is not None:
-        write_egse(args.l1a_file, egse)
+    write_egse(args.l1a_file, egse)
 
 
 # --------------------------------------------------
