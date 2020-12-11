@@ -81,20 +81,20 @@ def main():
 
     # extract timestaps, image data & attributes from Science packages
     img_sec = []
-    img_usec = []
+    img_subsec = []
     img_id = []
     images = []
     mps_data = []
     for packet in science_tm:
         img_sec.append(packet['secondary_header']['tai_sec'])
-        img_usec.append(packet['secondary_header']['sub_sec'])
+        img_subsec.append(packet['secondary_header']['sub_sec'])
         img_id.append(packet['primary_header']['sequence'] & 0x3fff)
 
         mps_data.append(packet['mps'])
         images.append(packet['image_data'])
 
     img_sec = np.array(img_sec)
-    img_usec = np.array(img_usec)
+    img_subsec = np.array(img_subsec)
     img_id = np.array(img_id)
     mps_data = np.array(mps_data)
     images = np.array(images)
@@ -130,33 +130,32 @@ def main():
 
     # convert timestamps NomHK to seconds-per-day
     hk_sec = []
-    hk_usec = []
+    hk_subsec = []
     hk_data = []
     for packet in nomhk_tm:
         hk_sec.append(packet['secondary_header']['tai_sec'])
-        hk_usec.append(packet['secondary_header']['sub_sec'])
+        hk_subsec.append(packet['secondary_header']['sub_sec'])
         hk_data.append(packet['nominal_hk'])
 
     hk_sec = np.array(hk_sec)
-    hk_usec = np.array(hk_usec)
+    hk_subsec = np.array(hk_subsec)
     hk_data = np.array(hk_data)
 
     # ToDo Remove these temporary fixes
-    us100 = np.round(10000 * img_usec.astype(float) / 65536)
+    us100 = np.round(10000 * img_subsec.astype(float) / 65536)
     buff = us100 + img_sec - 10000
     us100 = buff.astype('u8') % 10000
-    img_usec = (us100 << 16) // 10000
-    img_usec = img_usec.astype('u2')
+    img_subsec = (us100 << 16) // 10000
+    img_subsec = img_subsec.astype('u2')
 
-    us100 = np.round(10000 * hk_usec.astype(float) / 65536)
+    us100 = np.round(10000 * hk_subsec.astype(float) / 65536)
     buff = us100 + hk_sec - 10000
     us100 = buff.astype('u8') % 10000
-    hk_usec = (us100 << 16) // 10000
-    med = np.median(hk_usec)
-    indx = np.where(np.abs(hk_usec - med) > 1000)[0]
-    hk_usec[indx] = med
-    hk_usec = hk_usec.astype('u2')
-
+    hk_subsec = (us100 << 16) // 10000
+    med = np.median(hk_subsec)
+    indx = np.where(np.abs(hk_subsec - med) > 1000)[0]
+    hk_subsec[indx] = med
+    hk_subsec = hk_subsec.astype('u2')
 
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
@@ -165,11 +164,11 @@ def main():
 
         # write detector telemetry and image attributes
         l1a.fill_mps(mps_data)
-        l1a.fill_time(img_sec, img_usec, group='image_attributes')
+        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
         l1a.set_dset('/image_attributes/image_ID', img_id)
 
         # write engineering data
-        l1a.fill_time(hk_sec, hk_usec, group='engineering_data')
+        l1a.fill_time(hk_sec, hk_subsec, group='engineering_data')
         l1a.fill_nomhk(hk_data)
 
         # write global attributes
