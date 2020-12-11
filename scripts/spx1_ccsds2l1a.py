@@ -145,17 +145,15 @@ def main():
     us100 = np.round(10000 * img_subsec.astype(float) / 65536)
     buff = us100 + img_sec - 10000
     us100 = buff.astype('u8') % 10000
-    img_subsec = (us100 << 16) // 10000
-    img_subsec = img_subsec.astype('u2')
+    img_subsec = ((us100 << 16) // 10000).astype('u2')
 
     us100 = np.round(10000 * hk_subsec.astype(float) / 65536)
     buff = us100 + hk_sec - 10000
     us100 = buff.astype('u8') % 10000
-    hk_subsec = (us100 << 16) // 10000
-    med = np.median(hk_subsec)
-    indx = np.where(np.abs(hk_subsec - med) > 1000)[0]
-    hk_subsec[indx] = med
-    hk_subsec = hk_subsec.astype('u2')
+    med = np.median(us100)
+    indx = np.where(np.abs(us100 - med) > 1000)[0]
+    us100[indx] = med
+    hk_subsec = ((us100 << 16) // 10000).astype('u2')
 
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
