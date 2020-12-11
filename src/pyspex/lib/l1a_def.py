@@ -3,7 +3,7 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Python implementation of the PACE SPEX Level-1A product (inflight and on-ground)
+Python implementation of the PACE SPEX Level-1A product (inflight and onground)
 
 Copyright (c) 2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -153,7 +153,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset = sgrp.createVariable('detector_telemetry', mps_dtype,
                                ('number_of_images',))
     dset.long_name = "SPEX science telemetry"
-    dset.comment = "Measurement Parameter Settings"
+    dset.comment = "an subset of MPS and housekeeping parameters"
 
     # - define group /engineering_data and its datasets
     sgrp = rootgrp.createGroup('/engineering_data')
@@ -166,6 +166,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
                                           'hk_dtype')
     dset = sgrp.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
     dset.long_name = "SPEX nominal-HK telemetry"
+    dset.comment = "an extended subset of the housekeeping parameters"
     dset = sgrp.createVariable('temp_detector', 'f4', ('hk_packets',))
     dset.long_name = "Detector temperature"
     dset.comment = "TS1 DEM Nominal Temperature"

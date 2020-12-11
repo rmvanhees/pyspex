@@ -142,13 +142,13 @@ def main():
     hk_data = np.array(hk_data)
 
     # ToDo Remove these temporary fixes
-    us100 = np.round(10000 * img_usec.astype(np.float) / 65536)
+    us100 = np.round(10000 * img_usec.astype(float) / 65536)
     buff = us100 + img_sec - 10000
     us100 = buff.astype('u8') % 10000
     img_usec = (us100 << 16) // 10000
     img_usec = img_usec.astype('u2')
 
-    us100 = np.round(10000 * hk_usec.astype(np.float) / 65536)
+    us100 = np.round(10000 * hk_usec.astype(float) / 65536)
     buff = us100 + hk_sec - 10000
     us100 = buff.astype('u8') % 10000
     hk_usec = (us100 << 16) // 10000
