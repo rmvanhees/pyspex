@@ -534,7 +534,7 @@ class L1Aio(Lv1io):
         '/image_attributes/nr_coadditions': 0,
         '/image_attributes/exposure_time': 0,
         '/image_attributes/image_CCSDS_sec': 0,
-        '/image_attributes/image_CCSDS_usec': 0,
+        '/image_attributes/image_CCSDS_subsec': 0,
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
         '/engineering_data/HK_telemetry': 0,
@@ -573,16 +573,16 @@ class L1Aio(Lv1io):
         mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
 
         img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
-        img_usec = self.fid['/image_attributes/image_CCSDS_usec'][:].data
+        img_subsec = self.fid['/image_attributes/image_CCSDS_subsec'][:].data
 
         time0 = (self.epoch
                  + timedelta(seconds=int(img_sec[0]))
-                 + timedelta(microseconds=int(img_usec[0]))
+                 + timedelta(microseconds=int(1e6 * img_subsec[0] / 65536))
                  - timedelta(milliseconds=mcycl + imro))
 
         time1 = (self.epoch
                  + timedelta(seconds=int(img_sec[-1]))
-                 + timedelta(microseconds=int(img_usec[-1]))
+                 + timedelta(microseconds=int(1e6 * img_subsec[-1] / 65536))
                  - timedelta(milliseconds=imro))
 
         self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
@@ -653,9 +653,9 @@ class L1Aio(Lv1io):
         Parameters
         ----------
         ccsds_sec : numpy array (dtype='u4')
-          Seconds since 1970-01-01
+          Seconds since 1970-1-1
         ccsds_subsec : numpy array (dtype='u2')
-          Sub-seconds as (1 / 2**16) microseconds
+          Sub-seconds as (1 / 2**16) seconds
 
         Returns
         -------
@@ -675,7 +675,7 @@ class L1Aio(Lv1io):
         sec_of_day = ccsds_sec - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return sec_of_day + ccsds_subsec / 2**16
+        return sec_of_day + ccsds_subsec / 65536
 
     def fill_time(self, ccsds_sec, ccsds_subsec, group=None) -> None:
         """
@@ -684,13 +684,13 @@ class L1Aio(Lv1io):
         Parameters
         ----------
         ccsds_sec : numpy array (dtype='u4')
-          Seconds since 1970-01-01
+          Seconds since 1970-1-1
         ccsds_subsec : numpy array (dtype='u2')
-          Sub-seconds as (1 / 2**16) microseconds
+          Sub-seconds as (1 / 2**16) seconds
 
         Note
         ----
-        Writes parameters: image_CCSDS_sec, image_CCSDS_usec and image_time
+        Writes parameters: image_time, image_CCSDS_sec and image_CCSDS_subsec
         """
         if group is None:
             group = 'image_attributes'
@@ -700,8 +700,7 @@ class L1Aio(Lv1io):
 
         if group in ('image_attributes', '/image_attributes'):
             self.set_dset('/image_attributes/image_CCSDS_sec', ccsds_sec)
-            self.set_dset('/image_attributes/image_CCSDS_usec',
-                          np.round((ccsds_subsec / 2**16) * 1e6))
+            self.set_dset('/image_attributes/image_CCSDS_subsec', ccsds_subsec)
             self.set_dset('/image_attributes/image_time', sec_of_day)
         elif group in ('engineering_data', '/engineering_data'):
             self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)

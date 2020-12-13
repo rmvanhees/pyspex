@@ -111,15 +111,16 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.valid_max = 86400.999999
     dset.units = "seconds"
     dset = sgrp.createVariable('image_CCSDS_sec', 'u4', ('number_of_images',))
-    dset.long_name = "image CCSDS time (seconds since 1970)"
+    dset.long_name = "image CCSDS time (seconds)"
     dset.valid_min = np.uint32(1577500000)  # year 2020
     dset.valid_max = np.uint32(2050000000)  # year 2035
-    dset.units = "seconds"
-    dset = sgrp.createVariable('image_CCSDS_usec', 'i4', ('number_of_images',))
-    dset.long_name = "image CCSDS time (microseconds)"
-    dset.valid_min = np.int32(0)
-    dset.valid_max = np.int32(999999)
-    dset.units = "microseconds"
+    dset.units = "seconds since 1970-1-1 TAI"
+    dset = sgrp.createVariable('image_CCSDS_subsec', 'u2',
+                               ('number_of_images',))
+    dset.long_name = "image CCSDS time (sub-seconds)"
+    dset.valid_min = np.uint16(0)
+    dset.valid_max = np.uint16(0xFFFF)
+    dset.units = "1 / 65536 seconds"
     dset = sgrp.createVariable('image_ID', 'i4', ('number_of_images',))
     dset.long_name = "image counter from power-up"
     dset.valid_min = np.int32(0)
