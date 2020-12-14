@@ -569,7 +569,7 @@ class L1Aio(Lv1io):
         mps = LV1mps(self.get_dset('/science_data/detector_telemetry')[-1])
 
         # determine duration master clock cycle
-        imro =  1e-1 * mps.get('FTI') * 2
+        imro = 1e-1 * mps.get('FTI') * 2
         mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
 
         img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
@@ -646,7 +646,7 @@ class L1Aio(Lv1io):
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def sec_of_day(self, ccsds_sec, ccsds_subsec):
+    def sec_of_day(self, ccsds_sec, ccsds_subsec) -> tuple:
         """
         Convert CCSDS timestamp to seconds after midnight
 
@@ -662,20 +662,16 @@ class L1Aio(Lv1io):
         numpy.ndarray with sec_of_day
         """
         # determine midnight before start measurement
-        if 'reference_day' in self.fid.ncattrs():
-            reference_day = datetime.fromisoformat(self.fid.reference_day)
-        else:
-            tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
-            reference_day = datetime(year=tstamp0.year,
-                                     month=tstamp0.month,
-                                     day=tstamp0.day, tzinfo=timezone.utc)
-            self.fid.reference_day = reference_day.isoformat()
+        tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
+        reference_day = datetime(year=tstamp0.year,
+                                 month=tstamp0.month,
+                                 day=tstamp0.day, tzinfo=timezone.utc)
 
         # store seconds since midnight
         sec_of_day = ccsds_sec - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return sec_of_day + ccsds_subsec / 65536
+        return (reference_day, sec_of_day + ccsds_subsec / 65536)
 
     def fill_time(self, ccsds_sec, ccsds_subsec, group=None) -> None:
         """
@@ -696,14 +692,20 @@ class L1Aio(Lv1io):
             group = 'image_attributes'
 
         # calculate seconds of day
-        sec_of_day = self.sec_of_day(ccsds_sec, ccsds_subsec)
+        reference_day, sec_of_day = self.sec_of_day(ccsds_sec, ccsds_subsec)
 
         if group in ('image_attributes', '/image_attributes'):
             self.set_dset('/image_attributes/image_CCSDS_sec', ccsds_sec)
             self.set_dset('/image_attributes/image_CCSDS_subsec', ccsds_subsec)
             self.set_dset('/image_attributes/image_time', sec_of_day)
+            self.set_attr('units',
+                          'seconds since {}'.format(reference_day.isoformat()),
+                          ds_name='/image_attributes/image_time')
         elif group in ('engineering_data', '/engineering_data'):
             self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
+            self.set_attr('units',
+                          'seconds since {}'.format(reference_day.isoformat()),
+                          ds_name='/engineering_data/HK_tlm_time')
 
     def fill_mps(self, mps_data) -> None:
         """

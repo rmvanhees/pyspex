@@ -109,7 +109,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.long_name = "image time (seconds of day)"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    dset.units = "seconds"
+    # dset.units = "seconds"
     dset = sgrp.createVariable('image_CCSDS_sec', 'u4', ('number_of_images',))
     dset.long_name = "image CCSDS time (seconds)"
     dset.valid_min = np.uint32(1577500000)  # year 2020
@@ -162,7 +162,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.long_name = "HK telemetry packet time (seconds of day)"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    dset.units = "seconds"
+    # dset.units = "seconds"
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x320)),
                                           'hk_dtype')
     dset = sgrp.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
