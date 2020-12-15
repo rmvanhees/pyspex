@@ -139,7 +139,7 @@ def read_egse(egse_file: str, verbose=False):
                 if len(res) == 2:
                     units.append(res[1].replace('[', '').replace(']', ''))
                 else:
-                    units.append('')
+                    units.append('1')
 
         if verbose:
             print(len(names), names)
@@ -226,9 +226,9 @@ def write_egse(l1a_file: str, egse):
 
     # write EGSE settings as attributes
     gid.Line_skip_id = ""
-    gid.Enabled_lines = 2048
+    gid.Enabled_lines = np.uint16(2048)
     gid.Binning_table = ""
-    gid.Binned_pixels = 0
+    gid.Binned_pixels = np.uint32(0)
     gid.Light_source = parts[2]
     gid.FOV_begin = np.nan
     gid.FOV_end = np.nan

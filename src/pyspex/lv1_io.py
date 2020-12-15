@@ -17,6 +17,7 @@ import numpy as np
 
 from netCDF4 import Dataset
 
+from .l1a_mps import LV1mps
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.l1b_def import init_l1b
@@ -26,153 +27,30 @@ from .lib.l1c_def import init_l1c
 MCP_TO_SEC = 1e-7
 
 
-# - class LV1mps -------------------------
-class LV1mps:
+def frac_poly(xx_in, coefs=None):
     """
-    Class to convert raw register settings from the MPS
+    Temperature [K] calibration derived by Paul Tol (2020-10-21)
 
-    Methods
+    Parameters
+    ----------
+    xx    :  ndarray
+    coefs :  tuple
+      coefficients of fractional polynomial: r0, r1, r2, r3, r4
+
+    Returns
     -------
-    get(key)
-       Return (raw) MPS parameter.
-    number_channels
-       Return number of LVDS channels used.
-    lvds_clock
-       Returns flag for LVDS clock: False: disabled & True: enabled.
-    offset
-       Returns digital offset including ADC offset [counts].
-    pga_gain
-       Returns PGA gain [Volt].
-    exp_time
-       Returns pixel exposure time [master clock periods].
-    fot_time
-       Returns frame overhead time [master clock periods].
-    rot_time
-       Returns image read-out time [master clock periods]
-    frame_period
-       Returns frame period [master clock periods].
-    pll_control
-       Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
-    exp_control
-       Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
+    ndarray, dtype float
     """
-    def __init__(self, mps_data):
-        """
-        Initialize class L1A_mps
+    xx = xx_in.astype(float)
 
-        Parameters
-        mps_data :  ndarray
-        """
-        self.__mps = mps_data
+    if coefs is None:
+        coefs = (273.15 + 21.19, 6.97828e+7,
+                 -3.53275e-25, 7.79625e-31, -4.6505E-32)
 
-    def get(self, key: str):
-        """
-        Return (raw) MPS parameter
-        """
-        return self.__mps[key] if key in self.__mps.dtype.names else None
-
-    @property
-    def number_channels(self) -> int:
-        """
-        Return number of LVDS channels used
-        """
-        return 2 ** (4 - (self.__mps['DET_OUTMODE'] & 0x3))
-
-    @property
-    def lvds_clock(self) -> bool:
-        """
-        Returns flag for LVDS clock: False: disabled & True: enabled
-        """
-        return ((self.__mps['DET_PLLENA'] & 0x3) == 0
-                and (self.__mps['DET_PLLBYP'] & 0x3) != 0
-                and (self.__mps['DET_CHENA'] & 0x40000) != 0)
-
-    @property
-    def offset(self) -> int:
-        """
-        Returns digital offset including ADC offset
-        """
-        buff = self.__mps['DET_OFFSET'].astype('i4')
-        if np.isscalar(buff):
-            if buff >= 8192:
-                buff -= 16384
-        else:
-            buff[buff >= 8192] -= 16384
-
-        return buff + 70
-
-    @property
-    def pga_gain(self) -> float:
-        """
-        Returns PGA gain [Volt]
-        """
-        # need first bit of address 121
-        reg_pgagainfactor = self.__mps['DET_BLACKCOL'] & 0x1
-
-        reg_pgagain = self.__mps['DET_PGAGAIN']
-
-        return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
-
-    @property
-    def exp_time(self) -> float:
-        """
-        Returns pixel exposure time [master clock periods]
-        """
-        return 129 * (0.43 * self.__mps['DET_FOTLEN']
-                      + self.__mps['DET_EXPTIME'])
-
-    @property
-    def fot_time(self) -> int:
-        """
-        Returns frame overhead time [master clock periods]
-        """
-        return 129 * (self.__mps['DET_FOTLEN']
-                      + 2 * (16 // self.number_channels))
-
-    @property
-    def rot_time(self) -> int:
-        """
-        Returns image read-out time [master clock periods]
-        """
-        return 129 * (16 // self.number_channels) * self.__mps['DET_NUMLINES']
-
-    @property
-    def frame_period(self) -> float:
-        """
-        Returns frame period [master clock periods]
-        """
-        return 2.38e-7 + (self.__mps['REG_NCOADDFRAMES']
-                          * (self.exp_time + self.fot_time + self.rot_time))
-
-    @property
-    def pll_control(self) -> tuple:
-        """
-        Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div
-
-        Notes
-        -----
-        PLL_range:    bits [7], valid values: 0 or 1
-        PLL_out_fre:  bits [4:7], valid values:  0, 1, 2 or 5
-        PLL_div:      bits [0:3], valid values 9 (10-bit) or 11 (12-bit)
-
-        Other PLL registers are: PLL_enable, PLL_in_fre, PLL_bypass, PLL_load
-        """
-        pll_div = self.__mps['DET_PLLRATE'] & 0xF             # bit [0:4]
-        pll_out_fre = (self.__mps['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
-        pll_range = (self.__mps['DET_PLLRATE'] >> 7)          # bit [7]
-
-        return (pll_range, pll_out_fre, pll_div)
-
-    @property
-    def exp_control(self) -> tuple:
-        """
-        Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
-        """
-        inte_sync = (self.__mps['INTE_SYNC'] >> 2) & 0x1
-        exp_dual = (self.__mps['INTE_SYNC'] >> 1) & 0x1
-        exp_ext = self.__mps['INTE_SYNC'] & 0x1
-
-        return (inte_sync, exp_dual, exp_ext)
+    return (coefs[0]
+            + coefs[1] / xx
+            + coefs[2] * xx ** 4
+            + (coefs[3] + coefs[4] * np.log(xx)) * xx ** 5)
 
 
 # - class LV1io -------------------------
@@ -213,8 +91,8 @@ class Lv1io:
     Notes
     -----
     The engineering data should be extended, suggestions:
-    * temperatures of a.o. detector, FEE, optica, obm, telescope
-    * instrument settings: exposure time, dead time, frame time, coadding, ...
+    * Temperatures of a.o. detector, FEE, optica, obm, telescope
+    * Instrument settings: exposure time, dead time, frame time, coadding, ...
     """
     processing_level = 'unknown'
     dset_stored = {}
@@ -434,7 +312,8 @@ class Lv1io:
             self.fid[name][ibgn:, ...] = value
         else:
             self.fid[name][...] = value
-        self.dset_stored[name] += value.shape[0]
+
+        self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
     def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
@@ -730,10 +609,8 @@ class L1Aio(Lv1io):
         self.set_dset('/science_data/detector_telemetry', mps_data)
 
         mps = LV1mps(mps_data)
-        self.set_dset('/image_attributes/binning_table',
-                      mps.get('REG_BINNING_TABLE'))
-        self.set_dset('/image_attributes/digital_offset',
-                      mps.offset)
+        self.set_dset('/image_attributes/binning_table', mps.binning_table_id)
+        self.set_dset('/image_attributes/digital_offset', mps.offset)
         self.set_dset('/image_attributes/exposure_time',
                       MCP_TO_SEC * mps.exp_time)
         self.set_dset('/image_attributes/nr_coadditions',
@@ -753,7 +630,7 @@ class L1Aio(Lv1io):
         Writes nomhk_data as TM_telemetry in group /engineering_data
 
         Parameters: temp_detector and temp_housing are extracted and converted
-        to degrees Celsius and writen to the group /engineering_data
+        to Kelvin and writen to the group /engineering_data
         """
         if len(nomhk_data) == 0:
             return
@@ -765,14 +642,14 @@ class L1Aio(Lv1io):
                           np.full(nomhk_data.size, 273))
         else:
             self.set_dset('/engineering_data/temp_detector',
-                          nomhk_data['TS1_DEM_N_T'])
+                          frac_poly(nomhk_data['TS1_DEM_N_T']))
 
         if np.all(nomhk_data['TS2_HOUSING_N_T'] == 0):
             self.set_dset('/engineering_data/temp_housing',
                           np.full(nomhk_data.size, 293))
         else:
             self.set_dset('/engineering_data/temp_housing',
-                          nomhk_data['TS2_HOUSING_N_T'])
+                          frac_poly(nomhk_data['TS2_HOUSING_N_T']))
 
     def fill_gse(self, reference=None) -> None:
         """

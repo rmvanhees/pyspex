@@ -154,7 +154,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset = sgrp.createVariable('detector_telemetry', mps_dtype,
                                ('number_of_images',))
     dset.long_name = "SPEX science telemetry"
-    dset.comment = "an subset of MPS and housekeeping parameters"
+    dset.comment = "a subset of MPS and housekeeping parameters"
 
     # - define group /engineering_data and its datasets
     sgrp = rootgrp.createGroup('/engineering_data')
