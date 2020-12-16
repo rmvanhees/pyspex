@@ -60,7 +60,7 @@ def read_egse(egse_file: str, verbose=False):
                 if field == '':
                     continue
                 res = field.strip().split(' [')
-                names.append(res[0].replace(' nm', 'nm'))
+                names.append(res[0].replace(' nm', 'nm').replace(' ', '_'))
                 if len(res) == 2:
                     units.append(res[1].replace('[', '').replace(']', ''))
                 else:
@@ -131,7 +131,7 @@ def write_egse(l1a_file: str, egse):
         gid = fid['/gse_data']
 
     _ = gid.createEnumType('u1','ldls_t',
-                           {k.upper(): v
+                           {k.replace(b' ', b'_').upper(): v
                             for k, v in egse['ldls_dict'].items()})
     _ = gid.createEnumType('u1','shutter_t',
                            {k.upper(): v
