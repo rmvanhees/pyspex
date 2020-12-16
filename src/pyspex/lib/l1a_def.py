@@ -28,9 +28,12 @@ def create_group_gse_data(rootgrp, n_wave=None):
 
     dset = sgrp.createVariable('viewport', 'u1')
     dset.long_name = "viewport status"
+    dset.standard_name = "status_flag"
     dset.valid_range = np.array([0, 16], dtype='u1')
-    dset.comment = "bitmask: 1, 2, 4, 8, 16"
-    dset[:] = 0x0  # initialize to default value: all viewports used
+    dset.flag_values = np.array([0, 1, 2, 4, 8, 16], dtype='u1')
+    dset.flag_meanings = "ALL -50deg -20deg 0deg +20deg +50deg"
+    # initialize to default value: all viewports used
+    dset[:] = 0    
 
     if n_wave is not None:
         sgrp.createDimension('wavelength', n_wave)
