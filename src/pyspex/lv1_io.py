@@ -419,6 +419,7 @@ class L1Aio(Lv1io):
         '/engineering_data/HK_telemetry': 0,
         '/engineering_data/temp_detector': 0,
         '/engineering_data/temp_housing': 0,
+        '/engineering_data/temp_radiator': 0,
         '/engineering_data/HK_tlm_time': 0,
         '/navigation_data/adstate': 0,
         '/navigation_data/att_quat': 0,
@@ -650,6 +651,13 @@ class L1Aio(Lv1io):
         else:
             self.set_dset('/engineering_data/temp_housing',
                           frac_poly(nomhk_data['TS2_HOUSING_N_T']))
+
+        if np.all(nomhk_data['TS3_RADIATOR_N_T'] == 0):
+            self.set_dset('/engineering_data/temp_radiator',
+                          np.full(nomhk_data.size, 294))
+        else:
+            self.set_dset('/engineering_data/temp_radiator',
+                          frac_poly(nomhk_data['TS3_RADIATOR_N_T']))
 
     def fill_gse(self, reference=None) -> None:
         """
