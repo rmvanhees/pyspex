@@ -24,87 +24,12 @@ import numpy as np
 
 
 # - local functions --------------------------------
-def get_offs_egse_time(sron_sec: float):
-    """
-    Get offset between ITOS and EGSE hardware clocks
-    """
-    date_time_dir = Path('/array/slot1F/spex_one/OCAL/date_stats')
-    if not date_time_dir.is_dir():
-        date_time_dir = Path('/nfs/SPEXone/OCAL/date_stats')
-    if not date_time_dir.is_dir():
-        date_time_dir = Path('/data/richardh/SPEXone/OCAL/date_stats')
-
-    with open(date_time_dir / 'cmp_date_egse_itos.txt', 'r') as fid:
-        names = fid.readline().strip().lstrip(' #').split('\t\t\t')
-        formats = len(names) * ('f8',)
-        data = np.loadtxt(fid, dtype={'names': names, 'formats': formats})
-
-    indx = np.argmin(np.abs(data['SRON'] - sron_sec))
-    # print('argmin: ', indx,
-    #      int(data[indx]['EGSE'] - data[indx]['ITOS']),
-    #      int(data[indx]['SRON'] - data[indx]['EGSE']),
-    #      int(data[indx]['SRON'] - data[indx]['ITOS']))
-    return int(data[indx]['EGSE'] - data[indx]['ITOS'])
-
-
 def byte_to_timestamp(str_date: str):
     """
     Helper function for numpy.loadtxt() to convert byte-string to timestamp
     """
     buff = str_date.strip().decode('ascii') + '+00:00' # date is in UTC
     return datetime.strptime(buff, '%Y%m%dT%H%M%S.%f%z').timestamp()
-
-
-def read_egse_old(egse_file: str, verbose=False):
-    """
-    Read EGSE data to numpy compound array
-    """
-    # enumerate source status
-    ldls_dict = {b'UNPLUGGED': 0, b'Controller Fault': 1, b'Idle': 2,
-                 b'Laser ON': 3, b'Lamp ON': 4, b'Missing': 255}
-
-    # enumerate shutter positions
-    shutter_dict = {b'CLOSE': 0, b'OPEN': 1, b'Missing': 255}
-
-    # define dtype of the data
-    formats = ('f8',) + 14 * ('f4',) + ('u1',) + 2 * ('i4',)\
-        + 5 * ('f4', 'u1',) + 6 * ('u1',) + ('u1',) + ('u1',)
-    if verbose:
-        print(len(formats), formats)
-
-    with open(egse_file, 'r') as fid:
-        line = None
-        while not line:
-            line = fid.readline().strip()
-            fields = line.replace('\t', '').split(',')
-            names = []
-            units = []
-            for field in fields:
-                if field == '':
-                    continue
-                res = field.strip().split(' [')
-                names.append(res[0].replace(' nm', 'nm'))
-                if len(res) == 2:
-                    units.append(res[1].replace('[', '').replace(']', ''))
-                else:
-                    units.append('')
-
-        # Temporary fix
-        names = tuple(names[:21])\
-            + ('TMC_POS_1', 'TMC_MOVING_1', 'TMC_POS_2', 'TMC_MOVING_2')\
-            + tuple(names[21:])
-        units = tuple(units[:21]) + ('deg', '', 'deg', '') + tuple(units[21:])
-        if verbose:
-            print(len(names), names)
-            print(len(units), units)
-
-        data = np.loadtxt(fid, delimiter=',',
-                          dtype={'names': names, 'formats': formats},
-                          converters={0: byte_to_timestamp,
-                                      15: lambda s: ldls_dict[s.strip()],
-                                      34: lambda s: shutter_dict[s.strip()]})
-    return {'values': data, 'units': units,
-            'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
 
 
 def read_egse(egse_file: str, verbose=False):
@@ -141,19 +66,26 @@ def read_egse(egse_file: str, verbose=False):
                 else:
                     units.append('1')
 
+        if "NOMHK packets time" in names:
+            formats = ('f8',) + formats
+            convertors = {0: byte_to_timestamp,
+                          1: byte_to_timestamp,
+                          16: lambda s: ldls_dict.get(s.strip(), 255),
+                          21: lambda s: shutter_dict.get(s.strip(), 255)}
+        else:
+            convertors = {0: byte_to_timestamp,
+                          15: lambda s: ldls_dict.get(s.strip(), 255),
+                          20: lambda s: shutter_dict.get(s.strip(), 255)}
         if verbose:
             print(len(names), names)
             print(len(units), units)
 
-        data = np.loadtxt(fid, delimiter='\t',
-                          dtype={'names': names, 'formats': formats},
-                          converters={0: byte_to_timestamp,
-                                      15: lambda s: ldls_dict.get(s.strip(),
-                                                                  255),
-                                      20: lambda s: shutter_dict.get(s.strip(),
-                                                                     255)})
+        data = np.loadtxt(fid, delimiter='\t', converters=convertors,
+                          dtype={'names': names, 'formats': formats})
+
     return {'values': data, 'units': units,
             'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
+
 
 def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     """
@@ -166,13 +98,14 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
         coverage_stop = datetime.fromisoformat(
             fid.attrs['time_coverage_end'].decode('ascii'))
 
-    offset = get_offs_egse_time(coverage_start.timestamp()) - 50
-    if verbose:
-        print('offset: ', offset)
-    coverage_start += timedelta(seconds=offset)
-    coverage_stop += timedelta(seconds=offset)
-    indx = np.where((egse['values']['time'] >= coverage_start.timestamp())
-                    & (egse['values']['time'] <= coverage_stop.timestamp()))[0]
+    msmt_start = datetime.strptime(Path(l1a_file).stem.split('_')[6] + "+00:00",
+                                   "%Y%m%dT%H%M%S.%f%z")
+    msmt_start -= timedelta(microseconds=msmt_start.microsecond)
+    duration = np.ceil((coverage_stop - coverage_start).total_seconds())
+    msmt_stop = msmt_start + timedelta(seconds=int(duration))
+
+    indx = np.where((egse['values']['time'] >= msmt_start.timestamp())
+                    & (egse['values']['time'] <= msmt_stop.timestamp()))[0]
     if indx.size == 0:
         return None
 
