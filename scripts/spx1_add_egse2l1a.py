@@ -87,7 +87,7 @@ def read_egse(egse_file: str, verbose=False):
             'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
 
 
-def select_egse(l1a_file: str, egse, verbose=False, offset=90):
+def select_egse(l1a_file: str, egse):
     """
     Return indices EGSE records during the measurement in the Level-1A product
     """
@@ -107,6 +107,7 @@ def select_egse(l1a_file: str, egse, verbose=False, offset=90):
     indx = np.where((egse['values']['time'] >= msmt_start.timestamp())
                     & (egse['values']['time'] <= msmt_stop.timestamp()))[0]
     if indx.size == 0:
+        print('[INFO] no EGSE data found')
         return None
 
     # perform sanity check
@@ -155,7 +156,8 @@ def write_egse(l1a_file: str, egse):
 
     view_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8, 'P50DEG': 16}
     parts_type = parts[2].split('-')
-    gid['viewport'][:] = view_dict.get(parts_type[min(2, len(parts_type))], 255)
+    # default 0, when all viewports are illuminated
+    gid['viewport'][:] = view_dict.get(parts_type[min(2, len(parts_type))], 0)
 
     # write EGSE settings as attributes
     gid.Line_skip_id = ""
@@ -198,7 +200,7 @@ def main():
         egse = read_egse(egse_file, verbose=args.verbose)
 
     if args.l1a_file is not None:
-        egse = select_egse(args.l1a_file, egse, verbose=args.verbose)
+        egse = select_egse(args.l1a_file, egse)
         if egse is None:
             raise FileNotFoundError(
                 'could not find EGSE information for the measurements')
