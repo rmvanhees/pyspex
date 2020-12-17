@@ -84,7 +84,7 @@ def main():
     image_list = []
 
     # Measurement Parameters Settings
-    mps_data = np.zeros(len(args.file_list), dtype=np.dtype(tmtc_def(0x350)))
+    img_hk = np.zeros(len(args.file_list), dtype=np.dtype(tmtc_def(0x350)))
     hk_data = np.zeros(len(args.file_list), dtype=np.dtype(tmtc_def(0x320)))
     t_exp = np.empty(len(args.file_list), dtype=float)
     t_frm = np.empty(len(args.file_list), dtype=float)
@@ -121,11 +121,11 @@ def main():
             raise ValueError("Do not combine different kind of measurements")
 
         dem = DEMio(flname)
-        # obtain MPS information from header file (ASCII)
-        mps_data[ii] = dem.get_mps()
+        # obtain Science_HK information from header file (ASCII)
+        img_hk[ii] = dem.get_mps()
         # get nr_coaddings from file name
         coad_str = [x for x in parts if x.startswith('coad')][0]
-        mps_data[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
+        img_hk[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
         # determine exposure time
         t_exp[ii] = dem.exp_time()
         t_frm[ii] = dem.frame_period(int(coad_str[-2:]))
@@ -139,7 +139,7 @@ def main():
     # sort data according to timestamps
     if tstamp != sorted(tstamp):
         indx = sorted(range(len(tstamp)), key=tstamp.__getitem__)
-        mps_data = mps_data[indx]
+        img_hk = img_hk[indx]
         tstamp = [tstamp[k] for k in indx]
         t_exp = t_exp[indx]
         t_frm = t_frm[indx]
@@ -149,13 +149,13 @@ def main():
 
     # convert timestamps to seconds per day
     img_sec = []
-    img_usec = []
+    img_subsec = []
     for ii, tval in enumerate(tstamp):
         tdiff = (tval - EPOCH)
         img_sec.append(tdiff.seconds)
-        img_usec.append(tdiff.microseconds * 2**16 // 1000000)
+        img_subsec.append(tdiff.microseconds * 2**16 // 1000000)
     img_sec = np.array(img_sec)
-    img_usec = np.array(img_usec)
+    img_subsec = np.array(img_subsec)
 
     # generate name of L1A product
     prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
@@ -191,18 +191,14 @@ def main():
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
     with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
-        # write image data
-        l1a.set_dset('/science_data/detector_images',
-                     images.reshape(n_images, n_samples))
-
-        # write detector telemetry and image attributes
-        l1a.fill_mps(mps_data)
-        l1a.fill_time(img_sec, img_usec, group='image_attributes')
-        l1a.set_dset('/image_attributes/image_ID', np.arange(n_images))
+        # write image data, detector telemetry and image attributes
+        l1a.fill_science(images.reshape(n_images, n_samples), img_hk,
+                         np.arange(n_images))
+        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
 
         # Engineering data
-        l1a.fill_time(img_sec, img_usec, group='engineering_data')
         l1a.fill_nomhk(hk_data)
+        l1a.fill_time(img_sec, img_subsec, group='engineering_data')
 
         # GSE data
         if args.reference is not None:

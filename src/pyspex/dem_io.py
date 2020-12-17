@@ -16,7 +16,6 @@ import numpy as np
 
 from .lib.tmtc_def import tmtc_def
 
-
 # - global parameters ------------------------------
 
 
@@ -153,23 +152,19 @@ class DEMio:
        Returns image read-out time [s].
     frame_period(n_coad=1)
        Returns frame period [s].
-    get_mps()
-       Returns MPS of DEM measurement.
+    get_sci_hk()
+       Returns Science telemetry, a subset of MPS and housekeeping parameters
     get_data(numlines=None)
-       Returns data of a detector frame (numpy uint16 array).
+       Returns data of a detector images (numpy uint16 array).
 
     Notes
     -----
 
     Examples
     --------
-    >>> dem = DEMio()
-
-    Obtain MPS information from header file (ASCII)
-
-    >>> mps_data = dem.read_hdr(flname.replace('b.bin', 'a.txt'),
-    >>>                         return_mps=True)
-    >>> image_data = dem.read_data(flname)
+    >>> dem = DEMio(dem_file)
+    >>> img_hk = dem.get_sci_hk()
+    >>> img_data = dem.get_data()
     """
     def __init__(self, flname: str) -> None:
         """
@@ -368,9 +363,9 @@ class DEMio:
         return 2.38 + (n_coad
                        * (self.exp_time() + self.fot_time() + self.rot_time()))
 
-    def get_mps(self):
+    def get_sci_hk(self):
         """
-        Returns MPS of DEM measurement
+        Returns Science telemetry, a subset of MPS and housekeeping parameters
 
         Returns
         -------
@@ -386,7 +381,7 @@ class DEMio:
 
             return val
 
-        # convert original detector parameter values to MPS parameters
+        # convert original detector parameter values to telemetry parameters
         convert_det_params = {
             'DET_NUMLINES': convert_val('NUMBER_LINES'),
             'DET_START1': convert_val('START1'),
@@ -457,11 +452,11 @@ class DEMio:
             'DET_T': convert_val('TEMP')
         }
 
-        mps = np.zeros((1,), dtype=np.dtype(tmtc_def(0x350)))
+        sci_hk = np.zeros((1,), dtype=np.dtype(tmtc_def(0x350)))
         for key in convert_det_params:
-            mps[0][key] = convert_det_params[key]
+            sci_hk[0][key] = convert_det_params[key]
 
-        return mps
+        return sci_hk
 
     def get_data(self, numlines=None):
         """

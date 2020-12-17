@@ -342,11 +342,11 @@ def main():
 
     # Compute delta_time for each frame (seconds)
     # convert timestamps to seconds per day
-    midnight = utc_start.replace(hour=0, minute=0, second=0, microsecond=0)
-    secnds = np.full((n_images,), (utc_start - midnight).total_seconds())
-    for ii in range(n_images):
-        secnds[ii] += (ii * int(hdr['Co-additions'])
-                       * float(hdr['Exposure time (s)']))
+    offs = (utc_start - EPOCH).total_seconds()
+    intg_time = hdr['Co-additions'] * float(hdr['Exposure time (s)'])
+    secnds = (1 + np.arange(n_images, dtype=float)) * intg_time
+    img_sec = (offs + secnds // 1).astype('u4')
+    sub_sec = np.round((secnds % 1) * 2**16).astype('u2')
 
     # Generate L1A product
     hdr_dict = header_as_dict(hdr, n_images)
@@ -354,8 +354,8 @@ def main():
         # Add image data and telemetry
         l1a.set_dset('/science_data/detector_images',
                      images.reshape(n_images, -1))
-        mps_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
-        l1a.set_dset('/science_data/detector_telemetry', mps_data)
+        img_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
+        l1a.set_dset('/science_data/detector_telemetry', img_hk)
         # -- no detector_telemetry!!
         #
         # Add image attributes
@@ -375,7 +375,7 @@ def main():
         else:
             l1a.set_dset('/image_attributes/binning_table',
                          np.full(n_images, table_id))
-        l1a.fill_time(secnds, midnight)
+        l1a.fill_time(img_sec, sub_sec)
         #
         # Add engineering data
         hk_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))

@@ -586,6 +586,16 @@ class L1Aio(Lv1io):
             self.set_attr('units',
                           'seconds since {}'.format(reference_day.isoformat()),
                           ds_name='/engineering_data/HK_tlm_time')
+        else:
+            self.set_dset('/navigation_data/att_time', sec_of_day)
+            self.set_attr('units',
+                          'seconds since {}'.format(reference_day.isoformat()),
+                          ds_name='/navigation_data/att_time')
+            self.set_dset('/navigation_data/orb_time', sec_of_day)
+            self.set_attr('units',
+                          'seconds since {}'.format(reference_day.isoformat()),
+                          ds_name='/navigation_data/orb_time')
+
 
     def fill_science(self, img_data, img_hk, img_id) -> None:
         """

@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from pyspex import spx_product
+from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.ccsds_io import CCSDSio
 from pyspex.lv1_io import L1Aio
 
@@ -83,7 +84,7 @@ def main():
     img_sec = np.empty(len(science_tm), dtype='u4')
     img_subsec = np.empty(len(science_tm), dtype='u2')
     img_id = np.empty(len(science_tm), dtype='u4')
-    img_hk = np.empty(len(science_tm), dtype=science_tm[0]['science_hk'].dtype)
+    img_hk = np.empty(len(science_tm), dtype=np.dtype(tmtc_def(0x350)))
     img_data = []
     for ii, packet in enumerate(science_tm):
         if packet['science_hk']['ICUSWVER'] > 0x123:
@@ -108,7 +109,7 @@ def main():
     if nomhk_tm:
         hk_sec = np.empty(len(nomhk_tm), dtype='u4')
         hk_subsec = np.empty(len(nomhk_tm), dtype='u2')
-        hk_data = np.empty(len(nomhk_tm), dtype=nomhk_tm[0]['nominal_hk'].dtype)
+        hk_data = np.empty(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x320)))
         for ii, packet in enumerate(nomhk_tm):
             hk_sec[ii] = packet['secondary_header']['tai_sec']
             hk_subsec[ii] = packet['secondary_header']['sub_sec']
