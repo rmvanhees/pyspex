@@ -63,7 +63,7 @@ def main():
 
     # select NomHK packages
     nomhk_tm = ccsds.nomhk_tm(packets)
-    # combine segmented packages
+    # select Science packages and combine segmented packages
     science_tm = ccsds.science_tm(packets)
     if args.debug or args.verbose:
         print('[INFO]: number of CCSDS packets ', len(packets))
@@ -79,28 +79,50 @@ def main():
         print('[WARNING]: no science data found, exit')
         return
 
-    # extract timestaps, image data & attributes from Science packages
-    img_sec = []
-    img_subsec = []
-    img_id = []
-    images = []
-    mps_data = []
-    for packet in science_tm:
-        img_sec.append(packet['secondary_header']['tai_sec'])
-        img_subsec.append(packet['secondary_header']['sub_sec'])
-        img_id.append(packet['primary_header']['sequence'] & 0x3fff)
+    # extract timestaps, telemetry and image data from Science data
+    img_sec = np.empty(len(science_tm), dtype='u4')
+    img_subsec = np.empty(len(science_tm), dtype='u2')
+    img_id = np.empty(len(science_tm), dtype='u4')
+    img_hk = np.empty(len(science_tm), dtype=science_tm[0]['science_hk'].dtype)
+    img_data = []
+    for ii, packet in enumerate(science_tm):
+        if packet['science_hk']['ICUSWVER'] > 0x123:
+            img_sec[ii] = packet['icu_time']['tai_sec']
+            img_subsec[ii] = packet['icu_time']['sub_sec']
+        else:
+            img_sec[ii] = packet['secondary_header']['tai_sec']
+            img_subsec[ii] = packet['secondary_header']['sub_sec']
+        img_id[ii] = packet['primary_header']['sequence'] & 0x3fff
+        img_hk[ii] = packet['science_hk']
+        img_data.append(packet['image_data'])
+    img_data = np.array(img_data)
 
-        mps_data.append(packet['mps'])
-        images.append(packet['image_data'])
+    if np.all(img_hk['ICUSWVER'] == 0x123):
+        # fix bug in sub-seconds
+        us100 = np.round(10000 * img_subsec.astype(float) / 65536)
+        buff = us100 + img_sec - 10000
+        us100 = buff.astype('u8') % 10000
+        img_subsec = ((us100 << 16) // 10000).astype('u2')
 
-    img_sec = np.array(img_sec)
-    img_subsec = np.array(img_subsec)
-    img_id = np.array(img_id)
-    mps_data = np.array(mps_data)
-    images = np.array(images)
-    if args.verbose:
-        print('[INFO]: dimension of image ', images.size
-              if images.ndim == 1 else images.shape[1], images.shape)
+    # extract timestaps and telemetry of NomHK data
+    if nomhk_tm:
+        hk_sec = np.empty(len(nomhk_tm), dtype='u4')
+        hk_subsec = np.empty(len(nomhk_tm), dtype='u2')
+        hk_data = np.empty(len(nomhk_tm), dtype=nomhk_tm[0]['nominal_hk'].dtype)
+        for ii, packet in enumerate(nomhk_tm):
+            hk_sec[ii] = packet['secondary_header']['tai_sec']
+            hk_subsec[ii] = packet['secondary_header']['sub_sec']
+            hk_data[ii] = packet['nominal_hk']
+
+        if np.all(img_hk['ICUSWVER'] == 0x123):
+            # fix bug in sub-seconds
+            us100 = np.round(10000 * hk_subsec.astype(float) / 65536)
+            buff = us100 + hk_sec - 10000
+            us100 = buff.astype('u8') % 10000
+            med = np.median(us100)
+            indx = np.where(np.abs(us100 - med) > 1000)[0]
+            us100[indx] = med
+            hk_subsec = ((us100 << 16) // 10000).astype('u2')
 
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
@@ -121,53 +143,25 @@ def main():
         inflight = True
 
     # pylint: disable=unsubscriptable-object
-    n_frame = 1 if images.ndim == 1 else images.shape[0]
-    n_sample = images.size if images.ndim == 1 else images.shape[1]
+    n_frame = 1 if img_data.ndim == 1 else img_data.shape[0]
+    n_sample = img_data.size if img_data.ndim == 1 else img_data.shape[1]
+    if args.verbose:
+        print('[INFO]: dimension of images [{},{}]'.format(n_frame, n_sample))
     dims = {'number_of_images': n_frame,
             'samples_per_image': n_sample,
             'hk_packets': len(nomhk_tm),
             'SC_records': None}
 
-    # convert timestamps NomHK to seconds-per-day
-    hk_sec = []
-    hk_subsec = []
-    hk_data = []
-    for packet in nomhk_tm:
-        hk_sec.append(packet['secondary_header']['tai_sec'])
-        hk_subsec.append(packet['secondary_header']['sub_sec'])
-        hk_data.append(packet['nominal_hk'])
-
-    hk_sec = np.array(hk_sec)
-    hk_subsec = np.array(hk_subsec)
-    hk_data = np.array(hk_data)
-
-    # ToDo Remove these temporary fixes
-    us100 = np.round(10000 * img_subsec.astype(float) / 65536)
-    buff = us100 + img_sec - 10000
-    us100 = buff.astype('u8') % 10000
-    img_subsec = ((us100 << 16) // 10000).astype('u2')
-
-    us100 = np.round(10000 * hk_subsec.astype(float) / 65536)
-    buff = us100 + hk_sec - 10000
-    us100 = buff.astype('u8') % 10000
-    med = np.median(us100)
-    indx = np.where(np.abs(us100 - med) > 1000)[0]
-    us100[indx] = med
-    hk_subsec = ((us100 << 16) // 10000).astype('u2')
-
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
-        # write image data
-        l1a.set_dset('/science_data/detector_images', images)
-
-        # write detector telemetry and image attributes
-        l1a.fill_mps(mps_data)
+        # write image data, detector telemetry and image attributes
+        l1a.fill_science(img_data, img_hk, img_id)
         l1a.fill_time(img_sec, img_subsec, group='image_attributes')
-        l1a.set_dset('/image_attributes/image_ID', img_id)
 
         # write engineering data
-        l1a.fill_time(hk_sec, hk_subsec, group='engineering_data')
-        l1a.fill_nomhk(hk_data)
+        if nomhk_tm:
+            l1a.fill_nomhk(hk_data)
+            l1a.fill_time(hk_sec, hk_subsec, group='engineering_data')
 
         # write global attributes
         l1a.fill_global_attrs()

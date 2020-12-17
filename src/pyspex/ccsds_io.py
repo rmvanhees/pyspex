@@ -49,8 +49,7 @@ TIME_DTYPE = np.dtype([
     ('sub_sec', '>u2')
 ])
 
-# Define MPS parameters
-MPS_DTYPE = tmtc_dtype(0x350)
+SCIHK_DTYPE = tmtc_dtype(0x350)
 
 # - local functions --------------------------------
 
@@ -87,9 +86,9 @@ class CCSDSio:
        Close resources.
     open_next_file()
        Open next file from file_list.
-    fix_mps24(mps)
-       Correct 32-bit integers in the MPS which originate from 24-bit integers
-       in the detector register values.
+    fix_sci_hk24(sci_hk)
+       Correct 32-bit integers in the Science_HK which originate from
+       24-bit integers in the detector register values.
     read_packet()
        Read next telemetry packet.
     nomhk_tm(packets_in)
@@ -274,14 +273,14 @@ class CCSDSio:
         self.fp = open(flname, 'rb')
 
     @staticmethod
-    def fix_mps24(mps):
+    def fix_sci_hk24(sci_hk):
         """
-        Correct 32-bit integers in the MPS which originate from 24-bit integers
-        in the detector register values
+        Correct 32-bit integers in the Science HK which originate from
+        24-bit integers in the detector register values
 
         In addition, copy the first 4 bytes of DET_CHENA to DET_ILVDS
         """
-        mps['DET_ILVDS'] = mps['DET_CHENA'] & 0xf
+        sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
 
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
                     'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
@@ -291,9 +290,9 @@ class CCSDSio:
                     'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
                     'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
                     'DET_CHENA']:
-            mps[key] = mps[key] >> 8
+            sci_hk[key] = sci_hk[key] >> 8
 
-        return mps
+        return sci_hk
 
     def __tm(self, num_data=None):
         """
@@ -327,7 +326,7 @@ class CCSDSio:
             return np.zeros(1, dtype=np.dtype([
                 ('primary_header', HDR_DTYPE),
                 ('secondary_header', TIME_DTYPE),
-                ('mps', MPS_DTYPE),
+                ('science_hk', SCIHK_DTYPE),
                 ('icu_time', TIME_DTYPE),
                 ('image_data', 'u2', (num_data,))]))
 
@@ -365,10 +364,10 @@ class CCSDSio:
             num_bytes -= TIME_DTYPE.itemsize
 
         if self.ap_id == 0x350:             # Science telemetry packet
-            # MPS is provided in first segement or unsegmented data packet
+            # first segement or unsegmented data packet provides Science_HK
             if self.grouping_flag in (1, 3):
-                mps = np.fromfile(self.fp, count=1, dtype=MPS_DTYPE)
-                num_bytes -= MPS_DTYPE.itemsize
+                sci_hk = np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE)
+                num_bytes -= SCIHK_DTYPE.itemsize
                 time_icu = np.fromfile(self.fp, count=1, dtype=TIME_DTYPE)
                 num_bytes -= TIME_DTYPE.itemsize
 
@@ -380,7 +379,7 @@ class CCSDSio:
             packet['primary_header'] = hdr
             packet['secondary_header'] = time_tm
             if self.grouping_flag in (1, 3):
-                packet['mps'] = self.fix_mps24(mps)
+                packet['science_hk'] = self.fix_sci_hk24(sci_hk)
                 packet['icu_time'] = time_icu
             packet['image_data'] = data
         elif self.ap_id == 0x320:        # NomHK telemetry packet
@@ -500,10 +499,10 @@ class CCSDSio:
                     print('[WARNING]: current segment has APID = 1,'
                           'however, previous APID != 2, skip previous image')
 
-                rec_buff = self.__tm(packet['mps']['IMRLEN'] // 2)[0]
+                rec_buff = self.__tm(packet['science_hk']['IMRLEN'] // 2)[0]
                 rec_buff['primary_header'] = packet['primary_header']
                 rec_buff['secondary_header'] = packet['secondary_header']
-                rec_buff['mps'] = packet['mps']
+                rec_buff['science_hk'] = packet['science_hk']
                 img_buff = packet['image_data']
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1

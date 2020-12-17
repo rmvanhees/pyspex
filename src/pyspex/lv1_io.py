@@ -397,10 +397,10 @@ class L1Aio(Lv1io):
        Convert CCSDS timestamp to seconds after midnight.
     fill_time(ccsds_sec, ccsds_subsec, group=None)
        Write time of Science telemetry packets (UTC/TAI) to L1A product.
-    fill_mps(mps_data)
-       Write Science telemetry packets (MPS) to L1A product.
+    fill_science(img_data, img_hk, img_id)
+       Write Science data and housekeeping telemetry (Science) to L1A product.
     fill_nomhk(nomhk_data)
-       Write nominal house-keeping telemetry packets (NomHK) to L1A product.
+       Write nominal housekeeping telemetry packets (NomHK) to L1A product.
     fill_gse(reference=None)
        Write EGSE/OGSE data to L1A product.
     """
@@ -587,35 +587,41 @@ class L1Aio(Lv1io):
                           'seconds since {}'.format(reference_day.isoformat()),
                           ds_name='/engineering_data/HK_tlm_time')
 
-    def fill_mps(self, mps_data) -> None:
+    def fill_science(self, img_data, img_hk, img_id) -> None:
         """
-        Write Science telemetry packets (MPS) to L1A product
+        Write Science data and housekeeping telemetry (Science) to L1A product
 
         Parameters
         ----------
-        mps_data : numpy array
+        img_data : numpy array (uint16)
+           Detector image data
+        img_hk : numpy array ()
            Structured array with all Science telemetry parameters
+        img_id : numpy array (uint16)
+           Detector image counter
 
         Notes
         -----
-        Writes mps_data as detector_telemetry in the group /science_data
+        Adds detector_telemetry data to the group /science_data
 
         Parameters: binning_table, digital_offset, exposure_time
         and nr_coadding are extracted from the telemetry packets and writen
         in the group /image_attributes
         """
-        if len(mps_data) == 0:
+        if len(img_hk) == 0:
             return
 
-        self.set_dset('/science_data/detector_telemetry', mps_data)
+        self.set_dset('/science_data/detector_images', img_data)
+        self.set_dset('/science_data/detector_telemetry', img_hk)
 
-        mps = LV1mps(mps_data)
+        mps = LV1mps(img_hk)
         self.set_dset('/image_attributes/binning_table', mps.binning_table_id)
         self.set_dset('/image_attributes/digital_offset', mps.offset)
         self.set_dset('/image_attributes/exposure_time',
                       MCP_TO_SEC * mps.exp_time)
         self.set_dset('/image_attributes/nr_coadditions',
                       mps.get('REG_NCOADDFRAMES'))
+        self.set_dset('/image_attributes/image_ID', img_id)
 
     def fill_nomhk(self, nomhk_data):
         """
