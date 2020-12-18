@@ -87,7 +87,7 @@ def read_egse(egse_file: str, verbose=False):
             'ldls_dict': ldls_dict, 'shutter_dict': shutter_dict}
 
 
-def select_egse(l1a_file: str, egse):
+def select_egse(l1a_file: str, egse, verbose=False):
     """
     Return indices EGSE records during the measurement in the Level-1A product
     """
@@ -100,14 +100,15 @@ def select_egse(l1a_file: str, egse):
 
     msmt_start = datetime.strptime(Path(l1a_file).stem.split('_')[6] + "+00:00",
                                    "%Y%m%dT%H%M%S.%f%z")
-    msmt_start -= timedelta(microseconds=msmt_start.microsecond)
+    msmt_start.replace(microsecond=0)
     duration = np.ceil((coverage_stop - coverage_start).total_seconds())
     msmt_stop = msmt_start + timedelta(seconds=int(duration))
 
     indx = np.where((egse['values']['time'] >= msmt_start.timestamp())
                     & (egse['values']['time'] <= msmt_stop.timestamp()))[0]
     if indx.size == 0:
-        print('[INFO] no EGSE data found')
+        if verbose:
+            print('[INFO] no EGSE data found')
         return None
 
     # perform sanity check
@@ -199,11 +200,13 @@ def main():
     for egse_file in args.file_list:
         egse = read_egse(egse_file, verbose=args.verbose)
 
-    if args.l1a_file is not None:
-        egse = select_egse(args.l1a_file, egse)
-        if egse is None:
-            raise FileNotFoundError(
-                'could not find EGSE information for the measurements')
+        if args.l1a_file is not None:
+            egse = select_egse(args.l1a_file, egse)
+            if egse is not None:
+                break
+    else:
+        raise RuntimeError(
+            'could not find EGSE information for the measurements')
 
     write_egse(args.l1a_file, egse)
 
