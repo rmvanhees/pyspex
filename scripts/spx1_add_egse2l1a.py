@@ -66,7 +66,7 @@ def read_egse(egse_file: str, verbose=False):
                 else:
                     units.append('1')
 
-        if "NOMHK packets time" in names:
+        if "NOMHK_packets_time" in names:
             formats = ('f8',) + formats
             convertors = {0: byte_to_timestamp,
                           1: byte_to_timestamp,
