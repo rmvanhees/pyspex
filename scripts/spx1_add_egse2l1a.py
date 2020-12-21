@@ -118,7 +118,25 @@ def create_db_egse(db_name, egse_data, egse_units):
 
 
 # --------------------------------------------------
-def select_egse(l1a_file: str, egse_file: str, check=True):
+def check_egse(egse_data, act_angle, alt_angle):
+    """
+    Check consistency of OGSE/EGSE information during measurement
+    """
+    for key, fmt in egse_data.dtype.fields.items():
+        if fmt[0] == np.uint8:
+            res_sanity = (egse_data[key] == egse_data[key][0]).all()
+            if not res_sanity:
+                print('[WARNING] ', key, egse_data[key])
+
+    if act_angle:
+        if not np.allclose(egse_data['ACT_ANGLE'], act_angle[0], 1e-2):
+            print('[WARNING] ', 'ACT_ANGLE', egse_data['ACT_ANGLE'])
+    if alt_angle:
+        if not np.allclose(egse_data['ALT_ANGLE'], alt_angle[0], 1e-2):
+            print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
+
+
+def select_egse(l1a_file: str, egse_file: str):
     """
     Write OGSE/EGSE records of a measurement to a Level-1A product
     """
@@ -130,8 +148,10 @@ def select_egse(l1a_file: str, egse_file: str, check=True):
 
     # default 0, when all viewports are illuminated
     viewport = view_dict.get(vp_parts[min(2, len(vp_parts))], 0)
-    act_angle = [x.replace('act', '') for x in parts if x.startswith('act')]
-    alt_angle = [x.replace('alt', '') for x in parts if x.startswith('alt')]
+    act_angle = [float(x.replace('act', ''))
+                 for x in parts if x.startswith('act')]
+    alt_angle = [float(x.replace('alt', ''))
+                 for x in parts if x.startswith('alt')]
 
     with h5py.File(l1a_file, 'r') as fid:
         # pylint: disable=no-member
@@ -156,11 +176,7 @@ def select_egse(l1a_file: str, egse_file: str, check=True):
 
         egse_data = fid['egse'][indx[0]:indx[1]+1]
         # perform sanity check
-        if check:
-            for param in ['ALT_ANGLE', 'ACT_ANGLE']:
-                res_sanity = np.all(np.diff(egse_data[param]) < 0.01)
-                if not res_sanity:
-                    print('[WARNING] ', param, egse_data[param])
+        check_egse(egse_data, act_angle, alt_angle)
 
         # update Level-1A product with OGSE/EGSE information
         with Dataset(l1a_file, 'r+') as fid2:
@@ -182,10 +198,8 @@ def select_egse(l1a_file: str, egse_file: str, check=True):
             gid.Light_source = parts[2]
             gid.FOV_begin = np.nan
             gid.FOV_end = np.nan
-            gid.ACT_rotationAngle = \
-                np.nan if not act_angle else float(act_angle[0])
-            gid.ALT_rotationAngle = \
-                np.nan if not alt_angle else float(alt_angle[0])
+            gid.ACT_rotationAngle = np.nan if not act_angle else act_angle[0]
+            gid.ALT_rotationAngle = np.nan if not alt_angle else alt_angle[0]
             gid.ACT_illumination = np.nan
             gid.ALT_illumination = np.nan
             gid.DoLP = 0.
