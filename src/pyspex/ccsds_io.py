@@ -461,7 +461,8 @@ class CCSDSio:
         # first telemetry package must have grouping flag equals 1
         self.__hdr = packets[0]['primary_header']
         if self.grouping_flag != 1:
-            msg = '[WARNING]: removed {:d} segments of incomplete first image'
+            msg = ('[WARNING]: rejected first image because it is incomplete'
+                   ' - received only {:d} segments.')
             ii = 0
             for packet in packets:
                 self.__hdr = packet['primary_header']
@@ -475,8 +476,8 @@ class CCSDSio:
         # last telemetry package must have grouping flag equals 2
         self.__hdr = packets[-1]['primary_header']
         if self.grouping_flag != 2:
-            msg = '[WARNING]: removed {:d} segments of incomplete last image'
-
+            msg = ('[WARNING]: rejected last image because it is incomplete'
+                   ' - received only {:d} segments.')
             ii = len(packets)
             while ii > 0:
                 ii -= 1
@@ -496,8 +497,8 @@ class CCSDSio:
             if self.grouping_flag == 1:
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
-                    print('[WARNING]: current segment has APID = 1,'
-                          'however, previous APID != 2, skip previous image')
+                    msg = ('corrupted segements - detected APID 1 after <> 2')
+                    raise RuntimeError(msg)
 
                 rec_buff = self.__tm(packet['science_hk']['IMRLEN'] // 2)[0]
                 rec_buff['primary_header'] = packet['primary_header']
@@ -507,7 +508,9 @@ class CCSDSio:
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
                 if prev_grp_flag not in (0, 1):
-                    print('[WARNING]: previous packet not closed?')
+                    msg = ('corrupted segements - detected segement of'
+                           ' new image, however, previous not closed')
+                    raise RuntimeError(msg)
 
                 img_buff = np.concatenate((img_buff, packet['image_data']))
                 if self.grouping_flag == 2:
@@ -515,7 +518,8 @@ class CCSDSio:
                         rec_buff['image_data'] = img_buff
                         res += (rec_buff,)
                     else:
-                        print('[WARNING]: incomplete data-buffer, skip image')
+                        print('[WARNING]: rejected image'
+                              ' because it is incomplete')
 
             # keep current group flag for next read
             prev_grp_flag = self.grouping_flag
