@@ -268,14 +268,14 @@ def tmtc_def(apid):
             ('HTR2_I', '>u2'),                  # 154   0x00a6
             ('HTR3_I', '>u2'),                  # 156   0x00a8
             ('HTR4_I', '>u2'),                  # 158   0x00aa
-            ('HTR1_CALCPVAL', '>u4'),           # 160   0x00ac
-            ('HTR2_CALCPVAL', '>u4'),           # 164   0x00b0
-            ('HTR3_CALCPVAL', '>u4'),           # 168   0x00b4
-            ('HTR4_CALCPVAL', '>u4'),           # 172   0x00b8
-            ('HTR1_CALCIVAL', '>u4'),           # 176   0x00bc
-            ('HTR2_CALCIVAL', '>u4'),           # 180   0x00c0
-            ('HTR3_CALCIVAL', '>u4'),           # 184   0x00c4
-            ('HTR4_CALCIVAL', '>u4'),           # 188   0x00c8
+            ('HTR1_CALCPVAL', '>f4'),           # 160   0x00ac
+            ('HTR2_CALCPVAL', '>f4'),           # 164   0x00b0
+            ('HTR3_CALCPVAL', '>f4'),           # 168   0x00b4
+            ('HTR4_CALCPVAL', '>f4'),           # 172   0x00b8
+            ('HTR1_CALCIVAL', '>f4'),           # 176   0x00bc
+            ('HTR2_CALCIVAL', '>f4'),           # 180   0x00c0
+            ('HTR3_CALCIVAL', '>f4'),           # 184   0x00c4
+            ('HTR4_CALCIVAL', '>f4'),           # 188   0x00c8
             ('HTR1_DUTYCYCL', '>u2'),           # 192   0x00cc
             ('HTR2_DUTYCYCL', '>u2'),           # 194   0x00ce
             ('HTR3_DUTYCYCL', '>u2'),           # 196   0x00d0
@@ -340,21 +340,21 @@ def tmtc_def(apid):
             ('REG_IGEN_VALUE', '>u2'),          # 6     0x0012
             ('REG_FULL_FRAME', 'u1'),           # 8     0x0014
             ('dummy_01', 'u1'),                 # 9     0x0015
-            ('REG_FLASH_ERASE', '>u4'),         # 10    0x0016
-            ('REG_BINNING_TABLE_START', '>u4'), # 14    0x001a
+            ('REG_FLASH_ERASE', 'u4'),          # 10    0x0016 LE
+            ('REG_BINNING_TABLE_START', 'u4'),  # 14    0x001a LE
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 18    0x001e
             ('REG_DETECT_ENABLE', 'u1'),        # 19    0x001f
-            ('REG_POWERUP_DELAY', '>u4'),       # 20    0x0020
+            ('REG_POWERUP_DELAY', 'u4'),        # 20    0x0020 LE
             # ('FillerByte', 'u1')
-            ('REG_LU_THRESHOLD', '>u2'),        # 24    0x0024
-            ('REG_COADD_BUF_START', '>u4'),     # 26    0x0026
-            ('REG_COADD_RESA_START', '>u4'),    # 30    0x002a
-            ('REG_COADD_RESB_START', '>u4'),    # 34    0x002e
-            ('REG_FRAME_BUFA_START', '>u4'),    # 38    0x0032
-            ('REG_FRAME_BUFB_START', '>u4'),    # 42    0x0036
+            ('REG_LU_THRESHOLD', 'u2'),         # 24    0x0024 LE
+            ('REG_COADD_BUF_START', 'u4'),      # 26    0x0026 LE
+            ('REG_COADD_RESA_START', 'u4'),     # 30    0x002a LE
+            ('REG_COADD_RESB_START', 'u4'),     # 34    0x002e LE
+            ('REG_FRAME_BUFA_START', 'u4'),     # 38    0x0032 LE
+            ('REG_FRAME_BUFB_START', 'u4'),     # 42    0x0036 LE
             ('dummy_02', 'u1'),                 # 46    0x003a
             ('REG_FLASH_PAGE_SPR_BYTE', 'u1'),  # 47    0x003b
-            ('REG_LINE_ENABLE_START', '>u4'),   # 48    0x003c
+            ('REG_LINE_ENABLE_START', 'u4'),    # 48    0x003c LE
             ('DET_REG000', 'u1'),               # 52    0x0040
             ('dummy_03', 'u1'),                 # 53    0x0041
             ('DET_NUMLINES', '>u2'),            # 54    0x0042

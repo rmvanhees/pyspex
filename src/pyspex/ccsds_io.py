@@ -273,6 +273,29 @@ class CCSDSio:
         self.fp = open(flname, 'rb')
 
     @staticmethod
+    def fix_dem_hk24(dem_hk):
+        """
+        Correct 32-bit integers in the DemHK which originate from
+        24-bit integers in the detector register values
+        """
+        for key in ['DET_EXPTIME', 'DET_EXPSTEP',
+                    'DET_KP1', 'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2']:
+            dem_hk[key] = dem_hk[key] >> 8
+
+        return dem_hk
+
+    @staticmethod
+    def fix_nom_hk24(nom_hk):
+        """
+        Correct 32-bit integers in the NomHK which originate from
+        24-bit integers in the detector register values
+        """
+        # for key in []:
+        #     nom_hk[key] = nom_hk[key] >> 8
+
+        return nom_hk
+
+    @staticmethod
     def fix_sci_hk24(sci_hk):
         """
         Correct 32-bit integers in the Science HK which originate from
@@ -284,9 +307,10 @@ class CCSDSio:
 
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
                     'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
-                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I', 'LED2_ANODE_V',
-                    'LED2_CATH_V', 'LED2_I', 'ADC1_VCC', 'ADC1_REF',
-                    'ADC1_T', 'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
+                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
+                    'LED2_ANODE_V', 'LED2_CATH_V', 'LED2_I',
+                    'ADC1_VCC', 'ADC1_REF', 'ADC1_T',
+                    'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
                     'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
                     'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
                     'DET_CHENA']:
@@ -366,7 +390,7 @@ class CCSDSio:
         if self.ap_id == 0x350:             # Science telemetry packet
             # first segement or unsegmented data packet provides Science_HK
             if self.grouping_flag in (1, 3):
-                sci_hk = np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE)
+                hk_data = np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE)
                 num_bytes -= SCIHK_DTYPE.itemsize
                 time_icu = np.fromfile(self.fp, count=1, dtype=TIME_DTYPE)
                 num_bytes -= TIME_DTYPE.itemsize
@@ -379,21 +403,21 @@ class CCSDSio:
             packet['primary_header'] = hdr
             packet['secondary_header'] = time_tm
             if self.grouping_flag in (1, 3):
-                packet['science_hk'] = self.fix_sci_hk24(sci_hk)
+                packet['science_hk'] = self.fix_sci_hk24(hk_data)
                 packet['icu_time'] = time_icu
             packet['image_data'] = data
         elif self.ap_id == 0x320:        # NomHK telemetry packet
             packet = self.__tm()
             packet['primary_header'] = hdr
             packet['secondary_header'] = time_tm
-            packet['nominal_hk'] = np.fromfile(self.fp, count=1,
-                                               dtype=tmtc_dtype(0x320))
+            hk_data = np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x320))
+            packet['nominal_hk'] = self.fix_nom_hk24(hk_data)
         elif self.ap_id == 0x322:        # DemHK telemetry packet
             packet = self.__tm()
             packet['primary_header'] = hdr
             packet['secondary_header'] = time_tm
-            packet['detector_hk'] = np.fromfile(self.fp, count=1,
-                                                dtype=tmtc_dtype(0x322))
+            hk_data = np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322))
+            packet['detector_hk'] = self.fix_dem_hk24(hk_data)
         else:
             if not 0x320 <= self.ap_id <= 0x350:
                 self.found_invalid_apid = True
@@ -425,6 +449,34 @@ class CCSDSio:
 
             self.__hdr = packet['primary_header']
             if self.ap_id == 0x320:
+                packets += (packet,)
+
+        if not packets:
+            return ()
+
+        return packets
+
+    def demhk_tm(self, packets_in: tuple):
+        """
+        Select DemHK telemetry packages
+
+        Parameters
+        ----------
+        packets: tuple
+           Tuple with science or house-keeping telemetry packages
+
+        Returns
+        -------
+        Tuple with DemHK telemetry packages (chronological)
+        """
+        # reject non-DemHK telemetry packages
+        packets = ()
+        for packet in packets_in:
+            if 'primary_header' not in packet.dtype.names:
+                continue
+
+            self.__hdr = packet['primary_header']
+            if self.ap_id == 0x322:
                 packets += (packet,)
 
         if not packets:

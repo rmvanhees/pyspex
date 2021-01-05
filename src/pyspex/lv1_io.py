@@ -401,6 +401,8 @@ class L1Aio(Lv1io):
        Write Science data and housekeeping telemetry (Science) to L1A product.
     fill_nomhk(nomhk_data)
        Write nominal housekeeping telemetry packets (NomHK) to L1A product.
+    fill_demhk(demhk_data)
+       Write detector housekeeping telemetry packets (DemHK) to L1A product.
     fill_gse(reference=None)
        Write EGSE/OGSE data to L1A product.
     """
@@ -416,7 +418,8 @@ class L1Aio(Lv1io):
         '/image_attributes/image_CCSDS_subsec': 0,
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
-        '/engineering_data/HK_telemetry': 0,
+        '/engineering_data/NomHK_telemetry': 0,
+        '/engineering_data/DemHK_telemetry': 0,
         '/engineering_data/temp_detector': 0,
         '/engineering_data/temp_housing': 0,
         '/engineering_data/temp_radiator': 0,
@@ -652,7 +655,7 @@ class L1Aio(Lv1io):
         if len(nomhk_data) == 0:
             return
 
-        self.set_dset('/engineering_data/HK_telemetry', nomhk_data)
+        self.set_dset('/engineering_data/NomHK_telemetry', nomhk_data)
 
         if np.all(nomhk_data['TS1_DEM_N_T'] == 0):
             self.set_dset('/engineering_data/temp_detector',
@@ -674,6 +677,27 @@ class L1Aio(Lv1io):
         else:
             self.set_dset('/engineering_data/temp_radiator',
                           frac_poly(nomhk_data['TS3_RADIATOR_N_T']))
+
+    def fill_demhk(self, demhk_data):
+        """
+        Write detector housekeeping telemetry packets (DemHK) to L1A product
+
+        Parameters
+        ----------
+        demhk_data : numpy array
+           Structured array with all DemHK telemetry parameters
+
+        Notes
+        -----
+        Writes demhk_data as DetTM_telemetry in group /engineering_data
+
+        Parameters: temp_detector and temp_housing are extracted and converted
+        to Kelvin and writen to the group /engineering_data
+        """
+        if len(demhk_data) == 0:
+            return
+
+        self.set_dset('/engineering_data/DemHK_telemetry', demhk_data)
 
     def fill_gse(self, reference=None) -> None:
         """

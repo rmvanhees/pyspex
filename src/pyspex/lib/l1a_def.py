@@ -14,7 +14,7 @@ import numpy as np
 
 from netCDF4 import Dataset
 
-from pyspex.lib.tmtc_def import tmtc_def
+from .tmtc_def import tmtc_def
 
 # - global parameters ------------------------------
 
@@ -33,7 +33,7 @@ def create_group_gse_data(rootgrp, n_wave=None):
     dset.flag_values = np.array([0, 1, 2, 4, 8, 16], dtype='u1')
     dset.flag_meanings = "ALL -50deg -20deg 0deg +20deg +50deg"
     # initialize to default value: all viewports used
-    dset[:] = 0    
+    dset[:] = 0
 
     if n_wave is not None:
         sgrp.createDimension('wavelength', n_wave)
@@ -62,7 +62,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
             number_of_images : None     # number of image frames
             samples_per_image : 184000  # depends on binning table
             SC_records : None           # space-craft navigation records (1 Hz)
-            hk_packets : None           # number of HK tlm-packets ( Hz)
+            hk_packets : None           # number of HK tlm-packets (1 Hz)
             wavelength : None
     inflight:  boolean, optional
        True for in-flight measurements
@@ -152,9 +152,9 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "counts"
-    mps_dtype = rootgrp.createCompoundType(
-        np.dtype(tmtc_def(0x350)), 'mps_dtype')
-    dset = sgrp.createVariable('detector_telemetry', mps_dtype,
+    hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x350)),
+                                          'science_dtype')
+    dset = sgrp.createVariable('detector_telemetry', hk_dtype,
                                ('number_of_images',))
     dset.long_name = "SPEX science telemetry"
     dset.comment = "a subset of MPS and housekeeping parameters"
@@ -167,8 +167,8 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.valid_max = 86400.999999
     # dset.units = "seconds"
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x320)),
-                                          'hk_dtype')
-    dset = sgrp.createVariable('HK_telemetry', hk_dtype, ('hk_packets',))
+                                          'nomhk_dtype')
+    dset = sgrp.createVariable('NomHK_telemetry', hk_dtype, ('hk_packets',))
     dset.long_name = "SPEX nominal-HK telemetry"
     dset.comment = "an extended subset of the housekeeping parameters"
     dset = sgrp.createVariable('temp_detector', 'f4', ('hk_packets',))
@@ -189,6 +189,11 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
+    hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x322)),
+                                          'demhk_dtype')
+    dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
+    dset.long_name = "SPEX detector-HK telemetry"
+    dset.comment = "DEM housekeeping parameters"
 
     # - define group /navigation_data and its datasets
     sgrp = rootgrp.createGroup('/navigation_data')

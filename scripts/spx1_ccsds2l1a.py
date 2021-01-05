@@ -64,12 +64,15 @@ def main():
 
     # select NomHK packages
     nomhk_tm = ccsds.nomhk_tm(packets)
+    # select DemHK packages
+    demhk_tm = ccsds.demhk_tm(packets)
     # select Science packages and combine segmented packages
     science_tm = ccsds.science_tm(packets)
     if args.debug or args.verbose:
         print('[INFO]: number of CCSDS packets ', len(packets))
-        print('[INFO]: number of Science images ', len(science_tm))
         print('[INFO]: number of NomHK packages ', len(nomhk_tm))
+        print('[INFO]: number of DemHK packages ', len(demhk_tm))
+        print('[INFO]: number of Science images ', len(science_tm))
     del packets
 
     if args.debug:
@@ -107,23 +110,30 @@ def main():
 
     # extract timestaps and telemetry of NomHK data
     if nomhk_tm:
-        hk_sec = np.empty(len(nomhk_tm), dtype='u4')
-        hk_subsec = np.empty(len(nomhk_tm), dtype='u2')
-        hk_data = np.empty(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x320)))
+        nomhk_sec = np.empty(len(nomhk_tm), dtype='u4')
+        nomhk_subsec = np.empty(len(nomhk_tm), dtype='u2')
+        nomhk_data = np.empty(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x320)))
         for ii, packet in enumerate(nomhk_tm):
-            hk_sec[ii] = packet['secondary_header']['tai_sec']
-            hk_subsec[ii] = packet['secondary_header']['sub_sec']
-            hk_data[ii] = packet['nominal_hk']
+            nomhk_sec[ii] = packet['secondary_header']['tai_sec']
+            nomhk_subsec[ii] = packet['secondary_header']['sub_sec']
+            nomhk_data[ii] = packet['nominal_hk']
 
         if np.all(img_hk['ICUSWVER'] == 0x123):
             # fix bug in sub-seconds
-            us100 = np.round(10000 * hk_subsec.astype(float) / 65536)
-            buff = us100 + hk_sec - 10000
+            us100 = np.round(10000 * nomhk_subsec.astype(float) / 65536)
+            buff = us100 + nomhk_sec - 10000
             us100 = buff.astype('u8') % 10000
             med = np.median(us100)
             indx = np.where(np.abs(us100 - med) > 1000)[0]
             us100[indx] = med
-            hk_subsec = ((us100 << 16) // 10000).astype('u2')
+            nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
+
+    # if we have DemHK data then demhk_data should be equal in size with NomHK
+    if demhk_tm:
+        demhk_data = np.zeros(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x322)))
+        for ii in range(min(len(nomhk_tm), len(demhk_tm))):
+            demhk_data[ii] = demhk_tm[ii]['detector_hk']
+
 
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
@@ -161,8 +171,11 @@ def main():
 
         # write engineering data
         if nomhk_tm:
-            l1a.fill_nomhk(hk_data)
-            l1a.fill_time(hk_sec, hk_subsec, group='engineering_data')
+            l1a.fill_nomhk(nomhk_data)
+            l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
+
+        if demhk_tm:
+            l1a.fill_demhk(demhk_data)
 
         # write global attributes
         l1a.fill_global_attrs()
