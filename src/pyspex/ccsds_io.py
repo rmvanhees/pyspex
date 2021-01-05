@@ -556,6 +556,7 @@ class CCSDSio:
                 rec_buff['primary_header'] = packet['primary_header']
                 rec_buff['secondary_header'] = packet['secondary_header']
                 rec_buff['science_hk'] = packet['science_hk']
+                rec_buff['icu_time'] = packet['icu_time']
                 img_buff = packet['image_data']
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
