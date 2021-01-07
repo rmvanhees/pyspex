@@ -78,7 +78,7 @@ def tmtc_def(apid):
             ('REG_NCOADDFRAMES', 'u1'),         # 111   0x007b
             ('REG_IGEN_SELECT', 'u1'),          # 112   0x007c
             ('REG_FULL_FRAME', 'u1'),           # 113   0x007d
-            ('REG_BINNING_TABLE', '>u4'),       # 114   0x007e
+            ('REG_BINNING_TABLE_START', '<u4'), # 114   0x007e LE
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 118   0x0082
             ('dummy_01', 'u1'),                 # 119   0x0083
             ('REG_COADD_BUF_START', '>u4'),     # 120   0x0084
@@ -340,21 +340,21 @@ def tmtc_def(apid):
             ('REG_IGEN_VALUE', '>u2'),          # 6     0x0012
             ('REG_FULL_FRAME', 'u1'),           # 8     0x0014
             ('dummy_01', 'u1'),                 # 9     0x0015
-            ('REG_FLASH_ERASE', 'u4'),          # 10    0x0016 LE
-            ('REG_BINNING_TABLE_START', 'u4'),  # 14    0x001a LE
+            ('REG_FLASH_ERASE', '<u4'),         # 10    0x0016 LE
+            ('REG_BINNING_TABLE_START', '<u4'), # 14    0x001a
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 18    0x001e
             ('REG_DETECT_ENABLE', 'u1'),        # 19    0x001f
-            ('REG_POWERUP_DELAY', 'u4'),        # 20    0x0020 LE
+            ('REG_POWERUP_DELAY', '<u4'),       # 20    0x0020 LE
             # ('FillerByte', 'u1')
-            ('REG_LU_THRESHOLD', 'u2'),         # 24    0x0024 LE
-            ('REG_COADD_BUF_START', 'u4'),      # 26    0x0026 LE
-            ('REG_COADD_RESA_START', 'u4'),     # 30    0x002a LE
-            ('REG_COADD_RESB_START', 'u4'),     # 34    0x002e LE
-            ('REG_FRAME_BUFA_START', 'u4'),     # 38    0x0032 LE
-            ('REG_FRAME_BUFB_START', 'u4'),     # 42    0x0036 LE
+            ('REG_LU_THRESHOLD', '<u2'),        # 24    0x0024 LE
+            ('REG_COADD_BUF_START', '<u4'),     # 26    0x0026 LE
+            ('REG_COADD_RESA_START', '<u4'),    # 30    0x002a LE
+            ('REG_COADD_RESB_START', '<u4'),    # 34    0x002e LE
+            ('REG_FRAME_BUFA_START', '<u4'),    # 38    0x0032 LE
+            ('REG_FRAME_BUFB_START', '<u4'),    # 42    0x0036 LE
             ('dummy_02', 'u1'),                 # 46    0x003a
             ('REG_FLASH_PAGE_SPR_BYTE', 'u1'),  # 47    0x003b
-            ('REG_LINE_ENABLE_START', 'u4'),    # 48    0x003c LE
+            ('REG_LINE_ENABLE_START', '<u4'),   # 48    0x003c LE
             ('DET_REG000', 'u1'),               # 52    0x0040
             ('dummy_03', 'u1'),                 # 53    0x0041
             ('DET_NUMLINES', '>u2'),            # 54    0x0042
