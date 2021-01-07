@@ -93,6 +93,8 @@ class CCSDSio:
        Read next telemetry packet.
     nomhk_tm(packets_in)
        Select NomHK telemetry packages
+    demhk_tm(packets_in)
+       Select DemHK telemetry packages
     science_tm(packets_in)
        Combine segmented Science telemetry packages.
 
@@ -542,6 +544,8 @@ class CCSDSio:
 
         res = ()
         prev_grp_flag = 2
+        science_headers = ['primary_header', 'secondary_header',
+                           'science_hk', 'icu_time']
         for packet in packets:
             self.__hdr = packet['primary_header']
 
@@ -553,10 +557,8 @@ class CCSDSio:
                     raise RuntimeError(msg)
 
                 rec_buff = self.__tm(packet['science_hk']['IMRLEN'] // 2)[0]
-                rec_buff['primary_header'] = packet['primary_header']
-                rec_buff['secondary_header'] = packet['secondary_header']
-                rec_buff['science_hk'] = packet['science_hk']
-                rec_buff['icu_time'] = packet['icu_time']
+                for key in science_headers:
+                    rec_buff[key] = packet[key]
                 img_buff = packet['image_data']
             elif self.grouping_flag in (0, 2):
                 # group_flag of previous package should be 0 or 1
