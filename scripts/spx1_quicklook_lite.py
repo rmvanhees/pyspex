@@ -22,7 +22,7 @@ from pys5p.lib.plotlib import FIGinfo
 from pys5p.tol_colors import tol_cmap
 from pys5p.s5p_plot import S5Pplot
 
-TEST_BINNING = True
+TEST_BINNING = False
 
 # --------------------------------------------------
 def bin_table_id(binning_table_start) -> int:
@@ -46,7 +46,7 @@ def bin_table_id(binning_table_start) -> int:
 
 def binned_to_2x2_image(table_id: int, img_binned):
     """
-    Convert binned detector data to 2x2 binned image (1024x1024)
+    Convert binned detector data to image (1024, 1024)
     """
     ckd_dir = '/nfs/SPEXone/share/ckd'
     if not Path(ckd_dir).is_dir():
@@ -60,22 +60,20 @@ def binned_to_2x2_image(table_id: int, img_binned):
     with h5py.File(bin_tbl_ckd[-1], 'r') as fid:
         dset = fid['/Table_{:02d}/binning_table'.format(table_id)]
         bin_table = dset[:].reshape(-1)
-        fillvalue = dset.attrs['_FillValue']
+        fillvalue = dset.attrs['_FillValue'][0]
         dset = fid['/Table_{:02d}/coadding_table'.format(table_id)]
         coad_table = dset[:].reshape(-1)
 
-    # write binned data to 2-D grid
-    n_img = img_binned.shape[0]
-    images = np.zeros((n_img, 1024 * 1024), dtype='f4')
-    for ii in range(n_img):
-        indx = bin_table != fillvalue
-        images[ii, bin_table[indx]] = img_binned[ii, :]
-
+    # unbin array img_binned using bin_table
+    image = np.zeros(1024 * 1024, dtype='f4')
+    indx = bin_table != fillvalue
+    image[bin_table[indx]] = img_binned
+    
     # correct data for number of coaddings (pixel dependent)
     mask = coad_table > 0
-    images[:, mask] /= coad_table[mask]
+    image[mask] /= coad_table[mask]
 
-    return images
+    return image.reshape(1024, 1024)
 
 
 # --------------------------------------------------
@@ -104,10 +102,7 @@ def main():
             sci_hk['REG_BINNING_TABLE_START'] = 0x80000000 + 0x400000
             # de gebruikte binning tabel bevat data uit 416023 pixels
             # dus selecteer ik net zoveel pixels uit het full-frame image
-            img_binned = images[:, 20480:20480+416023]
-
-            table_id = bin_table_id(sci_hk[-1]['REG_BINNING_TABLE_START'])
-            images = binned_to_2x2_image(table_id, img_binned)
+            images = images[:, 20480:20480+416023]
 
         try:
             date_start = date_start.decode()
@@ -125,14 +120,13 @@ def main():
         for ii, img in enumerate(images):
             if sci_hk[ii]['REG_FULL_FRAME'] == 2 \
                and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 1:
-                print('Binned detector image')
-                img = img.reshape(1024, 1024)
+                table_id = bin_table_id(sci_hk[ii]['REG_BINNING_TABLE_START'])
+                img2d = binned_to_2x2_image(table_id, img)
             elif sci_hk[ii]['REG_FULL_FRAME'] == 1 \
                  and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 3:
                 if img.size != 4194304:
                     continue
-                print('Full-frame detector image')
-                img = img.reshape(2048, 2048) / sci_hk[ii]['REG_NCOADDFRAMES']
+                img2d = img.reshape(2048, 2048) / sci_hk[ii]['REG_NCOADDFRAMES']
             else:
                 raise RuntimeError('unknown FRAME_MODE, OUTPMODE combination')
 
@@ -144,9 +138,9 @@ def main():
             figinfo.add('coverage_start', date_start)
             figinfo.add('image_time', time_str)
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
-            figinfo.add('signal_range', [int(img.min()), int(img.max())],
+            figinfo.add('signal_range', [int(img2d.min()), int(img2d.max())],
                         fmt='{}')
-            plot.draw_signal(img, vperc=[1, 99],
+            plot.draw_signal(img2d, vperc=[1, 99],
                              fig_info=figinfo, sub_title='frame: {}'.format(ii))
 
         plot.close()
