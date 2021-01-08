@@ -22,7 +22,7 @@ from pys5p.lib.plotlib import FIGinfo
 from pys5p.tol_colors import tol_cmap
 from pys5p.s5p_plot import S5Pplot
 
-TEST_BINNING = False
+TEST_BINNING = True
 
 # --------------------------------------------------
 def bin_table_id(binning_table_start) -> int:
@@ -44,7 +44,7 @@ def bin_table_id(binning_table_start) -> int:
     return 1 + (binning_table_start - 0x80000000) // 0x400000
 
 
-def binned_to_2x2_image(table_id: int, img_data):
+def binned_to_2x2_image(table_id: int, img_binned):
     """
     Convert binned detector data to 2x2 binned image (1024x1024)
     """
@@ -58,17 +58,24 @@ def binned_to_2x2_image(table_id: int, img_data):
         raise FileNotFoundError('No CKD with binning tables found')
 
     with h5py.File(bin_tbl_ckd[-1], 'r') as fid:
-        coad_table = fid['/Table_{:02d}/coadding_table'.format(table_id)][:]
+        dset = fid['/Table_{:02d}/binning_table'.format(table_id)]
+        bin_table = dset[:].reshape(-1)
+        fillvalue = dset.attrs['_FillValue']
+        dset = fid['/Table_{:02d}/coadding_table'.format(table_id)]
+        coad_table = dset[:].reshape(-1)
 
     # write binned data to 2-D grid
-    data = np.zeros((1024, 1024), dtype='f4')
-    mask = coad_table > 0
-    data[mask] = img_data
+    n_img = img_binned.shape[0]
+    images = np.zeros((n_img, 1024 * 1024), dtype='f4')
+    for ii in range(n_img):
+        indx = bin_table != fillvalue
+        images[ii, bin_table[indx]] = img_binned[ii, :]
 
     # correct data for number of coaddings (pixel dependent)
-    data[mask] /= coad_table[mask]
+    mask = coad_table > 0
+    images[:, mask] /= coad_table[mask]
 
-    return data
+    return images
 
 
 # --------------------------------------------------
@@ -97,8 +104,11 @@ def main():
             sci_hk['REG_BINNING_TABLE_START'] = 0x80000000 + 0x400000
             # de gebruikte binning tabel bevat data uit 416023 pixels
             # dus selecteer ik net zoveel pixels uit het full-frame image
-            images = images[:, 20480:20480+416023]
-                
+            img_binned = images[:, 20480:20480+416023]
+
+            table_id = bin_table_id(sci_hk[-1]['REG_BINNING_TABLE_START'])
+            images = binned_to_2x2_image(table_id, img_binned)
+
         try:
             date_start = date_start.decode()
         except (UnicodeDecodeError, AttributeError):
@@ -115,12 +125,13 @@ def main():
         for ii, img in enumerate(images):
             if sci_hk[ii]['REG_FULL_FRAME'] == 2 \
                and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 1:
-                table_id = bin_table_id(sci_hk[ii]['REG_BINNING_TABLE_START'])
-                img = binned_to_2x2_image(table_id, img)
+                print('Binned detector image')
+                img = img.reshape(1024, 1024)
             elif sci_hk[ii]['REG_FULL_FRAME'] == 1 \
                  and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 3:
                 if img.size != 4194304:
                     continue
+                print('Full-frame detector image')
                 img = img.reshape(2048, 2048) / sci_hk[ii]['REG_NCOADDFRAMES']
             else:
                 raise RuntimeError('unknown FRAME_MODE, OUTPMODE combination')
