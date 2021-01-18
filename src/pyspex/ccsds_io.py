@@ -147,13 +147,13 @@ class CCSDSio:
         # initialize class attributes
         self.__hdr = None
         self.found_invalid_apid = False
-        self.file_list = iter(file_list))
+        self.file_list = iter(file_list)
         self.fp = None
 
         self.open_next_file()
 
     def __repr__(self) -> str:
-        return '{:03d} {} {} 0x{:x} {} {:5d} {:5d} {}'.format(
+        return '{:03d} {} {} 0x{:x} {} {:5d} {:5d} {:9d}'.format(
             self.version_no, self.type_indicator, self.secnd_hdr_flag,
             self.ap_id, self.grouping_flag, self.sequence_count,
             self.packet_length, self.fp.tell())
