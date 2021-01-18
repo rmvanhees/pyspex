@@ -137,11 +137,17 @@ class CCSDSio:
         ----------
         file_list: list of strings
            list of file-names, where each file contains parts of a measurement
+
+        Notes
+        -----
+        The files with science and telemetry data needs to be in chronological
+        order. However, you may mix science and housekeeping data as long as
+        science data are chronological and housekeeping data are chronological.
         """
         # initialize class attributes
         self.__hdr = None
         self.found_invalid_apid = False
-        self.file_list = iter(sorted(file_list))
+        self.file_list = iter(file_list))
         self.fp = None
 
         self.open_next_file()
@@ -550,7 +556,7 @@ class CCSDSio:
             self.__hdr = packet['primary_header']
 
             # handle segmented data
-            if self.grouping_flag == 1:
+            if self.grouping_flag == 1:   # first segment
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
                     msg = ('corrupted segements - detected APID 1 after <> 2')
@@ -560,9 +566,9 @@ class CCSDSio:
                 for key in science_headers:
                     rec_buff[key] = packet[key]
                 img_buff = packet['image_data']
-            elif self.grouping_flag in (0, 2):
+            else:                         # continuation or last segment
                 # group_flag of previous package should be 0 or 1
-                if prev_grp_flag not in (0, 1):
+                if prev_grp_flag == 2:
                     msg = ('corrupted segements - detected segement of'
                            ' new image, however, previous not closed')
                     raise RuntimeError(msg)
