@@ -54,6 +54,7 @@ class LV1mps:
 
         Parameters
         mps_data :  ndarray
+           SPEXone Science telemetry data
         """
         self.__mps = mps_data
 
@@ -76,7 +77,8 @@ class LV1mps:
         if np.all(self.__mps['REG_FULL_FRAME'] == 2):
             if np.all(self.__mps['REG_CMV_OUTPUTMODE'] != 1):
                 raise KeyError('Science mode with OUTPMODE != 1')
-            res = (self.__mps['REG_BINNING_TABLE'] - 128) // 4  # ToDo TBC
+            res = 1 + \
+                (self.__mps['REG_BINNING_TABLE_START'] - 0x80000000) // 0x400000
             return res & 0xFF
 
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
