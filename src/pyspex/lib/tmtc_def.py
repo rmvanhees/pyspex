@@ -78,7 +78,7 @@ def tmtc_def(apid):
             ('REG_NCOADDFRAMES', 'u1'),         # 111   0x007b
             ('REG_IGEN_SELECT', 'u1'),          # 112   0x007c
             ('REG_FULL_FRAME', 'u1'),           # 113   0x007d
-            ('REG_BINNING_TABLE_START', '<u4'), # 114   0x007e LE
+            ('REG_BINNING_TABLE_START', '<u4'), # 114   0x007e LE or BE?
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 118   0x0082
             ('dummy_01', 'u1'),                 # 119   0x0083
             ('REG_COADD_BUF_START', '>u4'),     # 120   0x0084

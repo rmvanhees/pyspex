@@ -155,7 +155,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x350)),
                                           'science_dtype')
     dset = sgrp.createVariable('detector_telemetry', hk_dtype,
-                               ('number_of_images',))
+                               dimensions=('number_of_images',))
     dset.long_name = "SPEX science telemetry"
     dset.comment = "a subset of MPS and housekeeping parameters"
 

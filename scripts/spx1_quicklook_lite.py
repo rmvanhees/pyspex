@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Quick and dirty script to generate simple Quick-Look figures.
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -21,6 +21,8 @@ import numpy as np
 from pys5p.lib.plotlib import FIGinfo
 from pys5p.tol_colors import tol_cmap
 from pys5p.s5p_plot import S5Pplot
+
+from pyspex.binning_tables import BinningTables
 
 TEST_BINNING = False
 
@@ -48,33 +50,12 @@ def binned_to_2x2_image(table_id: int, img_binned):
     """
     Convert binned detector data to image (1024, 1024)
     """
-    ckd_dir = '/nfs/SPEXone/share/ckd'
-    if not Path(ckd_dir).is_dir():
-        ckd_dir = '/data/richardh/SPEXone/share/ckd'
+    try:
+        bin_ckd = BinningTables()
+    except Exception as exc:
+        raise RuntimeError from exc
 
-    # only read the latest version of the binning-table CKD
-    bin_tbl_ckd = sorted(list(Path(ckd_dir).glob('SPX1_OCAL_L1A_TBL_*.nc')))
-    if not bin_tbl_ckd:
-        raise FileNotFoundError('No CKD with binning tables found')
-
-    with h5py.File(bin_tbl_ckd[-1], 'r') as fid:
-        dset = fid['/Table_{:02d}/binning_table'.format(table_id)]
-        bin_table = dset[:].reshape(-1)
-        fillvalue = dset.attrs['_FillValue'][0]
-        dset = fid['/Table_{:02d}/coadding_table'.format(table_id)]
-        coad_table = dset[:].reshape(-1)
-
-    # unbin array img_binned using bin_table
-    image = np.zeros(1024 * 1024, dtype='f4')
-    indx = bin_table != fillvalue
-    image[bin_table[indx]] = img_binned
-    
-    # correct data for number of coaddings (pixel dependent)
-    mask = coad_table > 0
-    image[mask] /= coad_table[mask]
-
-    return image.reshape(1024, 1024)
-
+    return bin_ckd.unbin(table_id, img_binned).reshape(1024, 1024)
 
 # --------------------------------------------------
 def main():
@@ -93,6 +74,7 @@ def main():
             date_start = fid.attrs['time_coverage_start']
             image_time = fid['/image_attributes/image_time'][:]
             exposure_time = fid['/image_attributes/exposure_time'][:]
+            table_id = fid['/image_attributes/binning_table'][:]
             sci_hk = fid['/science_data/detector_telemetry'][:]
             images = fid['/science_data/detector_images'][:]
 
@@ -115,20 +97,28 @@ def main():
         if not data_dir.is_dir():
             data_dir.mkdir(mode=0o755)
 
+        # open plot object
         plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
-        for ii, img in enumerate(images):
-            if sci_hk[ii]['REG_FULL_FRAME'] == 2 \
-               and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 1:
-                table_id = bin_table_id(sci_hk[ii]['REG_BINNING_TABLE_START'])
-                img2d = binned_to_2x2_image(table_id, img)
-            elif sci_hk[ii]['REG_FULL_FRAME'] == 1 \
-                 and sci_hk[ii]['REG_CMV_OUTPUTMODE'] == 3:
+
+        # max 20 images are shown in the quick-look
+        n_img = images.shape[0]
+        if n_img <= 20:
+            indx = range(n_img)
+        else:
+            indx = np.ceil(np.arange(0, n_img, n_img / 20)).astype(int)
+
+        # generate pages in quick-look
+        for ii in indx:
+            img = images[ii]
+            if table_id[ii] > 0:
+                print(table_id[ii])
+                img2d = binned_to_2x2_image(table_id[ii], img)
+                return
+            else:
                 if img.size != 4194304:
                     continue
                 img2d = img.reshape(2048, 2048) / sci_hk[ii]['REG_NCOADDFRAMES']
-            else:
-                raise RuntimeError('unknown FRAME_MODE, OUTPMODE combination')
 
             time_str = (
                 datetime(year=2020, month=1, day=1)
@@ -142,7 +132,7 @@ def main():
                         fmt='{}')
             plot.draw_signal(img2d, vperc=[1, 99],
                              fig_info=figinfo, sub_title='frame: {}'.format(ii))
-
+        # close plot object
         plot.close()
 
 

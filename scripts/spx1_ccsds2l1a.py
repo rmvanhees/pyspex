@@ -26,7 +26,7 @@ from pyspex.lv1_io import L1Aio
 # - global parameters ------------------------------
 LAUNCH_DATE = datetime(2022, 11, 2, tzinfo=timezone.utc)
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-LEAP_SECONDS = 0  # only in-flight the CCSDS packages have TAI timestamps
+LEAP_SECONDS = 0  # only in-flight the CCSDS packages have TAI timestamps(?)
 
 # - local functions --------------------------------
 
@@ -55,6 +55,7 @@ def main():
     with CCSDSio(args.file_list) as ccsds:
         while True:
             packet = ccsds.read_packet()
+            # print(ccsds.fp.tell(), packet is None, ccsds.packet_length)
             if packet is None or ccsds.packet_length == 0:
                 break
 
@@ -63,9 +64,9 @@ def main():
                 print('[DEBUG]: ', ccsds)
 
     # select NomHK packages
-    nomhk_tm = ccsds.nomhk_tm(packets)
+    nomhk_tm = ccsds.select_tm(packets, 0x320)
     # select DemHK packages
-    demhk_tm = ccsds.demhk_tm(packets)
+    demhk_tm = ccsds.select_tm(packets, 0x322)
     # select Science packages and combine segmented packages
     science_tm = ccsds.science_tm(packets)
     if args.debug or args.verbose:
@@ -94,10 +95,12 @@ def main():
             img_sec[ii] = packet['icu_time']['tai_sec']
             img_subsec[ii] = packet['icu_time']['sub_sec']
         else:
-            img_sec[ii] = packet['secondary_header']['tai_sec']
-            img_subsec[ii] = packet['secondary_header']['sub_sec']
-        img_id[ii] = packet['primary_header']['sequence'] & 0x3fff
+            img_sec[ii] = packet['packet_header']['tai_sec']
+            img_subsec[ii] = packet['packet_header']['sub_sec']
+        img_id[ii] = packet['packet_header']['sequence'] & 0x3fff
         img_hk[ii] = packet['science_hk']
+        # print(packet['science_hk']['MPS_ID'],
+        #       packet['science_hk']['REG_BINNING_TABLE_START'])
         img_data.append(packet['image_data'])
     img_data = np.array(img_data)
 
@@ -114,8 +117,8 @@ def main():
         nomhk_subsec = np.empty(len(nomhk_tm), dtype='u2')
         nomhk_data = np.empty(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x320)))
         for ii, packet in enumerate(nomhk_tm):
-            nomhk_sec[ii] = packet['secondary_header']['tai_sec']
-            nomhk_subsec[ii] = packet['secondary_header']['sub_sec']
+            nomhk_sec[ii] = packet['packet_header']['tai_sec']
+            nomhk_subsec[ii] = packet['packet_header']['sub_sec']
             nomhk_data[ii] = packet['nominal_hk']
 
         if np.all(img_hk['ICUSWVER'] == 0x123):
