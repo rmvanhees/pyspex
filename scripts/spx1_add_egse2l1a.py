@@ -164,12 +164,13 @@ def select_egse(l1a_file: str, egse_file: str):
         #      fid.attrs['time_coverage_end'].decode('ascii'))
         duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
-    # use the timestamp in the filename
-    msmt_start = datetime.strptime(Path(l1a_file).stem.split('_')[-1]
-                                   + "+00:00", "%Y%m%dT%H%M%S.%f%z")
-    msmt_start = msmt_start.replace(microsecond=0)
-    msmt_stop = msmt_start + timedelta(seconds=int(duration))
-    # print(msmt_start, msmt_stop)
+        # use the timestamp in the filename
+        date_str = Path(fid.attrs['input_files'][0]).stem.split('_')[-1]
+        date_str = date_str.rstrip('_hk') + "+00:00"
+        msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
+        msmt_start = msmt_start.replace(microsecond=0)
+        msmt_stop = msmt_start + timedelta(seconds=int(duration))
+        # print(msmt_start, msmt_stop)
 
     # open OGSE/EGSE database
     with Dataset(egse_file, 'r') as fid:
