@@ -10,7 +10,7 @@ Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-import sys
+import argparse
 
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -24,7 +24,6 @@ from pys5p.s5p_plot import S5Pplot
 
 from pyspex.binning_tables import BinningTables
 
-TEST_BINNING = False
 
 # --------------------------------------------------
 def bin_table_id(binning_table_start) -> int:
@@ -62,8 +61,22 @@ def main():
     """
     Main function of this module
     """
-    if len(sys.argv) > 1:
-        file_list = [Path(xx) for xx in sys.argv[1:]]
+    parser = argparse.ArgumentParser(
+        description='create Quick-Look from SPEXone L1A product')
+    parser.add_argument('--verbose', default=False, action='store_true',
+                        help='be verbose, default be silent') 
+    parser.add_argument('--show_images', type=str, default=None,
+                        help='comma seperated list, default use --max_images')
+    parser.add_argument('--max_images', type=int, default=20,
+                        help='maximum number of images in quick-look (20)')
+    parser.add_argument('file_list', nargs='*',
+                        help='provide name of L1A product')
+    args = parser.parse_args()
+    if args.verbose:
+        print(args)
+
+    if args.file_list:
+        file_list = [Path(xx) for xx in args.file_list]
     else:
         file_list = Path('.').glob('*.nc')
 
@@ -77,14 +90,6 @@ def main():
             table_id = fid['/image_attributes/binning_table'][:]
             sci_hk = fid['/science_data/detector_telemetry'][:]
             images = fid['/science_data/detector_images'][:]
-
-        if TEST_BINNING:
-            sci_hk['REG_FULL_FRAME'] = 2
-            sci_hk['REG_CMV_OUTPUTMODE'] = 1
-            sci_hk['REG_BINNING_TABLE_START'] = 0x80000000 + 0x400000
-            # de gebruikte binning tabel bevat data uit 416023 pixels
-            # dus selecteer ik net zoveel pixels uit het full-frame image
-            images = images[:, 20480:20480+416023]
 
         try:
             date_start = date_start.decode()
@@ -101,20 +106,25 @@ def main():
         plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
 
-        # max 20 images are shown in the quick-look
+        # which images are requested?
         n_img = images.shape[0]
-        if n_img <= 20:
-            indx = range(n_img)
+        if args.show_images is None:
+            if n_img <= args.max_images:
+                indx = range(n_img)
+            else:
+                indx = np.arange(0, n_img, n_img / args.max_images)
+                indx = [int(np.ceil(x)) for x in indx]
         else:
-            indx = np.ceil(np.arange(0, n_img, n_img / 20)).astype(int)
+            if args.show_images == 'all':
+                indx = range(n_img)
+            else:
+                indx = [int(x) for x in args.show_images.split(',')]
 
         # generate pages in quick-look
         for ii in indx:
             img = images[ii]
             if table_id[ii] > 0:
-                print(table_id[ii])
                 img2d = binned_to_2x2_image(table_id[ii], img)
-                return
             else:
                 if img.size != 4194304:
                     continue
@@ -128,10 +138,15 @@ def main():
             figinfo.add('coverage_start', date_start)
             figinfo.add('image_time', time_str)
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
-            figinfo.add('signal_range', [int(img2d.min()), int(img2d.max())],
+            figinfo.add('signal_range',
+                        [int(np.nanmin(img2d)), int(np.nanmax(img2d))],
                         fmt='{}')
-            plot.draw_signal(img2d, vperc=[1, 99],
-                             fig_info=figinfo, sub_title='frame: {}'.format(ii))
+            if table_id[ii] > 0:
+                suptitle = 'frame [table_id={}]: {}'.format(table_id[ii], ii)
+            else:
+                suptitle = 'frame: {}'.format(ii)
+            plot.draw_signal(img2d, vperc=[1, 99], fig_info=figinfo, 
+                             sub_title=suptitle)
         # close plot object
         plot.close()
 

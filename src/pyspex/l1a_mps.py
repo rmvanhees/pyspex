@@ -69,6 +69,11 @@ class LV1mps:
         """
         Return the binning table identifier (zero for full-frame images)
         """
+        print(self.__mps['MPS_ID'])
+        print(self.__mps['REG_FULL_FRAME'])
+        print(self.__mps['REG_CMV_OUTPUTMODE'])
+        print(self.__mps['REG_BINNING_TABLE_START'])
+                     
         if np.all(self.__mps['REG_FULL_FRAME'] == 1):
             if np.all(self.__mps['REG_CMV_OUTPUTMODE'] != 3):
                 raise KeyError('Diagnostic mode with OUTPMODE != 3')

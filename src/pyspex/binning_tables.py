@@ -53,14 +53,13 @@ class BinningTables:
         if not self.ckd_dir.is_dir():
             raise FileNotFoundError('directory with SPEXone CKD does not exist')
         self.ckd_file = None
-        self.table_id = 0
 
         if mode == 'read':
             self.search_ckd()
         elif mode == 'write':
             self.create_ckd()
         else:
-            raise KeyError('unknown mode, use "read" or "write"')
+            self.ckd_file = mode
 
     def search_ckd(self):
         """
@@ -95,45 +94,24 @@ class BinningTables:
             fid.createDimension('row', 1024)
             fid.createDimension('column', 1024)
 
-            # ----- define default binning table (full-frame) -----
-            gid = fid.createGroup('Table_{:02d}'.format(self.table_id))
-            gid.enabled_lines = np.uint16(1024)
-            gid.flex_binned_pixels = np.uint32(0)
-
-            dset = gid.createVariable('binning_table', 'u4', ('row', 'column'),
-                                      fill_value=FILL_VALUE,
-                                      chunksizes=(128, 128),
-                                      zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'binning table'
-            dset.valid_min = np.uint32(0)
-            dset.valid_max = np.uint32(0xfffff)
-            dset[:] = np.arange(1024 ** 2, dtype='u4').reshape(1024, 1024)
-
-            dset = gid.createVariable('count_table', 'u1', ('row', 'column'),
-                                      fill_value=FILL_VALUE,
-                                      chunksizes=(128, 128),
-                                      zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'number of aggregated pixel reading'
-            dset.valid_min = np.uint8(1)
-            dset.valid_max = np.uint8(1)
-            dset[:] = np.ones((1024, 1024), dtype='u1')
-
-    def add_table(self, binning_table):
+    def add_table(self, table_id: int, lineskip_arr, binning_table):
         """
         Add new binning table definition to CKD
 
         Parameters
         ----------
+        table_id :  int
+        lineskip_arr :  ndarray
         binning_table :  ndarray
           Binning table as written to DEM
         """
-        index, count = np.unique(binning_table, return_counts=True)
+        index, count = np.unique(binning_table[lineskip_arr == 1, :],
+                                 return_counts=True)
 
-        self.table_id += 1
         with Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
-            gid = fid.createGroup('Table_{:02d}'.format(self.table_id))
-            gid.enabled_lines = np.uint16(1024)
-            gid.flex_binned_pixels = np.uint32(np.sum(index > 0))
+            gid = fid.createGroup('/Table_{:03d}'.format(table_id))
+            gid.enabled_lines = np.uint16(lineskip_arr.sum())
+            gid.flex_binned_pixels = np.uint32(index.max()+1)
 
             dset = gid.createVariable('binning_table', 'u4', ('row', 'column'),
                                       fill_value=FILL_VALUE,
@@ -141,13 +119,20 @@ class BinningTables:
                                       zlib=True, complevel=1, shuffle=True)
             dset.long_name = 'binning table'
             dset.valid_min = np.uint32(0)
-            dset.valid_max = np.uint32(binning_table.max())
+            dset.valid_max = np.uint32(index.max())
             dset[:] = binning_table
+
+            dset = gid.createVariable('lineskip_arr', 'u1', ('row',),
+                                      zlib=True, complevel=1, shuffle=True)
+            dset.long_name = 'lineskip array'
+            dset.valid_min = np.uint8(0)
+            dset.valid_max = np.uint8(1)
+            dset[:] = lineskip_arr
 
             gid.createDimension('bins', count.size)
             dset = gid.createVariable('count_table', 'u2', ('bins',),
                                       zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'number of aggregated pixel reading'
+            dset.long_name = 'number of aggregated pixel readings'
             dset.valid_min = np.uint16(0)
             dset.valid_max = np.uint16(count.max())
             dset[:] = count.astype('u2')
@@ -157,13 +142,15 @@ class BinningTables:
         Reverse binning of detector data
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
-            gid = fid['/Table_{:02d}'.format(table_id)]
+            gid = fid['/Table_{:03d}'.format(table_id)]
             binning_table = gid.variables['binning_table'][:]
+            lineskip_arr = gid.variables['lineskip_arr'][:]
             count_table = gid.variables['count_table'][:]
 
-        print(img_binned.shape)
-        print(binning_table.shape)
-        print(count_table.shape)
-        
-        return (img_binned // count_table)[binning_table.reshape(-1)]
+        revert = np.full(binning_table.shape, np.nan)
+        table = binning_table[lineskip_arr == 1, :].reshape(-1)
+        revert[lineskip_arr == 1, :] = \
+            (img_binned / count_table)[table].reshape(-1, 1024)
+
+        return revert
         

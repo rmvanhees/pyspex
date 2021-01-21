@@ -31,34 +31,57 @@ from pyspex.binning_tables import BinningTables
 # - main function ----------------------------------
 def main():
     """
-    main program to generate a netCDF4 file with a SPEXone binning table
+    main program to build a database with SPEXone binning tables
     """
     parser = argparse.ArgumentParser(
-        description=('create SPEXone L1A product from DEM measurement(s)'))
-    parser.add_argument('--figure', default=False, action='store_true',
-                        help='generate (PDF) figure of binning table(s)')
+        description='build a database with SPEXone binning tables')
     parser.add_argument('--verbose', default=False, action='store_true',
-                        help='be verbose, default be silent')
+                        help='be verbose, default be silent') 
+    parser.add_argument('--db_file', default=None,
+                        help='append data to existing binning databse')
+    parser.add_argument('--table_id', type=str, default='0',
+                        help='start value table_id or comma seperated list')
+    parser.add_argument('--lineskip', default=None,
+                        help='provide lineskip arrays per binning table')
     parser.add_argument('file_list', nargs='+',
-                        help=("provide path to SPEXone binning table(s)"
-                              " in csv-format"))
+                        help='provide binning table(s) in csv-format')
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    bin_ckd = BinningTables(mode='write', ckd_dir='.')
+    # define a table_id per binning table
+    table_id_list = args.table_id.split(',')
+    if len(table_id_list) == 1:
+        offs = int(args.table_id)
+        table_id_list = [offs + x for x in range(len(args.file_list))]
+    else:
+        table_id_list = [int(x) for x in table_id_list]
+    if len(table_id_list) != len(args.file_list):
+        raise KeyError('you should provide one table_id per binning table')
+
+    # read lineskip data
+    lineskip_data = np.loadtxt(args.lineskip, delimiter=',', dtype=np.uint8)
+    lineskip_data = lineskip_data[1:, :]
+    
+    # create BinningTable object
+    if args.db_file in None:
+        bin_ckd = BinningTables(mode='write', ckd_dir='.')
+    else:
+        bin_ckd = BinningTables(mode=args.db_file, ckd_dir='.')
 
     # add binning tables
-    for flname in args.file_list:
-        flpath = Path(flname)
+    for ii in range(len(args.file_list)):
+        flpath = Path(args.file_list[ii])
         if not flpath.is_file():
-            raise FileNotFoundError(flname)
+            raise FileNotFoundError(args.file_list[ii])
         if flpath.suffix != '.csv':
             continue
 
         # read csv-file
-        table = np.loadtxt(flname, delimiter=',', dtype=np.uint32)
-        bin_ckd.add_table(table)
+        table = np.loadtxt(flpath, delimiter=',', dtype=np.uint32)
+
+        # write new binning-table
+        bin_ckd.add_table(table_id_list[ii], lineskip_data[ii, :], table)
 
 
 # --------------------------------------------------
