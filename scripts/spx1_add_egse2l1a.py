@@ -165,8 +165,8 @@ def select_egse(l1a_file: str, egse_file: str):
         duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
         # use the timestamp in the filename
-        date_str = Path(fid.attrs['input_files'][0]).stem.split('_')[-1]
-        date_str = date_str.rstrip('_hk') + "+00:00"
+        input_file = Path(fid.attrs['input_files'][0]).stem.rstrip('_hk')
+        date_str = input_file.split('_')[-1] + "+00:00"
         msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
         msmt_start = msmt_start.replace(microsecond=0)
         msmt_stop = msmt_start + timedelta(seconds=int(duration))
