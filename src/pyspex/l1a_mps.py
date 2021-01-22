@@ -69,11 +69,6 @@ class LV1mps:
         """
         Return the binning table identifier (zero for full-frame images)
         """
-        print(self.__mps['MPS_ID'])
-        print(self.__mps['REG_FULL_FRAME'])
-        print(self.__mps['REG_CMV_OUTPUTMODE'])
-        print(self.__mps['REG_BINNING_TABLE_START'])
-                     
         if np.all(self.__mps['REG_FULL_FRAME'] == 1):
             if np.all(self.__mps['REG_CMV_OUTPUTMODE'] != 3):
                 raise KeyError('Diagnostic mode with OUTPMODE != 3')
@@ -86,6 +81,10 @@ class LV1mps:
                 (self.__mps['REG_BINNING_TABLE_START'] - 0x80000000) // 0x400000
             return res & 0xFF
 
+        print(self.__mps['MPS_ID'])
+        print(self.__mps['REG_FULL_FRAME'])
+        print(self.__mps['REG_CMV_OUTPUTMODE'])
+        print(self.__mps['REG_BINNING_TABLE_START'])
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
