@@ -68,23 +68,44 @@ class LV1mps:
     def binning_table_id(self) -> int:
         """
         Return the binning table identifier (zero for full-frame images)
+
+        Notes
+        -----
+        The CCSDS data may hold data of different MPS, but only when the
+        size of the detector data does not change. Therefore, a mix of
+        Science and Full-frame data should not occur.
+
+        v126: Sometimes the MPS information is not updated for the first
+              images. We try to fix this and warn the user. 
         """
-        if np.all(self.__mps['REG_FULL_FRAME'] == 1):
-            if np.all(self.__mps['REG_CMV_OUTPUTMODE'] != 3):
-                raise KeyError('Diagnostic mode with OUTPMODE != 3')
+        full_frame = np.unique(self.__mps['REG_FULL_FRAME'])
+        if len(full_frame) > 1:
+            print('[WARNING]: value of REG_FULL_FRAME not unique')
+            print(self.__mps['REG_FULL_FRAME'])
+        full_frame = self.__mps['REG_FULL_FRAME'][-1]
+
+        cmv_outputmode = np.unique(self.__mps['REG_CMV_OUTPUTMODE'])
+        if len(cmv_outputmode) > 1:
+            print('[WARNING]: value of REG_CMV_OUTPUTMODE not unique')
+            print(self.__mps['REG_CMV_OUTPUTMODE'])
+        cmv_outputmode = self.__mps['REG_CMV_OUTPUTMODE'][-1]
+
+        if full_frame == 1:
+            if cmv_outputmode != 3:
+                raise KeyError('Diagnostic mode with REG_CMV_OUTPMODE != 3')
             return np.zeros(len(self.__mps), dtype='i1')
 
-        if np.all(self.__mps['REG_FULL_FRAME'] == 2):
-            if np.all(self.__mps['REG_CMV_OUTPUTMODE'] != 1):
-                raise KeyError('Science mode with OUTPMODE != 1')
-            res = 1 + \
-                (self.__mps['REG_BINNING_TABLE_START'] - 0x80000000) // 0x400000
+        if full_frame == 2:
+            if cmv_outputmode != 1:
+                raise KeyError('Science mode with REG_CMV_OUTPMODE != 1')
+            bin_tbl_start = self.__mps['REG_BINNING_TABLE_START']
+            indx0 = (self.__mps['REG_FULL_FRAME'] != 2).nonzero()[0]
+            if indx0.size > 0:
+                indx2 = (self.__mps['REG_FULL_FRAME'] == 2).nonzero()[0]    
+                bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
+            res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
             return res & 0xFF
 
-        print(self.__mps['MPS_ID'])
-        print(self.__mps['REG_FULL_FRAME'])
-        print(self.__mps['REG_CMV_OUTPUTMODE'])
-        print(self.__mps['REG_BINNING_TABLE_START'])
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
