@@ -64,7 +64,7 @@ def main():
     lineskip_data = lineskip_data[1:, :]
     
     # create BinningTable object
-    if args.db_file in None:
+    if args.db_file is None:
         bin_ckd = BinningTables(mode='write', ckd_dir='.')
     else:
         bin_ckd = BinningTables(mode=args.db_file, ckd_dir='.')
