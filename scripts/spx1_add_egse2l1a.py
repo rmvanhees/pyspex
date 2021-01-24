@@ -15,6 +15,7 @@ import argparse
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import pickle
 
 import h5py
 from netCDF4 import Dataset
@@ -84,6 +85,29 @@ def read_egse(egse_file: str, verbose=False) -> tuple:
     return (data, units)
 
 
+def write_ref_spectrum(gid):
+    """
+    Write reference spectrum to group /gse_data
+    """
+    flname = '/nfs/SPEXone/share/ckd/reference_laser_source.pickle'
+    if not Path(flname).is_file():
+        raise FileNotFoundError('file reference_laser_source.pickle not found')
+
+    with open(flname, 'rb') as fp:
+        data = pickle.load(fp)
+
+    _ = gid.createDimension('wavelength', len(data['wavelength']))
+    dset = gid.createVariable('wavelength', 'f8', ('wavelength',))
+    dset.long_name = 'wavelength of stimulus'
+    dset.units = data['units'][0]
+    dset[:] = data['wavelength']
+
+    dset = gid.createVariable('signal', 'f8', ('wavelength',))
+    dset.long_name = 'signal of stimulus'
+    dset.units = data['units'][1]
+    dset[:] = data['signal']
+
+
 def create_db_egse(db_name, egse_data, egse_units):
     """
     Write OGSE/EGSE data to HDF5 database
@@ -136,7 +160,7 @@ def check_egse(egse_data, act_angle, alt_angle):
             print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
 
 
-def select_egse(l1a_file: str, egse_file: str):
+def select_egse(l1a_file: str, egse_file: str, add_ref_laser_spectra: bool):
     """
     Write OGSE/EGSE records of a measurement to a Level-1A product
     """
@@ -165,6 +189,7 @@ def select_egse(l1a_file: str, egse_file: str):
         duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
         # use the timestamp in the filename
+        # pylint: disable=unsubscriptable-object
         input_file = Path(fid.attrs['input_files'][0]).stem.rstrip('_hk')
         date_str = input_file.split('_')[-1] + "+00:00"
         msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
@@ -195,6 +220,14 @@ def select_egse(l1a_file: str, egse_file: str):
             var_egse = gid.createVariable('egse', egse_t, ('time',))
             var_egse.setncatts(fid['egse'].__dict__)
             var_egse[:] = egse_data
+
+            # write reference spectra
+            if add_ref_laser_spectra:
+                print('Reference laser spectra')
+
+                # find pickle file with laser spectra
+                # read pickle file
+                # write reference spectra
 
             # write sub-set of OGSE/EGSE settings as attributes
             gid.Line_skip_id = ""
@@ -232,6 +265,8 @@ def main():
                                            " to a SPEXone Level-1A product"))
     parser_b.add_argument('--egse_db', default='egse_database.nc', type=str,
                           help="OGSE/EGSE database (HDF5)")
+    parser_b.add_argument('--add_ref_laser_spectra', action='store_true',
+                          default=True)
     parser_b.add_argument('l1a_file', default=None, type=str,
                           help="SPEXone L1A product")
     args = parser.parse_args()
@@ -248,7 +283,7 @@ def main():
         create_db_egse(args.db_name, egse, units)
         return
 
-    select_egse(args.l1a_file, args.egse_db)
+    select_egse(args.l1a_file, args.egse_db, args.add_ref_laser_spectra)
 
 
 # --------------------------------------------------
