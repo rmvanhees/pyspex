@@ -17,7 +17,7 @@ import numpy as np
 
 from netCDF4 import Dataset
 
-from .l1a_mps import LV1mps
+from .tm_science import TMscience
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.l1b_def import init_l1b
@@ -448,8 +448,8 @@ class L1Aio(Lv1io):
         # check of all required dataset their sizes
         self.check_stored(allow_empty=True)
 
-        # update coverage time
-        mps = LV1mps(self.get_dset('/science_data/detector_telemetry')[-1])
+        # define object to access Science telemetry parameters
+        mps = TMscience(self.get_dset('/science_data/detector_telemetry')[-1])
 
         # determine duration master clock cycle
         imro = 1e-1 * mps.get('FTI') * 2
@@ -599,7 +599,6 @@ class L1Aio(Lv1io):
                           'seconds since {}'.format(reference_day.isoformat()),
                           ds_name='/navigation_data/orb_time')
 
-
     def fill_science(self, img_data, img_hk, img_id) -> None:
         """
         Write Science data and housekeeping telemetry (Science) to L1A product
@@ -627,7 +626,7 @@ class L1Aio(Lv1io):
         self.set_dset('/science_data/detector_images', img_data)
         self.set_dset('/science_data/detector_telemetry', img_hk)
 
-        mps = LV1mps(img_hk)
+        mps = TMscience(img_hk)
         self.set_dset('/image_attributes/binning_table', mps.binning_table_id)
         self.set_dset('/image_attributes/digital_offset', mps.offset)
         self.set_dset('/image_attributes/exposure_time',

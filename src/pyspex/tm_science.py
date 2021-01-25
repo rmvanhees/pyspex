@@ -3,9 +3,9 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Python class to create SPEXone Level-1 products
+Python class to access SPEXone Science telemetry data (ApID 0x350)
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -16,15 +16,15 @@ import numpy as np
 # - global parameters -------------------
 
 
-# - class LV1mps -------------------------
-class LV1mps:
+# - class TMscience -------------------------
+class TMscience:
     """
-    Class to convert raw register settings from the MPS
+    Access/convert parameters of a SPEXone telemetry Science packet
 
     Methods
     -------
     get(key)
-       Return (raw) MPS parameter.
+       Return (raw) SPEXone telemetry Science parameter.
     number_channels
        Return number of LVDS channels used.
     binning_table_id
@@ -48,21 +48,21 @@ class LV1mps:
     exp_control
        Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
     """
-    def __init__(self, mps_data):
+    def __init__(self, tm_science):
         """
-        Initialize class L1A_mps
+        Initialize class TMscience
 
         Parameters
-        mps_data :  ndarray
-           SPEXone Science telemetry data
+        tm_science :  ndarray
+           SPEXone telemetry Science data
         """
-        self.__mps = mps_data
+        self.__tm = tm_science
 
     def get(self, key: str):
         """
-        Return (raw) MPS parameter
+        Return (raw) Science telemetry parameter
         """
-        return self.__mps[key] if key in self.__mps.dtype.names else None
+        return self.__tm[key] if key in self.__tm.dtype.names else None
 
     @property
     def binning_table_id(self) -> int:
@@ -71,37 +71,37 @@ class LV1mps:
 
         Notes
         -----
-        The CCSDS data may hold data of different MPS, but only when the
-        size of the detector data does not change. Therefore, a mix of
-        Science and Full-frame data should not occur.
+        The CCSDS data may hold data collected with different MPS, but
+        only when the size of the detector data does not change. Therefore,
+        a mix of Science mode and Full-frame data should not occur.
 
         v126: Sometimes the MPS information is not updated for the first
-              images. We try to fix this and warn the user. 
+              images. We try to fix this and warn the user.
         """
-        full_frame = np.unique(self.__mps['REG_FULL_FRAME'])
+        full_frame = np.unique(self.__tm['REG_FULL_FRAME'])
         if len(full_frame) > 1:
             print('[WARNING]: value of REG_FULL_FRAME not unique')
-            print(self.__mps['REG_FULL_FRAME'])
-        full_frame = self.__mps['REG_FULL_FRAME'][-1]
+            print(self.__tm['REG_FULL_FRAME'])
+        full_frame = self.__tm['REG_FULL_FRAME'][-1]
 
-        cmv_outputmode = np.unique(self.__mps['REG_CMV_OUTPUTMODE'])
+        cmv_outputmode = np.unique(self.__tm['REG_CMV_OUTPUTMODE'])
         if len(cmv_outputmode) > 1:
             print('[WARNING]: value of REG_CMV_OUTPUTMODE not unique')
-            print(self.__mps['REG_CMV_OUTPUTMODE'])
-        cmv_outputmode = self.__mps['REG_CMV_OUTPUTMODE'][-1]
+            print(self.__tm['REG_CMV_OUTPUTMODE'])
+        cmv_outputmode = self.__tm['REG_CMV_OUTPUTMODE'][-1]
 
         if full_frame == 1:
             if cmv_outputmode != 3:
                 raise KeyError('Diagnostic mode with REG_CMV_OUTPMODE != 3')
-            return np.zeros(len(self.__mps), dtype='i1')
+            return np.zeros(len(self.__tm), dtype='i1')
 
         if full_frame == 2:
             if cmv_outputmode != 1:
                 raise KeyError('Science mode with REG_CMV_OUTPMODE != 1')
-            bin_tbl_start = self.__mps['REG_BINNING_TABLE_START']
-            indx0 = (self.__mps['REG_FULL_FRAME'] != 2).nonzero()[0]
+            bin_tbl_start = self.__tm['REG_BINNING_TABLE_START']
+            indx0 = (self.__tm['REG_FULL_FRAME'] != 2).nonzero()[0]
             if indx0.size > 0:
-                indx2 = (self.__mps['REG_FULL_FRAME'] == 2).nonzero()[0]    
+                indx2 = (self.__tm['REG_FULL_FRAME'] == 2).nonzero()[0]
                 bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
             res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
             return res & 0xFF
@@ -113,23 +113,23 @@ class LV1mps:
         """
         Return number of LVDS channels used
         """
-        return 2 ** (4 - (self.__mps['DET_OUTMODE'] & 0x3))
+        return 2 ** (4 - (self.__tm['DET_OUTMODE'] & 0x3))
 
     @property
     def lvds_clock(self) -> bool:
         """
         Returns flag for LVDS clock: False: disabled & True: enabled
         """
-        return ((self.__mps['DET_PLLENA'] & 0x3) == 0
-                and (self.__mps['DET_PLLBYP'] & 0x3) != 0
-                and (self.__mps['DET_CHENA'] & 0x40000) != 0)
+        return ((self.__tm['DET_PLLENA'] & 0x3) == 0
+                and (self.__tm['DET_PLLBYP'] & 0x3) != 0
+                and (self.__tm['DET_CHENA'] & 0x40000) != 0)
 
     @property
     def offset(self) -> int:
         """
         Returns digital offset including ADC offset
         """
-        buff = self.__mps['DET_OFFSET'].astype('i4')
+        buff = self.__tm['DET_OFFSET'].astype('i4')
         if np.isscalar(buff):
             if buff >= 8192:
                 buff -= 16384
@@ -144,9 +144,9 @@ class LV1mps:
         Returns PGA gain [Volt]
         """
         # need first bit of address 121
-        reg_pgagainfactor = self.__mps['DET_BLACKCOL'] & 0x1
+        reg_pgagainfactor = self.__tm['DET_BLACKCOL'] & 0x1
 
-        reg_pgagain = self.__mps['DET_PGAGAIN']
+        reg_pgagain = self.__tm['DET_PGAGAIN']
 
         return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
 
@@ -155,15 +155,15 @@ class LV1mps:
         """
         Returns pixel exposure time [master clock periods]
         """
-        return 129 * (0.43 * self.__mps['DET_FOTLEN']
-                      + self.__mps['DET_EXPTIME'])
+        return 129 * (0.43 * self.__tm['DET_FOTLEN']
+                      + self.__tm['DET_EXPTIME'])
 
     @property
     def fot_time(self) -> int:
         """
         Returns frame overhead time [master clock periods]
         """
-        return 129 * (self.__mps['DET_FOTLEN']
+        return 129 * (self.__tm['DET_FOTLEN']
                       + 2 * (16 // self.number_channels))
 
     @property
@@ -171,14 +171,14 @@ class LV1mps:
         """
         Returns image read-out time [master clock periods]
         """
-        return 129 * (16 // self.number_channels) * self.__mps['DET_NUMLINES']
+        return 129 * (16 // self.number_channels) * self.__tm['DET_NUMLINES']
 
     @property
     def frame_period(self) -> float:
         """
         Returns frame period [master clock periods]
         """
-        return 2.38e-7 + (self.__mps['REG_NCOADDFRAMES']
+        return 2.38e-7 + (self.__tm['REG_NCOADDFRAMES']
                           * (self.exp_time + self.fot_time + self.rot_time))
 
     @property
@@ -194,9 +194,9 @@ class LV1mps:
 
         Other PLL registers are: PLL_enable, PLL_in_fre, PLL_bypass, PLL_load
         """
-        pll_div = self.__mps['DET_PLLRATE'] & 0xF             # bit [0:4]
-        pll_out_fre = (self.__mps['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
-        pll_range = (self.__mps['DET_PLLRATE'] >> 7)          # bit [7]
+        pll_div = self.__tm['DET_PLLRATE'] & 0xF             # bit [0:4]
+        pll_out_fre = (self.__tm['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
+        pll_range = (self.__tm['DET_PLLRATE'] >> 7)          # bit [7]
 
         return (pll_range, pll_out_fre, pll_div)
 
@@ -205,8 +205,8 @@ class LV1mps:
         """
         Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
         """
-        inte_sync = (self.__mps['INTE_SYNC'] >> 2) & 0x1
-        exp_dual = (self.__mps['INTE_SYNC'] >> 1) & 0x1
-        exp_ext = self.__mps['INTE_SYNC'] & 0x1
+        inte_sync = (self.__tm['INTE_SYNC'] >> 2) & 0x1
+        exp_dual = (self.__tm['INTE_SYNC'] >> 1) & 0x1
+        exp_ext = self.__tm['INTE_SYNC'] & 0x1
 
         return (inte_sync, exp_dual, exp_ext)
