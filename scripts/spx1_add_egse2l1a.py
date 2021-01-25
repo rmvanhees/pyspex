@@ -223,11 +223,7 @@ def select_egse(l1a_file: str, egse_file: str, add_ref_laser_spectra: bool):
 
             # write reference spectra
             if add_ref_laser_spectra:
-                print('Reference laser spectra')
-
-                # find pickle file with laser spectra
-                # read pickle file
-                # write reference spectra
+                write_ref_spectrum(gid)
 
             # write sub-set of OGSE/EGSE settings as attributes
             gid.Line_skip_id = ""
