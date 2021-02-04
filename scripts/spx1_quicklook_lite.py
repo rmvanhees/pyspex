@@ -120,11 +120,13 @@ def main():
             else:
                 indx = [int(x) for x in args.show_images.split(',')]
 
+        med_table_id = np.sort(table_id)[len(table_id) // 2]
+
         # generate pages in quick-look
         for ii in indx:
             img = images[ii]
-            if table_id[ii] > 0:
-                img2d = binned_to_2x2_image(table_id[ii], img)
+            if med_table_id > 0:
+                img2d = binned_to_2x2_image(med_table_id, img)
             else:
                 if img.size != 4194304:
                     continue
