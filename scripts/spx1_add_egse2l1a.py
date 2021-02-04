@@ -164,18 +164,24 @@ def select_egse(l1a_file: str, egse_file: str, add_ref_laser_spectra: bool):
     """
     Write OGSE/EGSE records of a measurement to a Level-1A product
     """
-    view_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8, 'P50DEG': 16}
-
     # investigate filename
     parts = l1a_file.split('_')
-    vp_parts = parts[2].split('-')
 
-    # default 0, when all viewports are illuminated
-    viewport = view_dict.get(vp_parts[min(2, len(vp_parts))], 0)
     act_angle = [float(x.replace('act', ''))
                  for x in parts if x.startswith('act')]
     alt_angle = [float(x.replace('alt', ''))
                  for x in parts if x.startswith('alt')]
+
+    # determine viewport: default 0, when all viewports are illuminated
+    if alt_angle:
+        vp_dict = {'-50.0': 1, '-20.0': 2, '0.0': 4, '20.0': 8, '50.0': 16}
+
+        viewport = vp_dict.get('{:.1f}'.format(alt_angle[0]), 0)
+    else:
+        vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
+                   'P50DEG': 16}
+        vp_parts = parts[2].split('-')
+        viewport = vp_dict.get(vp_parts[min(2, len(vp_parts))], 0)
 
     # determine duration of the measurement
     with h5py.File(l1a_file, 'r') as fid:
