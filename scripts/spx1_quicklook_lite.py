@@ -64,7 +64,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='create Quick-Look from SPEXone L1A product')
     parser.add_argument('--verbose', default=False, action='store_true',
-                        help='be verbose, default be silent') 
+                        help='be verbose, default be silent')
     parser.add_argument('--show_images', type=str, default=None,
                         help='comma seperated list, default use --max_images')
     parser.add_argument('--max_images', type=int, default=20,
@@ -124,13 +124,13 @@ def main():
 
         # generate pages in quick-look
         for ii in indx:
-            img = images[ii]
             if med_table_id > 0:
-                img2d = binned_to_2x2_image(med_table_id, img)
+                img2d = binned_to_2x2_image(med_table_id, images[ii, :]) / 4
             else:
-                if img.size != 4194304:
+                if images[ii, :].size != 4194304:
                     continue
-                img2d = img.reshape(2048, 2048) / sci_hk[ii]['REG_NCOADDFRAMES']
+                img2d = images[ii, :].reshape(2048, 2048)
+            img2d /= sci_hk[ii]['REG_NCOADDFRAMES']
 
             time_str = (
                 datetime(year=2020, month=1, day=1)
@@ -141,13 +141,13 @@ def main():
             figinfo.add('image_time', time_str)
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
             figinfo.add('signal_range',
-                        [int(np.nanmin(img2d)), int(np.nanmax(img2d))],
-                        fmt='{}')
+                        (np.nanmin(img2d), np.nanmax(img2d)),
+                        fmt='[{:.3f}, {:.3f}]')
             if table_id[ii] > 0:
                 suptitle = 'frame [table_id={}]: {}'.format(table_id[ii], ii)
             else:
                 suptitle = 'frame: {}'.format(ii)
-            plot.draw_signal(img2d, vperc=[1, 99], fig_info=figinfo, 
+            plot.draw_signal(img2d, vperc=[1, 99], fig_info=figinfo,
                              sub_title=suptitle)
         # close plot object
         plot.close()
