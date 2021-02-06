@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Convert SPEXone binning table in csv format to netCDF4
 
-Copyright (c) 2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -36,7 +36,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='build a database with SPEXone binning tables')
     parser.add_argument('--verbose', default=False, action='store_true',
-                        help='be verbose, default be silent') 
+                        help='be verbose, default be silent')
     parser.add_argument('--db_file', default=None,
                         help='append data to existing binning databse')
     parser.add_argument('--table_id', type=str, default='0',
@@ -61,8 +61,11 @@ def main():
 
     # read lineskip data
     lineskip_data = np.loadtxt(args.lineskip, delimiter=',', dtype=np.uint8)
-    lineskip_data = lineskip_data[1:, :]
-    
+    if lineskip_data.ndim > 1:
+        lineskip_data = lineskip_data[1:, :]
+    else:
+        lineskip_data = lineskip_data[np.newaxis, :]
+
     # create BinningTable object
     if args.db_file is None:
         bin_ckd = BinningTables(mode='write', ckd_dir='.')
