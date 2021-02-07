@@ -61,10 +61,10 @@ def main():
 
     # read lineskip data
     lineskip_data = np.loadtxt(args.lineskip, delimiter=',', dtype=np.uint8)
-    if lineskip_data.ndim > 1:
-        lineskip_data = lineskip_data[1:, :]
-    else:
+    if lineskip_data.ndim == 1:
         lineskip_data = lineskip_data[np.newaxis, :]
+    elif lineskip_data.shape[0] > len(args.file_list):
+        lineskip_data = lineskip_data[1:, :]
 
     # create BinningTable object
     if args.db_file is None:
