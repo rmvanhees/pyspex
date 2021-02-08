@@ -89,7 +89,9 @@ def main():
             exposure_time = fid['/image_attributes/exposure_time'][:]
             table_id = fid['/image_attributes/binning_table'][:]
             sci_hk = fid['/science_data/detector_telemetry'][:]
-            images = fid['/science_data/detector_images'][:]
+            dset = fid['/science_data/detector_images']
+            with dset.astype(float):
+                images = dset[:]
 
         try:
             date_start = date_start.decode()
