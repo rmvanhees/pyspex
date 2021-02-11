@@ -124,21 +124,20 @@ def create_db_egse(db_name, egse_data, egse_units):
         _ = fid.createEnumType('u1','shutter_t',
                                {k.upper(): v
                                 for k, v in SHUTTER_DICT.items()})
-        var_time = fid.createDimension('time', egse_data.size)
-
-        var_time = fid.createVariable('time', 'f8', ('time',),
-                                      chunksizes=(512,))
+        dset = fid.createDimension('time', egse_data.size)
+        dset = fid.createVariable('time', 'f8', ('time',),
+                                  chunksizes=(512,))
         indx = np.argsort(egse_data[time_key])
-        var_time[:] = egse_data[time_key][indx]
+        dset[:] = egse_data[time_key][indx]
 
         egse_t = fid.createCompoundType(egse_data.dtype, 'egse_dtype')
-        var_egse = fid.createVariable('egse', egse_t, ('time',),
+        dset = fid.createVariable('egse', egse_t, ('time',),
                                       chunksizes=(64,))
-        var_egse.long_name = 'OGSE/EGSE settings'
-        var_egse.units = egse_units
-        var_egse.comment = ('DIG_IN_00 is of enumType ldls_t;'
+        dset.long_name = 'OGSE/EGSE settings'
+        dset.units = egse_units
+        dset.comment = ('DIG_IN_00 is of enumType ldls_t;'
                             ' SHUTTER_STATUS is of enumType shutter_t')
-        var_egse[:] = egse_data[indx]
+        dset[:] = egse_data[indx]
 
 
 # --------------------------------------------------
@@ -211,7 +210,8 @@ def select_egse(l1a_file: str, egse_file: str, add_ref_laser_spectra: bool):
         if indx.size == 0:
             raise RuntimeError('no OGSE/EGSE data found')
 
-        egse_data = fid['egse'][indx[0]:indx[1]+1]
+        egse_time = egse_time[indx[0]:indx[-1]+1]
+        egse_data = fid['egse'][indx[0]:indx[-1]+1]
         # perform sanity check
         check_egse(egse_data, act_angle, alt_angle)
 
@@ -222,10 +222,12 @@ def select_egse(l1a_file: str, egse_file: str, add_ref_laser_spectra: bool):
 
             # add OGSE/EGSE information
             _ = gid.createDimension('time', len(egse_data))
+            dset = gid.createVariable('time', 'f8', ('time',))
+            dset[:] = egse_time
             egse_t = gid.createCompoundType(egse_data.dtype, 'egse_dtype')
-            var_egse = gid.createVariable('egse', egse_t, ('time',))
-            var_egse.setncatts(fid['egse'].__dict__)
-            var_egse[:] = egse_data
+            dset = gid.createVariable('egse', egse_t, ('time',))
+            dset.setncatts(fid['egse'].__dict__)
+            dset[:] = egse_data
 
             # write reference spectra
             if add_ref_laser_spectra:
