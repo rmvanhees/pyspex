@@ -261,14 +261,14 @@ def main():
     parser_a = subparsers.add_parser('create_db',
                                      help="create new OGSE/EGSE database")
     parser_a.add_argument('--db_name', default='egse_database.nc', type=str,
-                          help="name of OGSE/EGSE database")
+                          help="name of EGSE database(HDF5)")
     parser_a.add_argument('file_list', nargs='+',
                           help="provide names of one or more EGSE files (CSV)")
     parser_b = subparsers.add_parser('update',
                                      help=("add OGSE/EGSE information"
                                            " to a SPEXone Level-1A product"))
-    parser_b.add_argument('--egse_db', default='egse_database.nc', type=str,
-                          help="OGSE/EGSE database (HDF5)")
+    parser_b.add_argument('--db_name', default='egse_database.nc', type=str,
+                          help="name of EGSE database (HDF5)")
     parser_b.add_argument('--add_ref_laser_spectra', action='store_true',
                           default=True)
     parser_b.add_argument('l1a_file', default=None, type=str,
