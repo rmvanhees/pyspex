@@ -27,7 +27,7 @@ def byte_to_timestamp(str_date: str):
     """
     Helper function for numpy.loadtxt() to convert byte-string to timestamp
     """
-    buff = str_date.strip().decode('ascii') + '+00:00'     # date is in UTC
+    buff = str_date.strip().decode('ascii') + '+01:00'     # date is in CET
     return datetime.strptime(buff, '%Y-%m-%dT%H:%M:%S.%f%z').timestamp()
 
 
