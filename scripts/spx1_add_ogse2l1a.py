@@ -4,7 +4,9 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Add OCAL reference detector and avantes information to a SPEXone L1A product
+Add OCAL OGSE information to a SPEXone L1A product, a.o.
+ * reference diode
+ * wavelength monitor
 
 Copyright (c) 2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -29,12 +31,12 @@ def byte_to_timestamp(str_date: str):
     return datetime.strptime(buff, '%Y-%m-%dT%H:%M:%S.%f%z').timestamp()
 
 
-def read_ref_det(flname: str, verbose=False) -> tuple:
+def read_ref_diode(flname: str, verbose=False) -> tuple:
     """
-    Read reference detector data to numpy compound array
-    (comma separated values)
+    Read reference diode data to numpy compound array
+    (input comma separated values)
     """
-    tmpfile = Path('/dev/shm/tmp_ref_det.csv')
+    tmpfile = Path('/dev/shm/tmp_ref_diode.csv')
     data = None
     names = []
     units = []
@@ -93,10 +95,10 @@ def read_ref_det(flname: str, verbose=False) -> tuple:
     return (data, units)
 
 
-def read_avantes(file_list: list, verbose=False) -> tuple:
+def read_wav_mon(file_list: list, verbose=False) -> tuple:
     """
-    Read reference detector data to numpy compound array
-    (comma separated values)
+    Read wavelength monitor data to numpy compound array
+    (input comma separated values)
     """
     names = ('timestamp', 'spectrum')
     formats = None
@@ -135,50 +137,55 @@ def read_avantes(file_list: list, verbose=False) -> tuple:
     return (data, wavelength)
 
 
-def create_db_source(db_name, ref_data, ref_units, avantes_data, avantes_wv):
+def create_db_source(db_name, ref_diode, ref_units, wav_mon_data, wav_mon_wv):
     """
-    Write Reference detector and Avantes data to HDF5 database
+    Write reference diode and wavelength monitor data to HDF5 database
     """
     with Dataset(db_name, 'w', format='NETCDF4') as fid:
         fid.creation_date = \
             datetime.now(timezone.utc).isoformat(timespec='seconds')
 
-        # write Reference Detector data
+        # write Reference-Diode data
         time_key = 'Unix_Time'
-        gid = fid.createGroup("ReferenceDetector")
-        dset = gid.createDimension('time', ref_data.size)
+        gid = fid.createGroup("ReferenceDiode")
+        dset = gid.createDimension('time', ref_diode.size)
         dset = gid.createVariable('time', 'f8', ('time',),
                                   chunksizes=(512,))
-        indx = np.argsort(ref_data[time_key])
-        dset[:] = ref_data[time_key][indx]
+        indx = np.argsort(ref_diode[time_key])
+        dset[:] = ref_diode[time_key][indx]
 
-        ref_t = gid.createCompoundType(ref_data.dtype, 'ref_dtype')
-        dset = gid.createVariable('ref_det', ref_t, ('time',),
+        ref_t = gid.createCompoundType(ref_diode.dtype, 'ref_dtype')
+        dset = gid.createVariable('ref_diode', ref_t, ('time',),
                                   chunksizes=(64,))
-        dset.long_name = 'Reference detector data'
+        dset.long_name = 'Reference-Diode data'
         dset.units = ref_units
-        dset[:] = ref_data[indx]
+        dset[:] = ref_diode[indx]
 
-        # write Avantes data
+        # write Wavelength-Monitor data
         time_key = 'timestamp'
-        gid = fid.createGroup("Avantes")
-        dset = gid.createDimension('time', avantes_data.size)
+        gid = fid.createGroup("WaveMonitor")
+        dset = gid.createDimension('time', wav_mon_data.size)
         dset = gid.createVariable('time', 'f8', ('time',),
                                   chunksizes=(512,))
-        indx = np.argsort(avantes_data[time_key])
-        dset[:] = avantes_data[time_key][indx]
-        dset = gid.createDimension('wave', avantes_wv.size)
-        dset = gid.createVariable('wave', 'f8', ('wave',))
-        dset[:] = avantes_wv
-        avantes_t = gid.createCompoundType(avantes_data.dtype, 'avantes_dtype')
-        dset = gid.createVariable('avantes', avantes_t, ('time',),
+        indx = np.argsort(wav_mon_data[time_key])
+        dset[:] = wav_mon_data[time_key][indx]
+        dset = gid.createDimension('wavelength', wav_mon_wv.size)
+        dset = gid.createVariable('wavelength', 'f8', ('wavelength',))
+        dset.longname = 'wavelength grid'
+        dset.comment = 'wavelength annotation of the fibre spectrometer'
+        dset.units = 'nm'
+        dset[:] = wav_mon_wv
+        avantes_t = gid.createCompoundType(wav_mon_data.dtype,
+                                           'wav_mon_dtype')
+        dset = gid.createVariable('wav_mon', avantes_t, ('time',),
                                   chunksizes=(64,))
-        dset.long_name = 'Avantes data'
-        dset[:] = avantes_data[indx]
+        dset.long_name = 'wavelength-monitor data'
+        dset.comment = 'Avantes fibre spectrometer'
+        dset[:] = wav_mon_data[indx]
 
 
 # --------------------------------------------------
-def write_ref_data(l1a_file: str, ref_db: str):
+def write_ogse_data(l1a_file: str, ref_db: str):
     """
     Select reference data taken during a measurement and add to a L1A product
     """
@@ -213,58 +220,59 @@ def write_ref_data(l1a_file: str, ref_db: str):
 
     # open database with reference data (SRON clock)
     with Dataset(ref_db, 'r') as fid:
-        gid = fid['ReferenceDetector']
+        gid = fid['ReferenceDiode']
         ref_time = gid['time'][:] - t_diff
         indx = np.where((ref_time >= msmt_start.timestamp())
                         & (ref_time <= msmt_stop.timestamp()))[0]
         if indx.size == 0:
-            raise RuntimeError('no reference detector data found')
+            raise RuntimeError('no reference-diode data found')
         # print(indx)
 
         ref_time = gid['time'][indx[0]:indx[-1]+1] - t_diff
-        ref_det = gid['ref_det'][indx[0]:indx[-1]+1]
+        ref_diode = gid['ref_diode'][indx[0]:indx[-1]+1]
 
-        gid = fid['Avantes']
-        avantes_time = gid['time'][:] - t_diff
-        indx = np.where((avantes_time >= msmt_start.timestamp())
-                        & (avantes_time <= msmt_stop.timestamp()))[0]
+        gid = fid['WaveMonitor']
+        wav_mon_time = gid['time'][:] - t_diff
+        indx = np.where((wav_mon_time >= msmt_start.timestamp())
+                        & (wav_mon_time <= msmt_stop.timestamp()))[0]
         if indx.size == 0:
-            raise RuntimeError('no Avantes data found')
+            raise RuntimeError('no Wav_Mon data found')
         print(indx)
 
-        avantes_time = gid['time'][indx[0]:indx[-1]+1] - t_diff
-        avantes = gid['avantes'][indx[0]:indx[-1]+1]
-        # print('avantes ', avantes.shape)
-        avantes_wv = gid['wave'][:]
-        # print('avantes_wv ', avantes_wv.shape)
+        wav_mon_time = gid['time'][indx[0]:indx[-1]+1] - t_diff
+        wav_mon_data = gid['wav_mon'][indx[0]:indx[-1]+1]
+        # print('wav_mon ', wav_mon_data.shape)
+        wav_mon_wv = gid['wavelength'][:]
+        # print('wav_mon_wv ', wav_mon_wv.shape)
 
         # update Level-1A product with OGSE/EGSE information
         with Dataset(l1a_file, 'r+') as fid2:
             gid = fid2['/gse_data']
-            subgid = gid.createGroup('ReferenceDetector')
-            _ = subgid.createDimension('time', len(ref_det))
+            subgid = gid.createGroup('ReferenceDiode')
+            _ = subgid.createDimension('time', len(ref_diode))
             dset = subgid.createVariable('time', 'f8', ('time',))
             # print(dset.shape, ref_time.shape)
             dset[:] = ref_time
 
-            ref_t = subgid.createCompoundType(ref_det.dtype, 'ref_dtype')
-            dset = subgid.createVariable('ref_det', ref_t, ('time',))
-            dset.setncatts(fid['/ReferenceDetector/ref_det'].__dict__)
-            dset[:] = ref_det
+            ref_t = subgid.createCompoundType(ref_diode.dtype, 'ref_dtype')
+            dset = subgid.createVariable('ref_diode', ref_t, ('time',))
+            dset.setncatts(fid['/ReferenceDiode/ref_diode'].__dict__)
+            dset[:] = ref_diode
 
-            subgid = gid.createGroup('Avantes')
-            _ = subgid.createDimension('time', len(avantes))
+            subgid = gid.createGroup('WaveMonitor')
+            _ = subgid.createDimension('time', len(wav_mon_data))
             dset = subgid.createVariable('time', 'f8', ('time',))
-            dset[:] = avantes_time
+            dset[:] = wav_mon_time
 
-            avantes_t = subgid.createCompoundType(avantes.dtype,
-                                                  'avantes_dtype')
-            dset = subgid.createVariable('avantes', avantes_t, ('time',))
-            dset.setncatts(fid['/Avantes/avantes'].__dict__)
-            dset[:] = avantes
-            _ = subgid.createDimension('wave', len(avantes_wv))
-            dset = subgid.createVariable('wave', 'f8', ('wave',))
-            dset[:] = avantes_wv
+            avantes_t = subgid.createCompoundType(wav_mon_data.dtype,
+                                                  'wav_mon_dtype')
+            dset = subgid.createVariable('wav_mon', avantes_t, ('time',))
+            dset.setncatts(fid['/WaveMonitor/wav_mon'].__dict__)
+            dset[:] = wav_mon_data
+            _ = subgid.createDimension('wavelength', len(wav_mon_wv))
+            dset = subgid.createVariable('wavelength', 'f8', ('wavelength',))
+            dset.setncatts(fid['/WaveMonitor/wavelength'].__dict__)
+            dset[:] = wav_mon_wv
 
 
 # - main function ----------------------------------
@@ -277,33 +285,34 @@ def main():
     parser.add_argument('--verbose', action='store_true', default=False)
     subparsers = parser.add_subparsers(help='sub-command help')
     parser_a = subparsers.add_parser('create_db',
-                                     help="create new reference database")
-    parser_a.add_argument('--db_name', default='reference_db.nc', type=str,
-                          help="name of reference database (HDF5)")
-    parser_a.add_argument('--avantes', nargs='+',
-                          help="provide name of avantes files (CSV)")
-    parser_a.add_argument('--ref_det', default=None,
-                          help="provide name of reference detector file (CSV)")
+                                     help="create new OGSE database")
+    parser_a.add_argument('--db_name', default='spx1_ref_ogse_db.nc', type=str,
+                          help="name of OGSE database (HDF5)")
+    parser_a.add_argument('--wav_mon', nargs='+',
+                          help="name of wavelength-monitor files (CSV)")
+    parser_a.add_argument('--ref_diode', default=None,
+                          help="name of reference-diode file (CSV)")
     parser_b = subparsers.add_parser('update',
-                                     help=("add reference information"
+                                     help=("add OGSE information"
                                            " to a SPEXone Level-1A product"))
-    parser_b.add_argument('--db_name', default='reference_db.nc', type=str,
-                          help="name of reference database (HDF5)")
+    parser_b.add_argument('--db_name', default='spx1_ref_ogse_db.nc', type=str,
+                          help="name of OGSE database (HDF5)")
     parser_b.add_argument('l1a_file', default=None, type=str,
                           help="SPEXone L1A product")
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    if 'avantes' in args:
-        # read reference detector data
-        ref_det, ref_units = read_ref_det(args.ref_det, args.verbose)
-        # read avantes data
-        avantes, avantes_wv = read_avantes(args.avantes, args.verbose)
+    if 'wav_mon' in args:
+        # read reference-diode data
+        ref_diode, ref_units = read_ref_diode(args.ref_diode, args.verbose)
+        # read fibre spectrometer data
+        wav_mon, wav_mon_wv = read_wav_mon(args.wav_mon, args.verbose)
         # store reference data in HDF5 database
-        create_db_source(args.db_name, ref_det, ref_units, avantes, avantes_wv)
+        create_db_source(args.db_name, ref_diode, ref_units,
+                         wav_mon, wav_mon_wv)
     else:
-        write_ref_data(args.l1a_file, args.db_name)
+        write_ogse_data(args.l1a_file, args.db_name)
 
 
 # --------------------------------------------------
