@@ -287,7 +287,7 @@ def main():
         create_db_egse(args.db_name, egse, units)
         return
 
-    select_egse(args.l1a_file, args.egse_db, args.add_ref_laser_spectra)
+    select_egse(args.l1a_file, args.db_name, args.add_ref_laser_spectra)
 
 
 # --------------------------------------------------
