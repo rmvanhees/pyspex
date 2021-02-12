@@ -196,8 +196,8 @@ def write_ogse_data(l1a_file: str, ref_db: str):
             fid.attrs['time_coverage_start'].decode('ascii'))
         msmt_stop = datetime.fromisoformat(
             fid.attrs['time_coverage_end'].decode('ascii'))
-        print(fid.attrs['time_coverage_start'].decode('ascii'),
-              fid.attrs['time_coverage_end'].decode('ascii'))
+        # print(fid.attrs['time_coverage_start'].decode('ascii'),
+        #      fid.attrs['time_coverage_end'].decode('ascii'))
 
     # correct msmt_start and msmt_stop to SRON clock
     if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
@@ -206,17 +206,17 @@ def write_ogse_data(l1a_file: str, ref_db: str):
         data_dir = Path('/data/richardh/SPEXone/OCAL/date_stats')
     else:
         data_dir = Path('/nfs/SPEXone/OCAL/date_stats')
-    print(data_dir / 'cmp_date_egse_itos2.txt')
+    # print(data_dir / 'cmp_date_egse_itos2.txt')
     with open(data_dir / 'cmp_date_egse_itos2_clean.txt', 'r') as fid:
         names = fid.readline().strip().lstrip(' #').split('\t\t\t')
         formats = len(names) * ('f8',)
-        print(len(names), names)
+        # print(len(names), names)
         cmp_date = np.loadtxt(fid, dtype={'names': names, 'formats': formats})
 
     cmp_date['ITOS'] -= 0.35
     indx = np.argsort(np.abs(cmp_date['ITOS'] - msmt_start.timestamp()))[0]
     t_diff = cmp_date['SRON(1)'][indx] - cmp_date['ITOS'][indx]
-    print('T_shogun - T_itos [sec]:', t_diff)
+    # print('T_shogun - T_itos [sec]:', t_diff)
 
     # open database with reference data (SRON clock)
     with Dataset(ref_db, 'r') as fid:
@@ -237,7 +237,7 @@ def write_ogse_data(l1a_file: str, ref_db: str):
                         & (wav_mon_time <= msmt_stop.timestamp()))[0]
         if indx.size == 0:
             raise RuntimeError('no Wav_Mon data found')
-        print(indx)
+        # print(indx)
 
         wav_mon_time = gid['time'][indx[0]:indx[-1]+1] - t_diff
         wav_mon_data = gid['wav_mon'][indx[0]:indx[-1]+1]
