@@ -15,6 +15,7 @@ License:  BSD-3-Clause
 """
 import argparse
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 
 import h5py
@@ -36,12 +37,12 @@ def read_ref_diode(flname: str, verbose=False) -> tuple:
     Read reference diode data to numpy compound array
     (input comma separated values)
     """
-    tmpfile = Path('/dev/shm/tmp_ref_diode.csv')
     data = None
     names = []
     units = []
     usecols = ()
 
+    all_valid_lines = ''
     with open(flname, 'r') as fid:
         while True:
             line = fid.readline().strip()
@@ -72,23 +73,18 @@ def read_ref_diode(flname: str, verbose=False) -> tuple:
             print(len(formats), formats)
             print(len(units), units)
             print(len(usecols), usecols)
-            # return (None, None)
+            # return (data, units)
 
-        with open(tmpfile, 'w') as fid_tmp:
-            while True:
-                line = fid.readline().strip()
-                if not line:
-                    break
-                if line[0] == ',':
-                    continue
-                fields = line.split(',')
-                fid_tmp.write(','.join([x if x else '0'for x in fields]))
-                fid_tmp.write('\n')
+        while True:
+            line = fid.readline()
+            if not line:
+                break
+            if ',,,,' not in line:
+                all_valid_lines += line.replace(',,', ',0,')
 
-    with open(tmpfile, 'r') as fid_tmp:
-        data = np.loadtxt(fid_tmp, delimiter=',', usecols=usecols,
-                          dtype={'names': names, 'formats': formats})
-    tmpfile.unlink()
+    data = np.loadtxt(StringIO(all_valid_lines),
+                      usecols=usecols, delimiter=',',
+                      dtype={'names': names, 'formats': formats})
     if verbose:
         print('data :', len(data))
 
@@ -184,6 +180,34 @@ def create_db_source(db_name, ref_diode, ref_units, wav_mon_data, wav_mon_wv):
         dset[:] = wav_mon_data[indx]
 
 
+def read_date_stats():
+    """
+    Read date output from shogun, egse and freckle
+    """
+    if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
+        data_dir = Path('/array/slot1F/spex_one/OCAL/date_stats')
+    elif Path('/data/richardh/SPEXone/OCAL/date_stats').is_dir():
+        data_dir = Path('/data/richardh/SPEXone/OCAL/date_stats')
+    else:
+        data_dir = Path('/nfs/SPEXone/OCAL/date_stats')
+
+    all_valid_lines = ''
+    with open(data_dir / 'cmp_date_egse_itos2.txt', 'r') as fid:
+        names = fid.readline().strip().lstrip(' #').split('\t\t\t')
+        formats = len(names) * ('f8',)
+
+        while True:
+            line = fid.readline()
+            if not line:
+                break
+            fields = line.split('\t')
+            if '' not in fields:
+                all_valid_lines += line
+
+    return np.loadtxt(StringIO(all_valid_lines),
+                      dtype={'names': names, 'formats': formats})
+
+
 # --------------------------------------------------
 def write_ogse_data(l1a_file: str, ref_db: str):
     """
@@ -200,19 +224,7 @@ def write_ogse_data(l1a_file: str, ref_db: str):
         #      fid.attrs['time_coverage_end'].decode('ascii'))
 
     # correct msmt_start and msmt_stop to SRON clock
-    if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
-        data_dir = Path('/array/slot1F/spex_one/OCAL/date_stats')
-    elif Path('/data/richardh/SPEXone/OCAL/date_stats').is_dir():
-        data_dir = Path('/data/richardh/SPEXone/OCAL/date_stats')
-    else:
-        data_dir = Path('/nfs/SPEXone/OCAL/date_stats')
-    # print(data_dir / 'cmp_date_egse_itos2.txt')
-    with open(data_dir / 'cmp_date_egse_itos2_clean.txt', 'r') as fid:
-        names = fid.readline().strip().lstrip(' #').split('\t\t\t')
-        formats = len(names) * ('f8',)
-        # print(len(names), names)
-        cmp_date = np.loadtxt(fid, dtype={'names': names, 'formats': formats})
-
+    cmp_date = read_date_stats()
     cmp_date['ITOS'] -= 0.35
     indx = np.argsort(np.abs(cmp_date['ITOS'] - msmt_start.timestamp()))[0]
     t_diff = cmp_date['SRON(1)'][indx] - cmp_date['ITOS'][indx]
