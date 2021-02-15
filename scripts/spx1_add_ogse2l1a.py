@@ -39,7 +39,8 @@ def read_ref_diode(flname: str, verbose=False) -> tuple:
     """
     data = None
     names = []
-    units = []
+    units = ["seconds", "days", "seconds", "A", "1", "1", "1", "C", "1", "1",
+             "V", "A", "1", "seconds"]
     usecols = ()
 
     all_valid_lines = ''
@@ -57,10 +58,6 @@ def read_ref_diode(flname: str, verbose=False) -> tuple:
                 if res[0] in names:
                     continue
                 names.append(res[0])
-                if len(res) == 2:
-                    units.append(res[1].replace('(', '').replace(')', ''))
-                else:
-                    units.append('1')
                 usecols += (ii,)
             break
 
@@ -71,7 +68,6 @@ def read_ref_diode(flname: str, verbose=False) -> tuple:
         if verbose:
             print(len(names), names)
             print(len(formats), formats)
-            print(len(units), units)
             print(len(usecols), usecols)
             # return (data, units)
 
@@ -148,12 +144,15 @@ def create_db_source(db_name, ref_diode, ref_units, wav_mon_data, wav_mon_wv):
         dset = gid.createVariable('time', 'f8', ('time',),
                                   chunksizes=(512,))
         indx = np.argsort(ref_diode[time_key])
+        dset.units = 'seconds since 1970-01-01T00:00:00Z'
         dset[:] = ref_diode[time_key][indx]
 
         ref_t = gid.createCompoundType(ref_diode.dtype, 'ref_dtype')
         dset = gid.createVariable('ref_diode', ref_t, ('time',),
                                   chunksizes=(64,))
-        dset.long_name = 'Reference-Diode data'
+        dset.comment = 'Reference-Diode data'
+        dset.fields = np.array([np.string_(x) for x in dset.dtype.names])
+        dset.long_name = np.array([np.string_(x) for x in dset.dtype.names])
         dset.units = ref_units
         dset[:] = ref_diode[indx]
 
@@ -163,6 +162,7 @@ def create_db_source(db_name, ref_diode, ref_units, wav_mon_data, wav_mon_wv):
         dset = gid.createDimension('time', wav_mon_data.size)
         dset = gid.createVariable('time', 'f8', ('time',),
                                   chunksizes=(512,))
+        dset.units = 'seconds since 1970-01-01T00:00:00Z'
         indx = np.argsort(wav_mon_data[time_key])
         dset[:] = wav_mon_data[time_key][indx]
         dset = gid.createDimension('wavelength', wav_mon_wv.size)
@@ -175,6 +175,7 @@ def create_db_source(db_name, ref_diode, ref_units, wav_mon_data, wav_mon_wv):
                                            'wav_mon_dtype')
         dset = gid.createVariable('wav_mon', avantes_t, ('time',),
                                   chunksizes=(64,))
+        dset.fields = np.array([np.string_(x) for x in dset.dtype.names])
         dset.long_name = 'wavelength-monitor data'
         dset.comment = 'Avantes fibre spectrometer'
         dset[:] = wav_mon_data[indx]
