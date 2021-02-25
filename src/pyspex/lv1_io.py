@@ -403,8 +403,6 @@ class L1Aio(Lv1io):
        Write nominal housekeeping telemetry packets (NomHK) to L1A product.
     fill_demhk(demhk_data)
        Write detector housekeeping telemetry packets (DemHK) to L1A product.
-    fill_gse(reference=None)
-       Write EGSE/OGSE data to L1A product.
     """
     processing_level = 'L1A'
     dset_stored = {
@@ -697,34 +695,6 @@ class L1Aio(Lv1io):
             return
 
         self.set_dset('/engineering_data/DemHK_telemetry', demhk_data)
-
-    def fill_gse(self, reference=None) -> None:
-        """
-        Write EGSE/OGSE data to L1A product
-
-        Parameters
-        ----------
-        reference : dict, optional
-           biweight value and spread of the signal measured during the
-           measurement by a reference detector.
-           Expected dictionary keys: 'value', 'error'
-        """
-        if reference is not None:
-            dset = self.fid.createVariable('/gse_data/reference_signal',
-                                           'f8', ())
-            dset.long_name = "biweight median of reference-detector signal"
-            dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
-            dset.units = 'A'
-            dset[:] = reference['value']
-            self.set_attr('Illumination_level',
-                          reference['value'] * 5e9 / 1.602176634,
-                          ds_name='gse_data')
-
-            dset = self.fid.createVariable('/gse_data/reference_error',
-                                           'f8', ())
-            dset.long_name = "biweight spread of reference-detector signal"
-            dset.units = 'A'
-            dset[:] = reference['error']
 
 
 # - class L1Bio -------------------------

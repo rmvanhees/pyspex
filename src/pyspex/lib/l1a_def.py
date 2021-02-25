@@ -20,31 +20,6 @@ from .tmtc_def import tmtc_def
 
 
 # - local functions --------------------------------
-def create_group_gse_data(rootgrp, n_wave=None):
-    """
-    Define datasets and attributes in the group /gse_data
-    """
-    sgrp = rootgrp.createGroup('/gse_data')
-
-    dset = sgrp.createVariable('viewport', 'u1')
-    dset.long_name = "viewport status"
-    dset.standard_name = "status_flag"
-    dset.valid_range = np.array([0, 16], dtype='u1')
-    dset.flag_values = np.array([0, 1, 2, 4, 8, 16], dtype='u1')
-    dset.flag_meanings = "ALL -50deg -20deg 0deg +20deg +50deg"
-    # initialize to default value: all viewports used
-    dset[:] = 0
-
-    if n_wave is not None:
-        sgrp.createDimension('wavelength', n_wave)
-
-        dset = sgrp.createVariable('wavelength', 'f8', ('wavelength',))
-        dset.long_name = "wavelength of stimulus"
-        dset.units = 'nm'
-
-        dset = sgrp.createVariable('signal', 'f8', ('wavelength',))
-        dset.long_name = "signal of stimulus"
-        dset.units = 'photons.s-1.nm-1.m-2)'
 
 
 # - main function ----------------------------------
@@ -63,7 +38,6 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
             samples_per_image : 184000  # depends on binning table
             SC_records : None           # space-craft navigation records (1 Hz)
             hk_packets : None           # number of HK tlm-packets (1 Hz)
-            wavelength : None
     inflight:  boolean, optional
        True for in-flight measurements
        False for on-ground measurements (Default)
@@ -82,7 +56,6 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     img_samples = 184000
     hk_packets = None
     sc_records = None
-    n_wave = None
 
     if 'number_of_images' in dims:
         number_img = dims['number_of_images']
@@ -92,8 +65,6 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
         sc_records = dims['SC_records']
     if 'hk_packets' in dims:
         hk_packets = dims['hk_packets']
-    if 'wavelength' in dims:
-        n_wave = dims['wavelength']
 
     # create/overwrite netCDF4 product
     rootgrp = Dataset(l1a_flname, 'w')
@@ -235,8 +206,5 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
     dset.valid_min = -7600
     dset.valid_max = 7600
     dset.units = "meters s-1"
-
-    if not inflight:
-        create_group_gse_data(rootgrp, n_wave)
 
     return rootgrp

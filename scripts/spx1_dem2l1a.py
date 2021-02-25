@@ -45,8 +45,6 @@ def main():
     parser.add_argument('--dem_id', choices=('D35', 'D39'), default=None,
                         help=('provide DEM ID'
                               ' or ID will be extracted from path'))
-    parser.add_argument('--reference', default=None,
-                        help=('file with reference measurements'))
     parser.add_argument('--verbose', default=False, action='store_true',
                         help='be verbose, default be silent')
     parser.add_argument('file_list', nargs='+',
@@ -178,15 +176,6 @@ def main():
             'SC_records': None,
             'tlm_packets': None,
             'nv': 1}
-
-    if args.reference is not None:
-        utc_start = int((tstamp[0] - EPOCH).total_seconds())
-        utc_stop = round((tstamp[-1] - EPOCH).total_seconds())
-        with h5py.File(args.reference, 'r') as fid:
-            secnd = fid['sec'][:]
-            mask = ((secnd >= utc_start) & (secnd <= utc_stop))
-            median, spread = biweight(fid['amps'][mask], spread=True)
-        reference = {'value': median, 'error': spread}
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
@@ -199,10 +188,6 @@ def main():
         # Engineering data
         l1a.fill_nomhk(hk_data)
         l1a.fill_time(img_sec, img_subsec, group='engineering_data')
-
-        # GSE data
-        if args.reference is not None:
-            l1a.fill_gse(reference=reference)
 
         # Global attributes
         l1a.fill_global_attrs()
