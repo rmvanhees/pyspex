@@ -45,8 +45,9 @@ class LV1gse:
         else:
             vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
                        'P50DEG': 16}
-            vp_parts = parts[2].split('-')
-            viewport = vp_dict.get(vp_parts[min(2, len(vp_parts))], 0)
+            vp_str = [x for x in parts[2].split('-') if x.endswith('DEG')]
+
+            viewport = vp_dict.get(vp_str[0], 0) if vp_str else 0
 
         gid = self.fid.createGroup('/gse_data')
         dset = gid.createVariable('viewport', 'u1')
