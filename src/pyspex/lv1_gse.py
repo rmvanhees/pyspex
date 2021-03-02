@@ -282,10 +282,9 @@ class LV1gse:
                 print('[WARNING] ', 'ACT_ANGLE', egse_data['ACT_ANGLE'])
 
         alt_angle = self.fid['/gse_data'].ALT_rotationAngle
-        if alt_angle:
+        if np.isfinite(alt_angle):
             if not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2):
                 print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
-
 
 #    def fill_gse(self, reference=None) -> None:
 #        """
