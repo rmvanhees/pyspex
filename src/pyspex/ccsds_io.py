@@ -299,8 +299,16 @@ class CCSDSio:
         Correct 32-bit integers in the Science HK which originate from
         24-bit integers in the detector register values
 
-        In addition, copy the first 4 bytes of DET_CHENA to DET_ILVDS
+        In addition:
+         - copy the first 4 bytes of DET_CHENA to DET_ILVDS
+         - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
         """
+        if np.all(sci_hk['ICUSWVER'] < 0x129):
+            key = 'REG_BINNING_TABLE_START'
+            sci_hk[key] = np.ndarray(shape=sci_hk.shape,
+                                     dtype='<u4',
+                                     buffer=sci_hk[key])
+        
         sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
 
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',

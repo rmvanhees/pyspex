@@ -77,6 +77,7 @@ class TMscience:
 
         v126: Sometimes the MPS information is not updated for the first
               images. We try to fix this and warn the user.
+        v129: REG_BINNING_TABLE_START is stored in BE instead of LE
         """
         full_frame = np.unique(self.__tm['REG_FULL_FRAME'])
         if len(full_frame) > 1:

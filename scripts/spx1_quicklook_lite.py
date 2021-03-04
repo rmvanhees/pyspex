@@ -26,25 +26,6 @@ from pyspex.binning_tables import BinningTables
 
 
 # --------------------------------------------------
-def bin_table_id(binning_table_start) -> int:
-    """
-    Convert the start address of the binning table to an ID [1, 2, ...]
-
-    Notes
-    -----
-    'Diagnostic mode' does not use a binning table. These measurements can be
-    identified by the following register settings: FRAME_MODE=1 & OUTPMODE=3
-
-    'Science mode' using binning table to decrease the data rate. These
-    measurements  can be identified by the following register settings:
-    FRAME_MODE=2 & OUTPMODE=1
-
-    The first binning table is written to address 0x80000000, each table has
-    a size of 1024x1024 pointers of 4 bytes (0x400000)
-    """
-    return 1 + (binning_table_start - 0x80000000) // 0x400000
-
-
 def binned_to_2x2_image(table_id: int, img_binned):
     """
     Convert binned detector data to image (1024, 1024)
