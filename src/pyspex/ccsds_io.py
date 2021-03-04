@@ -380,9 +380,14 @@ class CCSDSio:
             if not 0x320 <= self.ap_id <= 0x350:
                 self.found_invalid_apid = True
 
-            packet = hdr
+            packet = np.empty(1, dtype=np.dtype([
+                ('packet_header', HDR_DTYPE),
+                ('raw_data', 'u1', num_bytes)]))
+            packet['packet_header'] = hdr
+            packet['raw_data'] = np.fromfile(self.fp, count=num_bytes,
+                                             dtype='u1')
             # move to the next telemetry packet
-            self.fp.seek(num_bytes, 1)
+            # self.fp.seek(num_bytes, 1)
 
         return packet
 
