@@ -4,7 +4,9 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Convert SPEXone binning table in csv format to netCDF4
+Create or update SPEXone binning-table CKD.
+Input is binning table information in CSV format.
+The binning-table CKD is written in netCDF4 format.
 
 Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -15,9 +17,6 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-
-# from pys5p.s5p_plot import S5Pplot
-# from pys5p.tol_colors import tol_cmap
 
 from pyspex.binning_tables import BinningTables
 
@@ -37,9 +36,9 @@ def main():
         description='build a database with SPEXone binning tables')
     parser.add_argument('--verbose', default=False, action='store_true',
                         help='be verbose, default be silent')
-    parser.add_argument('--db_file', default=None,
-                        help='append data to existing binning databse')
-    parser.add_argument('--table_id', type=str, default='0',
+    parser.add_argument('--mode', default='a', choices=('w', 'a'),
+                        help='write new file or add binning tables')
+    parser.add_argument('--table_id', type=str, default='1',
                         help='start value table_id or comma seperated list')
     parser.add_argument('--lineskip', default=None,
                         help='provide lineskip arrays per binning table')
@@ -67,10 +66,7 @@ def main():
         lineskip_data = lineskip_data[1:, :]
 
     # create BinningTable object
-    if args.db_file is None:
-        bin_ckd = BinningTables(mode='write', ckd_dir='.')
-    else:
-        bin_ckd = BinningTables(mode=args.db_file, ckd_dir='.')
+    bin_ckd = BinningTables(mode=args.mode, ckd_dir='.')
 
     # add binning tables
     for ii in range(len(args.file_list)):
