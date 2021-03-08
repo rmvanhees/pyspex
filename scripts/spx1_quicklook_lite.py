@@ -26,12 +26,13 @@ from pyspex.binning_tables import BinningTables
 
 
 # --------------------------------------------------
-def binned_to_2x2_image(table_id: int, img_binned):
+def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
     """
     Convert binned detector data to image (1024, 1024)
     """
     try:
         bin_ckd = BinningTables()
+        bin_ckd.search(coverage_start)
     except Exception as exc:
         raise RuntimeError from exc
 
@@ -65,7 +66,7 @@ def main():
         print(flname)
 
         with h5py.File(flname, 'r') as fid:
-            date_start = fid.attrs['time_coverage_start']
+            coverage_start = fid.attrs['time_coverage_start']
             image_time = fid['/image_attributes/image_time'][:]
             exposure_time = fid['/image_attributes/exposure_time'][:]
             table_id = fid['/image_attributes/binning_table'][:]
@@ -74,11 +75,11 @@ def main():
             images = dset.astype(float)[:]
 
         try:
-            date_start = date_start.decode()
+            coverage_start = coverage_start.decode()
         except (UnicodeDecodeError, AttributeError):
             pass
         else:
-            date_start = date_start.split('+')[0]
+            date_start = coverage_start.split('+')[0]
 
         data_dir = flname.parent / 'QuickLook'
         if not data_dir.is_dir():
@@ -107,7 +108,9 @@ def main():
         # generate pages in quick-look
         for ii in indx:
             if med_table_id > 0:
-                img2d = binned_to_2x2_image(med_table_id, images[ii, :]) / 4
+                img2d = binned_to_2x2_image(coverage_start,
+                                            med_table_id,
+                                            images[ii, :]) / 4
             else:
                 if images[ii, :].size != 4194304:
                     continue
