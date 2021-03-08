@@ -49,8 +49,10 @@ class BinningTables:
     Notes
     -----
     The name of the binning-table CKD files is defined as follows:
-       SPX1_CKD_BIN_TBL_<yyyymmddTHHMMSS>_<VVV>.nc
-    where yyyymmddTHHMMSS defines the validity start (UTC) and VVV the
+
+          SPX1_CKD_BIN_TBL_<yyyymmddTHHMMSS>_<NNN>.nc
+
+    where yyyymmddTHHMMSS defines the validity start (UTC) and NNN the
     release number of the file format.
 
     The binning tables as defined on-ground are supposed to be available
@@ -58,12 +60,11 @@ class BinningTables:
     original binning tables are necessary for re-processing and may
     facilitate instrument performance monitoring. Therefore, it is prefered
     that new binning tables are added to the current CKD product, without
-    changing the validity start string. The release number should be increased
-    by one.
+    changing the validity start string. In case any of the binning tables
+    are overwritten or moved in memory, a new CKD product should be released.
 
-    In case any of the binning tables are overwritten or moved in memory, a
-    new CKD product should be released and the release number should be reset
-    to 1.
+    If the format of the CKD changes then new CKD files should be created with 
+    the release number should be increased by one.
 
     Examples
     --------
@@ -158,6 +159,7 @@ class BinningTables:
         ckd_files = list(Path(self.ckd_dir).glob('SPX1_CKD_BIN_TBL_*.nc'))
         if not ckd_files:
             raise FileNotFoundError('No CKD with binning tables found')
+        ckd_files = [x.name for x in ckd_files]
 
         # use the latest version of the binning-table CKD
         if coverage_start is None:
@@ -166,11 +168,11 @@ class BinningTables:
 
         # use binning-table CKD based on coverage_start
         coverage_date = datetime.fromisoformat(coverage_start)
-        for name in sorted(ckd_files, reverse=True):
-            validity_date = datetime.strptime(name('_')[4] + '+00:00',
-                                            '%Y%m%dT%H%M%S%z')
+        for ckd_fl in sorted(ckd_files, reverse=True):
+            validity_date = datetime.strptime(ckd_fl.split('_')[4] + '+00:00',
+                                              '%Y%m%dT%H%M%S%z')
             if validity_date < coverage_date:
-                self.ckd_file = name
+                self.ckd_file = ckd_fl
                 return
         else:
             raise FileNotFoundError('No valid CKD with binning tables found')
