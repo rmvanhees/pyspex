@@ -37,45 +37,58 @@ class BinningTables:
 
     Methods
     -------
-    search_ckd()
-       Search current CKD file with binning tables.
-    create_ckd(release=1)
+    create_if_needed(validity_start, release=1)
        Initialize CKD file with binning tables (netCDF4 format).
     add_table(table_id, lineskip_arr, binning_table)
        Add a binning table definition to existing CKD file.
+    search(coverage_start)
+       Search current CKD file with binning tables.
     unbin(table_id: int, img_binned)
        Return unbinned detector data.
 
     Notes
     -----
+    The name of the binning-table CKD files is defined as follows:
+       SPX1_CKD_BIN_TBL_<yyyymmddTHHMMSS>_<VVV>.nc
+    where yyyymmddTHHMMSS defines the validity start (UTC) and VVV the
+    release number of the file format.
+
     The binning tables as defined on-ground are supposed to be available
     during the whole mission at the same memory location. Because these
     original binning tables are necessary for re-processing and may
-    facilitate instrument performance monitoring. New binning tables should
-    be added to the CKD, this can be performed without changing the name of
-    the CKD file. Actually, the name of the CKD file, which contains it
-    creation date, should only be changed when the format of the file is
-    changed. Therefore, the software should always use the CKD file with
-    latest creation time in its name.
+    facilitate instrument performance monitoring. Therefore, it is prefered
+    that new binning tables are added to the current CKD product, without
+    changing the validity start string. The release number should be increased
+    by one.
 
-    In case any of the binning tables are overwritten or moved in memory, we
-    could use the following strategy, where the 3 number digit in the CKD
-    filename indicated from which MPS version it is valid. Therefore, this
-    number is currently 001. Note, however, that this strategy is not part
-    of the current S/W implementation.
+    In case any of the binning tables are overwritten or moved in memory, a
+    new CKD product should be released and the release number should be reset
+    to 1.
 
     Examples
     --------
-    ...
+    # create new binning_table CKD
+    >>> bin_tbl = BinningTables()
+    >>> bin_tbl.create_if_needed(validity_start)
+    >>> bin_tbl.add_table(0, lineskip_arr, binning_table)
+    >>> bin_tbl.add_table(1, lineskip_arr, binning_table)
+
+    # add new binning-table to existing CKD
+    >>> bin_tbl BinningTables()
+    >>> bin_tbl.create_if_needed(validity_start)
+    >>> bin_tbl.add_table(2, lineskip_arr, binning_table)
+
+    # use binning-table to unbin SPEXone detector data
+    >>> bin_tbl BinningTables()
+    >>> bin_tbl.search(coverage_start)
+    >>> img = bin_tbl.unbin(2, img_binned)
     """
-    def __init__(self, mode='r', ckd_dir=None) -> None:
+    def __init__(self, ckd_dir=None) -> None:
         """
         Initialize class attributes
 
         Parameters
         ----------
-        mode : char
-           Read/write mode, choices are 'r': read, 'w': write, 'a': append
         ckd_dir : str
            Name of directory for the binning table CKD
 
@@ -83,8 +96,6 @@ class BinningTables:
         ------
         FileNotFoundError
            directory with SPEXone CKD does not exist
-        KeyError
-           read/write mode should be 'r', 'w' or 'a'
         """
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
@@ -95,42 +106,26 @@ class BinningTables:
         if not self.ckd_dir.is_dir():
             raise FileNotFoundError('directory with SPEXone CKD does not exist')
 
-        if mode in ('r', 'a'):
-            self.search_ckd()
-        elif mode == 'w':
-            self.create_ckd()
-        else:
-            raise KeyError("read/write mode should be 'r', 'w' or 'a'")
+        self.ckd_file = None
 
-    def search_ckd(self) -> None:
+    def create_if_needed(self, validity_start: str, release=1) -> None:
         """
-        Search CKD file with binning tables
-
-        Raises
-        ------
-        FileNotFoundError
-           No CKD with binning tables found
-        """
-        ckd_files = list(Path(self.ckd_dir).glob('SPX1_OCAL_L1A_TBL_*.nc'))
-        if not ckd_files:
-            raise FileNotFoundError('No CKD with binning tables found')
-
-        # only read the latest version of the binning-table CKD
-        self.ckd_file = sorted(ckd_files)[-1]
-
-    def create_ckd(self, release=1) -> None:
-        """
-        Initialize CKD file with binning tables (netCDF4 format)
+        Initialize CKD file for binning tables if not exist
 
         Parameters
         ----------
+        validity_start: str
+           Validity start of the CKD data, as yyyymmddTHHMMSS
         release :  int, default=1
-           Minimum version of the MPS for which the binning tables are valid
+           Release number, start at 1
         """
-        # initialize netCDF file with binning tables
-        self.ckd_file = 'SPX1_OCAL_L1A_TBL_{:s}_{:03d}.nc'.format(
-            datetime.utcnow().strftime("%Y%m%dT%H%M%S"), release)
+        self.ckd_file = 'SPX1_CKD_BIN_TBL_{:s}_{:03d}.nc'.format(
+            validity_start, release)
 
+        if (self.ckd_dir / self.ckd_file).is_file():
+            return
+
+        # initialize netCDF file with binning tables
         with Dataset(self.ckd_dir / self.ckd_file, 'w') as fid:
             fid.title = 'SPEXone Level-1 binning-tables'
             fid.Convensions = 'CF-1.6'
@@ -138,11 +133,47 @@ class BinningTables:
             fid.instrument = 'SPEXone'
             fid.institution = 'SRON Netherlands Institute for Space Research'
             fid.processing_version = version.get()
+            fid.validity_start = validity_start + '+00:00'
+            fid.release_number = np.uint16(release)
             fid.date_created = datetime.now(timezone.utc).isoformat(
                 timespec='seconds')
 
             fid.createDimension('row', 1024)
             fid.createDimension('column', 1024)
+
+    def search(self, coverage_start=None) -> None:
+        """
+        Search CKD file with binning tables
+
+        Parameters
+        ----------
+        coverage_start : str, default=None
+           time_coverage_start or start of the measurement (UTC)
+
+        Raises
+        ------
+        FileNotFoundError
+           No CKD with binning tables found
+        """
+        ckd_files = list(Path(self.ckd_dir).glob('SPX1_CKD_BIN_TBL_*.nc'))
+        if not ckd_files:
+            raise FileNotFoundError('No CKD with binning tables found')
+
+        # use the latest version of the binning-table CKD
+        if coverage_start is None:
+            self.ckd_file = sorted(ckd_files)[-1]
+            return
+
+        # use binning-table CKD based on coverage_start
+        coverage_date = datetime.fromisoformat(coverage_start)
+        for name in sorted(ckd_files, reverse=True):
+            validity_date = datetime.strptime(name('_')[4] + '+00:00',
+                                            '%Y%m%dT%H%M%S%z')
+            if validity_date < coverage_date:
+                self.ckd_file = name
+                return
+        else:
+            raise FileNotFoundError('No valid CKD with binning tables found')
 
     def add_table(self, table_id: int, lineskip_arr, binning_table) -> None:
         """

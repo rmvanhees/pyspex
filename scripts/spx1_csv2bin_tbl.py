@@ -36,8 +36,9 @@ def main():
         description='build a database with SPEXone binning tables')
     parser.add_argument('--verbose', default=False, action='store_true',
                         help='be verbose, default be silent')
-    parser.add_argument('--mode', default='a', choices=('w', 'a'),
-                        help='write new file or add binning tables')
+    parser.add_argument('--validity_start', default=None, type=str,
+                        help=('validity start of the binning tables'
+                              ' (format: yyyymmddTHHMMSS)'))
     parser.add_argument('--table_id', type=str, default='1',
                         help='start value table_id or comma seperated list')
     parser.add_argument('--lineskip', default=None,
@@ -66,7 +67,8 @@ def main():
         lineskip_data = lineskip_data[1:, :]
 
     # create BinningTable object
-    bin_ckd = BinningTables(mode=args.mode, ckd_dir='.')
+    bin_ckd = BinningTables(ckd_dir='.')
+    bin_ckd.create_if_needed(args.validity_start)
 
     # add binning tables
     for ii in range(len(args.file_list)):
