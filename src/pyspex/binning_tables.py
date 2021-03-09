@@ -5,12 +5,17 @@ https://github.com/rmvanhees/pyspex.git
 
 Python class to handle SPEXone binning tables
 
+Environment
+-----------
+CKD_DIR :  directory with SPEXone CKD, default is CWD
+
 Copyright (c) 2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
 from datetime import datetime, timezone
+from os import environ
 from pathlib import Path
 
 import numpy as np
@@ -63,7 +68,7 @@ class BinningTables:
     changing the validity start string. In case any of the binning tables
     are overwritten or moved in memory, a new CKD product should be released.
 
-    If the format of the CKD changes then new CKD files should be created with 
+    If the format of the CKD changes then new CKD files should be created with
     the release number should be increased by one.
 
     Examples
@@ -101,7 +106,7 @@ class BinningTables:
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
             if not self.ckd_dir.is_dir():
-                self.ckd_dir = Path('/data/richardh/SPEXone/share/ckd')
+                self.ckd_dir = environ.get('CKD_DIR', '.')
         else:
             self.ckd_dir = Path(ckd_dir)
         if not self.ckd_dir.is_dir():
@@ -173,7 +178,7 @@ class BinningTables:
                                               '%Y%m%dT%H%M%S%z')
             if validity_date < coverage_date:
                 self.ckd_file = ckd_fl
-                return
+                break
         else:
             raise FileNotFoundError('No valid CKD with binning tables found')
 

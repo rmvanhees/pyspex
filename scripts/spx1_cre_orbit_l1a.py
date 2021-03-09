@@ -26,6 +26,10 @@ Implementation:
 4. fill groups: /navigation_data, /engineering_data
 5. leave group: /gse_data empty
 
+Environment
+-----------
+CKD_DIR :  directory with SPEXone CKD, default is CWD
+
 Copyright (c) 2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
@@ -33,6 +37,7 @@ License:  BSD-3-Clause
 """
 import argparse
 from datetime import datetime, timezone
+from os import environ
 from pathlib import Path
 
 import h5py
@@ -61,7 +66,7 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
     """
     ckd_dir = '/nfs/SPEXone/share/ckd'
     if not Path(ckd_dir).is_dir():
-        ckd_dir = '/data/richardh/SPEXone/share/ckd'
+        ckd_dir = environ.get('CKD_DIR', '.')
     # only read the latest version of the binning-table CKD
     bin_tbl_fl = sorted(list(Path(ckd_dir).glob('SPX1_OCAL_L1A_TBL_*.nc')))
     if not bin_tbl_fl:

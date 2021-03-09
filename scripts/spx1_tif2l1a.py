@@ -6,14 +6,18 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation SPEXone instrument simulator output to L1A
 
+Environment
+-----------
+CKD_DIR :  directory with SPEXone CKD, default is CWD
+
 Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
 import argparse
-
 from datetime import datetime, timezone
+from os import environ
 from pathlib import Path
 
 import h5py
@@ -224,7 +228,7 @@ def get_table_id(ckd_dir, bin_table_name):
     Quick en dirty implementation to obtain table_id from binning-table CKD
     """
     if not Path(ckd_dir).is_dir():
-        ckd_dir = '/data/richardh/SPEXone/share/ckd'
+        ckd_dir = environ.get('CKD_DIR', '.')
 
     # only read the latest version of the binning-table CKD
     bin_tables = sorted(list(Path(ckd_dir).glob('SPX1_OCAL_L1A_TBL_*.nc')))
