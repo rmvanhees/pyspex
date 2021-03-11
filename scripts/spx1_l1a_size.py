@@ -12,7 +12,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import numpy as np
 

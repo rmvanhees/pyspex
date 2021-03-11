@@ -190,6 +190,10 @@ class CKDio:
     def add_non_linearity(self, values, binning=-1):
         """
         Add non-linearity CKD to CKD product
+
+        Notes
+        -----
+        Not implemented
         """
         if self.filename is None or not Path(self.filename).is_file():
             self.__initialize_product()

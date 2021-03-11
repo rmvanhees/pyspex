@@ -89,6 +89,9 @@ class CCSDSio:
        Close resources.
     open_next_file()
        Open next file from file_list.
+    fix_dem_hk24(sci_hk)
+       Correct 32-bit integers in the DemHK which originate from
+       24-bit integers in the detector register values.
     fix_sci_hk24(sci_hk)
        Correct 32-bit integers in the Science_HK which originate from
        24-bit integers in the detector register values.
@@ -308,7 +311,7 @@ class CCSDSio:
             sci_hk[key] = np.ndarray(shape=sci_hk.shape,
                                      dtype='<u4',
                                      buffer=sci_hk[key])
-        
+
         sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
 
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',

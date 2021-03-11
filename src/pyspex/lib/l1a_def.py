@@ -23,7 +23,7 @@ from .tmtc_def import tmtc_def
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
+def init_l1a(l1a_flname: str, dims: dict) -> None:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 
@@ -38,9 +38,6 @@ def init_l1a(l1a_flname: str, dims: dict, inflight) -> None:
             samples_per_image : 184000  # depends on binning table
             SC_records : None           # space-craft navigation records (1 Hz)
             hk_packets : None           # number of HK tlm-packets (1 Hz)
-    inflight:  boolean, optional
-       True for in-flight measurements
-       False for on-ground measurements (Default)
 
     Notes
     -----

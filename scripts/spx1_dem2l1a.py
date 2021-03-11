@@ -16,10 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 
-import h5py
 import numpy as np
-
-from pys5p.biweight import biweight
 
 from pyspex import spx_product
 from pyspex.lib.tmtc_def import tmtc_def
@@ -120,7 +117,7 @@ def main():
 
         dem = DEMio(flname)
         # obtain Science_HK information from header file (ASCII)
-        img_hk[ii] = dem.get_mps()
+        img_hk[ii] = dem.get_sci_hk()
         # get nr_coaddings from file name
         coad_str = [x for x in parts if x.startswith('coad')][0]
         img_hk[ii]['REG_NCOADDFRAMES'] = int(coad_str[-2:])
