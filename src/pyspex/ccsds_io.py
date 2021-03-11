@@ -457,6 +457,8 @@ class CCSDSio:
 
             print(msg.format(ii))
             packets = packets[ii:]
+            if not packets:
+                return ()
 
         # last telemetry package must have grouping flag equals 2
         self.__hdr = packets[-1]['packet_header']
@@ -472,6 +474,8 @@ class CCSDSio:
 
             print(msg.format(len(packets) - (ii + 1)))
             packets = packets[:ii+1]
+            if not packets:
+                return ()
 
         res = ()
         offs = 0
