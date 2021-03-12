@@ -34,7 +34,7 @@ def frac_poly(xx_in, coefs=None):
     Parameters
     ----------
     xx    :  ndarray
-    coefs :  tuple
+    coefs :  tuple, default=None
       coefficients of fractional polynomial: r0, r1, r2, r3, r4
 
     Returns
@@ -62,8 +62,6 @@ class Lv1io:
     ----------
     product: pathlib.Path object
        Concrete path object to SPEXone Level-1 product
-    inflight: boolean
-       Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
@@ -85,7 +83,7 @@ class Lv1io:
        Read data of a netCDF4 variable.
     set_dset(ds_name, value, ibgn=-1)
        Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None)
+    fill_global_attrs(level, orbit=-1, bin_size=None, inflight=False)
        Define global attributes in the SPEXone Level-1 products.
 
     Notes
@@ -105,16 +103,13 @@ class Lv1io:
         ----------
         product : str
            name of the SPEXone Level-1 product
-        append : bool
+        append : bool, default=False
            do no clobber, but add new data to existing product
         """
         self.__epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         # initialize private class-attributes
         self.product = Path(product)
-        self.inflight = True
-        if 'inflight' in kwargs:
-            self.inflight = kwargs['inflight']
         self.fid = None
 
         # initialize Level-1 product
@@ -190,7 +185,7 @@ class Lv1io:
         ----------
         name : string
            name of the attribute
-        ds_name : string, optional
+        ds_name : string, default=None
            name of dataset to which the attribute is attached
 
         Returns
@@ -221,7 +216,7 @@ class Lv1io:
            name of the attribute
         value : scalar, array_like
            value or values to be written
-        ds_name : string
+        ds_name : string, default=None
            name of group or dataset to which the attribute is attached
            **Use group name without starting '/'**
         """
@@ -285,9 +280,9 @@ class Lv1io:
         ----------
         name : string
            Name of Level-1 dataset
-        value : scalar, array_like
+        value : scalar or array_like
            Value or values to be written
-        ibgn : integer
+        ibgn : int, default=-1
            Index of the first (unlimited) dimension where to store the new data
            Default is to append the data
         """
@@ -316,18 +311,22 @@ class Lv1io:
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
-    def fill_global_attrs(self, orbit=-1, bin_size=None) -> None:
+    def fill_global_attrs(self, orbit=-1,
+                          bin_size=None,
+                          inflight=False) -> None:
         """
         Define global attributes in the SPEXone Level-1 products
 
         Parameters
         ----------
-        orbit_number: int
-           Orbit revolution counter, default=-1
-        bin_size: str, optional
+        orbit_number :  int, default=-1
+           Orbit revolution counter
+        bin_size :  str, default=None
            Size of the nadir footprint (cross-track), include unit: e.g. '5km'
+        inflight :  bool, default=False
+           Measurements performed on-ground or inflight
         """
-        dict_attrs = attrs_def(self.processing_level, self.inflight)
+        dict_attrs = attrs_def(self.processing_level, inflight)
         dict_attrs['product_name'] = self.product.name
         dict_attrs['orbit_number'] = orbit
         if bin_size is not None:
@@ -347,10 +346,9 @@ class L1Aio(Lv1io):
     ----------
     lv1_product: string
        Name of the Level-1A product
-    append : boolean, optional
-       Open file in append mode, parameter dims and inflight are ignored
-       Default: False
-    dims: dictionary, optional
+    append : boolean, default=False
+       If the file is opened in append mode, then parameter 'dims' is ignored
+    dims: dictionary, default=None
        Provide size of various dimensions (L1A only).
        Default values:
             number_of_images : None     # number of image frames
@@ -358,16 +356,11 @@ class L1Aio(Lv1io):
             SC_records : None           # space-craft navigation records
             hk_packets : None           # number of HK tlm-packets
             wavelength : None
-    inflight: boolean, optional
-       In-flight data, only affects global attributes of L1A product.
-       Default: False
 
     Attributes
     ----------
     product: pathlib.Path object
        Concrete path object to SPEXone Level-1 product
-    inflight: boolean
-       Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
@@ -389,7 +382,7 @@ class L1Aio(Lv1io):
        Read data of a netCDF4 variable.
     set_dset(ds_name, valu, ibgn=-1e)
        Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None)
+    fill_global_attrs(level, orbit=-1, bin_size=None, inflight=False)
        Define global attributes in the SPEXone Level-1 products.
     check_stored(allow_empty=False)
        Check variables with the same first dimension have equal sizes.
@@ -476,6 +469,10 @@ class L1Aio(Lv1io):
     def check_stored(self, allow_empty=False):
         """
         Check variables with the same first dimension have equal sizes
+
+        Parameters
+        ----------
+        allow_empty :  bool, default=False
         """
         warn_str = ('SPEX Level-1 format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
@@ -564,6 +561,7 @@ class L1Aio(Lv1io):
           Seconds since 1970-1-1
         ccsds_subsec : numpy array (dtype='u2')
           Sub-seconds as (1 / 2**16) seconds
+        group : str, default=None
 
         Note
         ----
@@ -706,21 +704,18 @@ class L1Bio(Lv1io):
     ----------
     lv1_product: string
        Name of the Level-1B product
-    append : boolean, optional
-       Open file in append mode, parameter dims and inflight are ignored
-       Default: False
-    number_of_images: int
+    append : boolean, default=False
+       If the file is opened in append mode, then parameter 'dims' is ignored
+    number_of_images: int, default=None
        Number of images used as input to generate the L1B product.
-       Default is None, then this dimension is UNLIMITED.
-    spatial_samples: int
-       Total number of spatial samples from all viewports, default is 200
+       This dimension is by default UNLIMITED.
+    spatial_samples: int, default=200
+       Total number of spatial samples from all viewport
 
     Attributes
     ----------
     product: pathlib.Path object
        Concrete path object to SPEXone Level-1 product
-    inflight: boolean
-       Flag to indicate data collected during in-flight of on-ground
     fid: netCDF5.Dataset object
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
@@ -862,14 +857,13 @@ class L1Cio(Lv1io):
 
     Parameters
     ----------
-    lv1_product: string
+    lv1_product :  str
        Name of the Level-1C product
-    append : boolean, optional
-       Open file in append mode, parameter dims and inflight are ignored
-       Default: False
-    number_of_images: int
+    append :  bool, default=False
+       If the file is opened in append mode, then parameter 'dims' is ignored
+    number_of_images: int, default=None
        Number of images used as input to generate the L1B product.
-       Default is None, then this dimension is UNLIMITED.
+       This dimension is by default UNLIMITED.
 
     Attributes
     ----------

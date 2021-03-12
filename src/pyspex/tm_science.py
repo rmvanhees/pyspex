@@ -98,7 +98,7 @@ class TMscience:
 
         if full_frame == 2:
             if cmv_outputmode != 1:
-                raise KeyError('Science mode with REG_CMV_OUTPMODE != 1')
+                raise KeyError('Science mode with REG_CMV_OUTPUTMODE != 1')
             bin_tbl_start = self.__tm['REG_BINNING_TABLE_START']
             indx0 = (self.__tm['REG_FULL_FRAME'] != 2).nonzero()[0]
             if indx0.size > 0:

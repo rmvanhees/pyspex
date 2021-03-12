@@ -19,12 +19,12 @@ from pathlib import Path
 import numpy as np
 
 from pyspex import spx_product
+from pyspex.lib.before_launch import before_launch
 from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.ccsds_io import CCSDSio
 from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
-LAUNCH_DATE = datetime(2022, 11, 2, tzinfo=timezone.utc)
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 LEAP_SECONDS = 0  # only in-flight the CCSDS packages have TAI timestamps(?)
 
@@ -99,8 +99,6 @@ def main():
             img_subsec[ii] = packet['packet_header']['sub_sec']
         img_id[ii] = packet['packet_header']['sequence'] & 0x3fff
         img_hk[ii] = packet['science_hk']
-        # print(packet['science_hk']['MPS_ID'],
-        #       packet['science_hk']['REG_BINNING_TABLE_START'])
         img_data.append(packet['image_data'])
     img_data = np.array(img_data)
 
@@ -140,7 +138,7 @@ def main():
 
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
-    if tstamp0 < LAUNCH_DATE:
+    if before_launch(tstamp0):
         msm_id = Path(args.file_list[0]).stem.replace('_hk', '')
         try:
             new_date = datetime.strptime(
@@ -167,7 +165,7 @@ def main():
             'SC_records': None}
 
     # Generate L1A product
-    with L1Aio(prod_name, dims=dims, inflight=inflight) as l1a:
+    with L1Aio(prod_name, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
         l1a.fill_time(img_sec, img_subsec, group='image_attributes')
@@ -181,7 +179,7 @@ def main():
             l1a.fill_demhk(demhk_data)
 
         # write global attributes
-        l1a.fill_global_attrs()
+        l1a.fill_global_attrs(inflight=inflight)
         l1a.set_attr('input_files',
                      [Path(x).name for x in args.file_list])
 

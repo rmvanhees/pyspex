@@ -97,15 +97,15 @@ def main():
         parts = dem_file.name.split('_')
         if len(parts) == 8:
             _id = '_'.join(parts[:4])
-            tstamp.append(datetime.strptime(parts[5] + parts[6] + '+0000',
+            tstamp.append(datetime.strptime(parts[5] + parts[6] + '+00:00',
                                             '%Y%m%d%H%M%S.%f%z'))
         elif len(parts) == 10:
             _id = '_'.join(parts[:6])
-            tstamp.append(datetime.strptime(parts[7] + parts[8] + '+0000',
+            tstamp.append(datetime.strptime(parts[7] + parts[8] + '+00:00',
                                             '%Y%m%d%H%M%S.%f%z'))
         elif len(parts) == 7:
             _id = '_'.join(parts[:3])
-            tstamp.append(datetime.strptime(parts[4] + parts[5] + '+0000',
+            tstamp.append(datetime.strptime(parts[4] + parts[5] + '+00:00',
                                             '%Y%m%d%H%M%S.%f%z'))
         else:
             raise ValueError("Invalid format of data-product name")
@@ -143,14 +143,11 @@ def main():
         images = images[indx]
 
     # convert timestamps to seconds per day
-    img_sec = []
-    img_subsec = []
+    img_sec = np.empty(len(tstamp), dtype='u4')
+    img_subsec = np.empty(len(tstamp), dtype='u2')
     for ii, tval in enumerate(tstamp):
-        tdiff = (tval - EPOCH)
-        img_sec.append(tdiff.seconds)
-        img_subsec.append(tdiff.microseconds * 2**16 // 1000000)
-    img_sec = np.array(img_sec)
-    img_subsec = np.array(img_subsec)
+        img_sec[ii] = (tval - EPOCH).total_seconds()
+        img_subsec[ii] = tval.microsecond * 2**16 // 1000000
 
     # generate name of L1A product
     prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
@@ -176,7 +173,7 @@ def main():
     #
     # Generate L1A product
     #   ToDo: correct value for measurement_type & viewport
-    with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
+    with L1Aio(prod_name, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, n_samples), img_hk,
                          np.arange(n_images))
@@ -187,7 +184,7 @@ def main():
         l1a.fill_time(img_sec, img_subsec, group='engineering_data')
 
         # Global attributes
-        l1a.fill_global_attrs()
+        l1a.fill_global_attrs(inflight=False)
         l1a.set_attr('history', msm_id)
         l1a.set_attr('dem_id', args.dem_id)
         l1a.set_attr('measurements', list_name_msm)

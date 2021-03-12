@@ -22,6 +22,35 @@ class LV1gse:
     def __init__(self, l1a_file: str) -> None:
         """
         Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product
+
+        Attributes
+        ----------
+        fid : netCDF4::Dataset
+            netCDF4 Dataset instance.
+
+        Methods
+        -------
+        write_viewport(viewport)
+           Add/update which viewports are illuminated.
+        write_reference_signal(signal, error)
+           Add reference signal and its error.
+        write_data_stimulus(wavelength, signal, units)
+           Add wavelength and signal of data stimulus.
+        write_egse(egse_time, egse_data, egse_attrs)
+           Add EGSE parameters.
+        write_reference_diode(ref_time, ref_data, ref_attrs)
+           Add data from the reference diode.
+        write_wavelength_monitor(wav_time, wav_intg, wav_avg_num,
+                                 wav_wv, wav_signal)
+           Add wavelength monitoring data of the Avantas fibre-spectrometer.
+        write_attr_act(angle: float, illumination)
+           Add ACT rotation angle as an group attribute.
+        write_attr_alt(angle: float, illumination)
+           Add altitude rotation angle as an group attribute.
+        write_attr_polarization(aolp: float, dolp: float)
+           Add polarization parameters AoLP & DoLP as group attributes.
+        check_egse(egse_data)
+           Check consistency of OGSE/EGSE information during measurement.
         """
         self.fid = Dataset(l1a_file, 'r+')
 
@@ -108,6 +137,34 @@ class LV1gse:
         viewport :  int
         """
         self.fid['/gse_data/viewport'][:] = viewport
+
+    def write_reference_signal(self, signal: float, error: float) -> None:
+        """
+        Write reference signal and its error
+
+        Parameters
+        ----------
+        signal :  float
+        error : float
+
+        Notes
+        -----
+        Used for non-linearity measurements, given as biweight value and spread
+        of the signal measured during the measurement by a reference detector.
+        """
+        gid = self.fid['/gse_data']
+        gid.Illumination_level = 5e9 / 1.602176634 * signal
+
+        dset = gid.createVariable('reference_signal', 'f8', ())
+        dset.long_name = "biweight median of reference-detector signal"
+        dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
+        dset.units = 'A'
+        dset[:] = signal
+
+        dset = gid.createVariable('reference_error', 'f8', ())
+        dset.long_name = "biweight spread of reference-detector signal"
+        dset.units = 'A'
+        dset[:] = error
 
     def write_data_stimulus(self, wavelength, signal, units) -> None:
         """
@@ -255,7 +312,7 @@ class LV1gse:
 
     def write_attr_polarization(self, aolp: float, dolp: float) -> None:
         """
-        Add polarization parameters AoLP & DoLP as an group attribute
+        Add polarization parameters AoLP & DoLP as group attributes
 
         Parameters
         ----------
@@ -267,7 +324,7 @@ class LV1gse:
         if dolp is not None:
             self.fid['/gse_data'].DoLP = dolp
 
-    def check_egse(self, egse_data):
+    def check_egse(self, egse_data) -> None:
         """
         Check consistency of OGSE/EGSE information during measurement
         """
@@ -286,31 +343,3 @@ class LV1gse:
         if np.isfinite(alt_angle):
             if not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2):
                 print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
-
-#    def fill_gse(self, reference=None) -> None:
-#        """
-#        Write EGSE/OGSE data to a SPEXone Level-1A product
-#
-#        Parameters
-#        ----------
-#        reference : dict, optional
-#           biweight value and spread of the signal measured during the
-#           measurement by a reference detector.
-#           Expected dictionary keys: 'value', 'error'
-#        """
-#        if reference is not None:
-#            dset = self.fid.createVariable('/gse_data/reference_signal',
-#                                           'f8', ())
-#            dset.long_name = "biweight median of reference-detector signal"
-#            dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
-#            dset.units = 'A'
-#            dset[:] = reference['value']
-#            self.set_attr('Illumination_level',
-#                          reference['value'] * 5e9 / 1.602176634,
-#                          ds_name='gse_data')
-#
-#            dset = self.fid.createVariable('/gse_data/reference_error',
-#                                           'f8', ())
-#            dset.long_name = "biweight spread of reference-detector signal"
-#            dset.units = 'A'
-#            dset[:] = reference['error']
