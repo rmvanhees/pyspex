@@ -180,8 +180,7 @@ def main():
 
         # write global attributes
         l1a.fill_global_attrs(inflight=inflight)
-        l1a.set_attr('input_files',
-                     [Path(x).name for x in args.file_list])
+        l1a.set_attr('input_files', [Path(x).name for x in args.file_list])
 
 
 # --------------------------------------------------

@@ -15,6 +15,7 @@ import numpy as np
 from netCDF4 import Dataset
 
 
+# --------------------------------------------------
 class LV1gse:
     """
     Python class add EGSE/OGSE data to a SPEXone Level-1A product
@@ -30,27 +31,28 @@ class LV1gse:
 
         Methods
         -------
-        write_viewport(viewport)
-           Add/update which viewports are illuminated.
-        write_reference_signal(signal, error)
-           Add reference signal and its error.
-        write_data_stimulus(wavelength, signal, units)
-           Add wavelength and signal of data stimulus.
-        write_egse(egse_time, egse_data, egse_attrs)
-           Add EGSE parameters.
-        write_reference_diode(ref_time, ref_data, ref_attrs)
-           Add data from the reference diode.
-        write_wavelength_monitor(wav_time, wav_intg, wav_avg_num,
-                                 wav_wv, wav_signal)
-           Add wavelength monitoring data of the Avantas fibre-spectrometer.
+        check_egse(egse_data)
+           Check consistency of OGSE/EGSE information during measurement.
+        set_attr(name, value)
+           Add/update an attribute of the group 'gse_data'
         write_attr_act(angle: float, illumination)
            Add ACT rotation angle as an group attribute.
         write_attr_alt(angle: float, illumination)
            Add altitude rotation angle as an group attribute.
         write_attr_polarization(aolp: float, dolp: float)
            Add polarization parameters AoLP & DoLP as group attributes.
-        check_egse(egse_data)
-           Check consistency of OGSE/EGSE information during measurement.
+        write_viewport(viewport)
+           Add/update which viewports are illuminated.
+        write_egse(egse_time, egse_data, egse_attrs)
+           Add EGSE parameters.
+        write_data_stimulus(xds_signal)
+           Add wavelength and signal of data stimulus.
+        write_reference_diode(ref_time, ref_data, ref_attrs)
+           Add data measured by the reference diode during the measurement.
+        write_reference_signal(xds_signal)
+           Add reference signal and its error.
+        write_wavelength_monitor(xds_wavelength)
+           Add wavelength monitoring data of the Avantas fibre-spectrometer.
         """
         self.fid = Dataset(l1a_file, 'r+')
 
@@ -64,7 +66,7 @@ class LV1gse:
         alt_angle = [float(x.replace('alt', ''))
                      for x in parts if x.startswith('alt')]
         pol_angle = [float(x.replace('pol', ''))
-                     for x in parts if x.startswith('pol')]
+                     for x in parts if x.startswith('pol') and x != 'polcal']
 
         # determine viewport: default 0, when all viewports are illuminated
         if alt_angle:
@@ -128,65 +130,76 @@ class LV1gse:
         self.fid.close()
         self.fid = None
 
-    def write_viewport(self, viewport: int) -> None:
+    def check_egse(self, egse_data) -> None:
         """
-        Add/update which viewports are illuminated
+        Check consistency of OGSE/EGSE information during measurement
+        """
+        for key, fmt in egse_data.dtype.fields.items():
+            if fmt[0] == np.uint8:
+                res_sanity = (egse_data[key] == egse_data[key][0]).all()
+                if not res_sanity:
+                    print('[WARNING] ', key, egse_data[key])
+
+        act_angle = self.fid['/gse_data'].ACT_rotationAngle
+        if np.isfinite(act_angle):
+            if not np.allclose(egse_data['ACT_ANGLE'], act_angle, 1e-2):
+                print('[WARNING] ', 'ACT_ANGLE', egse_data['ACT_ANGLE'])
+
+        alt_angle = self.fid['/gse_data'].ALT_rotationAngle
+        if np.isfinite(alt_angle):
+            if not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2):
+                print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
+
+    def set_attr(self, name: str, value) -> None:
+        """
+        Add attribute to group 'gse_data'
 
         Parameters
         ----------
-        viewport :  int
+        name: str
+        value: anything(?)
         """
-        self.fid['/gse_data/viewport'][:] = viewport
+        self.fid['/gse_data'].setncattr(name, value)
 
-    def write_reference_signal(self, signal: float, error: float) -> None:
+    def write_attr_act(self, angle: float, illumination=None) -> None:
         """
-        Write reference signal and its error
+        Add act rotation angle as an group attribute
 
         Parameters
         ----------
-        signal :  float
-        error : float
-
-        Notes
-        -----
-        Used for non-linearity measurements, given as biweight value and spread
-        of the signal measured during the measurement by a reference detector.
+        angle :  float
+        illumination :  float
         """
-        gid = self.fid['/gse_data']
-        gid.Illumination_level = 5e9 / 1.602176634 * signal
+        self.fid['/gse_data'].ACT_rotationAngle = angle
+        if illumination is not None:
+            self.fid['/gse_data'].ACT_illumination = illumination
 
-        dset = gid.createVariable('reference_signal', 'f8', ())
-        dset.long_name = "biweight median of reference-detector signal"
-        dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
-        dset.units = 'A'
-        dset[:] = signal
-
-        dset = gid.createVariable('reference_error', 'f8', ())
-        dset.long_name = "biweight spread of reference-detector signal"
-        dset.units = 'A'
-        dset[:] = error
-
-    def write_data_stimulus(self, wavelength, signal, units) -> None:
+    def write_attr_alt(self, angle: float, illumination=None) -> None:
         """
-        Add wavelength and signal of data stimulus
+        Add altitude rotation angle as an group attribute
 
         Parameters
         ----------
-        wavelength :  ndarray
-        signal :  ndarray
-        units :  list
+        angle :  float
+        illumination :  float
         """
-        gid = self.fid['/gse_data']
-        _ = gid.createDimension('wavelength', len(wavelength))
-        dset = gid.createVariable('wavelength', 'f8', ('wavelength',))
-        dset.long_name = 'wavelength of stimulus'
-        dset.units = units[0]
-        dset[:] = wavelength
+        self.fid['/gse_data'].ALT_rotationAngle = angle
+        if illumination is not None:
+            self.fid['/gse_data'].ALT_illumination = illumination
 
-        dset = gid.createVariable('signal', 'f8', ('wavelength',))
-        dset.long_name = 'signal of stimulus'
-        dset.units = units[1]
-        dset[:] = signal
+    def write_attr_polarization(self, aolp: float, dolp: float) -> None:
+        """
+        Add polarization parameters AoLP & DoLP as group attributes
+
+        Parameters
+        ----------
+        AoLP :  float
+        DoLP :  float
+        """
+        if aolp is not None:
+            self.fid['/gse_data'].AoLP = aolp
+        if dolp is not None:
+            self.fid['/gse_data'].DoLP = dolp
 
     def write_egse(self, egse_time, egse_data, egse_attrs: dict) -> None:
         """
@@ -211,10 +224,48 @@ class LV1gse:
         dset.setncatts(egse_attrs)
         dset[:] = egse_data
 
-    def write_reference_diode(self, ref_time, ref_data,
-                              ref_attrs: dict) -> None:
+    def write_viewport(self, viewport: int) -> None:
         """
-        Add data from the reference diode
+        Add/update which viewports are illuminated
+
+        Parameters
+        ----------
+        viewport :  int
+        """
+        self.fid['/gse_data/viewport'][:] = viewport
+
+    def write_reference_signal(self, signal, spread) -> None:
+        """
+        Write reference detector signal and variance
+
+        Parameters
+        ----------
+        signal :  float
+           Median signal level measured during the measurement
+        spread :  float
+           Variance of the signal level measured during the measurement
+
+        Notes
+        -----
+        Used for non-linearity measurements.
+        """
+        gid = self.fid['/gse_data']
+        gid.Illumination_level = 5e9 / 1.602176634 * signal
+
+        dset = gid.createVariable('reference_signal', 'f8', ())
+        dset.long_name = "biweight median of reference-detector signal"
+        dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
+        dset.units = 'A'
+        dset[:] = signal
+
+        dset = gid.createVariable('reference_error', 'f8', ())
+        dset.long_name = "biweight spread of reference-detector signal"
+        dset.units = 'A'
+        dset[:] = spread
+
+    def write_reference_diode(self, ref_time, ref_data, ref_attrs) -> None:
+        """
+        Add data measured by the reference diode during the measurement
 
         Parameters
         ----------
@@ -226,6 +277,8 @@ class LV1gse:
         gid = self.fid.createGroup('/gse_data/ReferenceDiode')
         _ = gid.createDimension('time', len(ref_data))
         dset = gid.createVariable('time', 'f8', ('time',))
+        dset.units = 'seconds since 1970-01-01T00:00:00+00:00'
+        dset.comment = 'Generated on SRON clean-room tablet'
         dset[:] = ref_time
 
         ref_t = gid.createCompoundType(ref_data.dtype, 'ref_dtype')
@@ -233,113 +286,48 @@ class LV1gse:
         dset.setncatts(ref_attrs)
         dset[:] = ref_data
 
-    def write_wavelength_monitor(self, wav_time, wav_intg, wav_avg_num,
-                                 wav_wv, wav_signal) -> None:
+    def write_data_stimulus(self, xds_stimulus) -> None:
+        """
+        Add wavelength and signal of data stimulus
+
+        Parameters
+        ----------
+        xds_stimulus :  xarray::Dataset
+           Contains xarray::DataArrays 'wavelength' and 'signal'
+        """
+        xds_stimulus.to_netcdf(self.fid.filepath(), mode='a', group='gse_data')
+
+    def write_wavelength_monitor(self, xds_wav_mon) -> None:
         """
         Add wavelength monitoring data of the Avantas fibre-spectrometer
 
         Parameters
         ----------
-        wav_time :  ndarray
-        wav_intg :  ndarray
-        wav_avg_num :  ndarray
-        wav_wv :  ndarray
-        wav_signal :  ndarray
+        xds_wav_mon :  xarray::Dataset
+           Contains xarray::DataArrays 'signal', 'wavelength', 'wav_time'
         """
-        gid = self.fid.createGroup('/gse_data/WaveMonitor')
+        xds_wav_mon.to_netcdf(self.fid.filepath(), mode='a',
+                              group='/gse_data/WaveMonitor')
 
-        _ = gid.createDimension('time', len(wav_time))
-        dset = gid.createVariable('time', 'f8', ('time',))
-        dset.units = 'seconds since 1970-01-01T00:00:00+00:00'
-        dset.comment = 'Generated on SRON clean-room tablet'
-        dset[:] = wav_time
-
-        _ = gid.createDimension('wavelength', len(wav_wv))
-        dset = gid.createVariable('wavelength', 'f4', ('wavelength',))
-        dset.longname = 'wavelength grid'
-        dset.comment = 'wavelength annotation of fibre spectrometer'
-        dset[:] = wav_wv
-
-        dset = gid.createVariable('t_intg', 'i2', ('time',))
-        dset.long_name = 'Integration time'
-        dset.units = 'ms'
-        dset[:] = wav_intg
-
-        dset = gid.createVariable('n_avg', 'i2', ('time',))
-        dset.long_name = 'Averaging number'
-        dset[:] = wav_avg_num
-
-        dset = gid.createVariable('wav_mon', 'f4', ('time', 'wavelength'))
-        dset.long_name = 'wavelength-monitor spectra'
-        dset.comment = 'Avantes fibre spectrometer'
-        dset[:] = wav_signal
-
-    # def write_attr_fov(self, val_begin: float, val_end: float) -> None:
-    #    """
-    #    Add field-of-view range as an group attribute
-    #
-    #    Parameters
-    #    ----------
-    #    val_begin :  float
-    #    val_end :  float
-    #    """
-    #    self.fid['/gse_data'].FOV_begin = val_begin
-    #    self.fid['/gse_data'].FOV_end = val_end
-
-    def write_attr_act(self, angle: float, illumination=None) -> None:
-        """
-        Add act rotation angle as an group attribute
-
-        Parameters
-        ----------
-        angle :  float
-        illumination :  float
-        """
-        self.fid['/gse_data'].ACT_rotationAngle = angle
-        self.fid['/gse_data'].ACT_illumination = illumination
-
-    def write_attr_alt(self, angle: float, illumination=None) -> None:
-        """
-        Add altitude rotation angle as an group attribute
-
-        Parameters
-        ----------
-        angle :  float
-        illumination :  float
-        """
-        self.fid['/gse_data'].ALT_rotationAngle = angle
-        self.fid['/gse_data'].ALT_illumination = illumination
-
-    def write_attr_polarization(self, aolp: float, dolp: float) -> None:
-        """
-        Add polarization parameters AoLP & DoLP as group attributes
-
-        Parameters
-        ----------
-        AoLP :  float
-        DoLP :  float
-        """
-        if aolp is not None:
-            self.fid['/gse_data'].AoLP = aolp
-        if dolp is not None:
-            self.fid['/gse_data'].DoLP = dolp
-
-    def check_egse(self, egse_data) -> None:
-        """
-        Check consistency of OGSE/EGSE information during measurement
-        """
-        for key, fmt in egse_data.dtype.fields.items():
-            if fmt[0] == np.uint8:
-                res_sanity = (egse_data[key] == egse_data[key][0]).all()
-                if not res_sanity:
-                    print('[WARNING] ', key, egse_data[key])
-
-        act_angle = self.fid['/gse_data'].ACT_rotationAngle
-        if np.isfinite(act_angle):
-            if not np.allclose(egse_data['ACT_ANGLE'], act_angle, 1e-2):
-                print('[WARNING] ', 'ACT_ANGLE', egse_data['ACT_ANGLE'])
-
-        alt_angle = self.fid['/gse_data'].ALT_rotationAngle
-        if np.isfinite(alt_angle):
-            if not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2):
-                print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
+        # gid = self.fid.createGroup('/gse_data/WaveMonitor')
+        # _ = gid.createDimension('time', len(wav_time))
+        # dset = gid.createVariable('time', 'f8', ('time',))
+        # dset.units = 'seconds since 1970-01-01T00:00:00+00:00'
+        # dset.comment = 'Generated on SRON clean-room tablet'
+        # dset[:] = wav_time
+        # _ = gid.createDimension('wavelength', len(wav_wv))
+        # dset = gid.createVariable('wavelength', 'f4', ('wavelength',))
+        # dset.longname = 'wavelength grid'
+        # dset.comment = 'wavelength annotation of fibre spectrometer'
+        # dset[:] = wav_wv
+        # dset = gid.createVariable('t_intg', 'i2', ('time',))
+        # dset.long_name = 'Integration time'
+        # dset.units = 'ms'
+        # dset[:] = wav_intg
+        # dset = gid.createVariable('n_avg', 'i2', ('time',))
+        # dset.long_name = 'Averaging number'
+        # dset[:] = wav_avg_num
+        # dset = gid.createVariable('wav_mon', 'f4', ('time', 'wavelength'))
+        # dset.long_name = 'wavelength-monitor spectra'
+        # dset.comment = 'Avantes fibre spectrometer'
+        # dset[:] = wav_signal

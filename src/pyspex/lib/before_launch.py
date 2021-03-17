@@ -20,4 +20,4 @@ def before_launch(timestamp: int) -> bool:
     """
     Return True when timestamp is before launch of PACE
     """
-    return True if timestamp < LAUNCH_DATE else False
+    return timestamp < LAUNCH_DATE

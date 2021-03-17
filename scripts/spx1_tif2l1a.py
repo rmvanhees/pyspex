@@ -22,207 +22,19 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import xarray as xr
 
 from pyspex import spx_product
 from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.tif_io import TIFio
 from pyspex.lv1_io import L1Aio
+from pyspex.lv1_gse import LV1gse
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
-def header_as_dict(hdr, n_images):
-    """
-    Convert header data to Python dictionary
-    """
-    hdr_dict = {}
-    hdr_dict['history'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['OCAL measurement'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Row dimension'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Column dimension'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Number of measurements'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Number of viewing angles'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Integration time (s)'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Exposure time (s)'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-    hdr_dict['Co-additions'] = {
-        'ds_type': None, 'ds_name': None, 'ds_value': None}
-
-    # keywords for binning (write as attribute
-    hdr_dict['Line_skip_id'] = {
-        'ds_type': 'attr',
-        'ds_name': 'Line_skip_id',
-        'ds_value': ''}
-    if 'Line-enable-array' in hdr and hdr['Line-enable-array'] != '':
-        hdr_dict['Line_skip_id']['ds_value'] = hdr['Line-enable-array']
-
-    hdr_dict['Enabled_lines'] = {
-        'ds_type': 'attr',
-        'ds_name': 'Enabled_lines',
-        'ds_value': np.uint16(2048)}
-    if 'Enabled lines' in hdr:
-        hdr_dict['Enabled_lines']['ds_value'] = np.uint16(hdr['Enabled lines'])
-
-    hdr_dict['Binning_table'] = {
-        'ds_type': 'attr',
-        'ds_name': 'Binning_table',
-        'ds_value': ''}
-    if 'Flexible binning table' in hdr and hdr['Flexible binning table'] != '':
-        hdr_dict['Binning_table']['ds_value'] = hdr['Flexible binning table']
-
-    hdr_dict['Binned_pixels'] = {
-        'ds_type': 'attr',
-        'ds_name': 'Binned_pixels',
-        'ds_value': np.uint32(0)}
-    if 'Total flex-binned pixels' in hdr:
-        hdr_dict['Binned_pixels']['ds_value'] = \
-            np.uint32(hdr['Total flex-binned pixels'])
-
-    # Datasets
-    hdr_dict['Optics temperature (K)'] = {
-        'ds_type': 'dset',
-        'ds_name': '/engineering_data/temp_housing',
-        'ds_value': np.full(n_images,
-                            float(hdr['Housing temperature (K)']))}
-    hdr_dict['Detector temperature (K)'] = {
-        'ds_type': 'dset',
-        'ds_name': '/engineering_data/temp_detector',
-        'ds_value': np.full(n_images,
-                            float(hdr['Detector temperature (K)']))}
-    if hdr['Illuminated viewing angle'] == 'None':
-        hdr_dict['Illuminated viewing angle'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Illuminated viewing angle'] = {
-            'ds_type': 'dset',
-            'ds_name': '/gse_data/viewport',
-            'ds_value': np.uint8(1 << int(hdr['Illuminated viewing angle']))}
-
-    # Attributes
-    if hdr['Light source'] == 'None':
-        hdr_dict['Light source'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Light source'] = {
-            'ds_type': 'attr',
-            'ds_name': 'Light_source',
-            'ds_value': hdr['Light source'].lstrip()}
-    if hdr['Illuminated fov begin'] == 'None':
-        hdr_dict['Illuminated fov begin'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Illuminated fov begin'] = {
-            'ds_type': 'attr',
-            'ds_name': 'FOV_begin',
-            'ds_value': float(hdr['Illuminated fov begin'])}
-    if hdr['Illuminated fov end'] == 'None':
-        hdr_dict['Illuminated fov end'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Illuminated fov end'] = {
-            'ds_type': 'attr',
-            'ds_name': 'FOV_end',
-            'ds_value': float(hdr['Illuminated fov end'])}
-    if hdr['Rotation stage ACT angle'] == 'None':
-        hdr_dict['Rotation stage ACT angle'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Rotation stage ACT angle'] = {
-            'ds_type': 'attr',
-            'ds_name': 'ACT_rotationAngle',
-            'ds_value': float(hdr['Rotation stage ACT angle'])}
-    if hdr['Rotation stage ALT angle'] == 'None':
-        hdr_dict['Rotation stage ALT angle'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Rotation stage ALT angle'] = {
-            'ds_type': 'attr',
-            'ds_name': 'ALT_rotationAngle',
-            'ds_value': float(hdr['Rotation stage ALT angle'])}
-    if hdr['Illuminated field ACT'] == 'None':
-        hdr_dict['Illuminated field ACT'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Illuminated field ACT'] = {
-            'ds_type': 'attr',
-            'ds_name': 'ACT_illumination',
-            'ds_value': float(hdr['Illuminated field ACT'])}
-    if hdr['Illuminated field ALT'] == 'None':
-        hdr_dict['Illuminated field ALT'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['Illuminated field ALT'] = {
-            'ds_type': 'attr',
-            'ds_name': 'ALT_illumination',
-            'ds_value': float(hdr['Illuminated field ALT'])}
-    if hdr['DoLP input'] == 'None':
-        hdr_dict['DoLP input'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['DoLP input'] = {
-            'ds_type': 'attr',
-            'ds_name': 'DoLP',
-            'ds_value': float(hdr['DoLP input'])}
-    if hdr['AoLP input (deg)'] == 'None':
-        hdr_dict['AoLP input (deg)'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        hdr_dict['AoLP input (deg)'] = {
-            'ds_type': 'attr',
-            'ds_name': 'AoLP',
-            'ds_value': float(hdr['AoLP input (deg)'])}
-
-    if hdr['Detector illumination'] == 'None':
-        hdr_dict['Detector illumination'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-        hdr_dict['Det. illumination level'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-    else:
-        if 'Det. illumination level' in hdr:
-            hdr_dict['Det. illumination level'] = {
-                'ds_type': 'attr',
-                'ds_name': 'Illumination_level',
-                'ds_value': float(hdr['Det. illumination level'])}
-            hdr_dict['Detector illumination'] = {
-                'ds_type': 'attr',
-                'ds_name': 'Light_source',
-                'ds_value': hdr['Detector illumination']}
-        if 'Detect. illumination e/ms' in hdr:
-            hdr_dict['Det. illumination level'] = {
-                'ds_type': 'attr',
-                'ds_name': 'Illumination_level',
-                'ds_value': float(hdr['Detect. illumination e/ms'])}
-            hdr_dict['Detector illumination'] = {
-                'ds_type': 'attr',
-                'ds_name': 'Light_source',
-                'ds_value': hdr['Detector illumination'] + ' (e.ms-1)'}
-
-    if 'Spectral data stimulus' in hdr:
-        ds_dict = hdr['Spectral data stimulus']
-        hdr_dict['Wavelength stimulus'] = {
-            'ds_type': 'dset',
-            'ds_name': '/gse_data/wavelength',
-            'ds_value': ds_dict['Wavelength (nm)']}
-        hdr_dict['Radius stimulus'] = {
-            'ds_type': 'dset',
-            'ds_name': '/gse_data/signal',
-            'ds_value': ds_dict['Radiance (photons/(s.nm.m^2.sr)']}
-    else:
-        hdr_dict['Spectral data stimulus'] = {
-            'ds_type': None, 'ds_name': None, 'ds_value': None}
-
-    return hdr_dict
-
-
 def get_table_id(ckd_dir, bin_table_name):
     """
     Quick en dirty implementation to obtain table_id from binning-table CKD
@@ -247,6 +59,28 @@ def get_table_id(ckd_dir, bin_table_name):
                 break
 
     return table_id
+
+
+def get_stimulus(hdr):
+    """
+    Return stimulus data as a xarray::Dataset
+    """
+    if 'Spectral data stimulus' not in hdr:
+        return None
+
+    ds_dict = hdr['Spectral data stimulus']
+    xr_wv = xr.DataArray(ds_dict['Wavelength (nm)'],
+                         coords=[ds_dict['Wavelength (nm)']],
+                         dims=['wavelength'],
+                         attrs={'long_name': 'wavelength of stimulus',
+                                'units': 'nm'})
+    xr_sign = xr.DataArray(ds_dict['Radiance (photons/(s.nm.m^2.sr)'],
+                           coords=[ds_dict['Wavelength (nm)']],
+                           dims=['wavelength'],
+                           attrs={'long_name': 'signal of stimulus',
+                                  'units': 'photons/(s.nm.m^2.sr)'})
+
+    return xr.Dataset({'wavelength': xr_wv, 'signal': xr_sign})
 
 
 # - main function ----------------------------------
@@ -285,6 +119,11 @@ def main():
     hdr = tif.header()
     tags = tif.tags()[0]
     images = tif.images(n_frame=args.nframe)
+    if args.verbose:
+        for key in hdr:
+            if key == 'Spectral data stimulus':
+                continue
+            print("{:s}: '{}'".format(key, hdr[key]))
 
     # For now, we obtain the reference time from the TIFF.tags
     msm_id = hdr['OCAL measurement']
@@ -327,9 +166,6 @@ def main():
             'samples_per_image': n_samples,
             'hk_packets': n_images,
             'viewing_angles': int(hdr['Number of viewing angles'])}
-    if 'Spectral data stimulus' in hdr:
-        ds_dict = hdr['Spectral data stimulus']
-        dims['wavelength'] = ds_dict['Wavelength (nm)'].size
 
     # define binning table ID
     if n_samples == 0x400000:
@@ -347,60 +183,80 @@ def main():
     # Compute delta_time for each frame (seconds)
     # convert timestamps to seconds per day
     offs = (utc_start - EPOCH).total_seconds()
-    intg_time = hdr['Co-additions'] * float(hdr['Exposure time (s)'])
+    intg_time = int(hdr['Co-additions']) * float(hdr['Exposure time (s)'])
     secnds = (1 + np.arange(n_images, dtype=float)) * intg_time
     img_sec = (offs + secnds // 1).astype('u4')
-    sub_sec = np.round((secnds % 1) * 2**16).astype('u2')
+    img_subsec = np.round((secnds % 1) * 2**16).astype('u2')
+
+    nom_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))
+    sci_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
+    if table_id == 0:
+        sci_hk['REG_FULL_FRAME'] = 1
+        sci_hk['REG_CMV_OUTPUTMODE'] = 3
+    else:
+        sci_hk['REG_FULL_FRAME'] = 2
+        sci_hk['REG_CMV_OUTPUTMODE'] = 1
+    sci_hk['REG_BINNING_TABLE_START'] = 0x400000 * (table_id + 1) + 0x80000000
+    sci_hk['DET_OFFSET'] = 16384 - 70
+    sci_hk['DET_FOTLEN'] = 20
+    sci_hk['DET_EXPTIME'] = \
+        int(1e7 * float(hdr['Exposure time (s)']) / 129 - 0.43 * 20)
+    sci_hk['REG_NCOADDFRAMES'] = int(hdr['Co-additions'])
 
     # Generate L1A product
-    hdr_dict = header_as_dict(hdr, n_images)
-    with L1Aio(prod_name, dims=dims, inflight=False) as l1a:
-        # Add image data and telemetry
-        l1a.set_dset('/science_data/detector_images',
-                     images.reshape(n_images, -1))
-        img_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
-        l1a.set_dset('/science_data/detector_telemetry', img_hk)
-        # -- no detector_telemetry!!
-        #
-        # Add image attributes
-        # - use default values for binning_table, digital_offset, image_ID
-        l1a.set_dset('/image_attributes/exposure_time',
-                     np.full(n_images, float(hdr['Exposure time (s)'])))
-        l1a.set_dset('/image_attributes/nr_coadditions',
-                     np.full(n_images, int(hdr['Co-additions'])))
+    with L1Aio(prod_name, dims=dims) as l1a:
+        # write image data, detector telemetry and image attributes
+        l1a.fill_science(images.reshape(n_images, -1), sci_hk,
+                         np.arange(n_images))
+        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
 
-        l1a.set_dset('/image_attributes/image_ID',
-                     np.arange(n_images))
-        l1a.set_dset('/image_attributes/digital_offset',
-                     np.zeros(n_images))
-        if args.inp_tif:
-            l1a.set_dset('/image_attributes/binning_table',
-                         np.full(n_images, 101))
-        else:
-            l1a.set_dset('/image_attributes/binning_table',
-                         np.full(n_images, table_id))
-        l1a.fill_time(img_sec, sub_sec)
-        #
-        # Add engineering data
-        hk_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))
-        l1a.set_dset('/engineering_data/HK_telemetry', hk_data)
-        l1a.set_dset('/engineering_data/HK_tlm_time', secnds)
-        for key in hdr_dict:
-            if hdr_dict[key]['ds_type'] != 'dset':
-                continue
-            l1a.set_dset(hdr_dict[key]['ds_name'], hdr_dict[key]['ds_value'])
-        #
-        # Add OGSE and EGSE parameters
-        for key in hdr_dict:
-            if hdr_dict[key]['ds_type'] != 'attr':
-                continue
+        # Engineering data
+        l1a.fill_nomhk(nom_hk)
+        l1a.fill_time(img_sec, img_subsec, group='engineering_data')
 
-            l1a.set_attr(hdr_dict[key]['ds_name'],
-                         hdr_dict[key]['ds_value'],
-                         ds_name='gse_data')
         # Global attributes
-        l1a.fill_global_attrs()
-        l1a.set_attr('history', hdr['OCAL measurement'])
+        l1a.fill_global_attrs(inflight=False)
+        l1a.set_attr('input_files', [Path(args.ascii_file).name])
+
+    with LV1gse(prod_name) as gse:
+        gse.set_attr('origin', hdr['history'])
+        gse.set_attr('comment', hdr['OCAL measurement'])
+        if 'Light source' in hdr:
+            gse.set_attr('light_source', hdr['Light source'])
+        if 'Detector illumination' in hdr:
+            gse.set_attr('Light_source', hdr['Detector illumination'])
+            gse.set_attr('Illumination_level',
+                         float(hdr['Detect. illumination e/ms']))
+        if 'Detector temperature (K)' in hdr:
+            gse.set_attr('Detector_temperature',
+                         float(hdr['Detector temperature (K)']))
+        if 'Detector temperature (K)' in hdr:
+            gse.set_attr('Optics_temperature',
+                         float(hdr['Optics temperature (K)']))
+        if 'Illuminated viewing angle' in hdr:
+            gse.write_viewport(1 << int(hdr['Illuminated viewing angle']))
+        else:
+            gse.write_viewport(0)
+        if 'Illuminated field ACT' in hdr:
+            gse.write_attr_act(float(hdr['Rotation stage ACT angle']),
+                               float(hdr['Illuminated field ACT']))
+        else:
+            gse.write_attr_act(float(hdr['Rotation stage ACT angle']))
+        if 'Illuminated field ALT' in hdr:
+            gse.write_attr_alt(float(hdr['Rotation stage ALT angle']),
+                               float(hdr['Illuminated field ALT']))
+        else:
+            gse.write_attr_alt(float(hdr['Rotation stage ALT angle']))
+        if 'DoLP input' in hdr:
+            gse.write_attr_polarization(float(hdr['AoLP input (deg)']),
+                                        float(hdr['DoLP input']))
+        if 'Spectral data stimulus' in hdr:
+            gse.write_data_stimulus(get_stimulus(hdr))
+        # gse.write_reference_signal(signal, error)
+        # gse.write_egse(egse_time, egse_data, egse_attrs)
+        # gse.write_reference_diode(ref_time, ref_data, ref_attrs)
+        # gse.write_wavelength_monitor(wav_time, wav_intg, wav_avg_num,
+        #                             wav_wv, wav_signal)
 
 
 # --------------------------------------------------

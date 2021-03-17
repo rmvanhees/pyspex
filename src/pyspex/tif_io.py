@@ -94,7 +94,8 @@ class TIFio():
                 if line == '-\n':
                     break
                 key, value = line[:-1].split(':')
-                res[key.rstrip(' ')] = value.strip(' ')
+                if value.strip(' ') != 'None':
+                    res[key.rstrip(' ')] = value.strip(' ')
 
             # read Spectral data stimulus
             line = fp.readline()
