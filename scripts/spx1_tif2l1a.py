@@ -74,11 +74,13 @@ def get_stimulus(hdr):
                          dims=['wavelength'],
                          attrs={'long_name': 'wavelength of stimulus',
                                 'units': 'nm'})
-    xr_sign = xr.DataArray(ds_dict['Radiance (photons/(s.nm.m^2.sr)'],
+
+    data = ds_dict['Radiance (photons/(s.nm.m^2.sr)']
+    data *= 2.99792458 * 6.62607015e-14 / ds_dict['Wavelength (nm)']
+    xr_sign = xr.DataArray(data, dims=['wavelength'],
                            coords=[ds_dict['Wavelength (nm)']],
-                           dims=['wavelength'],
                            attrs={'long_name': 'signal of stimulus',
-                                  'units': 'photons/(s.nm.m^2.sr)'})
+                                  'units': 'W.m-2.sr-1.um-1'})
 
     return xr.Dataset({'wavelength': xr_wv, 'signal': xr_sign})
 
@@ -234,7 +236,8 @@ def main():
             gse.set_attr('Optics_temperature',
                          float(hdr['Optics temperature (K)']))
         if 'Illuminated viewing angle' in hdr:
-            gse.write_viewport(1 << int(hdr['Illuminated viewing angle']))
+            vp_dict = {'0': 1, '1': 2, '2': 16, '3': 8, '4': 4}
+            gse.write_viewport(vp_dict.get(hdr['Illuminated viewing angle']))
         else:
             gse.write_viewport(0)
         if 'Illuminated field ACT' in hdr:
@@ -250,13 +253,9 @@ def main():
         if 'DoLP input' in hdr:
             gse.write_attr_polarization(float(hdr['AoLP input (deg)']),
                                         float(hdr['DoLP input']))
-        if 'Spectral data stimulus' in hdr:
+        if ('Spectral data stimulus' in hdr
+            and 'Illuminated viewing angle' in hdr):
             gse.write_data_stimulus(get_stimulus(hdr))
-        # gse.write_reference_signal(signal, error)
-        # gse.write_egse(egse_time, egse_data, egse_attrs)
-        # gse.write_reference_diode(ref_time, ref_data, ref_attrs)
-        # gse.write_wavelength_monitor(wav_time, wav_intg, wav_avg_num,
-        #                             wav_wv, wav_signal)
 
 
 # --------------------------------------------------
