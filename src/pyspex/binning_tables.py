@@ -106,7 +106,7 @@ class BinningTables:
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
             if not self.ckd_dir.is_dir():
-                self.ckd_dir = environ.get('CKD_DIR', '.')
+                self.ckd_dir = Path(environ.get('CKD_DIR', '.'))
         else:
             self.ckd_dir = Path(ckd_dir)
         if not self.ckd_dir.is_dir():
