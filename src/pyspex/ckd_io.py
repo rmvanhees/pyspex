@@ -47,16 +47,16 @@ class CKDio:
     -------
     add_offset(values, binning=-1)
        Add Offset CKD to CKD product.
-    add_darkflux(values, binning=-1)
-       Add Dark-flux CKD to CKD product.
+    add_darkcur(values, binning=-1)
+       Add Dark-current CKD to CKD product.
     add_non_linearity(values, binning=-1)
        Add non-linearity CKD to CKD product.
     add_prnu(values, binning=-1)
        Add PRNU CKD to CKD product.
     get_offset(binning=-1)
        Read Offset CKD.
-    get_darkflux(binning=-1)
-       Read Dark-flux CKD.
+    get_darkcur(binning=-1)
+       Read Dark-current CKD.
     get_non_linearity(values, binning=-1)
        Read non-Linearity CKD.
     get_prnu(binning=-1)
@@ -161,9 +161,9 @@ class CKDio:
             dset.attrs['date_created'] = \
                 datetime.utcnow().isoformat(timespec='milliseconds')
 
-    def add_darkflux(self, values, binning=-1):
+    def add_darkcur(self, values, binning=-1):
         """
-        Add Dark-flux CKD to CKD product
+        Add Dark-current CKD to CKD product
         """
         if self.filename is None or not Path(self.filename).is_file():
             self.__initialize_product()
@@ -173,16 +173,16 @@ class CKDio:
                 grp = fid['/FULL_FRAME']
             else:
                 grp = fid['/BINNING_{:03d}'.format(binning)]
-            if 'darkflux' in fid:
-                raise ValueError('dataset darkflux already exists')
+            if 'darkcurrent' in fid:
+                raise ValueError('dataset darkcurrent already exists')
 
             frame_shape = (grp['row'].size, grp['column'].size)
-            dset = grp.create_dataset('darkflux', frame_shape,
+            dset = grp.create_dataset('darkcurrent', frame_shape,
                                       compression=1, shuffle=True,
                                       fillvalue=np.nan, dtype='f4')
             dset.dims[0].attach_scale(grp['row'])
             dset.dims[1].attach_scale(grp['column'])
-            dset.attrs['long_name'] = "Dark-flux"
+            dset.attrs['long_name'] = "Dark-current"
             dset[:] = values
             dset.attrs['date_created'] = \
                 datetime.utcnow().isoformat(timespec='milliseconds')
@@ -249,19 +249,19 @@ class CKDio:
 
         return values
 
-    def get_darkflux(self, binning=-1):
+    def get_darkcur(self, binning=-1):
         """
-        Read Dark-flux CKD
+        Read Dark-current CKD
         """
         with h5py.File(self.filename, 'r') as fid:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
                 grp = fid['/BINNING_{:03d}'.format(binning)]
-            if 'darkflux' not in grp:
-                raise ValueError('CKD darkflux does not exist')
+            if 'darkcurrent' not in grp:
+                raise ValueError('CKD darkcurrent does not exist')
 
-            values = grp['darkflux'][:]
+            values = grp['darkcurrent'][:]
 
         return values
 
@@ -305,11 +305,11 @@ def main():
     """
     ckd = CKDio(None, verbose=True)
     ckd.add_offset(np.zeros((2048, 2048), dtype=float))
-    ckd.add_darkflux(np.zeros((2048, 2048), dtype=float))
+    ckd.add_darkcur(np.zeros((2048, 2048), dtype=float))
     ckd.add_prnu(np.ones((2048, 2048), dtype=float))
 
     print(np.mean(ckd.get_offset()))
-    print(np.mean(ckd.get_darkflux()))
+    print(np.mean(ckd.get_darkcur()))
     print(np.mean(ckd.get_prnu()))
 
 
