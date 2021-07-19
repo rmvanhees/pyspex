@@ -71,10 +71,10 @@ def main():
     bin_ckd.create_if_needed(args.validity_start)
 
     # add binning tables
-    for ii in range(len(args.file_list)):
-        flpath = Path(args.file_list[ii])
+    for ii, flname in enumerate(args.file_list):
+        flpath = Path(flname)
         if not flpath.is_file():
-            raise FileNotFoundError(args.file_list[ii])
+            raise FileNotFoundError(flname)
         if flpath.suffix != '.csv':
             continue
 

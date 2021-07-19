@@ -72,8 +72,8 @@ def main():
             table_id = fid['/image_attributes/binning_table'][:]
             sci_hk = fid['/science_data/detector_telemetry'][:]
             dset = fid['/science_data/detector_images']
+            # pylint: disable=no-member
             images = dset.astype(float)[:]
-
         try:
             coverage_start = coverage_start.decode()
         except (UnicodeDecodeError, AttributeError):

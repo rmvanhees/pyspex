@@ -122,10 +122,10 @@ def main():
     tags = tif.tags()[0]
     images = tif.images(n_frame=args.nframe)
     if args.verbose:
-        for key in hdr:
+        for key, value in hdr.items():
             if key == 'Spectral data stimulus':
                 continue
-            print("{:s}: '{}'".format(key, hdr[key]))
+            print("{:s}: '{}'".format(key, value))
 
     # For now, we obtain the reference time from the TIFF.tags
     msm_id = hdr['OCAL measurement']

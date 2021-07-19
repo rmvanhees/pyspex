@@ -282,6 +282,7 @@ class CCSDSio:
             raise FileNotFoundError('{} does not exist'.format(flname))
 
         self.close()
+        # pylint: disable=consider-using-with
         self.fp = open(flname, 'rb')
 
     @staticmethod

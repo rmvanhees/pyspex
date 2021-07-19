@@ -81,6 +81,7 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
     # read navigation file information
     with h5py.File(l1a_nav_product, 'r') as fid:
         # SC_hkt_block = fid['SC_hkt_block'].size
+        # pylint: disable=no-member
         nav_records = fid['SC_records'].size
         # quaternion_elements = fid['quaternion_elements'].size
         # vector_elements = fid['vector_elements'].size
@@ -137,6 +138,7 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
     temp_house = []
     for flname in l1a_prod_list:
         with h5py.File(flname, 'r') as fid:
+            # pylint: disable=no-member
             mps_dtype = fid['/science_data/detector_telemetry'].dtype
             coad.append(fid['/image_attributes/nr_coadditions'][:])
             texp.append(fid['/image_attributes/exposure_time'][:])

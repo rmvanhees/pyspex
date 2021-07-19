@@ -455,8 +455,8 @@ class DEMio:
         sci_hk = np.zeros((1,), dtype=np.dtype(tmtc_def(0x350)))
         sci_hk[0]['REG_FULL_FRAME'] = 1
         sci_hk[0]['REG_CMV_OUTPUTMODE'] = 3
-        for key in convert_det_params:
-            sci_hk[0][key] = convert_det_params[key]
+        for key, value in convert_det_params.items():
+            sci_hk[0][key] = value
 
         return sci_hk
 

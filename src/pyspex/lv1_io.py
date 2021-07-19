@@ -332,9 +332,9 @@ class Lv1io:
         if bin_size is not None:
             dict_attrs['bin_size_at_nadir'] = bin_size
 
-        for key in dict_attrs:
-            if dict_attrs[key] is not None:
-                self.fid.setncattr(key, dict_attrs[key])
+        for key, value in dict_attrs.items():
+            if value is not None:
+                self.fid.setncattr(key, value)
 
 
 # - class L1Aio -------------------------

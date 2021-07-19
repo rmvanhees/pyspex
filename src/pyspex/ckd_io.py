@@ -150,6 +150,7 @@ class CKDio:
             if 'offset' in fid:
                 raise ValueError('dataset offset already exists')
 
+            # pylint: disable=no-member
             frame_shape = (grp['row'].size, grp['column'].size)
             dset = grp.create_dataset('offset', frame_shape,
                                       compression=1, shuffle=True,
@@ -176,6 +177,7 @@ class CKDio:
             if 'darkcurrent' in fid:
                 raise ValueError('dataset darkcurrent already exists')
 
+            # pylint: disable=no-member
             frame_shape = (grp['row'].size, grp['column'].size)
             dset = grp.create_dataset('darkcurrent', frame_shape,
                                       compression=1, shuffle=True,
@@ -222,6 +224,7 @@ class CKDio:
             if 'PRNU' in fid:
                 raise ValueError('dataset PRNU already exists')
 
+            # pylint: disable=no-member
             frame_shape = (grp['row'].size, grp['column'].size)
             dset = grp.create_dataset('PRNU', frame_shape,
                                       compression=1, shuffle=True,
