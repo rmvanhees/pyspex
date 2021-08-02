@@ -11,6 +11,7 @@ Copyright (c) 2020 SRON - Netherlands Institute for Space Research
 License:  BSD-3-Clause
 """
 from netCDF4 import Dataset
+import numpy as np
 
 # - global parameters ------------------------------
 
@@ -50,51 +51,13 @@ def init_l1c(l1c_flname: str, dims: dict):
     rootgrp = Dataset(l1c_flname, "w")
 
     # create global dimensions
-    _ = rootgrp.createDimension('number_of_views', n_views)
-    _ = rootgrp.createDimension('intensity_bands_per_view', n_bins_intens)
-    _ = rootgrp.createDimension('polarization_bands_per_view', n_bins_polar)
     _ = rootgrp.createDimension('bins_across_track', n_bins_across)
     _ = rootgrp.createDimension('bins_along_track', number_of_images)
+    _ = rootgrp.createDimension('intensity_bands_per_view', n_bins_intens)
+    _ = rootgrp.createDimension('number_of_views', n_views)
+    _ = rootgrp.createDimension('polarization_bands_per_view', n_bins_polar)
 
     # create groups and all variables with attributes
-    sgrp = rootgrp.createGroup('SENSOR_VIEWS_BANDS')
-    dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
-    dset.long_name = 'along track view zenith angles at sensor'
-    dset.units = 'degrees'
-    dset.comment = ('view_angles is defined at the sensor, as it provides'
-                    ' a swath independent value at TOA.')
-    dset = sgrp.createVariable('intensity_wavelengths', 'f4',
-                               ('number_of_views', 'intensity_bands_per_view'))
-    dset.long_name = 'wavelength at center of intensity bands'
-    dset.units = 'nm'
-    dset = sgrp.createVariable('intensity_bandpasses', 'f4',
-                               ('number_of_views', 'intensity_bands_per_view'))
-    dset.long_name = 'FWHM of intensity bands'
-    dset.units = 'nm'
-    dset = sgrp.createVariable('polarization_wavelengths', 'f4',
-                               ('number_of_views',
-                                'polarization_bands_per_view'))
-    dset.long_name = 'wavelength at center of polarization bands'
-    dset.units = 'nm'
-    dset = sgrp.createVariable('polarization_bandpasses', 'f4',
-                               ('number_of_views',
-                                'polarization_bands_per_view'))
-    dset.long_name = 'FWHM of polarization bands'
-    dset.units = 'nm'
-    dset = sgrp.createVariable('intensity_f0', 'f4',
-                               ('number_of_views', 'intensity_bands_per_view'))
-    dset.long_name = 'Solar irradiance on intensity wavelength grid'
-    dset.units = 'W.m-2'
-    dset.comment = ('Spectral response function convolved mean solar flux'
-                    ' at each intensity band and view.')
-    dset = sgrp.createVariable('polarization_f0', 'f4',
-                               ('number_of_views',
-                                'polarization_bands_per_view'))
-    dset.long_name = 'Solar irradiance on polarization wavelength grid'
-    dset.units = 'W.m-2'
-    dset.comment = ('Spectral response function convolved mean solar flux'
-                    ' at each polarization band and view.')
-
     sgrp = rootgrp.createGroup('BIN_ATTRIBUTES')
     chunksizes = None if number_of_images is not None else (512,)
     dset = sgrp.createVariable('nadir_view_time', 'f8', ('bins_along_track',),
@@ -111,7 +74,22 @@ def init_l1c(l1c_flname: str, dims: dict):
     dset.long_name = 'offset to nadir view time'
     dset.units = 'seconds'
 
+    # -------------------------
     sgrp = rootgrp.createGroup('GEOLOCATION_DATA')
+    dset = sgrp.createVariable('altitude', 'f4',
+                               ('bins_along_track', 'bins_across_track'),
+                               chunksizes=chunksizes)
+    dset.standard_name = 'altitude'
+    dset.long_name = "height above mean sea level"
+    dset.units = "meters"
+    dset.positive = "up"
+    dset.axis = "Z"
+    dset = sgrp.createVariable('altitude_variability', 'f4',
+                               ('bins_along_track', 'bins_across_track'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'altitude (stdev)'
+    dset.units = 'meters'
+
     dset = sgrp.createVariable('latitude', 'f4',
                                ('bins_along_track', 'bins_across_track'),
                                chunksizes=chunksizes)
@@ -128,29 +106,6 @@ def init_l1c(l1c_flname: str, dims: dict):
     dset.valid_min = -180
     dset.valid_max = 180
     dset.units = 'degrees_east'
-    dset = sgrp.createVariable('altitude', 'f4',
-                               ('bins_along_track', 'bins_across_track'),
-                               chunksizes=chunksizes)
-    dset.standard_name = 'altitude'
-    dset.long_name = "height above mean sea level"
-    dset.units = "meters"
-    dset.positive = "up"
-    dset.axis = "Z"
-    dset = sgrp.createVariable('altitude_variability', 'f4',
-                               ('bins_along_track', 'bins_across_track'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'altitude (stdev)'
-    dset.units = 'meters'
-    dset = sgrp.createVariable('solar_azimuth', 'f4',
-                               ('bins_along_track', 'bins_across_track'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'solar azimuth angle'
-    dset.units = 'degrees'
-    dset = sgrp.createVariable('solar_zenith', 'f4',
-                               ('bins_along_track', 'bins_across_track'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'solar zenith angle'
-    dset.units = 'degrees'
 
     chunksizes = None if number_of_images is not None else \
         (512, n_bins_across, n_views)
@@ -167,103 +122,37 @@ def init_l1c(l1c_flname: str, dims: dict):
     dset.long_name = 'sensor zenith angle'
     dset.units = 'degrees'
 
-    chunksizes = None if number_of_images is not None else (512, 40, 5)
-    sgrp = rootgrp.createGroup('OBSERVATION_DATA')
-    dset = sgrp.createVariable('obs_per_view', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views'),
+    chunksizes = None if number_of_images is not None else (512, n_bins_across)
+    dset = sgrp.createVariable('solar_azimuth', 'f4',
+                               ('bins_along_track', 'bins_across_track'),
                                chunksizes=chunksizes)
-    dset.long_name = 'observations per view'
-    dset.units = '1'
-    dset.comment = "Observations contributing to bin from each view"
+    dset.long_name = 'solar azimuth angle'
+    dset.units = 'degrees'
+    dset = sgrp.createVariable('solar_zenith', 'f4',
+                               ('bins_along_track', 'bins_across_track'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'solar zenith angle'
+    dset.units = 'degrees'
 
-    chunksizes = None if number_of_images is not None else \
-        (32, n_bins_across, n_views, n_bins_intens)
-    dset = sgrp.createVariable('I', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views', 'intensity_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'I Stokes component'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('I_noise', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views', 'intensity_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'noise of I'
-    dset.units = 'W.m-2.sr-1.um-1'
-
+    # -------------------------
     chunksizes = None if number_of_images is not None else \
         (256, n_bins_across, n_views, n_bins_polar)
-    dset = sgrp.createVariable('I_polsample', 'f4',
+    sgrp = rootgrp.createGroup('OBSERVATION_DATA')
+    dset = sgrp.createVariable('AoLP', 'f4',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views',
                                 'polarization_bands_per_view'),
                                chunksizes=chunksizes)
-    dset.long_name = 'I at polarimeter sampling'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('I_polsample_noise', 'f4',
+    dset.long_name = 'angle of linear polarization'
+    dset.units = 'degrees'
+    dset = sgrp.createVariable('AoLP_noise', 'f4',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views',
                                 'polarization_bands_per_view'),
                                chunksizes=chunksizes)
-    dset.long_name = 'noise of I at polarimeter sampling'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('Q', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'Q Stokes component'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('Q_noise', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'noise of Q'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('U', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'U Stokes component'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('U_noise', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'noise of U'
-    dset.units = 'W.m-2.sr-1.um-1'
-    dset = sgrp.createVariable('q', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'Q over I Stokes component'
+    dset.long_name = 'random noise of AoLP'
     dset.units = '1'
-    dset = sgrp.createVariable('q_noise', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'noise of q'
-    dset.units = '1'
-    dset = sgrp.createVariable('u', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'U over I Stokes component'
-    dset.units = '1'
-    dset = sgrp.createVariable('u_noise', 'f4',
-                               ('bins_along_track', 'bins_across_track',
-                                'number_of_views',
-                                'polarization_bands_per_view'),
-                               chunksizes=chunksizes)
-    dset.long_name = 'noise of u'
-    dset.units = '1'
+
     dset = sgrp.createVariable('DoLP', 'f4',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views',
@@ -279,11 +168,167 @@ def init_l1c(l1c_flname: str, dims: dict):
     dset.long_name = 'noise of DoLP'
     dset.units = '1'
 
+    chunksizes = None if number_of_images is not None else \
+        (32, n_bins_across, n_views, n_bins_intens)
+    dset = sgrp.createVariable('I', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views', 'intensity_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'I Stokes vector component'
+    dset.units = 'W.m-2.sr-1.um-1'
+    dset = sgrp.createVariable('I_noise', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views', 'intensity_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'random noise of I'
+    dset.units = 'W.m-2.sr-1.um-1'
+
+    chunksizes = None if number_of_images is not None else \
+        (256, n_bins_across, n_views, n_bins_polar)
+    dset = sgrp.createVariable('I_polsample', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'I Stokes vector component'
+    dset.comment = 'polarization band spectal sampling'
+    dset.units = 'W.m-2.sr-1.um-1'
+    dset = sgrp.createVariable('I_polsample_noise', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'random noise of I Stokes vector component'
+    dset.comment = 'polarization band spectal sampling'
+    dset.units = 'W.m-2.sr-1.um-1'
+
+    chunksizes = None if number_of_images is not None else \
+        (32, n_bins_across, n_views, n_bins_intens)
+    dset = sgrp.createVariable('QC', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views', 'intensity_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'quality indicator'
+    dset.valid_min = 0
+    dset.valid_max = 10
+    dset.units = '1'
+    dset = sgrp.createVariable('QC_bitwise', 'u4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views', 'intensity_bands_per_view'),
+                               fill_value=2 ** 32 - 1,
+                               chunksizes=chunksizes)
+    dset.long_name = 'quality flags'
+    dset.valid_min = np.uint32(0)
+    dset.valid_max = np.uint32(2 ** 31)
+    dset.units = '1'
+    chunksizes = None if number_of_images is not None else \
+        (256, n_bins_across, n_views, n_bins_polar)
+    dset = sgrp.createVariable('QC_polsample', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'quality indicator'
+    dset.comment = 'polarization band spectal sampling'
+    dset.valid_min = 0
+    dset.valid_max = 10
+    dset.units = '1'
+    dset = sgrp.createVariable('QC_polsample_bitwise', 'u4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               fill_value=2 ** 32 - 1,
+                               chunksizes=chunksizes)
+    dset.long_name = 'quality flags'
+    dset.comment = 'polarization band spectal sampling'
+    dset.valid_min = np.uint32(0)
+    dset.valid_max = np.uint32(2 ** 31)
+    dset.units = '1'
+
+    dset = sgrp.createVariable('Q_over_I', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'Q_over_I Stokes vector component'
+    dset.units = '1'
+    dset = sgrp.createVariable('Q_over_I_noise', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'random noise of Q_over_I'
+    dset.units = '1'
+    dset = sgrp.createVariable('U_over_I', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'U_over_I Stokes vector component'
+    dset.units = '1'
+    dset = sgrp.createVariable('U_over_I_noise', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views',
+                                'polarization_bands_per_view'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'random noise of U_over_I'
+    dset.units = '1'
+
+    chunksizes = None if number_of_images is not None else \
+        (32, n_bins_across, n_views)
+    dset = sgrp.createVariable('obs_per_view', 'f4',
+                               ('bins_along_track', 'bins_across_track',
+                                'number_of_views'),
+                               chunksizes=chunksizes)
+    dset.long_name = 'observations per view'
+    dset.units = '1'
+    dset.comment = "Observations contributing to bin from each view"
+
+    # -------------------------
+    sgrp = rootgrp.createGroup('SENSOR_VIEWS_BANDS')
+    dset = sgrp.createVariable('intensity_F0', 'f4',
+                               ('number_of_views', 'intensity_bands_per_view'))
+    dset.long_name = 'solar irradiance on intensity wavelength grid'
+    dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each intensity band and view.')
+    dset = sgrp.createVariable('intensity_bandpasses', 'f4',
+                               ('number_of_views', 'intensity_bands_per_view'))
+    dset.long_name = 'FWHM of intensity bands'
+    dset.units = 'nm'
+    dset = sgrp.createVariable('intensity_wavelengths', 'f4',
+                               ('number_of_views', 'intensity_bands_per_view'))
+    dset.long_name = 'wavelength at center of intensity bands'
+    dset.units = 'nm'
+
+    dset = sgrp.createVariable('polarization_F0', 'f4',
+                               ('number_of_views',
+                                'polarization_bands_per_view'))
+    dset.long_name = 'Solar irradiance on polarization wavelength grid'
+    dset.units = 'W.m-2'
+    dset.comment = ('Spectral response function convolved mean solar flux'
+                    ' at each polarization band and view.')
+    dset = sgrp.createVariable('polarization_bandpasses', 'f4',
+                               ('number_of_views',
+                                'polarization_bands_per_view'))
+    dset.long_name = 'FWHM of polarization bands'
+    dset.units = 'nm'
+    dset = sgrp.createVariable('polarization_wavelengths', 'f4',
+                               ('number_of_views',
+                                'polarization_bands_per_view'))
+    dset.long_name = 'wavelength at center of polarization bands'
+    dset.units = 'nm'
+
+    dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
+    dset.long_name = 'along track view zenith angles at sensor'
+    dset.units = 'degrees'
+    dset.comment = ('view_angles is defined at the sensor, as it provides'
+                    ' a swath independent value at TOA.')
+
     return rootgrp
 
 
 # --------------------------------------------------
 if __name__ == '__main__':
     fid = init_l1c('PACE_SPEX.20230115T123456.L1C.5km.V01.nc', {})
-    fid.fill_global_attrs(orbit=12345, bin_size='5km')
     fid.close()
