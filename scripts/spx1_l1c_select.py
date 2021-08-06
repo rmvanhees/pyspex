@@ -13,6 +13,8 @@ License:  BSD-3-Clause
 import argparse
 from pathlib import Path
 
+import h5py
+
 from pyspex.lv1_io import L1Cio
 
 # --------------------------------------------------
@@ -51,20 +53,54 @@ def main():
         out_dir.mkdir(mode=0o755, parents=True)
 
     # ----- read data from orignal product -----
-    # ToDo: implement read of data
-    dims = []
-    nomhk_tm = []
-    demhk_tm = []
-    with L1Cio(l1c_product) as l1c:
-        # write image data, detector telemetry and image attributes
-        # - datasets: img_data, img_hk, img_id, img_sec, img_subsec
+    # pylint: disable=no-member, unsubscriptable-object
+    with h5py.File(l1c_product) as fid:
+        # group BIN_ATTRIBUTES
+        nadir_view_time = fid['/bin_attributes/nadir_view_time'][:]
+        view_time_offs = fid['/bin_attributes/view_time_offsets'][:]
 
-        # write engineering data
-        # - datasets: nomhk_data, nomhk_sec, nomhk_subsec
-        # - datasets: demhk_data
+        # group GEOLOCATION_DATA
+        altitude = fid['/geolocation_data/altitude'][:]
+        altitude_var = fid['/geolocation_data/altitude_variability'][:]
+        latitude = fid['/geolocation_data/latitude'][:]
+        longitude = fid['/geolocation_data/longitude'][:]
+        sensor_azi = fid['/geolocation_data/sensor_azimuth'][:]
+        sensor_zen = fid['/geolocation_data/sensor_zenith'][:]
+        solar_azi = fid['/geolocation_data/solar_azimuth'][:]
+        solar_zen = fid['/geolocation_data/solar_zenith'][:]
 
-        # write global attributes
-        # - parameters: inflight, selection criteria
+        # group OBSERVATION_DATA
+        obs_per_view = fid['/observation_data/obs_per_view'][:]
+        qc_bits = fid['/observation_data/QC_bitwise'][:]
+        qc_val = fid['/observation_data/QC'][:]
+        qc_pol_bits = fid['/observation_data/QC_polsample_bitwise'][:]
+        qc_pol = fid['/observation_data/QC_polsample'][:]
+        intens_val = fid['/observation_data/I'][:]
+        intens_noise = fid['/observation_data/I_noise'][:]
+        intens_pol = fid['/observation_data/I_polsample'][:]
+        intens_pol_noise = fid['/observation_data/I_polsample_noise'][:]
+        dolp_val = fid['/observation_data/DOLP'][:]
+        dolp_noise = fid['/observation_data/DOLP_noise'][:]
+        q_val = fid['/observation_data/Q_over_I'][:]
+        q_noise = fid['/observation_data/Q_over_I_noise'][:]
+        aolp_val = fid['/observation_data/AOLP'][:]
+        aolp_noise = fid['/observation_data/AOLP_noise'][:]
+        u_val = fid['/observation_data/U_over_I'][:]
+        u_noise = fid['/observation_data/U_over_I_noise'][:]
+
+        # group SENSOR_VIEWS_BANDS
+        intens_bands = fid['/sensor_views_bands/intensity_bandpasses'][:]
+        intens_f0 = fid['/sensor_views_bands/intensity_F0'][:]
+        intens_wav = fid['/sensor_views_bands/intensity_wavelengths'][:]
+        polar_bands = fid['/sensor_views_bands/polarization_bandpasses'][:]
+        polar_f0 = fid['/sensor_views_bands/polarization_F0'][:]
+        polar_wav = fid['/sensor_views_bands/polarization_wavelengths'][:]
+        view_angles = fid['/sensor_views_bands/view_angles'][:]
+
+    dims = {'bins_along_track' :  latitude.shape[0],
+            'bins_across_track' :  latitude.shape[1],
+            'intensity_bands_per_view' :  intens_bands.shape[1],
+            'polarization_bands_per_view' :  polar_bands.shape[1]}
 
     # ----- perform data selection -----
     # ToDo: implement data selection
@@ -73,55 +109,55 @@ def main():
     # - because the production time has changed
     # - and when coverage time is changed
     if ((out_dir / l1c_product.name).is_file()
-        l1c_product.samefile(out_dir / l1c_product.name)):
+        and l1c_product.samefile(out_dir / l1c_product.name)):
         raise OSError('Output will overwrite original product')
-        
+
     # ----- write new output product with selected data -----
     with L1Cio(out_dir / l1c_product.name, dims=dims) as l1c:
         # group BIN_ATTRIBUTES
-        l1c.set_dset('/BIN_ATTRIBUTES/nadir_view_time', data)
-        l1c.set_dset('/BIN_ATTRIBUTES/view_time_offsets', data)
-        
+        l1c.set_dset('/BIN_ATTRIBUTES/nadir_view_time', nadir_view_time)
+        l1c.set_dset('/BIN_ATTRIBUTES/view_time_offsets', view_time_offs)
+
         # group GEOLOCATION_DATA
-        l1c.set_dset('/GEOLOCATION_DATA/altitude', data)
-        l1c.set_dset('/GEOLOCATION_DATA/altitude_variability', data)
-        l1c.set_dset('/GEOLOCATION_DATA/latitude', data)
-        l1c.set_dset('/GEOLOCATION_DATA/longitude', data)
-        l1c.set_dset('/GEOLOCATION_DATA/sensor_azimuth', data)
-        l1c.set_dset('/GEOLOCATION_DATA/sensor_zenith', data)
-        l1c.set_dset('/GEOLOCATION_DATA/solar_azimuth', data)
-        l1c.set_dset('/GEOLOCATION_DATA/solar_zenith', data)
+        l1c.set_dset('/GEOLOCATION_DATA/altitude', altitude)
+        l1c.set_dset('/GEOLOCATION_DATA/altitude_variability', altitude_var)
+        l1c.set_dset('/GEOLOCATION_DATA/latitude', latitude)
+        l1c.set_dset('/GEOLOCATION_DATA/longitude', longitude)
+        l1c.set_dset('/GEOLOCATION_DATA/sensor_azimuth', sensor_azi)
+        l1c.set_dset('/GEOLOCATION_DATA/sensor_zenith', sensor_zen)
+        l1c.set_dset('/GEOLOCATION_DATA/solar_azimuth', solar_azi)
+        l1c.set_dset('/GEOLOCATION_DATA/solar_zenith', solar_zen)
 
         # group OBSERVATION_DATA
-        l1c.set_dset('/OBSERVATION_DATA/obs_per_view', data)
-        l1c.set_dset('/OBSERVATION_DATA/QC_bitwise', data)
-        l1c.set_dset('/OBSERVATION_DATA/QC', data)
-        l1c.set_dset('/OBSERVATION_DATA/QC_polsample_bitwise', data)
-        l1c.set_dset('/OBSERVATION_DATA/QC_polsample', data)
-        l1c.set_dset('/OBSERVATION_DATA/I', data)
-        l1c.set_dset('/OBSERVATION_DATA/I_noise', data)
-        l1c.set_dset('/OBSERVATION_DATA/I_polsample', data)
-        l1c.set_dset('/OBSERVATION_DATA/I_polsample_noise', data)
-        l1c.set_dset('/OBSERVATION_DATA/DoLP', data)
-        l1c.set_dset('/OBSERVATION_DATA/DoLP_noise', data)
-        l1c.set_dset('/OBSERVATION_DATA/Q_over_I', data)
-        l1c.set_dset('/OBSERVATION_DATA/Q_over_I_noise', data)
-        l1c.set_dset('/OBSERVATION_DATA/AoLP', data)
-        l1c.set_dset('/OBSERVATION_DATA/AoLP_noise', data)
-        l1c.set_dset('/OBSERVATION_DATA/U_over_I', data)
-        l1c.set_dset('/OBSERVATION_DATA/U_over_I_noise', data)
+        l1c.set_dset('/OBSERVATION_DATA/obs_per_view', obs_per_view)
+        l1c.set_dset('/OBSERVATION_DATA/QC_bitwise', qc_bits)
+        l1c.set_dset('/OBSERVATION_DATA/QC', qc_val)
+        l1c.set_dset('/OBSERVATION_DATA/QC_polsample_bitwise', qc_pol_bits)
+        l1c.set_dset('/OBSERVATION_DATA/QC_polsample', qc_pol)
+        l1c.set_dset('/OBSERVATION_DATA/I', intens_val)
+        l1c.set_dset('/OBSERVATION_DATA/I_noise', intens_noise)
+        l1c.set_dset('/OBSERVATION_DATA/I_polsample', intens_pol)
+        l1c.set_dset('/OBSERVATION_DATA/I_polsample_noise', intens_pol_noise)
+        l1c.set_dset('/OBSERVATION_DATA/DoLP', dolp_val)
+        l1c.set_dset('/OBSERVATION_DATA/DoLP_noise', dolp_noise)
+        l1c.set_dset('/OBSERVATION_DATA/Q_over_I', q_val)
+        l1c.set_dset('/OBSERVATION_DATA/Q_over_I_noise', q_noise)
+        l1c.set_dset('/OBSERVATION_DATA/AoLP', aolp_val)
+        l1c.set_dset('/OBSERVATION_DATA/AoLP_noise', aolp_noise)
+        l1c.set_dset('/OBSERVATION_DATA/U_over_I', u_val)
+        l1c.set_dset('/OBSERVATION_DATA/U_over_I_noise', u_noise)
 
         # group SENSOR_VIEWS_BANDS
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_bandpasses', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_F0', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_wavelengths', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_bandpasses', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_F0', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_wavelengths', data)
-        l1c.set_dset('/SENSOR_VIEWS_BANDS/view_angles', data)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_bandpasses', intens_bands)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_F0', intens_f0)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/intensity_wavelengths', intens_wav)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_bandpasses', polar_bands)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_F0', polar_f0)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/polarization_wavelengths', polar_wav)
+        l1c.set_dset('/SENSOR_VIEWS_BANDS/view_angles', view_angles)
 
         # write global attributes
-        l1c.fill_global_attrs(inflight=inflight)
+        l1c.fill_global_attrs()
         # l1c.set_attr('input_files', [Path(x).name for x in args.file_list])
 
 # --------------------------------------------------
