@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python class to create SPEXone Level-1 products
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -537,7 +537,7 @@ class L1Aio(Lv1io):
 
         Returns
         -------
-        numpy.ndarray with sec_of_day
+        tuple holding reference_day and numpy.ndarray with sec_of_day
         """
         # determine midnight before start measurement
         tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
@@ -549,7 +549,7 @@ class L1Aio(Lv1io):
         sec_of_day = ccsds_sec - (reference_day - self.epoch).total_seconds()
 
         # return seconds since midnight
-        return (reference_day, sec_of_day + ccsds_subsec / 65536)
+        return reference_day, sec_of_day + ccsds_subsec / 65536
 
     def fill_time(self, ccsds_sec, ccsds_subsec, group=None) -> None:
         """
