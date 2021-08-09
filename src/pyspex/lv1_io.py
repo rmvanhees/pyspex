@@ -106,11 +106,11 @@ class Lv1io:
         append : bool, default=False
            do no clobber, but add new data to existing product
         """
-        self.__epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-        # initialize private class-attributes
         self.product = Path(product)
         self.fid = None
+
+        # initialize private class-attributes
+        self.__epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         # initialize Level-1 product
         if not append:
@@ -118,8 +118,12 @@ class Lv1io:
                 self.fid = init_l1a(product, **kwargs)
             elif self.processing_level == 'L1B':
                 self.fid = init_l1b(product, **kwargs)
+                if 'ref_date' in kwargs and kwargs['ref_date'] is not None:
+                    self.__epoch = kwargs['ref_date']
             elif self.processing_level == 'L1C':
                 self.fid = init_l1c(product, **kwargs)
+                if 'ref_date' in kwargs and kwargs['ref_date'] is not None:
+                    self.__epoch = kwargs['ref_date']
             else:
                 raise KeyError('valid processing levels are: L1A, L1B or L1C')
         else:
@@ -474,7 +478,7 @@ class L1Aio(Lv1io):
         ----------
         allow_empty :  bool, default=False
         """
-        warn_str = ('SPEX Level-1 format check [WARNING]:'
+        warn_str = ('SPEX Level-1A format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check image datasets
@@ -748,33 +752,32 @@ class L1Bio(Lv1io):
     """
     processing_level = 'L1B'
     dset_stored = {
-        '/SENSOR_VIEWS_BANDS/viewport_index': 0,
-        '/SENSOR_VIEWS_BANDS/view_angles': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_f0': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_f0': 0,
         '/BIN_ATTRIBUTES/image_time': 0,
+        '/GEOLOCATION_DATA/altitude': 0,
         '/GEOLOCATION_DATA/latitude': 0,
         '/GEOLOCATION_DATA/longitude': 0,
-        '/GEOLOCATION_DATA/altitude': 0,
-        '/GEOLOCATION_DATA/altitude_variability': 0,
         '/GEOLOCATION_DATA/sensor_azimuth': 0,
         '/GEOLOCATION_DATA/sensor_zenith': 0,
         '/GEOLOCATION_DATA/solar_azimuth': 0,
         '/GEOLOCATION_DATA/solar_zenith': 0,
         '/OBSERVATION_DATA/I': 0,
         '/OBSERVATION_DATA/I_noise': 0,
-        '/OBSERVATION_DATA/q': 0,
-        '/OBSERVATION_DATA/q_noise': 0,
-        '/OBSERVATION_DATA/u': 0,
-        '/OBSERVATION_DATA/u_noise': 0,
         '/OBSERVATION_DATA/AoLP': 0,
         '/OBSERVATION_DATA/AoLP_noise': 0,
         '/OBSERVATION_DATA/DoLP': 0,
-        '/OBSERVATION_DATA/DoLP_noise': 0
+        '/OBSERVATION_DATA/DoLP_noise': 0,
+        '/OBSERVATION_DATA/Q_over_I': 0,
+        '/OBSERVATION_DATA/Q_over_I_noise': 0,
+        '/OBSERVATION_DATA/U_over_I': 0,
+        '/OBSERVATION_DATA/U_over_I_noise': 0,
+        '/SENSOR_VIEWS_BANDS/viewport_index': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_F0': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_F0': 0,
+        '/SENSOR_VIEWS_BANDS/view_angles': 0
     }
 
     def close(self):
@@ -815,7 +818,7 @@ class L1Bio(Lv1io):
         """
         Check variables with the same first dimension have equal sizes
         """
-        warn_str = ('SPEX Level-1 format check [WARNING]:'
+        warn_str = ('SPEX Level-1B format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check datasets in group /SENSOR_VIEWS_BANDS
@@ -903,13 +906,6 @@ class L1Cio(Lv1io):
     """
     processing_level = 'L1C'
     dset_stored = {
-        '/SENSOR_VIEWS_BANDS/view_angles': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_f0': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_f0': 0,
         '/BIN_ATTRIBUTES/nadir_view_time': 0,
         '/BIN_ATTRIBUTES/view_time_offsets': 0,
         '/GEOLOCATION_DATA/latitude': 0,
@@ -921,20 +917,29 @@ class L1Cio(Lv1io):
         '/GEOLOCATION_DATA/solar_azimuth': 0,
         '/GEOLOCATION_DATA/solar_zenith': 0,
         '/OBSERVATION_DATA/obs_per_view': 0,
+        '/OBSERVATION_DATA/AoLP': 0,
+        '/OBSERVATION_DATA/AoLP_noise': 0,
+        '/OBSERVATION_DATA/DoLP': 0,
+        '/OBSERVATION_DATA/DoLP_noise': 0,
         '/OBSERVATION_DATA/I': 0,
         '/OBSERVATION_DATA/I_noise': 0,
         '/OBSERVATION_DATA/I_polsample': 0,
         '/OBSERVATION_DATA/I_polsample_noise': 0,
-        '/OBSERVATION_DATA/Q': 0,
-        '/OBSERVATION_DATA/Q_noise': 0,
-        '/OBSERVATION_DATA/U': 0,
-        '/OBSERVATION_DATA/U_noise': 0,
-        '/OBSERVATION_DATA/q': 0,
-        '/OBSERVATION_DATA/q_noise': 0,
-        '/OBSERVATION_DATA/u': 0,
-        '/OBSERVATION_DATA/u_noise': 0,
-        '/OBSERVATION_DATA/DoLP': 0,
-        '/OBSERVATION_DATA/DoLP_noise': 0
+        '/OBSERVATION_DATA/QC': 0,
+        '/OBSERVATION_DATA/QC_bitwise': 0,
+        '/OBSERVATION_DATA/QC_polsample': 0,
+        '/OBSERVATION_DATA/QC_polsample_bitwise': 0,
+        '/OBSERVATION_DATA/Q_over_I': 0,
+        '/OBSERVATION_DATA/Q_over_I_noise': 0,
+        '/OBSERVATION_DATA/U_over_I': 0,
+        '/OBSERVATION_DATA/U_over_I_noise': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/intensity_F0': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
+        '/SENSOR_VIEWS_BANDS/polarization_F0': 0,
+        '/SENSOR_VIEWS_BANDS/view_angles': 0
     }
 
     def close(self):
@@ -975,7 +980,7 @@ class L1Cio(Lv1io):
         """
         Check variables with the same first dimension have equal sizes
         """
-        warn_str = ('SPEX Level-1 format check [WARNING]:'
+        warn_str = ('SPEX Level-1C format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check datasets in group /SENSOR_VIEWS_BANDS

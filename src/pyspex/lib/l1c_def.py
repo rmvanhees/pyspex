@@ -10,8 +10,11 @@ Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+from datetime import datetime, timezone
+
 from netCDF4 import Dataset
 import numpy as np
+
 
 # - global parameters ------------------------------
 
@@ -20,7 +23,7 @@ import numpy as np
 
 
 # - main function ----------------------------------
-def init_l1c(l1c_flname: str, dims: dict) -> None:
+def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     """
     Create an empty PACE SPEX Level-1C product
 
@@ -28,6 +31,8 @@ def init_l1c(l1c_flname: str, dims: dict) -> None:
     ----------
     l1c_flname : string
        Name of Level-1C product
+    ref_date : datetime.datetime
+       Reference date for image time
     dims :   dictionary
        Provide length of the Level-1B dimensions
        Default values:
@@ -73,17 +78,19 @@ def init_l1c(l1c_flname: str, dims: dict) -> None:
     # create groups and all variables with attributes
     sgrp = rootgrp.createGroup('BIN_ATTRIBUTES')
     chunksizes = None if n_bins_along is not None else (512,)
-    dset = sgrp.createVariable('nadir_view_time', 'f8', ('bins_along_track',),
-                               chunksizes=chunksizes)
+    dset = sgrp.createVariable('nadir_view_time', 'f8',
+                               ('bins_along_track',), chunksizes=chunksizes)
     dset.long_name = 'time bin was viewed at nadir view'
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    dset.units = 'seconds'
-    dset.reference = 'yyyy-mm-ddT00:00:00'
+    if ref_date is None:
+        dset.units = 'seconds'
+    else:
+        dset.units = 'seconds since {}'.format(ref_date.isoformat(sep=" "))
     chunksizes = None if n_bins_along is not None else (512, n_bins_across)
     dset = sgrp.createVariable('view_time_offsets', 'f8',
-                               ('bins_along_track', 'bins_across_track'),
-                               chunksizes=chunksizes)
+                               ('bins_along_track', 'bins_across_track',
+                               'number_of_views'), chunksizes=chunksizes)
     dset.long_name = 'time offsets of views from nadir view'
     dset.valid_min = -200
     dset.valid_max = 200
@@ -149,10 +156,11 @@ def init_l1c(l1c_flname: str, dims: dict) -> None:
     sgrp = rootgrp.createGroup('OBSERVATION_DATA')
     chunksizes = None if n_bins_along is not None else \
         (32, n_bins_across, n_views)
-    dset = sgrp.createVariable('obs_per_view', 'f4',
+    dset = sgrp.createVariable('obs_per_view', 'i2',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views'), chunksizes=chunksizes)
     dset.long_name = 'observations contributing to bin from each view'
+    dset.valid_min = 0
     dset.units = '1'
     dset.comment = "Observations contributing to bin from each view"
     chunksizes = None if n_bins_along is not None \
