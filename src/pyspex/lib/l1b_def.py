@@ -10,8 +10,6 @@ Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timezone
-
 from netCDF4 import Dataset
 
 # - global parameters ------------------------------
@@ -257,6 +255,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    fid = init_l1b('PACE_SPEX.20230115T123456.L1B.2.5km.V01.nc', {})
+    fid = init_l1b('PACE_SPEX.20230115T123456.L1B.2.5km.V01.nc',
+                   ref_date=None, dims={})
     fid.fill_global_attrs(orbit=12345, bin_size='2.5km')
     fid.close()

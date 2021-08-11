@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation of the PACE SPEX Level-1A product (inflight and onground)
 
-Copyright (c) 2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause

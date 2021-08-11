@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation to convert SPEXone DEM measurements to L1A format
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -134,7 +134,6 @@ def main():
         demhk_data = np.zeros(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x322)))
         for ii in range(min(len(nomhk_tm), len(demhk_tm))):
             demhk_data[ii] = demhk_tm[ii]['detector_hk']
-
 
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))

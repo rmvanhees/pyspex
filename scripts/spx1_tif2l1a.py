@@ -10,7 +10,7 @@ Environment
 -----------
 CKD_DIR :  directory with SPEXone CKD, default is CWD
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -253,8 +253,8 @@ def main():
         if 'DoLP input' in hdr:
             gse.write_attr_polarization(float(hdr['AoLP input (deg)']),
                                         float(hdr['DoLP input']))
-        if ('Spectral data stimulus' in hdr
-            and 'Illuminated viewing angle' in hdr):
+        if 'Spectral data stimulus' in hdr \
+           and 'Illuminated viewing angle' in hdr:
             gse.write_data_stimulus(get_stimulus(hdr))
 
 

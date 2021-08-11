@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation to convert SPEXone DEM measurements to L1A format
 
-Copyright (c) 2019-2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -222,6 +222,7 @@ def main():
                 mask = ((secnd >= utc_start) & (secnd <= utc_stop))
                 value, spread = biweight(fid['amps'][mask], spread=True)
             gse.write_reference_signal(value, spread)
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

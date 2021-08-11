@@ -30,7 +30,7 @@ Environment
 -----------
 CKD_DIR :  directory with SPEXone CKD, default is CWD
 
-Copyright (c) 2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause

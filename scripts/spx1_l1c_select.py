@@ -18,6 +18,7 @@ import h5py
 
 from pyspex.lv1_io import L1Cio
 
+
 # --------------------------------------------------
 def main():
     """
@@ -120,10 +121,10 @@ def main():
                 else:
                     global_attrs[key] = fid.attrs[key].decode('ascii')
 
-    dims = {'bins_along_track' :  latitude.shape[0],
-            'bins_across_track' :  latitude.shape[1],
-            'intensity_bands_per_view' :  intens_bands.shape[1],
-            'polarization_bands_per_view' :  polar_bands.shape[1]}
+    dims = {'bins_along_track':  latitude.shape[0],
+            'bins_across_track':  latitude.shape[1],
+            'intensity_bands_per_view':  intens_bands.shape[1],
+            'polarization_bands_per_view':  polar_bands.shape[1]}
 
     # ----- perform data selection -----
     # ToDo: implement data selection
@@ -131,8 +132,8 @@ def main():
     # ----- now we can update the name of the output product -----
     # - because the production time has changed
     # - and when coverage time is changed
-    if ((out_dir / l1c_product.name).is_file()
-        and l1c_product.samefile(out_dir / l1c_product.name)):
+    if (out_dir / l1c_product.name).is_file() \
+       and l1c_product.samefile(out_dir / l1c_product.name):
         raise OSError('Output will overwrite original product')
 
     # ----- write new output product with selected data -----

@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Defines global attributes for SPEXone L1 products
 
-Copyright (c) 2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause

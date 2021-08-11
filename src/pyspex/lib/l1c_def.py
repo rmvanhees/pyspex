@@ -10,8 +10,6 @@ Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timezone
-
 from netCDF4 import Dataset
 import numpy as np
 
@@ -57,13 +55,13 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     n_polar_bands = 50
 
     if 'bins_across_track' in dims:
-       n_bins_across = dims['bins_across_track']
+        n_bins_across = dims['bins_across_track']
     if 'bins_along_track' in dims:
-       n_bins_along = dims['bins_along_track']
+        n_bins_along = dims['bins_along_track']
     if 'intensity_bands_per_view' in dims:
-       n_intens_bands = dims['intensity_bands_per_view']
+        n_intens_bands = dims['intensity_bands_per_view']
     if 'polarization_bands_per_view' in dims:
-       n_polar_bands = dims['polarization_bands_per_view']
+        n_polar_bands = dims['polarization_bands_per_view']
 
     # create/overwrite netCDF4 product
     rootgrp = Dataset(l1c_flname, "w")
@@ -90,7 +88,7 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     chunksizes = None if n_bins_along is not None else (512, n_bins_across)
     dset = sgrp.createVariable('view_time_offsets', 'f8',
                                ('bins_along_track', 'bins_across_track',
-                               'number_of_views'), chunksizes=chunksizes)
+                                'number_of_views'), chunksizes=chunksizes)
     dset.long_name = 'time offsets of views from nadir view'
     dset.valid_min = -200
     dset.valid_max = 200
@@ -128,7 +126,7 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     dset.valid_max = 180
     dset.units = 'degrees_east'
     chunksizes = None if n_bins_along is not None \
-                 else (512, n_bins_across, n_views)
+        else (512, n_bins_across, n_views)
     dset = sgrp.createVariable('sensor_azimuth', 'f4',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views'), chunksizes=chunksizes)
@@ -322,6 +320,7 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    fid = init_l1c('PACE_SPEX.20230115T123456.L1C.5km.V01.nc', {})
+    fid = init_l1c('PACE_SPEX.20230115T123456.L1C.5km.V01.nc',
+                   ref_date=None, dims={})
     fid.fill_global_attrs(orbit=12345, bin_size='5km')
     fid.close()

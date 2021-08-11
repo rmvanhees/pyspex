@@ -42,6 +42,7 @@ def inv_sec_of_day(reference_day, sec_of_day,
 
     return offs + ccsds_sec, ccsds_subsec
 
+
 # --------------------------------------------------
 def main():
     """
@@ -115,8 +116,8 @@ def main():
         # gse_data = 'gse_data' in fid
 
     # define dimensions
-    dims = {'number_of_images' : img_data.shape[0],
-            'samples_per_image' : img_data.shape[1],
+    dims = {'number_of_images': img_data.shape[0],
+            'samples_per_image': img_data.shape[1],
             'hk_packets': nomhk_data.size}
 
     # ----- perform data selection -----
@@ -125,8 +126,8 @@ def main():
     # ----- now we can update the name of the output product -----
     # - because the production time has changed
     # - and when coverage time is changed
-    if ((out_dir / l1a_product.name).is_file()
-        and l1a_product.samefile(out_dir / l1a_product.name)):
+    if (out_dir / l1a_product.name).is_file() \
+       and l1a_product.samefile(out_dir / l1a_product.name):
         raise OSError('Output will overwrite original product')
 
     # ----- write new output product with selected data -----
@@ -154,6 +155,7 @@ def main():
     #     with h5py.File(l1a_product) as fid_in:
     #         with h5py.File(out_dir / l1a_product.name, 'r+') as fid_out:
     #             fid_out.copy(fid_in['gse_data'], 'gse_data')
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

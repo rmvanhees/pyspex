@@ -38,6 +38,7 @@ def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
 
     return bin_ckd.unbin(table_id, img_binned).reshape(1024, 1024)
 
+
 # --------------------------------------------------
 def main():
     """

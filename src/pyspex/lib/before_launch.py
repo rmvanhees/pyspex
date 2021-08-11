@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 # before the expected launch date of PACE in 2023
 LAUNCH_DATE = datetime(2023, 1, 1, tzinfo=timezone.utc)
 
+
 def before_launch(timestamp: int) -> bool:
     """
     Return True when timestamp is before launch of PACE

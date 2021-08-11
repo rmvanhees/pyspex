@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 Defines SPEXone telemetry packet structures as a list of tuples to create
 Numpy structured datatypes
 
-Copyright (c) 2020 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -78,7 +78,7 @@ def tmtc_def(apid):
             ('REG_NCOADDFRAMES', 'u1'),         # 111   0x007b
             ('REG_IGEN_SELECT', 'u1'),          # 112   0x007c
             ('REG_FULL_FRAME', 'u1'),           # 113   0x007d
-            ('REG_BINNING_TABLE_START', '>u4'), # 114   0x007e
+            ('REG_BINNING_TABLE_START', '>u4'),  # 114  0x007e
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 118   0x0082
             ('dummy_01', 'u1'),                 # 119   0x0083
             ('REG_COADD_BUF_START', '>u4'),     # 120   0x0084
@@ -341,7 +341,7 @@ def tmtc_def(apid):
             ('REG_FULL_FRAME', 'u1'),           # 8     0x0014
             ('dummy_01', 'u1'),                 # 9     0x0015
             ('REG_FLASH_ERASE', '<u4'),         # 10    0x0016 LE
-            ('REG_BINNING_TABLE_START', '>u4'), # 14    0x001a
+            ('REG_BINNING_TABLE_START', '>u4'),  # 14   0x001a
             ('REG_CMV_OUTPUTMODE', 'u1'),       # 18    0x001e
             ('REG_DETECT_ENABLE', 'u1'),        # 19    0x001f
             ('REG_POWERUP_DELAY', '<u4'),       # 20    0x0020 LE
@@ -458,6 +458,7 @@ def tmtc_def(apid):
         ]                                       # 188
 
     raise ValueError('Telemetry APID not implemented')
+
 
 def tmtc_dtype(apid):
     """
