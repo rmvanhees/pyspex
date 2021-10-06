@@ -50,7 +50,11 @@ def prod_name(utc_sensing_start, msm_id=None,
     -----
     The general format that applies to all in-flight SPEXone products:
 
-       PACE_CCCC_SPX1_PP_LLL_OOOOO_yyyymmddThhmmss_YYYYMMDDTHHMMSS_vvvvv.nc
+       [Science Product] PACE_SPEXone.yyyymmddThhmmss.LLL.VVV.nc
+       [Calibration Product] PACE_SPEXone_CAL.yyyymmddThhmmss.LLL.VVV.nc
+       [Monitoring Product] PACE_SPEXone_TTTTT.yyyymmddThhmmss.LLL.VVV.nc
+
+       A Near Real-Time identifier can be added if required
 
     The general format that applies to all on-ground SPEXone products:
 
@@ -63,7 +67,10 @@ def prod_name(utc_sensing_start, msm_id=None,
     if not isinstance(version_number, int):
         raise ValueError("parameter: version_number")
 
-    # define product ID
+    # define string of sensing start as yyyymmddThhmmss
+    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
+
+    # in-flight product when no MSM identifier is provided
     if msm_id is None:
         if orbit is not None and not isinstance(orbit, int):
             raise ValueError("parameter: orbit")
@@ -71,18 +78,15 @@ def prod_name(utc_sensing_start, msm_id=None,
         if file_class not in ('OPER', 'CONS', 'TEST'):
             raise ValueError("parameter: file_class")
 
-        if data_type not in ('CA', 'RA'):
-            raise ValueError("parameter: data_type")
+        # should be None, 'CAL' or 'MON*'
+        if data_type is not None:
+            return (f'PACE_SPEXone_{data_type}.{sensing_start:15s}'
+                    f'.{level:3s}.V{version_number:02d}.nc')
 
-        product_id = (f'PACE_{file_class:4s}_SPX1_{data_type:2s}'
-                      f'_{level:3s}_{orbit:05d}')
-    else:
-        product_id = f'SPX1_OCAL_{msm_id:s}_L1A'
+        return (f'PACE_SPEXone.{sensing_start:15s}'
+                f'.{level:3s}.V{version_number:02d}.nc')
 
-    # define string of sensing start as yyyymmddThhmmss
-    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
-
-    # define instance ID
-    return (f'{product_id}_{sensing_start:15s}'
+    # on-ground product
+    return (f'SPX1_OCAL_{msm_id}_L1A_{sensing_start:15s}'
             f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
             f'_{version_number:04d}.nc')
