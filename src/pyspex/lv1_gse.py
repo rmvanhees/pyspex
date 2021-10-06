@@ -72,7 +72,7 @@ class LV1gse:
         if alt_angle:
             vp_dict = {'-50.0': 1, '-20.0': 2, '0.0': 4, '20.0': 8, '50.0': 16}
 
-            viewport = vp_dict.get('{:.1f}'.format(alt_angle[0]), 0)
+            viewport = vp_dict.get(f'{alt_angle[0]:.1f}', 0)
         else:
             vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
                        'P50DEG': 16}

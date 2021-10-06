@@ -79,7 +79,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
     if ref_date is None:
         dset.units = 'seconds'
     else:
-        dset.units = 'seconds since {}'.format(ref_date.isoformat(sep=" "))
+        dset.units = f'seconds since {ref_date.isoformat(sep=" ")}'
 
     # -------------------------
     sgrp = rootgrp.createGroup('GEOLOCATION_DATA')

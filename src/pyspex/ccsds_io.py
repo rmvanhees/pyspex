@@ -157,10 +157,10 @@ class CCSDSio:
         self.open_next_file()
 
     def __repr__(self) -> str:
-        return '{:03d} {} {} 0x{:x} {} {:5d} {:5d} {:9d}'.format(
-            self.version_no, self.type_indicator, self.secnd_hdr_flag,
-            self.ap_id, self.grouping_flag, self.sequence_count,
-            self.packet_length, self.fp.tell())
+        return (f'{self.version_no:03d} {self.type_indicator}'
+                f' {self.secnd_hdr_flag} 0x{self.ap_id:x} {self.grouping_flag}'
+                f' {self.sequence_count:5d} {self.packet_length:5d}'
+                f' {self.fp.tell():9d}')
 
     def __iter__(self):
         for attr in sorted(self.__dict__):
@@ -279,7 +279,7 @@ class CCSDSio:
         """
         flname = next(self.file_list)
         if not Path(flname).is_file():
-            raise FileNotFoundError('{} does not exist'.format(flname))
+            raise FileNotFoundError(f'{flname} does not exist')
 
         self.close()
         # pylint: disable=consider-using-with

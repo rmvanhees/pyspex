@@ -130,9 +130,9 @@ def main():
                         (np.nanmin(img2d), np.nanmax(img2d)),
                         fmt='[{:.3f}, {:.3f}]')
             if table_id[ii] > 0:
-                suptitle = 'frame [table_id={}]: {}'.format(table_id[ii], ii)
+                suptitle = f'frame [table_id={table_id[ii]}]: {ii}'
             else:
-                suptitle = 'frame: {}'.format(ii)
+                suptitle = f'frame: {ii}'
             plot.draw_signal(img2d, vperc=[1, 99], fig_info=figinfo,
                              sub_title=suptitle)
         # close plot object

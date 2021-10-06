@@ -181,7 +181,7 @@ class DEMio:
             self.bin_file = flname
             self.hdr_file = flname.replace('b.bin', 'a.txt')
         else:
-            raise RuntimeError('invalid filename: {}'.format(flname))
+            raise RuntimeError(f'invalid filename: {flname}')
 
         if Path(self.hdr_file).is_file():
             self.__get_hdr()
@@ -191,7 +191,7 @@ class DEMio:
         Read DEM header data
         """
         self.__hdr = np.zeros((1,), dtype=det_dtype())
-        with open(self.hdr_file, 'r') as fp:
+        with open(self.hdr_file, 'r', encoding='ascii', errors='ignore') as fp:
             for line in fp:
                 columns = line[:-1].split(',')
                 if columns[0] == 'Reg':
@@ -217,7 +217,7 @@ class DEMio:
                 elif name == 'Unused':
                     if columns[0] == '86':
                         continue
-                    name = 'Unused_{:03d}'.format(int(columns[0]))
+                    name = f'Unused_{int(columns[0]):03d}'
 
                 key = name.upper()
                 if isinstance(self.__hdr[0][key], np.ndarray):

@@ -136,7 +136,7 @@ class Lv1io:
 
     def __repr__(self) -> str:
         class_name = type(self).__name__
-        return '{}({!r})'.format(class_name, self.product)
+        return f'{class_name}({self.product!r})'
 
     def __iter__(self):
         for attr in sorted(self.__dict__):
@@ -235,13 +235,11 @@ class Lv1io:
             if grp_name != '.':
                 if var_name not in self.fid[grp_name].groups \
                    and var_name not in self.fid[grp_name].variables:
-                    raise KeyError(
-                        'ds_name {} not present in product'.format(ds_name))
+                    raise KeyError(f'ds_name {ds_name} not present in product')
             else:
                 if var_name not in self.fid.groups \
                    and var_name not in self.fid.variables:
-                    raise KeyError(
-                        'ds_name {} not present in product'.format(ds_name))
+                    raise KeyError(f'ds_name {ds_name} not present in product')
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.string_(value))
@@ -267,12 +265,10 @@ class Lv1io:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(
-                    'dataset {} not present in Level-1 product'.format(name))
+                raise KeyError(f'dataset {name} not present in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(
-                    'dataset {} not present in Level-1 product'.format(name))
+                raise KeyError(f'dataset {name} not present in Level-1 product')
 
         return self.fid[name][:]
 
@@ -295,12 +291,10 @@ class Lv1io:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(
-                    'dataset {} not present in Level-1 product'.format(name))
+                raise KeyError(f'dataset {name} not present in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(
-                    'dataset {} not present in Level-1 product'.format(name))
+                raise KeyError(f'dataset {name} not present in Level-1 product')
 
         dims = self.fid[name].get_dims()
         if not dims:
@@ -582,21 +576,21 @@ class L1Aio(Lv1io):
             self.set_dset('/image_attributes/image_CCSDS_subsec', ccsds_subsec)
             self.set_dset('/image_attributes/image_time', sec_of_day)
             self.set_attr('units',
-                          'seconds since {}'.format(reference_day.isoformat()),
+                          f'seconds since {reference_day.isoformat()}',
                           ds_name='/image_attributes/image_time')
         elif group in ('engineering_data', '/engineering_data'):
             self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
             self.set_attr('units',
-                          'seconds since {}'.format(reference_day.isoformat()),
+                          f'seconds since {reference_day.isoformat()}',
                           ds_name='/engineering_data/HK_tlm_time')
         else:
             self.set_dset('/navigation_data/att_time', sec_of_day)
             self.set_attr('units',
-                          'seconds since {}'.format(reference_day.isoformat()),
+                          f'seconds since {reference_day.isoformat()}',
                           ds_name='/navigation_data/att_time')
             self.set_dset('/navigation_data/orb_time', sec_of_day)
             self.set_attr('units',
-                          'seconds since {}'.format(reference_day.isoformat()),
+                          f'seconds since {reference_day.isoformat()}',
                           ds_name='/navigation_data/orb_time')
 
     def fill_science(self, img_data, img_hk, img_id) -> None:

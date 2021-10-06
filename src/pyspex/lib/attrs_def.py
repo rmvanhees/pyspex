@@ -37,7 +37,7 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
         origin = 'NASA' if inflight else 'SRON'
 
     res = {
-        "title": "PACE SPEX Level-{:s} data".format(level[1:]),
+        "title": f"PACE SPEX Level-{level[1:]} data",
         "instrument": "SPEX",
         "processing_version": "V1.0",
         "conventions": "CF-1.6",
@@ -80,7 +80,7 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
     }
 
     if origin == 'SRON':
-        res['title'] = "SPEXone Level-{:s} data".format(level[1:])
+        res['title'] = f"SPEXone Level-{level[1:]} data"
         res['instrument'] = "SPEXone"
         res['institution'] = "SRON Netherlands Institute for Space Research"
         res['creator_name'] = "SRON/Earth Science"

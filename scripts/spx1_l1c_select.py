@@ -45,8 +45,7 @@ def main():
 
     l1c_product = Path(args.l1c_product)
     if not l1c_product.is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.l1c_product))
+        raise FileNotFoundError(f'File {args.l1c_product} does not exist')
     # Check if SPEXone Level-1C product
     # ToDo: implement check on data product
 

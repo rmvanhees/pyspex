@@ -125,8 +125,7 @@ class BinningTables:
         release :  int, default=1
            Release number, start at 1
         """
-        self.ckd_file = 'SPX1_CKD_BIN_TBL_{:s}_{:03d}.nc'.format(
-            validity_start, release)
+        self.ckd_file = f'SPX1_CKD_BIN_TBL_{validity_start}_{release:03d}.nc'
 
         if (self.ckd_dir / self.ckd_file).is_file():
             return
@@ -199,7 +198,7 @@ class BinningTables:
                                  return_counts=True)
 
         with Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
-            gid = fid.createGroup('/Table_{:03d}'.format(table_id))
+            gid = fid.createGroup(f'/Table_{table_id:03d}')
             gid.enabled_lines = np.uint16(lineskip_arr.sum())
             gid.flex_binned_pixels = np.uint32(index.max()+1)
             gid.date_created = datetime.now(timezone.utc).isoformat(
@@ -245,7 +244,7 @@ class BinningTables:
            Unbinned image data (no interpolation)
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
-            gid = fid['/Table_{:03d}'.format(table_id)]
+            gid = fid[f'/Table_{table_id:03d}']
             binning_table = gid.variables['binning_table'][:]
             lineskip_arr = gid.variables['lineskip_arr'][:]
             count_table = gid.variables['count_table'][:]

@@ -84,7 +84,7 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     if ref_date is None:
         dset.units = 'seconds'
     else:
-        dset.units = 'seconds since {}'.format(ref_date.isoformat(sep=" "))
+        dset.units = f'seconds since {ref_date.isoformat(sep=" ")}'
     chunksizes = None if n_bins_along is not None else (512, n_bins_across)
     dset = sgrp.createVariable('view_time_offsets', 'f8',
                                ('bins_along_track', 'bins_across_track',

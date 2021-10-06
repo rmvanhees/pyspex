@@ -111,8 +111,7 @@ def main():
         print(args)
 
     if not Path(args.ascii_file).is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.ascii_file))
+        raise FileNotFoundError(f'File {args.ascii_file} does not exist')
 
     if not args.inp_tif and args.nframe is not None:
         raise RuntimeError('option --nframe works only with "--inp_tif"')
@@ -125,7 +124,7 @@ def main():
         for key, value in hdr.items():
             if key == 'Spectral data stimulus':
                 continue
-            print("{:s}: '{}'".format(key, value))
+            print(f"{key:s}: '{value}'")
 
     # For now, we obtain the reference time from the TIFF.tags
     msm_id = hdr['OCAL measurement']

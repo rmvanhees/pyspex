@@ -97,8 +97,8 @@ class CKDio:
             valid_date = '20191001T000000'
 
         creation_date = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-        self.filename = 'SPX1_L1_CKD_{:13s}_{:6s}_{:13s}.h5'.format(
-            valid_date, VERSION, creation_date)
+        self.filename = \
+            f'SPX1_L1_CKD_{valid_date:13s}_{VERSION:6s}_{creation_date:13s}.h5'
 
         if Path(self.filename).is_file():
             if not overwrite:
@@ -146,7 +146,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'offset' in fid:
                 raise ValueError('dataset offset already exists')
 
@@ -173,7 +173,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'darkcurrent' in fid:
                 raise ValueError('dataset darkcurrent already exists')
 
@@ -204,7 +204,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'nonlinearity' in fid:
                 raise ValueError('dataset nonlinearity already exists')
             raise ValueError('not yet implemented')
@@ -220,7 +220,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'PRNU' in fid:
                 raise ValueError('dataset PRNU already exists')
 
@@ -244,7 +244,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'offset' not in grp:
                 raise ValueError('CKD offset does not exist')
 
@@ -260,7 +260,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'darkcurrent' not in grp:
                 raise ValueError('CKD darkcurrent does not exist')
 
@@ -276,7 +276,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'nonlinearity' not in grp:
                 raise ValueError('CKD nonlinearity does not exist')
 
@@ -292,7 +292,7 @@ class CKDio:
             if binning == -1:
                 grp = fid['/FULL_FRAME']
             else:
-                grp = fid['/BINNING_{:03d}'.format(binning)]
+                grp = fid[f'/BINNING_{binning:03d}']
             if 'PRNU' not in grp:
                 raise ValueError('CKD PRNU does not exist')
 

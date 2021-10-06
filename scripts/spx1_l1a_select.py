@@ -69,8 +69,7 @@ def main():
 
     l1a_product = Path(args.l1a_product)
     if not l1a_product.is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.l1a_product))
+        raise FileNotFoundError(f'File {args.l1a_product} does not exist')
     # Check if SPEXone Level-1a product
     # ToDo: implement check on data product
 

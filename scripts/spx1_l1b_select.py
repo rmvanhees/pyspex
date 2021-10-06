@@ -45,8 +45,7 @@ def main():
 
     l1b_product = Path(args.l1b_product)
     if not l1b_product.is_file():
-        raise FileNotFoundError(
-            'File {} does not exist'.format(args.l1b_product))
+        raise FileNotFoundError(f'File {args.l1b_product} does not exist')
     # Check if SPEXone Level-1B product
     # ToDo: implement check on data product
 
@@ -92,14 +91,14 @@ def main():
         # group SENSOR_VIEWS_BANDS
         group = 'SENSOR_VIEWS_BANDS' if 'SENSOR_VIEWS_BANDS' in fid \
             else 'SENSOR_VIEW_BANDS'
-        view_indx = fid['/{}/viewport_index'.format(group)][:]
-        intens_bands = fid['/{}/intensity_bandpasses'.format(group)][:]
-        intens_wav = fid['/{}/intensity_wavelengths'.format(group)][:]
-        intens_f0 = fid['/{}/intensity_f0'.format(group)][:]
-        polar_bands = fid['/{}/polarization_bandpasses'.format(group)][:]
-        polar_wav = fid['/{}/polarization_wavelengths'.format(group)][:]
-        polar_f0 = fid['/{}/polarization_f0'.format(group)][:]
-        view_angles = fid['/{}/view_angles'.format(group)][:]
+        view_indx = fid[f'/{group}/viewport_index'][:]
+        intens_bands = fid[f'/{group}/intensity_bandpasses'][:]
+        intens_wav = fid[f'/{group}/intensity_wavelengths'][:]
+        intens_f0 = fid[f'/{group}/intensity_f0'][:]
+        polar_bands = fid[f'/{group}/polarization_bandpasses'][:]
+        polar_wav = fid[f'/{group}/polarization_wavelengths'][:]
+        polar_f0 = fid[f'/{group}/polarization_f0'][:]
+        view_angles = fid[f'/{group}/view_angles'][:]
 
         # global attributes
         global_attrs = {}

@@ -74,15 +74,15 @@ def prod_name(utc_sensing_start, msm_id=None,
         if data_type not in ('CA', 'RA'):
             raise ValueError("parameter: data_type")
 
-        product_id = 'PACE_{:4s}_SPX1_{:2s}_{:3s}_{:05d}'.format(
-            file_class, data_type, level, orbit)
+        product_id = (f'PACE_{file_class:4s}_SPX1_{data_type:2s}'
+                      f'_{level:3s}_{orbit:05d}')
     else:
-        product_id = 'SPX1_OCAL_{:s}_L1A'.format(msm_id)
+        product_id = f'SPX1_OCAL_{msm_id:s}_L1A'
 
     # define string of sensing start as yyyymmddThhmmss
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
     # define instance ID
-    return '{}_{:15s}_{:15s}_{:04d}.nc'.format(
-        product_id, sensing_start,
-        datetime.utcnow().strftime("%Y%m%dT%H%M%S"), version_number)
+    return (f'{product_id}_{sensing_start:15s}'
+            f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{version_number:04d}.nc')

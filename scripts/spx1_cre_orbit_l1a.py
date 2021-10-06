@@ -74,7 +74,7 @@ def initialize_l1a_product(l1a_nav_product: str, bin_tbl: int) -> None:
 
     # read binning table information
     with h5py.File(bin_tbl_fl[-1], 'r') as fid:
-        gid = fid['Table_{:02d}'.format(bin_tbl)]
+        gid = fid[f'Table_{bin_tbl:02d}']
         # enabled_lines = gid.attrs['enabled_lines']
         n_samples = gid['binning_table'].attrs['valid_max'] + 1
 
@@ -230,7 +230,7 @@ def main():
 
     if args.navigation_data is not None:
         duration = initialize_l1a_product(args.navigation_data, args.binTableID)
-        print('Coverage of the navigation data is {} seconds'.format(duration))
+        print(f'Coverage of the navigation data is {duration} seconds')
 
     if args.measurement_data is not None:
         add_measurements(args.measurement_data, args.repeats, sampling=3)

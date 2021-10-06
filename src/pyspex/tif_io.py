@@ -67,7 +67,7 @@ class TIFio():
 
         """
         if not Path(hdr_file).is_file():
-            raise FileNotFoundError('file {} not found'.format(hdr_file))
+            raise FileNotFoundError(f'file {hdr_file} not found')
 
         # initialize class-attributes
         self.filename = hdr_file
@@ -79,7 +79,7 @@ class TIFio():
 
     def __repr__(self):
         class_name = type(self).__name__
-        return '{}({!r})'.format(class_name, self.filename)
+        return f'{class_name}({self.filename!r})'
 
     # --------------------------------------------------
     def header(self) -> dict:
@@ -87,7 +87,7 @@ class TIFio():
         Read header as dictionary
         """
         res = {}
-        with Path(self.filename).open() as fp:
+        with Path(self.filename).open(encoding='ascii', errors='ignore') as fp:
             res['history'] = fp.readline()[:-1]
             _ = fp.readline()
             for line in fp:
@@ -128,7 +128,7 @@ class TIFio():
 
         res = []
         for num in range(n_frame):
-            tif_path = self.dir_name / '{}_{}.tif'.format(self.__stem, num)
+            tif_path = self.dir_name / f'{self.__stem}_{num}.tif'
             with pytiff.Tiff(str(tif_path)) as handle:
                 res.append(handle.read_tags())
 
@@ -148,7 +148,7 @@ class TIFio():
             self.header()
 
         if self.inp_tif:
-            tif_path = self.dir_name / '{}_inp.tif'.format(self.__stem)
+            tif_path = self.dir_name / f'{self.__stem}_inp.tif'
             with pytiff.Tiff(str(tif_path)) as handle:
                 data = handle[:]
 

@@ -104,7 +104,7 @@ def main():
     for ii, flname in enumerate(args.file_list):
         dem_file = Path(flname)
         if not dem_file.is_file():
-            raise FileNotFoundError('file {} does not exist'.format(flname))
+            raise FileNotFoundError(f'file {flname} does not exist')
         if dem_file.suffix == '.txt':
             raise ValueError("We should not try a file with suffix '.txt'")
 

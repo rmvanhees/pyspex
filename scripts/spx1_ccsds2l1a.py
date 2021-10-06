@@ -157,7 +157,7 @@ def main():
     n_frame = 1 if img_data.ndim == 1 else img_data.shape[0]
     n_sample = img_data.size if img_data.ndim == 1 else img_data.shape[1]
     if args.verbose:
-        print('[INFO]: dimension of images [{},{}]'.format(n_frame, n_sample))
+        print(f'[INFO]: dimension of images [{n_frame},{n_sample}]')
     dims = {'number_of_images': n_frame,
             'samples_per_image': n_sample,
             'hk_packets': len(nomhk_tm),
