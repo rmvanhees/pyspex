@@ -61,6 +61,11 @@ class LV1gse:
 
         # investigate filename
         parts = l1a_file.split('_')
+        if len(parts) > 2 and parts[0] == 'SPX1':
+            parts = parts[2:]
+        msmt_fields = parts[0].split('-')
+        background = msmt_fields[1] == 'BKG'
+        vp_str = [x for x in msmt_fields if x.endswith('DEG')]
         act_angle = [float(x.replace('act', ''))
                      for x in parts if x.startswith('act')]
         alt_angle = [float(x.replace('alt', ''))
@@ -69,16 +74,19 @@ class LV1gse:
                      for x in parts if x.startswith('pol') and x != 'polcal']
 
         # determine viewport: default 0, when all viewports are illuminated
-        vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
-                   'P50DEG': 16}
-        vp_str = [x for x in parts[2].split('-') if x.endswith('DEG')]
-        if vp_str:
-            viewport = vp_dict.get(vp_str[0], 0)
+        if background:
+            viewport = 0
+        elif vp_str:
+            vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
+                       'P50DEG': 16}
 
-        if viewport == 0 and alt_angle:
+            viewport = vp_dict.get(vp_str[0], 0)
+        elif alt_angle:
             vp_dict = {'-50.0': 1, '-20.0': 2, '0.0': 4, '20.0': 8, '50.0': 16}
 
             viewport = vp_dict.get(f'{alt_angle[0]:.1f}', 0)
+        else:
+            viewport = 0
 
         gid = self.fid.createGroup('/gse_data')
         dset = gid.createVariable('viewport', 'u1')
@@ -96,8 +104,7 @@ class LV1gse:
         # gid.ACT_illumination = np.nan
         # gid.ALT_illumination = np.nan
         gid.AoLP = 0. if not pol_angle else pol_angle[0]
-        fields = parts[0].split('-')
-        if fields[0] in ('POLARIZED', 'POLARIMETRIC') and fields[1] != 'BKG':
+        if not background and msmt_fields[0] in ('POLARIZED', 'POLARIMETRIC'):
             gid.DoLP = 1.
         else:
             gid.DoLP = 0.
