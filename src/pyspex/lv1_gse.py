@@ -69,16 +69,16 @@ class LV1gse:
                      for x in parts if x.startswith('pol') and x != 'polcal']
 
         # determine viewport: default 0, when all viewports are illuminated
-        if alt_angle:
+        vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
+                   'P50DEG': 16}
+        vp_str = [x for x in parts[2].split('-') if x.endswith('DEG')]
+        if vp_str:
+            viewport = vp_dict.get(vp_str[0], 0)
+
+        if viewport == 0 and alt_angle:
             vp_dict = {'-50.0': 1, '-20.0': 2, '0.0': 4, '20.0': 8, '50.0': 16}
 
             viewport = vp_dict.get(f'{alt_angle[0]:.1f}', 0)
-        else:
-            vp_dict = {'M50DEG': 1, 'M20DEG': 2, '0DEG': 4, 'P20DEG': 8,
-                       'P50DEG': 16}
-            vp_str = [x for x in parts[2].split('-') if x.endswith('DEG')]
-
-            viewport = vp_dict.get(vp_str[0], 0) if vp_str else 0
 
         gid = self.fid.createGroup('/gse_data')
         dset = gid.createVariable('viewport', 'u1')
