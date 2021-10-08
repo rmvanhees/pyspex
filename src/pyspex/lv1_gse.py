@@ -64,7 +64,7 @@ class LV1gse:
         if len(parts) > 2 and parts[0] == 'SPX1':
             parts = parts[2:]
         msmt_fields = parts[0].split('-')
-        background = msmt_fields[1] == 'BKG'
+        background = 'BKG' in msmt_fields
         vp_str = [x for x in msmt_fields if x.endswith('DEG')]
         act_angle = [float(x.replace('act', ''))
                      for x in parts if x.startswith('act')]
