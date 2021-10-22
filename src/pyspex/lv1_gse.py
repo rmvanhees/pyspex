@@ -203,7 +203,8 @@ class LV1gse:
         if dolp is not None:
             self.fid['/gse_data'].DoLP = dolp
 
-    def write_egse(self, egse_time, egse_data, egse_attrs: dict) -> None:
+    def write_egse(self, egse_time, egse_data, egse_attrs: dict,
+                   ldls_dict: dict, shutter_dict:dict) -> None:
         """
         Add EGSE parameters
 
@@ -220,6 +221,9 @@ class LV1gse:
         _ = gid.createDimension('time', len(egse_data))
         dset = gid.createVariable('time', 'f8', ('time',))
         dset[:] = egse_time
+
+        _ = gid.createEnumType(np.uint8, 'ldls_dtype', ldls_dict)
+        _ = gid.createEnumType(np.uint8, 'shutter_dtype', shutter_dict)
 
         egse_t = gid.createCompoundType(egse_data.dtype, 'egse_dtype')
         dset = gid.createVariable('egse', egse_t, ('time',))
@@ -287,17 +291,6 @@ class LV1gse:
         dset = gid.createVariable('ref_diode', ref_t, ('time',))
         dset.setncatts(ref_attrs)
         dset[:] = ref_data
-
-    def write_data_stimulus(self, xds_stimulus) -> None:
-        """
-        Add wavelength and signal of data stimulus
-
-        Parameters
-        ----------
-        xds_stimulus :  xarray::Dataset
-           Contains xarray::DataArrays 'wavelength' and 'signal'
-        """
-        xds_stimulus.to_netcdf(self.fid.filepath(), mode='a', group='gse_data')
 
     def write_wavelength_monitor(self, xds_wav_mon) -> None:
         """
