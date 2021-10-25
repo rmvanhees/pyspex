@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 This file is part of pyspex
 
@@ -25,16 +26,16 @@ def main():
     Main function of this module
     """
     parser = argparse.ArgumentParser(
-        description='create Quick-Look from SPEXone L1B product')
-    parser.add_argument('--verbose', default=False, action='store_true',
+        description=('Copy selected data from one SPEXone L1B product'
+                     ' into a new SPEXone L1B product'))
+    parser.add_argument('--verbose', '-v', action='store_true',
                         help='be verbose, default be silent')
-    parser.add_argument('--time', nargs=2, default=None,
-                        help='select on image time [start, end]')
-    parser.add_argument('--mps_id', default=None,
-                        help='select on MPS-ID [comma separated?]')
+    parser.add_argument('--mps_id', nargs='*', type=int, default=None,
+                        help='select on MPS-ID')
+    # parser.add_argument('--time', nargs=2, default=None,
+    #                    help='select on image time [start, end]')
     # parser.add_argument('--', default=None, help='')
-    # parser.add_argument('--', default=None, help='')
-    parser.add_argument('--out_dir', default='.',
+    parser.add_argument('--out', default='.',
                         help=('name of directory to store the new Level-1B'
                               ' product, default: current working directory'))
     parser.add_argument('l1b_product', default=None,
@@ -46,7 +47,7 @@ def main():
     l1b_product = Path(args.l1b_product)
     if not l1b_product.is_file():
         raise FileNotFoundError(f'File {args.l1b_product} does not exist')
-    # Check if SPEXone Level-1B product
+    # ToDo: check if SPEXone Level-1B product
     # ToDo: implement check on data product
 
     out_dir = Path(args.out_dir)

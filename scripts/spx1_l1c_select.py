@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 This file is part of pyspex
 
@@ -25,37 +26,43 @@ def main():
     Main function of this module
     """
     parser = argparse.ArgumentParser(
-        description='create Quick-Look from SPEXone L1C product')
-    parser.add_argument('--verbose', default=False, action='store_true',
+        description=('Copy selected data from one SPEXone L1C product'
+                     ' into a new SPEXone L1C product'))
+    parser.add_argument('--verbose', '-v', action='store_true',
                         help='be verbose, default be silent')
-    parser.add_argument('--time', nargs=2, default=None,
-                        help='select on image time [start, end]')
-    parser.add_argument('--mps_id', default=None,
-                        help='select on MPS-ID [comma separated?]')
+    parser.add_argument('--mps_id', nargs='*', type=int, default=None,
+                        help='select on MPS-ID')
+    # parser.add_argument('--time', nargs=2, default=None,
+    #                    help='select on image time [start, end]')
     # parser.add_argument('--', default=None, help='')
-    # parser.add_argument('--', default=None, help='')
-    parser.add_argument('--out_dir', default='.',
+    parser.add_argument('--out', default='.',
                         help=('name of directory to store the new Level-1C'
                               ' product, default: current working directory'))
-    parser.add_argument('l1c_product', default=None,
-                        help='name of SPEXone Level-1C product')
+    parser.add_argument('l1c_products', default=None, nargs='+',
+                        help=('names of SPEXone/OCI Level-1C products'
+                              'expect one SPEXone L1C product'
+                              ' and one or more OCI L1C granuals'))
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    l1c_product = Path(args.l1c_product)
-    if not l1c_product.is_file():
-        raise FileNotFoundError(f'File {args.l1c_product} does not exist')
-    # Check if SPEXone Level-1C product
-    # ToDo: implement check on data product
+    for name in args.l1c_products:
+        l1c_product = Path(name)
+        if not l1c_product.is_file():
+            raise FileNotFoundError(f'File {name} does not exist')
+        # ToDo: check SPEXone/OCI products
+        # ToDo: store in variables spx1_product:str, oci_products:list
+        # ToDo: implement check on data product
 
     out_dir = Path(args.out_dir)
     if not out_dir.is_dir():
         out_dir.mkdir(mode=0o755, parents=True)
 
     # ----- read data from orignal product -----
+    # ToDo: read data into dict or xarray.Dataset per product
+    # ToDo: combine OCI granuals into one dict or xarray.Dataset
     # pylint: disable=no-member, unsubscriptable-object
-    with h5py.File(l1c_product) as fid:
+    with h5py.File(l1c_product[0]) as fid:
         # group BIN_ATTRIBUTES
         ref_date = None
         nadir_view_time = fid['/bin_attributes/nadir_view_time'][:]
