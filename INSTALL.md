@@ -5,7 +5,7 @@ Installing pyspex
 Wheels
 ------
 I you have an existing Python (v3.7+) installation, pyspex can be installed
-using pip3 from PyPI:
+using pip from PyPI:
 
     pip3 install pyspex [--user]
 
@@ -22,7 +22,7 @@ the command line via:
 for [Anaconda](https://www.anaconda.com/)/[MiniConda](http://conda.pydata.org/miniconda.html).
 
 
-Source installation
+Install from source
 -------------------
 The latest release of pyspex is available from
 [gitHub](https://github.com/rmvanhees/pyspex).
@@ -37,7 +37,7 @@ Before you can install pyspex, you need:
  * HDF5, installed with development headers
  * netCDF4, installed with development headers
 
-And the following Python modules:
+And have the following Python modules available:
 
  * setuptools v57+
  * setuptools-scm v6+
@@ -46,7 +46,7 @@ And the following Python modules:
  * netCDF4 v1.5+
  * xarray v0.16+
  * pytiff v0.8+ (optional), requires libtiff5 with development headers
- * pys5p v1.1+
+ * pys5p v2+
 
 The software is known to work using:
 
@@ -54,10 +54,10 @@ The software is known to work using:
  * HDF5 v1.10+, netCDF4 v4.7.3 or v4.8+ and python-netCDF4 v1.5+
  * HDF5 v1.12+, netCDF4 v4.8+ and python-netCDF4 v1.5+
 
-The actual installation of pyspex should be done via:
+You can install pyspex once you have satisfied the requirements listed above.
+Run at the top of the source tree:
 
     python3 -m build  
     pip3 install dist/pyspex-<version>.whl [--user]
 
-The scripts to convert raw SPEXone data to L1A can be found under:
-`/usr/local/bin` or `$USER/.local/bin`.
+The Python scripts can be found under `/usr/local/bin` or `$USER/.local/bin`.
