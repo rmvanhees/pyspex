@@ -196,15 +196,16 @@ class LV1gse:
         Parameters
         ----------
         AoLP :  float
+           Angle of linear polarization
         DoLP :  float
+           Degree of linear polarization
         """
         if aolp is not None:
             self.fid['/gse_data'].AoLP = aolp
         if dolp is not None:
             self.fid['/gse_data'].DoLP = dolp
 
-    def write_egse(self, egse_time, egse_data, egse_attrs: dict,
-                   ldls_dict: dict, shutter_dict:dict) -> None:
+    def write_egse(self, egse_time, egse_data, egse_attrs: dict) -> None:
         """
         Add EGSE parameters
 
@@ -222,12 +223,12 @@ class LV1gse:
         dset = gid.createVariable('time', 'f8', ('time',))
         dset[:] = egse_time
 
-        _ = gid.createEnumType(np.uint8, 'ldls_dtype', ldls_dict)
-        _ = gid.createEnumType(np.uint8, 'shutter_dtype', shutter_dict)
-
         egse_t = gid.createCompoundType(egse_data.dtype, 'egse_dtype')
         dset = gid.createVariable('egse', egse_t, ('time',))
-        dset.setncatts(egse_attrs)
+        dset.long_name = egse_attrs['long_name']
+        dset.fields = egse_attrs['fields']
+        dset.units = egse_attrs['units']
+        dset.comment = egse_attrs['comment']
         dset[:] = egse_data
 
     def write_viewport(self, viewport: int) -> None:
