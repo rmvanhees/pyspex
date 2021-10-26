@@ -71,6 +71,10 @@ class LV1gse:
                      for x in parts if x.startswith('alt')]
         pol_angle = [float(x.replace('pol', ''))
                      for x in parts if x.startswith('pol') and x != 'polcal']
+        gp1_angle = [float(x.replace('glass', ''))
+                     for x in parts if x.startswith('glass')]
+        gp1_offs = 5.634375
+        gp2_offs = 5.09625
 
         # determine viewport: default 0, when all viewports are illuminated
         if alt_angle:
@@ -101,6 +105,8 @@ class LV1gse:
         gid.AoLP = 0. if not pol_angle else pol_angle[0]
         if not background and msmt_fields[0] in ('POLARIZED', 'POLARIMETRIC'):
             gid.DoLP = 1.
+            if gp1_angle:
+                gid.GP1_angle = gp1_angle[0] + gp1_offs
         else:
             gid.DoLP = 0.
 
