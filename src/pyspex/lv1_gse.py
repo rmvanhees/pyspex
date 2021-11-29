@@ -74,7 +74,7 @@ class LV1gse:
         gp1_angle = [float(x.replace('glass', ''))
                      for x in parts if x.startswith('glass')]
         gp1_offs = 5.634375
-        gp2_offs = 5.09625
+        # gp2_offs = 5.09625
 
         # determine viewport: default 0, when all viewports are illuminated
         if alt_angle:
@@ -247,16 +247,16 @@ class LV1gse:
         """
         self.fid['/gse_data/viewport'][:] = viewport
 
-    def write_reference_signal(self, signal, spread) -> None:
+    def write_reference_signal(self, signal, stdev) -> None:
         """
         Write reference detector signal and variance
 
         Parameters
         ----------
         signal :  float
-           Median signal level measured during the measurement
-        spread :  float
-           Variance of the signal level measured during the measurement
+           Mean of signal level measured during the measurement
+        stdev :  float
+           standard deviation of signal level measured during the measurement
 
         Notes
         -----
@@ -266,15 +266,15 @@ class LV1gse:
         gid.Illumination_level = 5e9 / 1.602176634 * signal
 
         dset = gid.createVariable('reference_signal', 'f8', ())
-        dset.long_name = "biweight median of reference-detector signal"
+        dset.long_name = "mean of reference-diode signal"
         dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
         dset.units = 'A'
         dset[:] = signal
 
-        dset = gid.createVariable('reference_error', 'f8', ())
-        dset.long_name = "biweight spread of reference-detector signal"
+        dset = gid.createVariable('reference_signal_std', 'f8', ())
+        dset.long_name = "standard deviation of reference-diode signal"
         dset.units = 'A'
-        dset[:] = spread
+        dset[:] = stdev
 
     def write_reference_diode(self, ref_time, ref_data, ref_attrs) -> None:
         """

@@ -18,8 +18,6 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pys5p.biweight import biweight
-
 from pyspex import spx_product
 from pyspex.lib.tmtc_def import tmtc_def
 from pyspex.dem_io import DEMio
@@ -215,13 +213,12 @@ def main():
         gse.set_attr('measurement', msm_id)
         gse.set_attr('dem_id', args.dem_id)
         if args.reference is not None:
-            utc_start = int((tstamp[0] - EPOCH).total_seconds())
-            utc_stop = round((tstamp[-1] - EPOCH).total_seconds())
+            sec_bgn = int((tstamp[0] - EPOCH).total_seconds())
+            sec_end = round((tstamp[-1] - EPOCH).total_seconds())
             with h5py.File(args.reference, 'r') as fid:
                 secnd = fid['sec'][:]
-                mask = ((secnd >= utc_start) & (secnd <= utc_stop))
-                value, spread = biweight(fid['amps'][mask], spread=True)
-            gse.write_reference_signal(value, spread)
+                data = fid['amps2'][((secnd >= sec_bgn) & (secnd <= sec_end))]
+            gse.write_reference_signal(data.mean(), data.std())
 
 
 # --------------------------------------------------
