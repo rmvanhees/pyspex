@@ -217,7 +217,8 @@ def main():
             sec_end = round((tstamp[-1] - EPOCH).total_seconds())
             with h5py.File(args.reference, 'r') as fid:
                 secnd = fid['sec'][:]
-                data = fid['amps2'][((secnd >= sec_bgn) & (secnd <= sec_end))]
+                data = fid['amps_nlin'][((secnd >= sec_bgn)
+                                         & (secnd <= sec_end))]
             gse.write_reference_signal(data.mean(), data.std())
 
 
