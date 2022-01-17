@@ -19,9 +19,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pys5p.lib.plotlib import FIGinfo
-from pys5p.tol_colors import tol_cmap
-from pys5p.s5p_plot import S5Pplot
+from moniplot.lib.fig_info import FIGinfo
+from moniplot.tol_colors import tol_cmap
+from moniplot.mon_plot import MONplot
 
 from pyspex.binning_tables import BinningTables
 
@@ -88,7 +88,7 @@ def main():
             data_dir.mkdir(mode=0o755)
 
         # open plot object
-        plot = S5Pplot((data_dir / flname.name).with_suffix('.pdf'))
+        plot = MONplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
 
         # which images are requested?
@@ -134,8 +134,7 @@ def main():
                 suptitle = f'frame [table_id={table_id[ii]}]: {ii}'
             else:
                 suptitle = f'frame: {ii}'
-            plot.draw_signal(img2d, vperc=[1, 99], fig_info=figinfo,
-                             sub_title=suptitle)
+            plot.draw_signal(img2d, fig_info=figinfo, title=suptitle)
         # close plot object
         plot.close()
 
