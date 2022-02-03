@@ -81,7 +81,8 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.valid_min = 0
     dset.valid_max = 86400.999999
     # dset.units = "seconds"
-    dset = sgrp.createVariable('image_CCSDS_sec', 'u4', ('number_of_images',))
+    dset = sgrp.createVariable('image_CCSDS_sec', 'u4', ('number_of_images',),
+                               fill_value=0)
     dset.long_name = "image CCSDS time (seconds)"
     dset.valid_min = np.uint32(1577500000)  # year 2020
     dset.valid_max = np.uint32(2050000000)  # year 2035
@@ -103,10 +104,13 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset = sgrp.createVariable('digital_offset', 'i2', ('number_of_images',))
     dset.long_name = "digital offset"
     dset.units = "1"
-    dset = sgrp.createVariable('nr_coadditions', 'u2', ('number_of_images',))
+    dset = sgrp.createVariable('nr_coadditions', 'u2', ('number_of_images',),
+                               fill_value=0)
     dset.long_name = "number of coadditions"
+    dset.valid_min = np.int32(1)
     dset.units = "1"
-    dset = sgrp.createVariable('exposure_time', 'f8', ('number_of_images',))
+    dset = sgrp.createVariable('exposure_time', 'f8', ('number_of_images',),
+                               fill_value=0)
     dset.long_name = "exposure time"
     dset.units = "seconds"
 
@@ -115,10 +119,10 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     chunksizes = None if number_img is not None else (1, img_samples)
     dset = sgrp.createVariable('detector_images', 'u2',
                                ('number_of_images', 'samples_per_image'),
-                               chunksizes=chunksizes, fill_value=0)
+                               chunksizes=chunksizes, fill_value=0xFFFF)
     dset.long_name = "Image data from detector"
     dset.valid_min = np.uint16(0)
-    dset.valid_max = np.uint16(0xFFFF)
+    dset.valid_max = np.uint16(0xFFFE)
     dset.units = "counts"
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x350)),
                                           'science_dtype')
@@ -166,7 +170,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     # - define group /navigation_data and its datasets
     sgrp = rootgrp.createGroup('/navigation_data')
     dset = sgrp.createVariable('adstate', 'u1',
-                               ('SC_records',), fill_value=255)
+                               ('SC_records',), fill_value=0xFF)
     dset.long_name = "Current ADCS State"
     dset.flag_values = np.array([0, 1, 2, 3, 4, 5], dtype='u1')
     dset.flag_meanings = "Wait Detumple AcqSun Point Delta Earth"
