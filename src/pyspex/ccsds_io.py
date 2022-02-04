@@ -486,7 +486,18 @@ class CCSDSio:
         prev_grp_flag = 2
         for packet in packets:
             grouping_flag = (packet['packet_header']['sequence'] >> 14) & 0x3
+            # print(prev_grp_flag, grouping_flag, len(res), offs,
+            #      packet['image_data'].size)
 
+            # handle corrupted data
+            if grouping_flag == 1 and prev_grp_flag != 2:
+                if packet['image_data'].size == 7853:
+                    prev_grp_flag = 2
+                    print('[WARNING]: rejected image because it is incomplete')
+                    offs = 0
+                else:
+                    grouping_flag = 0
+                
             # handle segmented data
             if grouping_flag == 1:   # first segment
                 # group_flag of previous package should be 2
