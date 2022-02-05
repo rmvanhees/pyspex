@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Class to read SPEXone ICU packages (version 2)
 
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -54,7 +54,10 @@ TIME_DTYPE = np.dtype([
 
 SCIHK_DTYPE = tmtc_dtype(0x350)
 
-# - local functions --------------------------------
+# - Error messages ------------------------
+MSG_SKIP_FRAME = "[WARNING]: rejected a frame because it's incomplete"
+MSG_CORRUPT_APID = 'corrupted segements - detected APID 1 after <> 2'
+MSG_CORRUPT_FRAME = 'corrupted segements - previous frame not closed'
 
 
 # - class CCSDSio -------------------------
@@ -488,22 +491,16 @@ class CCSDSio:
             grouping_flag = (packet['packet_header']['sequence'] >> 14) & 0x3
             # print(prev_grp_flag, grouping_flag, len(res), offs,
             #      packet['image_data'].size)
-
-            # handle corrupted data
-            if grouping_flag == 1 and prev_grp_flag != 2:
-                if packet['image_data'].size == 7853:
-                    prev_grp_flag = 2
-                    print('[WARNING]: rejected image because it is incomplete')
-                    offs = 0
-                else:
-                    grouping_flag = 0
-                
             # handle segmented data
             if grouping_flag == 1:   # first segment
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
-                    msg = ('corrupted segements - detected APID 1 after <> 2')
-                    raise RuntimeError(msg)
+                    if packet['image_data'].size in (3853, 7853):
+                        print(MSG_SKIP_FRAME)
+                        prev_grp_flag = 2
+                        offs = 0
+                    else:
+                        raise RuntimeError(MSG_CORRUPT_APID)
 
                 img_size = packet['science_hk']['IMRLEN'] // 2
                 rec_buff = np.empty(1, dtype=np.dtype([
@@ -522,9 +519,7 @@ class CCSDSio:
             else:                         # continuation or last segment
                 # group_flag of previous package should be 0 or 1
                 if prev_grp_flag == 2:
-                    msg = ('corrupted segements - detected segement of'
-                           ' new image, however, previous not closed')
-                    raise RuntimeError(msg)
+                    raise RuntimeError(MSG_CORRUPT_FRAME)
 
                 img_buff[offs:offs + packet['image_data'].size] = \
                     packet['image_data']
