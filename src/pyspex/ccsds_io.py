@@ -161,9 +161,9 @@ class CCSDSio:
 
     def __repr__(self) -> str:
         return (f'{self.version_no:03d} {self.type_indicator}'
-                f' {self.secnd_hdr_flag} 0x{self.ap_id:x} {self.grouping_flag}'
-                f' {self.sequence_count:5d} {self.packet_length:5d}'
-                f' {self.fp.tell():9d}')
+                f' {self.secnd_hdr_flag} 0x{self.ap_id:x}'
+                f' {self.grouping_flag} {self.sequence_count:5d}'
+                f' {self.packet_length:5d} {self.fp.tell():9d}')
 
     def __iter__(self):
         for attr in sorted(self.__dict__):
@@ -331,13 +331,80 @@ class CCSDSio:
 
         return sci_hk
 
+    def __rd_science(self, hdr):
+        """
+        Read Science telemetry packet
+        """
+        num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
+        packet = np.empty(1, dtype=np.dtype([
+            ('packet_header', HDR_DTYPE),
+            ('science_hk', SCIHK_DTYPE),
+            ('icu_time', TIME_DTYPE),
+            ('image_data', 'O')]))
+        packet['packet_header'] = hdr
+
+        # first segement or unsegmented data packet provides Science_HK
+        if self.grouping_flag in (1, 3):
+            packet['science_hk'] = self.fix_sci_hk24(
+                np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE))
+            num_bytes -= SCIHK_DTYPE.itemsize
+            packet['icu_time'] = np.fromfile(self.fp, count=1,
+                                             dtype=TIME_DTYPE)
+            num_bytes -= TIME_DTYPE.itemsize
+
+        # read detector image data
+        packet['image_data'][0] = np.fromfile(self.fp, dtype='>u2',
+                                              count=num_bytes // 2)
+        return packet
+
+    def __rd_nomhk(self, hdr):
+        """
+        Read NomHK telemetry packet
+        """
+        packet = np.empty(1, dtype=np.dtype([
+            ('packet_header', HDR_DTYPE),
+            ('nominal_hk', tmtc_dtype(0x320))]))
+        packet['packet_header'] = hdr
+        packet['nominal_hk'] = np.fromfile(self.fp, count=1,
+                                           dtype=tmtc_dtype(0x320))
+        return packet
+
+    def __rd_demhk(self, hdr):
+        """
+        Read DemHK telemetry packet
+        """
+        packet = np.empty(1, dtype=np.dtype([
+            ('packet_header', HDR_DTYPE),
+            ('detector_hk', tmtc_dtype(0x322))]))
+        packet['packet_header'] = hdr
+        packet['detector_hk'] = self.fix_dem_hk24(
+            np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322)))
+        return packet
+
+    def __rd_other(self, hdr):
+        """
+        Read other telemetry packet
+        """
+        num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
+        if not 0x320 <= self.ap_id <= 0x350:
+            self.found_invalid_apid = True
+            self.fp.seek(num_bytes, 1)
+            return None
+
+        packet = np.empty(1, dtype=np.dtype([
+            ('packet_header', HDR_DTYPE),
+            ('raw_data', 'u1', num_bytes)]))
+        packet['packet_header'] = hdr
+        packet['raw_data'] = np.fromfile(self.fp, count=num_bytes, dtype='u1')
+        return packet
+
     def read_packet(self):
         """
         Read next telemetry packet
 
         Returns
         -------
-        ndarray
+        ndarray with packet data
         """
         # read primary/secondary header
         hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
@@ -355,56 +422,12 @@ class CCSDSio:
 
         # save packet header as class attribute
         self.__hdr = hdr[0]
-        num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
 
-        if self.ap_id == 0x350:             # Science telemetry packet
-            packet = np.empty(1, dtype=np.dtype([
-                ('packet_header', HDR_DTYPE),
-                ('science_hk', SCIHK_DTYPE),
-                ('icu_time', TIME_DTYPE),
-                ('image_data', 'O')]))
-            packet['packet_header'] = hdr
-
-            # first segement or unsegmented data packet provides Science_HK
-            if self.grouping_flag in (1, 3):
-                packet['science_hk'] = self.fix_sci_hk24(
-                    np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE))
-                num_bytes -= SCIHK_DTYPE.itemsize
-                packet['icu_time'] = np.fromfile(self.fp, count=1,
-                                                 dtype=TIME_DTYPE)
-                num_bytes -= TIME_DTYPE.itemsize
-
-            # read detector image data
-            packet['image_data'][0] = np.fromfile(self.fp, dtype='>u2',
-                                                  count=num_bytes // 2)
-        elif self.ap_id == 0x320:        # NomHK telemetry packet
-            packet = np.empty(1, dtype=np.dtype([
-                ('packet_header', HDR_DTYPE),
-                ('nominal_hk', tmtc_dtype(0x320))]))
-            packet['packet_header'] = hdr
-            packet['nominal_hk'] = np.fromfile(self.fp, count=1,
-                                               dtype=tmtc_dtype(0x320))
-        elif self.ap_id == 0x322:        # DemHK telemetry packet
-            packet = np.empty(1, dtype=np.dtype([
-                ('packet_header', HDR_DTYPE),
-                ('detector_hk', tmtc_dtype(0x322))]))
-            packet['packet_header'] = hdr
-            packet['detector_hk'] = self.fix_dem_hk24(
-                np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322)))
-        else:
-            if not 0x320 <= self.ap_id <= 0x350:
-                self.found_invalid_apid = True
-
-            packet = np.empty(1, dtype=np.dtype([
-                ('packet_header', HDR_DTYPE),
-                ('raw_data', 'u1', num_bytes)]))
-            packet['packet_header'] = hdr
-            packet['raw_data'] = np.fromfile(self.fp, count=num_bytes,
-                                             dtype='u1')
-            # move to the next telemetry packet
-            # self.fp.seek(num_bytes, 1)
-
-        return packet
+        # read telemetry packet
+        rd_func = {0x350: self.__rd_science,
+                   0x320: self.__rd_nomhk,
+                   0x322: self.__rd_demhk}.get(self.ap_id, self.__rd_other)
+        return rd_func(hdr)
 
     @staticmethod
     def select_tm(packets_in: tuple, ap_id: int):
@@ -453,8 +476,6 @@ class CCSDSio:
         # first telemetry package must have grouping flag equals 1
         self.__hdr = packets[0]['packet_header']
         if self.grouping_flag != 1:
-            msg = ('[WARNING]: rejected first image because it is incomplete'
-                   ' - received only {:d} segments.')
             ii = 0
             for packet in packets:
                 self.__hdr = packet['packet_header']
@@ -462,7 +483,8 @@ class CCSDSio:
                     break
                 ii += 1
 
-            print(msg.format(ii))
+            print('[WARNING]: first frame incomplete - received only'
+                  f' {ii} segments, frame rejected')
             packets = packets[ii:]
             if not packets:
                 return ()
@@ -470,8 +492,6 @@ class CCSDSio:
         # last telemetry package must have grouping flag equals 2
         self.__hdr = packets[-1]['packet_header']
         if self.grouping_flag != 2:
-            msg = ('[WARNING]: rejected last image because it is incomplete'
-                   ' - received only {:d} segments.')
             ii = len(packets)
             while ii > 0:
                 ii -= 1
@@ -479,7 +499,8 @@ class CCSDSio:
                 if self.grouping_flag == 2:
                     break
 
-            print(msg.format(len(packets) - (ii + 1)))
+            print('[WARNING]: rejected last frame - received only'
+                  f' {len(packets) - (ii + 1)} segments, frame rejected.')
             packets = packets[:ii+1]
             if not packets:
                 return ()
