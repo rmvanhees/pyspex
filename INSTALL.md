@@ -4,7 +4,7 @@ Installing pyspex
 
 Wheels
 ------
-I you have an existing Python (v3.7+) installation, pyspex can be installed
+I you have an existing Python (v3.8+) installation, pyspex can be installed
 using pip from PyPI:
 
     pip3 install pyspex [--user]
@@ -15,8 +15,8 @@ Python Distributions
 If you use a Python Distribution, the installation of pyspex can be done on
 the command line via:
 
-    conda install pytiff [optional]  
-    conda install pys5p  
+    conda install pytiff [optional]
+    conda install moniplot
     conda install pyspex
 
 for [Anaconda](https://www.anaconda.com/)/[MiniConda](http://conda.pydata.org/miniconda.html).
@@ -33,7 +33,7 @@ Or you can use git do download the repository:
 
 Before you can install pyspex, you need:
 
- * Python version 3.7+ with development headers
+ * Python version 3.8+ with development headers
  * HDF5, installed with development headers
  * netCDF4, installed with development headers
 
@@ -41,12 +41,12 @@ And have the following Python modules available:
 
  * setuptools v57+
  * setuptools-scm v6+
- * numpy v1.20+
- * h5py v3.40+
+ * numpy v1.19+
+ * h5py v3.5+
  * netCDF4 v1.5+
- * xarray v0.16+
+ * xarray v0.20+
+ * moniplot v0.2+
  * pytiff v0.8+ (optional), requires libtiff5 with development headers
- * pys5p v2+
 
 The software is known to work using:
 
@@ -57,7 +57,7 @@ The software is known to work using:
 You can install pyspex once you have satisfied the requirements listed above.
 Run at the top of the source tree:
 
-    python3 -m build  
+    python3 -m build
     pip3 install dist/pyspex-<version>.whl [--user]
 
 The Python scripts can be found under `/usr/local/bin` or `$USER/.local/bin`.
