@@ -80,13 +80,13 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "image time (seconds of day)"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    # dset.units = "seconds"
-    dset = sgrp.createVariable('image_CCSDS_sec', 'u4', ('number_of_images',),
-                               fill_value=0)
+    dset.units = "seconds since midnight"
+    dset = sgrp.createVariable('image_CCSDS_sec', 'u4',
+                               ('number_of_images',))
     dset.long_name = "image CCSDS time (seconds)"
     dset.valid_min = np.uint32(1577500000)  # year 2020
     dset.valid_max = np.uint32(2050000000)  # year 2035
-    dset.units = "seconds since 1970-1-1 TAI"
+    dset.units = "seconds since 1970-1-1 0:0:0"             # UTC or TAI?
     dset = sgrp.createVariable('image_CCSDS_subsec', 'u2',
                                ('number_of_images',))
     dset.long_name = "image CCSDS time (sub-seconds)"
@@ -112,7 +112,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset = sgrp.createVariable('exposure_time', 'f8', ('number_of_images',),
                                fill_value=0)
     dset.long_name = "exposure time"
-    dset.units = "seconds"
+    dset.units = "sec"
 
     # - define group /science_data and its datasets
     sgrp = rootgrp.createGroup('/science_data')
@@ -137,7 +137,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "HK telemetry packet time (seconds of day)"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    # dset.units = "seconds"
+    dset.units = "seconds since midnight"
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x320)),
                                           'nomhk_dtype')
     dset = sgrp.createVariable('NomHK_telemetry', hk_dtype, ('hk_packets',))
@@ -178,7 +178,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "Attitude sample time (seconds of day)"
     dset.valid_min = 0.0
     dset.valid_max = 86400.999999
-    dset.units = "seconds"
+    dset.units = "seconds since midnight"
     chunksizes = None if sc_records is not None else (256, 4)
     dset = sgrp.createVariable('att_quat', 'f4',
                                ('SC_records', 'quaternion_elements'),
@@ -191,7 +191,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "Orbit vector time (seconds of day)"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
-    dset.units = "seconds"
+    dset.units = "seconds since midnight"
     chunksizes = None if sc_records is not None else (340, 3)
     dset = sgrp.createVariable('orb_pos', 'f4',
                                ('SC_records', 'vector_elements'),
