@@ -56,6 +56,8 @@ SCIHK_DTYPE = tmtc_dtype(0x350)
 
 # - Error messages ------------------------
 MSG_SKIP_FRAME = "[WARNING]: rejected a frame because it's incomplete"
+MSG_INVALID_APID = \
+    '[WARNING]: found one or more telemetry packages with an invalid APID'
 MSG_CORRUPT_APID = 'corrupted segements - detected APID 1 after <> 2'
 MSG_CORRUPT_FRAME = 'corrupted segements - previous frame not closed'
 
@@ -189,8 +191,7 @@ class CCSDSio:
         """
         if self.fp is not None:
             if self.found_invalid_apid:
-                print('[WARNING]: found one or more telemetry packages'
-                      ' with an invalid APID')
+                print(MSG_INVALID_APID)
             self.found_invalid_apid = False
             self.fp.close()
 
@@ -473,7 +474,8 @@ class CCSDSio:
         if not packets:
             return ()
 
-        # first telemetry package must have grouping flag equals 1
+        # check if grouping_flag of first segement equals 1
+        #   else reject all segments with grouping_flag != 1
         self.__hdr = packets[0]['packet_header']
         if self.grouping_flag != 1:
             ii = 0
@@ -483,25 +485,25 @@ class CCSDSio:
                     break
                 ii += 1
 
-            print('[WARNING]: first frame incomplete - received only'
-                  f' {ii} segments, frame rejected')
+            print(f'[WARNING]: first frame incomplete - skipped {ii} segments')
             packets = packets[ii:]
             if not packets:
                 return ()
 
-        # last telemetry package must have grouping flag equals 2
+        # check if grouping_flag of last segement equals 2
+        #   else reject all segments after the last segment
+        #   with grouping_flag == 2
         self.__hdr = packets[-1]['packet_header']
         if self.grouping_flag != 2:
-            ii = len(packets)
-            while ii > 0:
-                ii -= 1
-                self.__hdr = packets[ii]['packet_header']
+            ii = 0
+            for packet in packets:
+                self.__hdr = packet['packet_header']
                 if self.grouping_flag == 2:
                     break
+                ii += 1
 
-            print('[WARNING]: rejected last frame - received only'
-                  f' {len(packets) - (ii + 1)} segments, frame rejected.')
-            packets = packets[:ii+1]
+            print(f'[WARNING]: last frame incomplete - rejected {ii} segments')
+            packets = packets[:-ii]
             if not packets:
                 return ()
 
@@ -550,8 +552,7 @@ class CCSDSio:
                         rec_buff['image_data'] = img_buff
                         res += (rec_buff,)
                     else:
-                        print('[WARNING]: rejected image'
-                              ' because it is incomplete')
+                        print(MSG_SKIP_FRAME)
                     offs = 0
 
             # keep current group flag for next read

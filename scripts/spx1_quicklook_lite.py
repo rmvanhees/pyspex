@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Quick and dirty script to generate simple Quick-Look figures.
 
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -81,7 +81,7 @@ def main():
         except (UnicodeDecodeError, AttributeError):
             pass
         else:
-            date_start = coverage_start.split('+')[0]
+            date_start = coverage_start.split('.')[0]
 
         data_dir = flname.parent / 'QuickLook'
         if not data_dir.is_dir():
@@ -89,6 +89,7 @@ def main():
 
         # open plot object
         plot = MONplot((data_dir / flname.name).with_suffix('.pdf'))
+        plot.set_institute('SRON')
         plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
 
         # which images are requested?
@@ -129,7 +130,7 @@ def main():
             figinfo.add('exposure_time', exposure_time[ii], fmt='{:f}s')
             figinfo.add('signal_range',
                         (np.nanmin(img2d), np.nanmax(img2d)),
-                        fmt='[{:.3f}, {:.3f}]')
+                        fmt='[{:.2f}, {:.2f}]')
             if table_id[ii] > 0:
                 suptitle = f'frame [table_id={table_id[ii]}]: {ii}'
             else:
