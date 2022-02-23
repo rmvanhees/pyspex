@@ -3,9 +3,9 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Class to read SPEXone ICU packages (version 2)
+Class to read SPEXone Level-0 packages (after integration on the PACE platform)
 
-Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+Copyright (c) 2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from pyspex.lib.tmtc_def import tmtc_dtype
+
 
 # - global parameters ------------------------------
 # Define parameters of Primary header
@@ -36,10 +37,11 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 #  - Packet length  (16 bits): size of packet data in bytes (always odd)
 #                              (secondary header + User data) - 1
 #  - Packet timestamp:         Secondary header
-#                   (32 bits): seconds (1-1-1970 UTC)
+#                   (32 bits): seconds (1-1-1958 TAI)
 #                   (16 bits): sub-seconds (1/2 ** 16)
 
 HDR_DTYPE = np.dtype([
+    ('spacewire', '>u2'),
     ('type', '>u2'),
     ('sequence', '>u2'),
     ('length', '>u2'),
@@ -62,10 +64,10 @@ MSG_CORRUPT_APID = 'corrupted segements - detected APID 1 after <> 2'
 MSG_CORRUPT_FRAME = 'corrupted segements - previous frame not closed'
 
 
-# - class CCSDSio -------------------------
-class CCSDSio:
+# - class ST3io -------------------------
+class ST3io:
     """
-    Read SPEXone telemetry packets.
+    Read SPEXone platform telemetry packets.
 
     Attributes
     ----------
@@ -124,10 +126,10 @@ class CCSDSio:
     Examples
     --------
     >>> packets = ()
-    >>> with CCSDSio(file_list) as ccsds:
+    >>> with ST3io(file_list) as st3:
     >>>     while True:
     >>>         # read one telemetry packet at a time
-    >>>         packet = ccsds.read_packet()
+    >>>         packet = st3.read_packet()
     >>>         if packet is None:
     >>>             # now we have read all files
     >>>             break
@@ -135,12 +137,12 @@ class CCSDSio:
     >>>         packets += (packet[0],)
     >>>
     >>>     # combine segmented Science packages
-    >>>     science_tm = ccsds.group_tm(packets)
+    >>>     science_tm = st3.group_tm(packets)
     >>>     # now you may want to collect the engineering packages
     """
     def __init__(self, file_list: str) -> None:
         """
-        Initialize access to a SPEXone Level-0 product (CCSDS format)
+        Initialize access to a SPEXone Level-0 product (ST3 format)
 
         Parameters
         ----------
@@ -310,12 +312,6 @@ class CCSDSio:
          - copy the first 4 bytes of DET_CHENA to DET_ILVDS
          - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
         """
-        if np.all(sci_hk['ICUSWVER'] < 0x129):
-            key = 'REG_BINNING_TABLE_START'
-            sci_hk[key] = np.ndarray(shape=sci_hk.shape,
-                                     dtype='<u4',
-                                     buffer=sci_hk[key])
-
         sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
 
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
@@ -468,8 +464,8 @@ class CCSDSio:
         ndarray with packet data
         """
         # read primary/secondary header
-        hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
-        if hdr.size == 0:
+        itos_hdr = np.fromfile(self.fp, count=8, dtype='>u2')
+        if itos_hdr.size == 0:
             try:
                 self.open_next_file()
             except StopIteration:
@@ -477,9 +473,9 @@ class CCSDSio:
             except FileNotFoundError:
                 return None
 
-            hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
-            if hdr.size == 0:
-                return None
+        hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
+        if hdr.size == 0:
+            return None
 
         # save packet header as class attribute
         self.__hdr = hdr[0]
