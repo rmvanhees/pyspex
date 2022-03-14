@@ -14,7 +14,7 @@ from datetime import datetime
 
 # - global parameters ------------------------------
 EPOCH_1900 = int(datetime.fromisoformat("1900-01-01T00+00:00").timestamp())
-EPOCH_1958 = int(datetime.fromisoformat("1950-01-01T00+00:00").timestamp())
+EPOCH_1958 = int(datetime.fromisoformat("1958-01-01T00+00:00").timestamp())
 
 
 # - class Clocks -------------------------
