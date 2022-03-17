@@ -276,7 +276,7 @@ class CCSDSio:
         return self.__hdr['length']
 
     # ---------- define empty telemetry packet ----------
-    def open_next_file(self):
+    def open_next_file(self) -> None:
         """
         Open next file from file_list
         """
@@ -331,7 +331,7 @@ class CCSDSio:
 
         return sci_hk
 
-    def __rd_science(self, hdr):
+    def __rd_science(self, hdr) -> np.ndarray:
         """
         Read Science telemetry packet
         """
@@ -357,7 +357,7 @@ class CCSDSio:
                                               count=num_bytes // 2)
         return packet
 
-    def __rd_nomhk(self, hdr):
+    def __rd_nomhk(self, hdr) -> np.ndarray:
         """
         Read NomHK telemetry packet
         """
@@ -369,7 +369,7 @@ class CCSDSio:
                                            dtype=tmtc_dtype(0x320))
         return packet
 
-    def __rd_demhk(self, hdr):
+    def __rd_demhk(self, hdr) -> np.ndarray:
         """
         Read DemHK telemetry packet
         """
@@ -381,7 +381,7 @@ class CCSDSio:
             np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322)))
         return packet
 
-    def __rd_tc_accept(self, _):
+    def __rd_tc_accept(self, _) -> np.ndarray:
         """
         Read/dump TcAccept packet
         """
@@ -390,11 +390,11 @@ class CCSDSio:
             ('packet_header', HDR_DTYPE),
             ('TcPacketId', '>u2'),
             ('TcSeqControl', '>u2')]))
-        print('[TcAccept]  ', self, packet['TcPacketId'][0],
+        print('[TcAccept]: ', self, packet['TcPacketId'][0],
               packet['TcSeqControl'][0])
         return packet
 
-    def __rd_tc_execute(self, _):
+    def __rd_tc_execute(self, _) -> np.ndarray:
         """
         Read/dump TcExecute packet
         """
@@ -403,11 +403,11 @@ class CCSDSio:
             ('packet_header', HDR_DTYPE),
             ('TcPacketId', '>u2'),
             ('TcSeqControl', '>u2')]))
-        print('[TcExecute] ', self, packet['TcPacketId'][0],
+        print('[TcExecute]:', self, packet['TcPacketId'][0],
               packet['TcSeqControl'][0])
         return packet
 
-    def __rd_tc_fail(self, _):
+    def __rd_tc_fail(self, _) -> np.ndarray:
         """
         Read/dump TcFail packet
         """
@@ -419,13 +419,13 @@ class CCSDSio:
             ('TcFailCode', '>u2'),
             ('FailParameter1', '>u2'),
             ('FailParameter2', '>u2')]))
-        print('[TcFail]    ', self, packet['TcPacketId'][0],
+        print('[TcFail]:   ', self, packet['TcPacketId'][0],
               packet['TcSeqControl'][0], bin(packet['TcFailCode'][0]),
               packet['FailParameter1'][0], packet['FailParameter2'][0]
               )
         return packet
 
-    def __rd_tc_reject(self, _):
+    def __rd_tc_reject(self, _) -> np.ndarray:
         """
         Read/dump TcReject packet
         """
@@ -437,12 +437,12 @@ class CCSDSio:
             ('TcRejectCode', '>u2'),
             ('RejectParameter1', '>u2'),
             ('RejectParameter2', '>u2')]))
-        print('[TcReject]  ', self, packet['TcPacketId'][0],
+        print('[TcReject]: ', self, packet['TcPacketId'][0],
               packet['TcSeqControl'][0], bin(packet['TcRejectCode'][0]),
               packet['RejectParameter1'][0], packet['RejectParameter2'][0])
         return packet
 
-    def __rd_other(self, hdr):
+    def __rd_other(self, hdr) -> np.ndarray:
         """
         Read other telemetry packet
         """
@@ -459,7 +459,7 @@ class CCSDSio:
         packet['raw_data'] = np.fromfile(self.fp, count=num_bytes, dtype='u1')
         return packet
 
-    def read_packet(self):
+    def read_packet(self) -> np.ndarray:
         """
         Read next telemetry packet
 
@@ -495,7 +495,7 @@ class CCSDSio:
         return rd_func(hdr)
 
     @staticmethod
-    def select_tm(packets_in: tuple, ap_id: int):
+    def select_tm(packets_in: tuple, ap_id: int) -> tuple:
         """
         Select telemetry packages on SPEXone ApID
 
@@ -520,7 +520,7 @@ class CCSDSio:
 
         return packets
 
-    def science_tm(self, packets_in: tuple):
+    def science_tm(self, packets_in: tuple) -> tuple:
         """
         Combine segmented Science telemetry packages
 
