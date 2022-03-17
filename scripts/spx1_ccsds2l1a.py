@@ -6,7 +6,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation to convert SPEXone DEM measurements to L1A format
 
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -40,41 +40,100 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='create SPEXone Level-1A product from CCSDS packages (L0)')
-    parser.add_argument('file_list', nargs='+',
-                        help=("provide names of one or more files with"
-                              " CCSDS packages of the same measurement"))
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
+    parser.add_argument('--select', default='all',
+                        choices=['all', 'binned', 'fullFrame'])
+    parser.add_argument('--datapath', type=Path, default=Path('.'))
+    parser.add_argument('msmt_id',
+                        help=('name of the measurement without extension,'
+                              " name of the telemetry data are: msmt_id+'_hk'"))
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    args.file_list = [x for x in args.file_list if not x.endswith('.H')]
+    # Read Science packages
+    sci_files = sorted(args.datapath.glob(args.msmt_id + '.[0123456789]')) \
+        + sorted(args.datapath.glob(args.msmt_id + '.?[0123456789]'))
 
     packets = ()
-    with CCSDSio(args.file_list) as ccsds:
+    with CCSDSio(sci_files) as ccsds:
         while True:
             packet = ccsds.read_packet()
             # print(ccsds.fp.tell(), packet is None, ccsds.packet_length)
             if packet is None or ccsds.packet_length == 0:
                 break
 
-            packets += (packet[0],)
             if args.debug:
                 print('[DEBUG]: ', ccsds)
+            packets += (packet[0],)
+    if args.verbose:
+        print('[INFO]: number of CCSDS packets ', len(packets))
+
+    # combine segmented packages
+    science_tm = ccsds.science_tm(packets)
+    del packets
+    if args.verbose:
+        print('[INFO]: number of Science images ', len(science_tm))
+
+    num_packets = 0
+    mps_length = 0
+    mps_list = []
+    for packet in science_tm:
+        mps_id = packet['science_hk']['MPS_ID']
+        mps_sz = packet['science_hk']['IMRLEN'] // 2
+        if mps_id == 0:
+            continue
+
+        if args.select == 'fullFrame' \
+           and packet['science_hk']['IMRLEN'] != 8388608:
+            continue
+
+        if args.select == 'binned'\
+           and packet['science_hk']['IMRLEN'] == 8388608:
+            continue
+
+        mps_length = max(mps_sz, mps_length)
+        if not mps_id in mps_list:
+            mps_list.append(mps_id)
+        num_packets += 1
+    if args.verbose:
+        print(mps_length, mps_list)
+        print('[INFO]: number of Science images ', num_packets)
+
+    # read NomHK packages
+    hk_files = sorted(args.datapath.glob(args.msmt_id + '_hk.[0123456789]'))
+
+    packets = ()
+    with CCSDSio(hk_files) as ccsds:
+        while True:
+            packet = ccsds.read_packet()
+            # print(ccsds.fp.tell(), packet is None, ccsds.packet_length)
+            if packet is None or ccsds.packet_length == 0:
+                break
+
+            if args.debug:
+                print('[DEBUG]: ', ccsds)
+            packets += (packet[0],)
+    if args.verbose:
+        print('[INFO]: number of telemetry CCSDS packets ', len(packets))
 
     # select NomHK packages
+    num_packets = 0
     nomhk_tm = ccsds.select_tm(packets, 0x320)
-    # select DemHK packages
-    demhk_tm = ccsds.select_tm(packets, 0x322)
-    # select Science packages and combine segmented packages
-    science_tm = ccsds.science_tm(packets)
+    for packet in nomhk_tm:
+        if packet['nominal_hk']['MPS_ID'] not in mps_list:
+            continue
+        num_packets += 1
+
     if args.debug or args.verbose:
-        print('[INFO]: number of CCSDS packets ', len(packets))
-        print('[INFO]: number of NomHK packages ', len(nomhk_tm))
-        print('[INFO]: number of DemHK packages ', len(demhk_tm))
-        print('[INFO]: number of Science images ', len(science_tm))
-    del packets
+        print('[INFO]: number of NomHK packages ', num_packets)
+
+    # select DemHK packages
+    if args.select == 'all':
+        demhk_tm = ccsds.select_tm(packets, 0x322)
+        if args.debug or args.verbose:
+            print('[INFO]: number of DemHK packages ', len(demhk_tm))
 
     if args.debug:
         return
