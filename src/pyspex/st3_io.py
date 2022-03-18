@@ -13,6 +13,7 @@ Both classes have a much higher performance than obsolete class CCSDSio.
 ToDo
 ----
 - Remove the 16-bit ITOS header from the ST3-format hdr_dtype definition
+- Add data sanity checks
 
 Copyright (c) 2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -23,8 +24,11 @@ import numpy as np
 
 from pyspex.lib.tmtc_def import tmtc_dtype
 
-
 # - global parameters ------------------------------
+FULLFRAME_BYTES = 2 * 2048 * 2048
+
+
+# - local functions --------------------------------
 def hdr_dtype(st3_format=True) -> np.dtype:
     """
     Returns numpy dtype for packet header of data in CCSDS or ST3 format
@@ -364,10 +368,10 @@ class ScienceCCSDS():
                     if select == 'all':
                         packets += (buff.copy(),)
                     elif (select == 'binned'
-                          and buff['sci_hk']['IMRLEN'][0] < 8388608):
+                          and buff['sci_hk']['IMRLEN'][0] < FULLFRAME_BYTES):
                         packets += (buff.copy(),)
                     elif (select == 'fullFrame'
-                          and buff['sci_hk']['IMRLEN'][0] == 8388608):
+                          and buff['sci_hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                         packets += (buff.copy(),)
             except EOFError:
                 pass
