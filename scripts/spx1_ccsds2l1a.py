@@ -197,7 +197,7 @@ def main():
     # generate name of L1A product
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
     if before_launch(tstamp0):
-        msm_id = Path(args.file_list[0]).stem.replace('_hk', '')
+        msm_id = args.msmt_id
         try:
             new_date = datetime.strptime(
                 msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
@@ -238,7 +238,7 @@ def main():
 
         # write global attributes
         l1a.fill_global_attrs(inflight=inflight)
-        l1a.set_attr('input_files', [Path(x).name for x in args.file_list])
+        l1a.set_attr('input_files', [Path(x).name for x in sci_files])
 
 
 # --------------------------------------------------
