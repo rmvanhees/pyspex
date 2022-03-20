@@ -44,17 +44,20 @@ def main():
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--select', default='all',
                         choices=['all', 'binned', 'fullFrame'])
-    parser.add_argument('--datapath', type=Path, default=Path('.'))
-    parser.add_argument('msmt_id',
-                        help=('name of the measurement without extension,'
-                              " name of the telemetry data are: msmt_id+'_hk'"))
+    parser.add_argument('--datapath', type=Path, default=Path('.'),
+                        help="directory to store the results")
+    parser.add_argument('msmt_id', type=Path,
+                        help=('name of the measurement without extension'
+                              '(full path). The names of the telemetry data'
+                              ' are expected to be: msmt_id+"_hk" (also'
+                              ' without extension).'))
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
     # Read Science packages
-    sci_files = sorted(args.datapath.glob(args.msmt_id + '.[0123456789]')) \
-        + sorted(args.datapath.glob(args.msmt_id + '.?[0123456789]'))
+    sci_files = sorted(args.msmt_id('.[0123456789]')) \
+        + sorted(args.msmt_id('.?[0123456789]'))
 
     packets = ()
     with CCSDSio(sci_files) as ccsds:
@@ -102,7 +105,7 @@ def main():
         print('[INFO]: number of Science images ', num_packets)
 
     # read NomHK packages
-    hk_files = sorted(args.datapath.glob(args.msmt_id + '_hk.[0123456789]'))
+    hk_files = sorted(args.msmt_id('_hk.[0123456789]'))
 
     packets = ()
     with CCSDSio(hk_files) as ccsds:
@@ -195,9 +198,14 @@ def main():
             demhk_data[ii] = demhk_tm[ii]['detector_hk']
 
     # generate name of L1A product
+    # ToDo: rewrite this section because all onground calibration measurements
+    #       which are in CCSDS format will have a different filename convesion
+    #       then the data in ST3 format. Thus the distinction between inflight
+    #       and onground is not accurate, the distionction should be between
+    #       the data formats: CCSDS and ST3.
     tstamp0 = EPOCH + timedelta(seconds=int(img_sec[0]))
     if before_launch(tstamp0):
-        msm_id = args.msmt_id
+        msm_id = args.msmt_id.name
         try:
             new_date = datetime.strptime(
                 msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
@@ -223,7 +231,7 @@ def main():
             'SC_records': None}
 
     # Generate L1A product
-    with L1Aio(prod_name, dims=dims) as l1a:
+    with L1Aio(args.datapath / prod_name, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
         l1a.fill_time(img_sec, img_subsec, group='image_attributes')
