@@ -336,7 +336,7 @@ class ScienceCCSDS():
             2 * self.icutm_dtype.itemsize + self.scihk_dtype.itemsize - 1
 
         buff = np.empty(1, dtype=np.dtype([('hdr', self.hdr_dtype),
-                                           ('sci_hk', self.scihk_dtype),
+                                           ('hk', self.scihk_dtype),
                                            ('icu_tm', self.icutm_dtype),
                                            ('frame', 'O')]))
         # process all data
@@ -349,9 +349,9 @@ class ScienceCCSDS():
                 offs = self.hdr_dtype.itemsize
                 if grouping_flag(hdr) == 1:
                     buff['hdr'] = hdr
-                    buff['sci_hk'] = np.frombuffer(segment, count=1,
-                                                   offset=offs,
-                                                   dtype=self.scihk_dtype)[0]
+                    buff['hk'] = np.frombuffer(segment, count=1,
+                                               offset=offs,
+                                               dtype=self.scihk_dtype)[0]
                     offs += self.scihk_dtype.itemsize
                     buff['icu_tm'] = np.frombuffer(segment, count=1,
                                                    offset=offs,
@@ -368,10 +368,10 @@ class ScienceCCSDS():
                     if select == 'all':
                         packets += (buff.copy(),)
                     elif (select == 'binned'
-                          and buff['sci_hk']['IMRLEN'][0] < FULLFRAME_BYTES):
+                          and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
                         packets += (buff.copy(),)
                     elif (select == 'fullFrame'
-                          and buff['sci_hk']['IMRLEN'][0] == FULLFRAME_BYTES):
+                          and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                         packets += (buff.copy(),)
             except EOFError:
                 pass
@@ -444,9 +444,9 @@ class TmTcCCSDS():
         Return dictionary with numpy dtype definitions for telemetry packages
         """
         return {0x320: np.dtype([('hdr', self.hdr_dtype),
-                                 ('nom_hk', tmtc_dtype(0x320))]),
+                                 ('hk', tmtc_dtype(0x320))]),
                 0x322: np.dtype([('hdr', self.hdr_dtype),
-                                 ('nom_hk', tmtc_dtype(0x322))]),
+                                 ('hk', tmtc_dtype(0x322))]),
                 0x331: np.dtype([('hdr', self.hdr_dtype),
                                  ('TcPacketId', '>u2'),
                                  ('TcSeqControl', '>u2')]),
