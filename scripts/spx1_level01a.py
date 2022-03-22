@@ -6,6 +6,30 @@ https://github.com/rmvanhees/pyspex.git
 
 Python script to store SPEXone Level-0 data in a new Level-1A product.
 
+Examples
+--------
+Read ST3 Level-0 file in current directory, write Level-1A in different
+directory:
+
+   spx1_level01a.py --datapath L1A ./SCI_20220124_174737_419.ST3
+
+Read CCSDS Level-0 files in current directory, write Level-1A in different
+directory:
+
+   spx1_level01a.py --datapath L1A ./NomSciCal1_20220123T121801.676167
+
+Note that science data is read from ./NomSciCal1_20220123T121801.676167.?
+and ./NomSciCal1_20220123T121801.676167.??, and telemetry data is read
+from ./NomSciCal1_20220123T121801.676167_hk.?
+
+Read ST3 Level-0 file in current directory, and write packet header information
+to a file with extension '.dump' in directory 'L1A':
+
+   spx1_level01a.py --datapath L1A ./SCI_20220124_174737_419.ST3 --dump
+
+Note that the extension will not be removed, thus the name of the dump file is:
+./L1A/SCI_20220124_174737_419.ST3.dump
+
 Copyright (c) 2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
@@ -147,6 +171,7 @@ def get_l1a_name(args, science) -> str:
     img_sec, _ = get_science_timestamps(science)
     if args.msmt_id.name.endswith('.ST3'):
         # inflight product name
+        # ToDo: detect Diagnostic DARK measurements
         prod_type = '_CAL' if args.select == 'fullFrame' else ''
         #sensing_start = EPOCH_1958 + timedelta(seconds=int(img_sec[0]))
         sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
@@ -168,7 +193,7 @@ def get_l1a_name(args, science) -> str:
     else:
         msm_id = msm_id[:-22] + new_date
 
-    return ('SPX1_OCAL_{msm_id}_L1A'
+    return (f'SPX1_OCAL_{msm_id}_L1A'
             f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
             f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
             f'_{args.file_version:04d}.nc')
@@ -199,10 +224,10 @@ def main():
     # Note that science packages and telementry packages are combined in one
     # ST3 product (in chronological order), but seperated in CCSDS products.
     parser.add_argument('msmt_id', type=Path,
-                        help=('name of the SPEXone level 0 in ST3 format,'
-                              ' or name of the measurement without extension'
-                              '(full path). The names of the telemetry data'
-                              ' are expected to be: msmt_id+"_hk.?" (CCSDS)'))
+                        help=('[ST3] full name of the SPEXone level 0 file.'
+                              '[CCSDS] filename (without extension) of the'
+                              ' measurement data, where the expected filenames'
+                              ' of the telemetry data are msmt_id + "_hk.?"'))
     args = parser.parse_args()
     if args.verbose:
         print(args)
