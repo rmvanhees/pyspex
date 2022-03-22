@@ -13,7 +13,7 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -24,8 +24,9 @@ from pyspex.st3_io import (ap_id, split_ccsds, select_science, select_hk,
                            ScienceCCSDS, TmTcCCSDS)
 
 # - global parameters ------------------------------
-EPOCH = datetime(1958, 1, 1, tzinfo=timezone.utc)
-LEAP_SECONDS = 0  # only in-flight the CCSDS packages have TAI timestamps
+EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc)
+EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 
 # - local functions --------------------------------
 def __rd_l0_data(args) -> tuple:
@@ -116,9 +117,9 @@ def get_nomhk_timestamps(nomhk):
     return (nomhk_sec, nomhk_subsec)
 
 
-def get_l1a_name() -> str:
+def get_l1a_name(args, science) -> str:
     """
-    Generate Level-1A products name, using the following filename conventions
+    Generate name of Level-1A product, using the following filename conventions
 
     Inflight
     --------
@@ -135,9 +136,43 @@ def get_l1a_name() -> str:
 
     OCAL
     ----
-    see the SPEXone L1AC IODS
+    L1A file name format:
+       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_yyyymmddThhmmss_vvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       yyyymmddThhmmss is the creation time (UTC) of the product
+       vvvv is the version number of the product starting at 0001
     """
-    return 'SPX1_L1A_PRODUCT.nc'
+    img_sec, _ = get_science_timestamps(science)
+    if args.msmt_id.name.endswith('.ST3'):
+        # inflight product name
+        prod_type = '_CAL' if args.select == 'fullFrame' else ''
+        #sensing_start = EPOCH_1958 + timedelta(seconds=int(img_sec[0]))
+        sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
+
+        return (f'PACE_SPEXone{prod_type}'
+                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
+                f'.V{args.file_version:02d}.nc')
+
+    # OCAL product name
+    sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
+
+    # determine measurement identifier
+    msm_id = args.msmt_id.name
+    try:
+        new_date = datetime.strptime(
+            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
+    except ValueError:
+        pass
+    else:
+        msm_id = msm_id[:-22] + new_date
+
+    return ('SPX1_OCAL_{msm_id}_L1A'
+            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{args.file_version:04d}.nc')
+
 
 # - main function ----------------------------------
 def main():
@@ -151,6 +186,8 @@ def main():
     parser.add_argument('--dump', action='store_true',
                         help=('dump CCSDS packet headers in ASCII'))
     parser.add_argument('--verbose', action='store_true', help='be verbose')
+    parser.add_argument('--file_version', type=int, default=1,
+                        help='provide file version number of level-1A product')
     parser.add_argument('--select', default='all',
                         choices=['all', 'binned', 'fullFrame'],
                         help=('read "all" data (default) or select'
@@ -185,7 +222,7 @@ def main():
     print(dims)
 
     # generate name of the level-1A product
-    prod_name = 
+    prod_name = get_l1a_name(args, science)
 
     # Generate and fill L1A product
     with L1Aio(args.datapath / prod_name, dims=dims) as l1a:
