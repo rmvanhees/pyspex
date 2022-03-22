@@ -255,7 +255,7 @@ class ScienceCCSDS():
     #    return
 
     @staticmethod
-    def _fix_hk24(sci_hk):
+    def _fix_hk24_(sci_hk):
         """
         Correct 32-bit integers in the Science HK which originate from
         24-bit integers in the detector register values
@@ -264,14 +264,12 @@ class ScienceCCSDS():
          - copy the first 4 bytes of DET_CHENA to DET_ILVDS
          - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
         """
-        if np.all(sci_hk['ICUSWVER'] < 0x129):
-            key = 'REG_BINNING_TABLE_START'
-            sci_hk[key] = np.ndarray(shape=sci_hk.shape,
-                                     dtype='<u4',
-                                     buffer=sci_hk[key])
+        res = sci_hk.copy()
+        if sci_hk['ICUSWVER'] < 0x129:
+            res['REG_BINNING_TABLE_START'] = \
+                sci_hk['REG_BINNING_TABLE_START'].byteswap()
 
-        sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
-
+        res['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
         for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
                     'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
                     'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
@@ -281,9 +279,8 @@ class ScienceCCSDS():
                     'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
                     'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
                     'DET_CHENA']:
-            sci_hk[key] = sci_hk[key] >> 8
-
-        return sci_hk
+            res[key] = sci_hk[key] >> 8
+        return res
 
     def dump(self, flname: str) -> None:
         """
@@ -349,9 +346,9 @@ class ScienceCCSDS():
                 offs = self.hdr_dtype.itemsize
                 if grouping_flag(hdr) == 1:
                     buff['hdr'] = hdr
-                    buff['hk'] = np.frombuffer(segment, count=1,
-                                               offset=offs,
-                                               dtype=self.scihk_dtype)[0]
+                    buff['hk'] = self._fix_hk24_(
+                        np.frombuffer(segment, count=1, offset=offs,
+                                      dtype=self.scihk_dtype)[0])
                     offs += self.scihk_dtype.itemsize
                     buff['icu_tm'] = np.frombuffer(segment, count=1,
                                                    offset=offs,
