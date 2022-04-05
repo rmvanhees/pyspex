@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-This file is part of pySpexCal
+This file is part of pyspex
 
-https://gitlab.sron.nl/Richardh/pySpexCal
+https://github.com/rmvanhees/pyspex.git
 
-Add OCAL OGSE/EGSE information to a SPEXone Level-1A product
+Add ITOS EGSE information of OCAL measurements to a SPEXone Level-1A product
 
-Copyright (c) 2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
