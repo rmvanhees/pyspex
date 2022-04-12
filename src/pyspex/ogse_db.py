@@ -3,22 +3,30 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-...
+Collect reference diode and Avantes fibre spectrometer data collected during
+an OCAL ambient measurement at SRON into a netCDF4 database.
+
+Using this database the data for a given time interval can be selected and
+added to a SPEXone level-1A product.
 
 Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
+from pathlib import Path
 
+import h5py
 import numpy as np
-import xarray as xr
+from xarray import DataArray, Dataset, open_dataset
+
+# - global parameters ------------------------------
 
 
-# ---------- CREATE OGSE databases ----------
-def read_ref_diode(file_list: list, verbose=False) -> xr.Dataset:
+# ---------- CREATE OGSE DATABASES ----------
+def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     """
     Read reference diode data to numpy compound array
     (input: comma separated values)
@@ -40,7 +48,7 @@ def read_ref_diode(file_list: list, verbose=False) -> xr.Dataset:
     usecols = ()
     for flname in file_list:
         all_valid_lines = ''
-        with open(flname, 'r', encoding='ascii') as fid:
+        with open(ogse_dir / flname, 'r', encoding='ascii') as fid:
             while True:
                 line = fid.readline().strip()
                 if not line.startswith('Unix'):
@@ -87,37 +95,24 @@ def read_ref_diode(file_list: list, verbose=False) -> xr.Dataset:
 
     time_key = 'Unix_Time'
     res = {}
-    res['time'] = xr.DataArray(
+    res['time'] = DataArray(
         data[time_key], coords={'time': data[time_key]},
         attrs={'longname': 'time', 'units': 'seconds since 1970-1-1 0:0:0'})
     for ii, key in enumerate(names):
         if key == time_key:
             continue
 
-        res[key] = xr.DataArray(data[key], coords={'time': data[time_key]},
-                                attrs={'longname': key, 'units': units[ii]})
+        res[key] = DataArray(data[key], coords={'time': data[time_key]},
+                             attrs={'longname': key, 'units': units[ii]})
 
-    xds = xr.Dataset(res).sortby('time')
+    xds = Dataset(res).sortby('time')
     xds.attrs = {'source': 'Calibrated diode inside integrated sphere',
                  'comment': 'Generated on SRON clean-room tablet'}
     return xds
 
 
 # ---------------
-def create_ref_diode_db(file_list: list, verbose=False):
-    """
-    Write reference diode and wavelength monitor data to HDF5 database
-    """
-    # read reference-diode data
-    xds = read_ref_diode(file_list, verbose)
-
-    # create new database for reference-diode data
-    xds.to_netcdf('ogse_ref_diode.nc', mode='w', format='NETCDF4',
-                  group='/gse_data/ReferenceDiode')
-
-
-# ---------------
-def read_wav_mon(file_list: list, verbose=False) -> xr.Dataset:
+def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     """
     Read wavelength monitor data to numpy compound array
     (input comma separated values)
@@ -148,7 +143,7 @@ def read_wav_mon(file_list: list, verbose=False) -> xr.Dataset:
     n_avg = None
 
     for flname in file_list:
-        with open(flname, 'r', encoding='ascii') as fid:
+        with open(ogse_dir / flname, 'r', encoding='ascii') as fid:
             while True:
                 line = fid.readline().strip()
 
@@ -195,38 +190,133 @@ def read_wav_mon(file_list: list, verbose=False) -> xr.Dataset:
 
     time_key = 'timestamp'
     res = {}
-    res['time'] = xr.DataArray(
+    res['time'] = DataArray(
         data[time_key], coords={'time': data[time_key]},
         attrs={'longname': 'time', 'units': 'seconds since 1970-1-1 0:0:0'})
-    res['wavelength'] = xr.DataArray(
+    res['wavelength'] = DataArray(
         wavelength, coords={'wavelength': wavelength},
         attrs={'longname': 'wavelength grid', 'units': 'nm'})
-    res['t_intg'] = xr.DataArray(
+    res['t_intg'] = DataArray(
         t_intg.astype('i2'), dims=['time'],
         attrs={'longname': 'Integration time', 'units': 'nm'})
-    res['n_avg'] = xr.DataArray(
+    res['n_avg'] = DataArray(
         n_avg.astype('i2'), dims=['time'],
         attrs={'longname': 'Averaging number', 'units': '1'})
-    res['spectrum'] = xr.DataArray(
+    res['spectrum'] = DataArray(
         data['spectrum'], dims=['time', 'wavelength'],
         attrs={'longname': 'radiance spectrum', 'units': 'W/(m^2 sr nm'})
 
-    xds = xr.Dataset(res).sortby('time')
+    xds = Dataset(res).sortby('time')
     xds.attrs = {'source': 'Avantes fibre spectrometer',
                  'comment': 'Generated on SRON clean-room tablet'}
     return xds
 
 
-# ---------------
-def create_wav_mon_db(file_list: list, verbose=False):
+# ----- SELECT OGSE DATA FROM DATABASE AND ADD TO L1A PRODUCT -----
+def read_date_stats():
     """
-    Write Avantes fibre spectrometer data to HDF5 database
+    Read date output from shogun, egse and freckle
     """
-    # read reference-diode data
-    xds = read_wav_mon(file_list, verbose)
+    if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
+        data_dir = Path('/array/slot2B/spex_ocal/ambient/date_stats')
+    else:
+        data_dir = Path('/nfs/SPEXone/ocal/ambient/date_stats')
+    flname = data_dir / 'cmp_date_egse_itos2.txt'
 
-    # create new database for reference-diode data
-    xds.to_netcdf('ogse_wave_mon.nc', mode='w', format='NETCDF4',
+    all_valid_lines = ''
+    with open(flname, 'r', encoding='ascii') as fid:
+        names = fid.readline().strip().lstrip(' #').split('\t\t\t')
+        formats = len(names) * ('f8',)
+
+        while True:
+            line = fid.readline()
+            if not line:
+                break
+            fields = line.split('\t')
+            if '' not in fields:
+                all_valid_lines += line
+
+    return np.loadtxt(StringIO(all_valid_lines),
+                      dtype={'names': names, 'formats': formats})
+
+
+def clock_offset(l1a_file: str) -> float:
+    """
+    Derive offset between msmt_start/msmt_stop and the SRON clock
+    """
+    # determine duration of the measurement (ITOS clock)
+    with h5py.File(l1a_file, 'r') as fid:
+        # pylint: disable=unsubscriptable-object
+        res = fid.attrs['input_files']
+        if isinstance(res, bytes):
+            input_file = Path(res.decode('ascii')).stem.rstrip('_hk')
+        else:
+            input_file = Path(res[0]).stem.rstrip('_hk')
+        # pylint: disable=no-member
+        msmt_start = datetime.fromisoformat(
+            fid.attrs['time_coverage_start'].decode('ascii'))
+        msmt_stop = datetime.fromisoformat(
+            fid.attrs['time_coverage_end'].decode('ascii'))
+        # print(fid.attrs['time_coverage_start'].decode('ascii'),
+        #      fid.attrs['time_coverage_end'].decode('ascii'))
+        duration = np.ceil((msmt_stop - msmt_start).total_seconds())
+
+    # use the timestamp in the filename to correct ICU time
+    date_str = input_file.split('_')[-1] + "+00:00"
+    msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
+    msmt_start = msmt_start.replace(microsecond=0)
+    msmt_stop = msmt_start + timedelta(seconds=int(duration))
+
+    # correct msmt_start and msmt_stop to SRON clock
+    cmp_date = read_date_stats()
+    cmp_date['ITOS'] -= 0.35
+    indx = np.argsort(np.abs(cmp_date['ITOS'] - msmt_start.timestamp()))[0]
+    t_diff = cmp_date['SRON(1)'][indx] - cmp_date['ITOS'][indx]
+    # print('T_shogun - T_itos [sec]:', t_diff)
+
+    return msmt_start, msmt_stop, t_diff
+
+
+def add_ogse_ref_diode(ref_db: Path, l1a_file: str) -> None:
+    """
+    Select reference data taken during a measurement and add to a L1A product
+    """
+    msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
+
+    xds = open_dataset(ref_db, group='/gse_data/ReferenceDiode')
+    ref_time = xds['time'].values - t_diff
+    indx = np.where((ref_time >= msmt_start.timestamp())
+                    & (ref_time <= msmt_stop.timestamp()))[0]
+    if indx.size == 0:
+        print('ReferenceDiode', ref_time.min(), msmt_start.timestamp(),
+              msmt_stop.timestamp(), ref_time.max())
+        print('[Warning] no reference-diode data found')
+        return
+
+    xds = xds.sel(time=indx)
+    print(xds)
+
+    # update Level-1A product with OGSE/EGSE information
+    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
+                  group='/gse_data/ReferenceDiode')
+
+
+def add_ogse_wav_mon(ref_db: Path, l1a_file: str) -> None:
+    """
+    Select reference data taken during a measurement and add to a L1A product
+    """
+    msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
+
+    xds = open_dataset(ref_db, group='/gse_data/WaveMonitor')
+    ref_time = xds['time'].values - t_diff
+    indx = np.where((ref_time >= msmt_start.timestamp())
+                    & (ref_time <= msmt_stop.timestamp()))[0]
+
+    xds = xds.sel(time=indx)
+    print(xds)
+
+    # update Level-1A product with OGSE/EGSE information
+    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
                   group='/gse_data/WaveMonitor')
 
 
@@ -235,22 +325,20 @@ def test():
     """
     Test module
     """
-    data_dir = '/data/richardh/SPEXone/ambient/polarimetric/calibration/'\
-        'light_level/Logs/'
+    ogse_dir = Path('/data/richardh/SPEXone/ambient/polarimetric/calibration/'
+                    'light_level/Logs/')
 
-    file_list = [data_dir
-                 + 'POLARIMETRIC_LIGHT_LEVELS_ref_det_session174.csv']
+    file_list = ['POLARIMETRIC_LIGHT_LEVELS_ref_det_session174.csv']
     print('---------- SHOW DATASET ----------')
-    print(read_ref_diode(file_list, verbose=True))
-    print('---------- WRITE DATASET ----------')
-    create_ref_diode_db(file_list)
+    print(read_ref_diode(ogse_dir, file_list, verbose=True))
+    # print('---------- WRITE DATASET ----------')
+    # create_ref_diode_db(ogse_dir, file_list)
 
-    file_list = [data_dir
-                 + 'POLARIMETRIC_LIGHTLEVELS_3_Avantes_20210211T165045.csv']
+    file_list = ['POLARIMETRIC_LIGHTLEVELS_3_Avantes_20210211T165045.csv']
     print('---------- SHOW DATASET ----------')
-    print(read_wav_mon(file_list, verbose=True))
-    print('---------- WRITE DATASET ----------')
-    create_wav_mon_db(file_list)
+    print(read_wav_mon(ogse_dir, file_list, verbose=True))
+    # print('---------- WRITE DATASET ----------')
+    # create_wav_mon_db(ogse_dir, file_list)
 
 
 if __name__ == '__main__':

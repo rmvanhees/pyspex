@@ -18,22 +18,38 @@ Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
 License:  BSD-3-Clause
 """
 import argparse
+from pathlib import Path
 
-# from pyspex.lv1_gse import LV1gse
-from pyspex.ogse_db import create_ref_diode_db, create_wav_mon_db
+from pyspex.ogse_db import (read_ref_diode, read_wav_mon,
+                            add_ogse_ref_diode, add_ogse_wav_mon)
 # from pyspex.ogse_helios import add_ogse_helios
 
+# - global parameters ------------------------------
+DB_REF_DIODE = 'ogse_ref_diode.nc'
+DB_WAV_MON = 'ogse_wave_mon.nc'
 
+
+# - local functions --------------------------------
 def create_ogse_db(args):
     """
-    Create HDF5 databases of reference diode data and/or
-    Avantes fibre spectrometer
+    Create databases for reference diode and/or Avantes fibre spectrometer
     """
-    print(args)
     if args.ref_diode:
-        create_ref_diode_db(args.ref_diode, verbose=args.verbose)
+        # read reference-diode data
+        xds = read_ref_diode(args.ogse_dir, args.ref_diode, args.verbose)
+
+        # create new database for reference-diode data
+        xds.to_netcdf(args.ogse_dir / DB_REF_DIODE,
+                      mode='w', format='NETCDF4',
+                      group='/gse_data/ReferenceDiode')
+
     if args.wav_mon:
-        create_wav_mon_db(args.ref_diode, verbose=args.verbose)
+        # read reference-diode data
+        xds = read_wav_mon(args.ogse_dir, args.wav_mon, args.verbose)
+        # create new database for reference-diode data
+        xds.to_netcdf(args.ogse_dir / DB_WAV_MON,
+                      mode='w', format='NETCDF4',
+                      group='/gse_data/WaveMonitor')
 
 
 def write_ogse(args):
@@ -42,9 +58,9 @@ def write_ogse(args):
     """
     print(args)
     if args.ref_diode:
-        pass
+        add_ogse_ref_diode(args.ogse_dir / DB_REF_DIODE, args.l1a_file)
     if args.avantes:
-        pass
+        add_ogse_wav_mon(args.ogse_dir / DB_WAV_MON, args.l1a_file)
     if args.helios:
         pass
     if args.grande:
@@ -61,7 +77,8 @@ def main():
     # parse command-line parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', action='store_true', default=False)
-
+    parser.add_argument('--ogse_dir', default='Logs', type=Path,
+                        help="directory with OGSE data")
     subparsers = parser.add_subparsers(help='sub-command help')
     parser_db = subparsers.add_parser('create_db',
                                       help="create new OGSE database")
