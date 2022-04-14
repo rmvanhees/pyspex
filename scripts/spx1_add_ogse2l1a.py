@@ -62,8 +62,8 @@ def write_ogse(args):
         add_ogse_wav_mon(args.ogse_dir / DB_WAV_MON, args.l1a_file)
     if args.helios:
         add_ogse_helios(args.l1a_file)
-    if args.grande:
-        pass
+    if args.grande is not None:
+        add_ogse_helios(args.l1a_file, args.grande)
     if args.opo_laser:
         pass
 
@@ -97,8 +97,8 @@ def main():
                                  '  from OGSE database'))
     parser_wr.add_argument('--helios', action='store_true',
                            help='add Helios reference spectrum')
-    parser_wr.add_argument('--grande', action='store_true',
-                           help='add Grande reference spectrum')
+    parser_wr.add_argument('--grande', type=int, choices=(1, 2, 3, 5, 9),
+                           help='add Grande reference spectrum for #lamps')
     parser_wr.add_argument('--opo_laser', action='store_true',
                            help='add wavelength of OPO laser')
     parser_wr.add_argument('l1a_file', default=None, type=str,
