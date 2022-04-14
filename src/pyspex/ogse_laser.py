@@ -5,7 +5,7 @@ https://github.com/rmvanhees/pyspex.git
 
 Add the wavelength of the tunable Paladin OPO laser of the NASA GSFC
 Calibration facility as used for the ISRF and stray-light measurements to
-the SPEXone level-1A products. 
+the SPEXone level-1A products.
 
 Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -18,6 +18,8 @@ import numpy as np
 from openpyxl import load_workbook
 import xarray as xr
 
+
+# - local functions ----------------------------
 def read_gse_excel(target_cwl: str, gse_dir: Path) -> xr.Dataset:
     """
     Return GSE info on central wavelength, line-width and laser radiance
@@ -57,15 +59,16 @@ def read_gse_excel(target_cwl: str, gse_dir: Path) -> xr.Dataset:
         'signal': xr.DataArray([wsheet['I'][indx].value],
                                coords={'elmnt': np.atleast_1d(1)},
                                attrs={'long_name': 'radiance',
-                                      'units': 'W/(m^2/Sr)'})})
+                                      'units': 'W/(m^2.sr)'})})
     wbook.close()
     return xds
+
 
 def test_netcdf(l1a_file: str) -> None:
     """
     Create a netCDF4 file with the Helios data in it
     """
-    #xds = read_gse_excel('465.4nm', Path('/data/richardh/SPEXone/GSFC'))
+    # xds = read_gse_excel('465.4nm', Path('/data/richardh/SPEXone/GSFC'))
     xds = read_gse_excel('360nm', Path('/data/richardh/SPEXone/GSFC'))
     xds = read_gse_excel('840nm', Path('/data/richardh/SPEXone/GSFC'))
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',

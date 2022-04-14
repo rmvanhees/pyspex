@@ -408,7 +408,7 @@ class L1Aio(Lv1io):
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
         '/engineering_data/NomHK_telemetry': 0,
-        '/engineering_data/DemHK_telemetry': 0,
+        # '/engineering_data/DemHK_telemetry': 0,
         '/engineering_data/temp_detector': 0,
         '/engineering_data/temp_housing': 0,
         '/engineering_data/temp_radiator': 0,

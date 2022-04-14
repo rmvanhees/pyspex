@@ -56,8 +56,9 @@ def main():
         print(args)
 
     # Read Science packages
-    sci_files = sorted(args.msmt_id('.[0123456789]')) \
-        + sorted(args.msmt_id('.?[0123456789]'))
+    data_dir = args.msmt_id.parent
+    sci_files = sorted(data_dir.glob(args.msmt_id.name + '.[0-9]')) \
+        + sorted(data_dir.glob(args.msmt_id.name + '.?[0-9]'))
 
     packets = ()
     with CCSDSio(sci_files) as ccsds:
@@ -105,8 +106,8 @@ def main():
         print('[INFO]: number of Science images ', num_packets)
 
     # read NomHK packages
-    hk_files = sorted(args.msmt_id('_hk.[0123456789]'))
-
+    hk_files = sorted(data_dir.glob(args.msmt_id.name + '_hk.[0-9]'))
+    
     packets = ()
     with CCSDSio(hk_files) as ccsds:
         while True:

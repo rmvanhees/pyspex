@@ -53,6 +53,23 @@ EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
+def get_sci_files(msmt_id: Path):
+    """
+    Returns list of all Science files used as input (OCAL, only)
+    """
+    data_dir = msmt_id.parent
+    return sorted(data_dir.glob(msmt_id.name + '.[0-9]')) \
+        + sorted(data_dir.glob(msmt_id.name + '.?[0-9]'))
+
+
+def get_hk_files(msmt_id: Path):
+    """
+    Returns list of all Science files used as input (OCAL, only)
+    """
+    data_dir = msmt_id.parent
+    return sorted(data_dir.glob(msmt_id.name + '_hk.[0-9]'))
+
+
 def __rd_l0_data(args) -> tuple:
     """
     Read level 0 data and return Science and telemetry data
@@ -62,18 +79,13 @@ def __rd_l0_data(args) -> tuple:
         with open(args.msmt_id, 'rb') as fp:
             ccsds_data, ccsds_hk = split_ccsds(fp.read())
     else:
-        data_dir = args.msmt_id.parent
-        sci_files = sorted(data_dir.glob(args.msmt_id.name + '.[0-9]')) \
-            + sorted(data_dir.glob(args.msmt_id.name + '.?[0-9]'))
         ccsds_data = ()
-        for flname in sci_files:
+        for flname in get_sci_files(args.msmt_id):
             with open(flname, 'rb') as fp:
                 ccsds_data += select_science(fp.read())
 
-        hk_files = sorted(data_dir.glob(args.msmt_id.name + '_hk.[0-9]'))
-        print(hk_files)
         ccsds_hk = ()
-        for flname in hk_files:
+        for flname in get_hk_files(args.msmt_id):
             with open(flname, 'rb') as fp:
                 ccsds_hk += select_hk(fp.read())
 
@@ -244,7 +256,6 @@ def main():
             'samples_per_image': science['hk']['IMRLEN'].max() // 2,
             'hk_packets': nomhk.size,
             'SC_records': None}
-    print(dims)
 
     # generate name of the level-1A product
     prod_name = get_l1a_name(args, science)
@@ -272,8 +283,13 @@ def main():
         #    l1a.fill_demhk(demhk['hk'])
 
         # write global attributes
-        l1a.fill_global_attrs(inflight=args.msmt_id.name.endswith('.ST3'))
-        l1a.set_attr('input_files', str(args.msmt_id))
+        if args.msmt_id.name.endswith('.ST3'):
+            l1a.fill_global_attrs(inflight=True)
+            l1a.set_attr('input_files', args.msmt_id.name)
+        else:
+            l1a.fill_global_attrs(inflight=False)
+            l1a.set_attr('input_files',
+                         [x.name for x in get_sci_files(args.msmt_id)])
 
 
 # --------------------------------------------------

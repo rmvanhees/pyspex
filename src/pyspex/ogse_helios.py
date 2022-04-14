@@ -3,9 +3,9 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Define spectrum of the Helios lamp used at SRON in OCAL measurements
+Define radiance spectrum of the Helios lamp used at SRON
 
-Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
+Copyright (c) 2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -14,7 +14,8 @@ import numpy as np
 import xarray as xr
 
 # - global parameters ------------------------------
-HELIOS_ATTRS = {'setup.Port': 'A',
+HELIOS_ATTRS = {'source': 'Helios',
+                'setup.Port': 'A',
                 'setup.Lamp': 'HES-150',
                 'setup.Output': '100%',
                 'setup.Date': '03-Sept-2019',
@@ -396,7 +397,7 @@ def helios_spectrum() -> xr.Dataset:
     xar_sign = xr.DataArray(1e-3 * np.array(HELIOS_SPECTRUM, dtype='f4'),
                             coords={'wavelength': wavelength},
                             attrs={'longname': 'Helios radiance spectrum',
-                                   'units': 'W/(m^2 sr nm)'})
+                                   'units': 'W/(m^2.sr.nm)'})
 
     return xr.Dataset({'wavelength': xar_wv, 'spectral_radiance': xar_sign},
                       attrs=HELIOS_ATTRS)
@@ -404,27 +405,27 @@ def helios_spectrum() -> xr.Dataset:
 
 def show_ogse_helios() -> None:
     """
-    Show all data to be stored in the group HeliosSpectralRadiance
+    Show all data to be stored in the group ReferenceSpectrum
     """
     print(helios_spectrum())
 
 
 def add_ogse_helios(l1a_file: str) -> None:
     """
-    Add netCDF4 group HeliosSpectralRadiance to a L1A product
+    Add netCDF4 group ReferenceSpectrum to gse_data in an L1A product
     """
     xds = helios_spectrum()
     xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/HeliosSpectralRadiance')
+                  group='/gse_data/ReferenceSpectrum')
 
 
 def test_netcdf(l1a_file: str) -> None:
     """
-    Create a netCDF4 file with the Helios data in it
+    Create a netCDF4 file containing the Helios reference spectrum
     """
     xds = helios_spectrum()
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',
-                  group='/gse_data/HeliosSpectralRadiance')
+                  group='/gse_data/ReferenceSpectrum')
 
 
 # --------------------------------------------------

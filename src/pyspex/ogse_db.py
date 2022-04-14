@@ -14,7 +14,7 @@ Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import StringIO
 from pathlib import Path
 
@@ -204,7 +204,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
         attrs={'longname': 'Averaging number', 'units': '1'})
     res['spectrum'] = DataArray(
         data['spectrum'], dims=['time', 'wavelength'],
-        attrs={'longname': 'radiance spectrum', 'units': 'W/(m^2 sr nm'})
+        attrs={'longname': 'radiance spectrum', 'units': 'W/(m^2.sr.nm)'})
 
     xds = Dataset(res).sortby('time')
     xds.attrs = {'source': 'Avantes fibre spectrometer',
@@ -246,33 +246,23 @@ def clock_offset(l1a_file: str) -> float:
     """
     # determine duration of the measurement (ITOS clock)
     with h5py.File(l1a_file, 'r') as fid:
-        # pylint: disable=unsubscriptable-object
-        res = fid.attrs['input_files']
-        if isinstance(res, bytes):
-            input_file = Path(res.decode('ascii')).stem.rstrip('_hk')
-        else:
-            input_file = Path(res[0]).stem.rstrip('_hk')
-        # pylint: disable=no-member
-        msmt_start = datetime.fromisoformat(
+        msmt_start = np.datetime64(
             fid.attrs['time_coverage_start'].decode('ascii'))
-        msmt_stop = datetime.fromisoformat(
+        msmt_stop = np.datetime64(
             fid.attrs['time_coverage_end'].decode('ascii'))
-        # print(fid.attrs['time_coverage_start'].decode('ascii'),
-        #      fid.attrs['time_coverage_end'].decode('ascii'))
-        duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
-    # use the timestamp in the filename to correct ICU time
-    date_str = input_file.split('_')[-1] + "+00:00"
-    msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
-    msmt_start = msmt_start.replace(microsecond=0)
-    msmt_stop = msmt_start + timedelta(seconds=int(duration))
+    # Extent measurement periode by 1 second
+    msmt_start -= np.timedelta64(500, 'ms')
+    msmt_stop += np.timedelta64(500, 'ms')
 
     # correct msmt_start and msmt_stop to SRON clock
     cmp_date = read_date_stats()
     cmp_date['ITOS'] -= 0.35
-    indx = np.argsort(np.abs(cmp_date['ITOS'] - msmt_start.timestamp()))[0]
-    t_diff = cmp_date['SRON(1)'][indx] - cmp_date['ITOS'][indx]
-    # print('T_shogun - T_itos [sec]:', t_diff)
+    date_itos = (1000 * cmp_date['ITOS']).astype(int).astype('datetime64[ms]')
+    date_sron = (1000 * cmp_date['SRON(1)']).astype(int).astype('datetime64[ms]')
+    indx = np.argsort(np.abs(date_itos - msmt_start))[0]
+    t_diff = date_sron[indx] - date_itos[indx]
+    # print('T_shogun - T_itos:', t_diff)
 
     return msmt_start, msmt_stop, t_diff
 
@@ -285,18 +275,15 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: str) -> None:
 
     xds = open_dataset(ref_db, group='/gse_data/ReferenceDiode')
     ref_time = xds['time'].values - t_diff
-    indx = np.where((ref_time >= msmt_start.timestamp())
-                    & (ref_time <= msmt_stop.timestamp()))[0]
+    indx = np.where((ref_time >= msmt_start) & (ref_time <= msmt_stop))[0]
     if indx.size == 0:
-        print('ReferenceDiode', ref_time.min(), msmt_start.timestamp(),
-              msmt_stop.timestamp(), ref_time.max())
+        print('ReferenceDiode',
+              ref_time.min(), msmt_start, msmt_stop, ref_time.max())
         print('[Warning] no reference-diode data found')
         return
 
-    xds = xds.sel(time=indx)
-    print(xds)
-
     # update Level-1A product with OGSE/EGSE information
+    xds = xds.isel(time=indx)
     xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
                   group='/gse_data/ReferenceDiode')
 
@@ -309,13 +296,15 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: str) -> None:
 
     xds = open_dataset(ref_db, group='/gse_data/WaveMonitor')
     ref_time = xds['time'].values - t_diff
-    indx = np.where((ref_time >= msmt_start.timestamp())
-                    & (ref_time <= msmt_stop.timestamp()))[0]
-
-    xds = xds.sel(time=indx)
-    print(xds)
+    indx = np.where((ref_time >= msmt_start) & (ref_time <= msmt_stop))[0]
+    if indx.size == 0:
+        print('WaveMonitor',
+              ref_time.min(), msmt_start, msmt_stop, ref_time.max())
+        print('[Warning] no wavelength monitoring data found')
+        return
 
     # update Level-1A product with OGSE/EGSE information
+    xds = xds.isel(time=indx)
     xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
                   group='/gse_data/WaveMonitor')
 

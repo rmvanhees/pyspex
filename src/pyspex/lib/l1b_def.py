@@ -77,7 +77,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
     dset.valid_min = 0
     dset.valid_max = 86400.999999
     if ref_date is None:
-        dset.units = 'seconds'
+        dset.units = 'second'
     else:
         dset.units = f'seconds since {ref_date.isoformat(sep=" ")}'
 
@@ -91,7 +91,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
                                chunksizes=chunksizes)
     dset.standard_name = 'altitude'
     dset.long_name = "height above mean sea level"
-    dset.units = "meters"
+    dset.units = "m"
     dset.positive = "up"
     dset.axis = "Z"
     dset = sgrp.createVariable('latitude', 'f4',
@@ -117,25 +117,25 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
                                 'spatial_samples_per_image'),
                                chunksizes=chunksizes)
     dset.long_name = 'sensor azimuth angle'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset = sgrp.createVariable('sensor_zenith', 'f4',
                                ('bins_along_track',
                                 'spatial_samples_per_image'),
                                chunksizes=chunksizes)
     dset.long_name = 'sensor zenith angle'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset = sgrp.createVariable('solar_azimuth', 'f4',
                                ('bins_along_track',
                                 'spatial_samples_per_image'),
                                chunksizes=chunksizes)
     dset.long_name = 'solar azimuth angle'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset = sgrp.createVariable('solar_zenith', 'f4',
                                ('bins_along_track',
                                 'spatial_samples_per_image'),
                                chunksizes=chunksizes)
     dset.long_name = 'solar zenith angle'
-    dset.units = 'degrees'
+    dset.units = 'degree'
 
     # -------------------------
     sgrp = rootgrp.createGroup('OBSERVATION_DATA')
@@ -146,13 +146,13 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
                                 'intensity_bands_per_view'),
                                chunksizes=chunksizes)
     dset.long_name = 'I Stokes vector component'
-    dset.units = 'W.m-2.sr-1.um-1'
+    dset.units = 'W/(m^2.sr.um)'
     dset = sgrp.createVariable('I_noise', 'f4',
                                ('bins_along_track', 'spatial_samples_per_image',
                                 'intensity_bands_per_view'),
                                chunksizes=chunksizes)
     dset.long_name = 'random noise of I'
-    dset.units = 'W.m-2.sr-1.um-1'
+    dset.units = 'W/(m^2.sr.um)'
 
     chunksizes = None if n_bins_along is not None else \
         (64, n_spatial_samples, n_polar_bands)
@@ -185,13 +185,13 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
                                 'polarization_bands_per_view'),
                                chunksizes=chunksizes)
     dset.long_name = 'angle of linear polarization'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset = sgrp.createVariable('AoLP_noise', 'f4',
                                ('bins_along_track', 'spatial_samples_per_image',
                                 'polarization_bands_per_view'),
                                chunksizes=chunksizes)
     dset.long_name = 'random noise of AoLP'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset = sgrp.createVariable('DoLP', 'f4',
                                ('bins_along_track', 'spatial_samples_per_image',
                                 'polarization_bands_per_view'),
@@ -215,7 +215,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
     dset.comment = "Contains indices to each viewport for all spatial samples."
     dset = sgrp.createVariable('view_angles', 'f4', ('number_of_views',))
     dset.long_name = 'along track view zenith angles at sensor'
-    dset.units = 'degrees'
+    dset.units = 'degree'
     dset.comment = ('view_angles is defined at the sensor, as it provides'
                     ' a swath independent value at TOA.')
     dset = sgrp.createVariable('intensity_wavelengths', 'f4',
@@ -229,7 +229,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
     dset = sgrp.createVariable('intensity_F0', 'f4',
                                ('number_of_views', 'intensity_bands_per_view'))
     dset.long_name = 'Solar irradiance on intensity wavelength grid'
-    dset.units = 'W.m-2'
+    dset.units = 'W/m^2'
     dset.comment = ('Spectral response function convolved mean solar flux'
                     ' at each intensity band and view.')
     dset = sgrp.createVariable('polarization_wavelengths', 'f4',
@@ -246,7 +246,7 @@ def init_l1b(l1b_flname: str, ref_date, dims: dict):
                                ('number_of_views',
                                 'polarization_bands_per_view'))
     dset.long_name = 'Solar irradiance on polarization wavelength grid'
-    dset.units = 'W.m-2'
+    dset.units = 'W/m^2'
     dset.comment = ('Spectral response function convolved mean solar flux'
                     ' at each polarization band and view.')
 

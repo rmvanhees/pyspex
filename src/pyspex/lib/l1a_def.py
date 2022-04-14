@@ -23,7 +23,7 @@ from .tmtc_def import tmtc_def
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict) -> None:
+def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 
@@ -86,13 +86,14 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "image CCSDS time (seconds)"
     dset.valid_min = np.uint32(1577500000)  # year 2020
     dset.valid_max = np.uint32(2050000000)  # year 2035
-    dset.units = "seconds since 1970-1-1 0:0:0"             # UTC or TAI?
+    dset.units = "seconds since 1958-1-1 TAI" if inflight \
+        else "seconds since 1970-1-1"
     dset = sgrp.createVariable('image_CCSDS_subsec', 'u2',
                                ('number_of_images',))
     dset.long_name = "image CCSDS time (sub-seconds)"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
-    dset.units = "1 / 65536 seconds"
+    dset.units = "1/65536 s"
     dset = sgrp.createVariable('image_ID', 'i4', ('number_of_images',))
     dset.long_name = "image counter from power-up"
     dset.valid_min = np.int32(0)
@@ -112,7 +113,7 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset = sgrp.createVariable('exposure_time', 'f8', ('number_of_images',),
                                fill_value=0)
     dset.long_name = "exposure time"
-    dset.units = "sec"
+    dset.units = "second"
 
     # - define group /science_data and its datasets
     sgrp = rootgrp.createGroup('/science_data')
@@ -161,11 +162,11 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
-    hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x322)),
-                                          'demhk_dtype')
-    dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
-    dset.long_name = "SPEX detector-HK telemetry"
-    dset.comment = "DEM housekeeping parameters"
+    # hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x322)),
+    #                                      'demhk_dtype')
+    # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
+    # dset.long_name = "SPEX detector-HK telemetry"
+    # dset.comment = "DEM housekeeping parameters"
 
     # - define group /navigation_data and its datasets
     sgrp = rootgrp.createGroup('/navigation_data')
@@ -199,13 +200,13 @@ def init_l1a(l1a_flname: str, dims: dict) -> None:
     dset.long_name = "Orbit positions vectors (J2000)"
     dset.valid_min = -7200000
     dset.valid_max = 7200000
-    dset.units = "meters"
+    dset.units = "m"
     dset = sgrp.createVariable('orb_vel', 'f4',
                                ('SC_records', 'vector_elements'),
                                chunksizes=chunksizes)
     dset.long_name = "Orbit velocity vectors (J2000)"
     dset.valid_min = -7600
     dset.valid_max = 7600
-    dset.units = "meters s-1"
+    dset.units = "m/s"
 
     return rootgrp

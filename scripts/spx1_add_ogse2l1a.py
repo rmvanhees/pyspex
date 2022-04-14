@@ -22,11 +22,11 @@ from pathlib import Path
 
 from pyspex.ogse_db import (read_ref_diode, read_wav_mon,
                             add_ogse_ref_diode, add_ogse_wav_mon)
-# from pyspex.ogse_helios import add_ogse_helios
+from pyspex.ogse_helios import add_ogse_helios
 
 # - global parameters ------------------------------
-DB_REF_DIODE = 'ogse_ref_diode.nc'
-DB_WAV_MON = 'ogse_wave_mon.nc'
+DB_REF_DIODE = 'ogse_db_ref_diode.nc'
+DB_WAV_MON = 'ogse_db_wave_mon.nc'
 
 
 # - local functions --------------------------------
@@ -56,13 +56,12 @@ def write_ogse(args):
     """
     Add OGSE data to a SPEXone level-1A product
     """
-    print(args)
     if args.ref_diode:
         add_ogse_ref_diode(args.ogse_dir / DB_REF_DIODE, args.l1a_file)
     if args.avantes:
         add_ogse_wav_mon(args.ogse_dir / DB_WAV_MON, args.l1a_file)
     if args.helios:
-        pass
+        add_ogse_helios(args.l1a_file)
     if args.grande:
         pass
     if args.opo_laser:

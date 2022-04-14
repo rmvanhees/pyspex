@@ -4,7 +4,7 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Add ITOS EGSE information of OCAL measurements to a SPEXone Level-1A product
+Add ITOS EGSE information of OCAL measurements to a SPEXone level-1A product
 
 Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -24,6 +24,8 @@ from pyspex.lv1_gse import LV1gse
 
 
 # - global parameters ------------------------------
+DB_EGSE = 'egse_db_itos.nc'
+
 # enumerate source status
 LDLS_DICT = {b'UNPLUGGED': 0, b'Controller Fault': 1, b'Idle': 2,
              b'Laser ON': 3, b'Lamp ON': 4, b'MISSING': 255}
@@ -102,7 +104,7 @@ def egse_units():
 
 def read_egse(egse_file: str, verbose=False) -> tuple:
     """
-    Read OGSE/EGSE data (tab separated values) to numpy compound array
+    Read EGSE data (tab separated values) to numpy compound array
     """
     with open(egse_file, 'r', encoding='ascii') as fid:
         line = None
@@ -154,24 +156,22 @@ def read_egse(egse_file: str, verbose=False) -> tuple:
                           converters=convertors, usecols=usecols,
                           dtype={'names': names, 'formats': formats})
 
-    print(data.dtype.names)
     egse = np.empty(data.size, dtype=egse_dtype())
-    print(egse.dtype.names)
     egse['NOMHK_packets_time'][:] = np.nan
     egse['GP_0_ANGLE'][:] = np.nan
     egse['GP_1_ANGLE'][:] = np.nan
     egse['GP_0_MOVING'][:] = 255
     egse['GP_1_MOVING'][:] = 255
     for name in data.dtype.names:
-        print(name)
         egse[name][:] = data[name][:]
 
     return (egse, units)
 
 
-def create_db_egse(args):
+# --------------------------------------------------
+def create_egse_db(args):
     """
-    Write OGSE/EGSE data to HDF5 database
+    Write EGSE data to HDF5 database
     """
     egse = None
     for egse_file in args.file_list:
@@ -182,7 +182,7 @@ def create_db_egse(args):
 
         egse = res[0] if egse is None else np.concatenate((egse, res[0]))
 
-    with Dataset(args.db_name, 'w', format='NETCDF4') as fid:
+    with Dataset(args.egse_dir / DB_EGSE, 'w', format='NETCDF4') as fid:
         fid.input_files = [Path(x).name for x in args.file_list]
         fid.creation_date = \
             datetime.now(timezone.utc).isoformat(timespec='seconds')
@@ -204,7 +204,7 @@ def create_db_egse(args):
         egse_t = fid.createCompoundType(egse.dtype, 'egse_dtype')
         dset = fid.createVariable('egse', egse_t, ('time',),
                                   chunksizes=(64,))
-        dset.long_name = 'OGSE/EGSE settings'
+        dset.long_name = 'EGSE settings'
         dset.fields = np.array([np.string_(n) for n in egse.dtype.names])
         dset.units = np.array([np.string_(n) for n in egse_units()])
         dset.comment = ('DIG_IN_00 is of enumType ldls_t;'
@@ -213,12 +213,12 @@ def create_db_egse(args):
 
 
 # --------------------------------------------------
-def select_egse(l1a_file: str, egse_file: str):
+def write_egse(args):
     """
-    Write OGSE/EGSE records of a measurement to a Level-1A product
+    Write EGSE records of a measurement to a level-1A product
     """
     # determine duration of the measurement (ITOS clock)
-    with h5py.File(l1a_file, 'r') as fid:
+    with h5py.File(args.l1a_file, 'r') as fid:
         # pylint: disable=unsubscriptable-object
         res = fid.attrs['input_files']
         if isinstance(res, bytes):
@@ -241,8 +241,8 @@ def select_egse(l1a_file: str, egse_file: str):
     msmt_stop = msmt_start + timedelta(seconds=int(duration))
     # print(msmt_start, msmt_stop)
 
-    # open OGSE/EGSE database
-    with Dataset(egse_file, 'r') as fid:
+    # open EGSE database
+    with Dataset(args.egse_dir / DB_EGSE, 'r') as fid:
         egse_time = fid['time'][:].data
         indx = np.where((egse_time >= msmt_start.timestamp())
                         & (egse_time <= msmt_stop.timestamp()))[0]
@@ -252,8 +252,8 @@ def select_egse(l1a_file: str, egse_file: str):
         egse_time = egse_time[indx[0]:indx[-1]+1]
         egse_data = fid['egse'][indx[0]:indx[-1]+1]
 
-    # update Level-1A product with OGSE/EGSE information
-    with LV1gse(l1a_file) as gse:
+    # update Level-1A product with EGSE information
+    with LV1gse(args.l1a_file) as gse:
         gid = gse.fid['/gse_data']
         _ = gid.createEnumType('u1', 'ldls_t',
                                {k.replace(b' ', b'_').upper(): v
@@ -267,7 +267,7 @@ def select_egse(l1a_file: str, egse_file: str):
 
         egse_t = gid.createCompoundType(egse_data.dtype, 'egse_dtype')
         dset = gid.createVariable('egse', egse_t, ('time',))
-        dset.long_name = 'OGSE/EGSE settings'
+        dset.long_name = 'EGSE settings'
         dset.fields = np.array([np.string_(n) for n in egse_data.dtype.names])
         dset.units = np.array([np.string_(n) for n in egse_units()])
         dset.comment = ('DIG_IN_00 is of enumType ldls_t;'
@@ -298,29 +298,27 @@ def main():
     # parse command-line parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--egse_dir', default='Logs', type=Path,
+                        help="directory with EGSE data")
     subparsers = parser.add_subparsers(help='sub-command help')
-    parser_a = subparsers.add_parser('create_db',
-                                     help="create new OGSE/EGSE database")
-    parser_a.add_argument('--db_name', default='egse_database.nc', type=str,
-                          help="name of EGSE database(HDF5)")
-    parser_a.add_argument('file_list', nargs='+',
-                          help="provide names of one or more EGSE files (CSV)")
-    parser_b = subparsers.add_parser('update',
-                                     help=("add OGSE/EGSE information"
-                                           " to a SPEXone Level-1A product"))
-    parser_b.add_argument('--db_name', default='egse_database.nc', type=str,
-                          help="name of EGSE database (HDF5)")
-    parser_b.add_argument('l1a_file', default=None, type=str,
-                          help="SPEXone L1A product")
+    parser_db = subparsers.add_parser('create_db',
+                                      help="create new EGSE database")
+    parser_db.add_argument('file_list', nargs='+',
+                           help="provide names EGSE files (CSV)")
+    parser_db.set_defaults(func=create_egse_db)
+
+    parser_wr = subparsers.add_parser('add',
+                                      help=("add EGSE information"
+                                            " to a SPEXone level-1A product"))
+    parser_wr.add_argument('l1a_file', default=None, type=str,
+                           help="SPEXone L1A product")
+    parser_wr.set_defaults(func=write_egse)
     args = parser.parse_args()
     if args.verbose:
         print(args)
 
-    if 'file_list' in args:
-        create_db_egse(args)
-        return
-
-    select_egse(args.l1a_file, args.db_name)
+    # call whatever function was selected
+    args.func(args)
 
 
 # --------------------------------------------------

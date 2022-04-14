@@ -378,7 +378,7 @@ class ScienceCCSDS():
         return packets
 
 
-#--------------------------------------------------
+# --------------------------------------------------
 class TmTcCCSDS():
     """
     Read SPEXone telemetry data
