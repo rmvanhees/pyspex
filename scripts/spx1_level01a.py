@@ -129,7 +129,7 @@ def get_science_timestamps(science):
 
     img_sec = science['hdr']['tai_sec']
     img_subsec = science['hdr']['sub_sec']
-    if science['hk']['ICUSWVER'][0] > 0x123:
+    if science['hk']['ICUSWVER'][0] == 0x123:
         # fix bug in sub-seconds
         us100 = np.round(10000 * img_subsec.astype(float) / 65536)
         buff = us100 + img_sec - 10000
@@ -144,7 +144,7 @@ def get_nomhk_timestamps(nomhk):
     """
     nomhk_sec = nomhk['hdr']['tai_sec']
     nomhk_subsec = nomhk['hdr']['sub_sec']
-    if nomhk['hk']['ICUSWVER'][0] > 0x123:
+    if nomhk['hk']['ICUSWVER'][0] == 0x123:
         # fix bug in sub-seconds
         us100 = np.round(10000 * nomhk_subsec.astype(float) / 65536)
         buff = us100 + nomhk_sec - 10000
