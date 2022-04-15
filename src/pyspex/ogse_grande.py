@@ -115,11 +115,11 @@ def grande_spectrum(n_lamps: int) -> xr.Dataset:
                                  'units': 'nm',
                                  'comment': 'wavelength annotation'})
     signal = np.array(GRANDE_SPECTRUM, dtype='f4')
-    xar_sign = xr.DataArray(signal[:, indx],
+    xar_sign = xr.DataArray(1e-3 * signal[:, indx],
                             coords={'wavelength': wavelength},
                             attrs={'longname': 'Grande radiance spectrum',
                                    'comment': f'{n_lamps} Lamps',
-                                   'units': 'W/(m^2.sr.um)'})
+                                   'units': 'W/(m^2.sr.nm)'})
 
     return xr.Dataset({'wavelength': xar_wv, 'spectral_radiance': xar_sign},
                       attrs=GRANDE_ATTRS)
