@@ -67,19 +67,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
                        'signal': xar_sign})
 
 
-def add_ogse_laser(l1a_file: str, target_cwl: str, gse_dir: Path) -> None:
-    """
-    Add netCDF4 group OPO_laser to gse_data in an L1A product
-    """
-    # ToDo if target_cw is None: find intended laser wavelength in filename
-    if gse_dir is None:
-        gse_dir = Path('Logs')
-    xds = read_gse_excel(gse_dir, target_cwl)
-    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/OPO_laser')
-
-
-def test_netcdf(l1a_file: str) -> None:
+def test(l1a_file: str) -> None:
     """
     Create a netCDF4 file with the Helios data in it
     """
@@ -93,4 +81,4 @@ def test_netcdf(l1a_file: str) -> None:
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    test_netcdf('test_netcdf.nc')
+    test('test_netcdf.nc')

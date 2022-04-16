@@ -240,7 +240,7 @@ def read_date_stats():
                       dtype={'names': names, 'formats': formats})
 
 
-def clock_offset(l1a_file: str) -> float:
+def clock_offset(l1a_file: Path) -> float:
     """
     Derive offset between msmt_start/msmt_stop and the SRON clock
     """
@@ -267,7 +267,7 @@ def clock_offset(l1a_file: str) -> float:
     return msmt_start, msmt_stop, t_diff
 
 
-def add_ogse_ref_diode(ref_db: Path, l1a_file: str) -> None:
+def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
     """
     Select reference data taken during a measurement and add to a L1A product
     """
@@ -288,7 +288,7 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: str) -> None:
                   group='/gse_data/ReferenceDiode')
 
 
-def add_ogse_wav_mon(ref_db: Path, l1a_file: str) -> None:
+def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
     """
     Select reference data taken during a measurement and add to a L1A product
     """

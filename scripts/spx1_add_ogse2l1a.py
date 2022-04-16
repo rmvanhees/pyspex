@@ -22,7 +22,9 @@ from pathlib import Path
 
 from pyspex.ogse_db import (read_ref_diode, read_wav_mon,
                             add_ogse_ref_diode, add_ogse_wav_mon)
-from pyspex.ogse_helios import add_ogse_helios
+from pyspex.ogse_helios import helios_spectrum
+from pyspex.ogse_grande import grande_spectrum
+from pyspex.ogse_laser import read_gse_excel
 
 # - global parameters ------------------------------
 DB_REF_DIODE = 'ogse_db_ref_diode.nc'
@@ -61,11 +63,18 @@ def write_ogse(args):
     if args.avantes:
         add_ogse_wav_mon(args.ogse_dir / DB_WAV_MON, args.l1a_file)
     if args.helios:
-        add_ogse_helios(args.l1a_file)
+        xds = helios_spectrum()
+        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                      group='/gse_data/ReferenceSpectrum')
     if args.grande is not None:
-        add_ogse_helios(args.l1a_file, args.grande)
+        xds = grande_spectrum(args.grande)
+        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                      group='/gse_data/ReferenceSpectrum')
     if args.opo_laser:
-        pass
+        target_cwl = args.l1a_file.stem.split('_')[2].split('-')[-1]
+        xds = read_gse_excel(args.ogse_dir, target_cwl)
+        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                      group='/gse_data/OPO_laser')
 
 
 # - main function ----------------------------------
@@ -101,7 +110,7 @@ def main():
                            help='add Grande reference spectrum for #lamps')
     parser_wr.add_argument('--opo_laser', action='store_true',
                            help='add wavelength of OPO laser')
-    parser_wr.add_argument('l1a_file', default=None, type=str,
+    parser_wr.add_argument('l1a_file', default=None, type=Path,
                            help="SPEXone L1A product")
     parser_wr.set_defaults(func=write_ogse)
     args = parser.parse_args()

@@ -125,23 +125,7 @@ def grande_spectrum(n_lamps: int) -> xr.Dataset:
                       attrs=GRANDE_ATTRS)
 
 
-def show_ogse_grande(n_lamps: int) -> None:
-    """
-    Show all data to be stored in the netCDF4 group ReferenceSpectrum
-    """
-    print(grande_spectrum(n_lamps))
-
-
-def add_ogse_grande(l1a_file: str, n_lamps: int) -> None:
-    """
-    Add netCDF4 group ReferenceSpectrum to gse_data in an L1A product
-    """
-    xds = grande_spectrum(n_lamps)
-    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/ReferenceSpectrum')
-
-
-def test_netcdf(l1a_file: str) -> None:
+def test(l1a_file: str) -> None:
     """
     Create a netCDF4 file containing a Grande reference spectrum
     """
@@ -153,6 +137,6 @@ def test_netcdf(l1a_file: str) -> None:
 # --------------------------------------------------
 if __name__ == '__main__':
     print('---------- SHOW DATASET ----------')
-    show_ogse_grande(5)
+    print(grande_spectrum(5))
     print('---------- WRITE DATASET ----------')
-    test_netcdf('test_netcdf.nc')
+    test('test_netcdf.nc')

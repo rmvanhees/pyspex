@@ -403,23 +403,7 @@ def helios_spectrum() -> xr.Dataset:
                       attrs=HELIOS_ATTRS)
 
 
-def show_ogse_helios() -> None:
-    """
-    Show all data to be stored in the group ReferenceSpectrum
-    """
-    print(helios_spectrum())
-
-
-def add_ogse_helios(l1a_file: str) -> None:
-    """
-    Add netCDF4 group ReferenceSpectrum to gse_data in an L1A product
-    """
-    xds = helios_spectrum()
-    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/ReferenceSpectrum')
-
-
-def test_netcdf(l1a_file: str) -> None:
+def test(l1a_file: str) -> None:
     """
     Create a netCDF4 file containing the Helios reference spectrum
     """
@@ -431,6 +415,6 @@ def test_netcdf(l1a_file: str) -> None:
 # --------------------------------------------------
 if __name__ == '__main__':
     print('---------- SHOW DATASET ----------')
-    show_ogse_helios()
+    print(helios_spectrum())
     print('---------- WRITE DATASET ----------')
-    test_netcdf('test_netcdf.nc')
+    test('test_netcdf.nc')
