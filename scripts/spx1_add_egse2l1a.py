@@ -252,7 +252,7 @@ def write_egse(args):
         egse_time = egse_time[indx[0]:indx[-1]+1]
         egse_data = fid['egse'][indx[0]:indx[-1]+1]
 
-    # update Level-1A product with EGSE information
+    # update level-1A product with EGSE information
     with LV1gse(args.l1a_file) as gse:
         gid = gse.fid['/gse_data']
         _ = gid.createEnumType('u1', 'ldls_t',
