@@ -213,9 +213,9 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
 
 
 # ----- SELECT OGSE DATA FROM DATABASE AND ADD TO L1A PRODUCT -----
-def read_date_stats():
+def read_date_stats() -> tuple:
     """
-    Read date output from shogun, egse and freckle
+    Read output of program 'date' executed at freckle (ITOS) and shogun (SRON)
     """
     if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
         data_dir = Path('/array/slot2B/spex_ocal/ambient/date_stats')
@@ -236,8 +236,15 @@ def read_date_stats():
             if '' not in fields:
                 all_valid_lines += line
 
-    return np.loadtxt(StringIO(all_valid_lines),
-                      dtype={'names': names, 'formats': formats})
+    res = np.loadtxt(StringIO(all_valid_lines),
+                     dtype={'names': names, 'formats': formats})
+
+    # a constant difference between the SRON/ITOS timestamps is introduced
+    # by the calls of 'date' via 'ssh'. This difference is estimated at 350ms.
+    t_itos = (1000 * res['ITOS'] - 350).astype(int)
+    t_sron = (1000 * res['SRON(1)']).astype(int)
+    
+    return t_itos.astype('datetime64[ms]'), t_sron.astype('datetime64[ms]')
 
 
 def clock_offset(l1a_file: Path) -> float:
@@ -246,23 +253,31 @@ def clock_offset(l1a_file: Path) -> float:
     """
     # determine duration of the measurement (ITOS clock)
     with h5py.File(l1a_file, 'r') as fid:
+        res = fid.attrs['input_files']
+        if isinstance(res, bytes):
+            input_file = Path(res.decode('ascii')).stem.rstrip('_hk')
+        else:
+            input_file = Path(res[0]).stem.rstrip('_hk')
         msmt_start = np.datetime64(
-            fid.attrs['time_coverage_start'].decode('ascii'))
+            fid.attrs['time_coverage_start'].decode('ascii').split('+')[0])
         msmt_stop = np.datetime64(
-            fid.attrs['time_coverage_end'].decode('ascii'))
+            fid.attrs['time_coverage_end'].decode('ascii').split('+')[0])
 
-    # Extent measurement periode by 1 second
-    msmt_start -= np.timedelta64(500, 'ms')
-    msmt_stop += np.timedelta64(500, 'ms')
+    duration = (msmt_stop - msmt_start).astype('timedelta64[s]') + 1
+    # print('duration: ', duration)
+
+    # use the timestamp in the filename to correct ICU time
+    date_start = datetime.strptime(input_file.split('_')[-1],
+                                   "%Y%m%dT%H%M%S.%f")
+    msmt_start = np.datetime64(date_start.isoformat()).astype('datetime64[s]')
+    msmt_stop = msmt_start + duration
+    # print('msmt: ', msmt_start, msmt_stop)
 
     # correct msmt_start and msmt_stop to SRON clock
-    cmp_date = read_date_stats()
-    cmp_date['ITOS'] -= 0.35
-    date_itos = (1000 * cmp_date['ITOS']).astype(int).astype('datetime64[ms]')
-    date_sron = (1000 * cmp_date['SRON(1)']).astype(int).astype('datetime64[ms]')
-    indx = np.argsort(np.abs(date_itos - msmt_start))[0]
-    t_diff = date_sron[indx] - date_itos[indx]
-    # print('T_shogun - T_itos:', t_diff)
+    t_itos, t_sron = read_date_stats()
+    indx = np.argsort(np.abs(t_itos - t_sron))[0]
+    t_diff = t_sron[indx] - t_itos[indx]
+    # print('T_sron - T_itos:', t_diff)
 
     return msmt_start, msmt_stop, t_diff
 
@@ -271,8 +286,10 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
     """
     Select reference data taken during a measurement and add to a L1A product
     """
+    # msmt_start and msmt_stop are generated with the ITOS clock
     msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
 
+    # ref_time is generated with the SRON clock
     xds = open_dataset(ref_db, group='/gse_data/ReferenceDiode')
     ref_time = xds['time'].values - t_diff
     indx = np.where((ref_time >= msmt_start) & (ref_time <= msmt_stop))[0]
@@ -292,19 +309,21 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
     """
     Select reference data taken during a measurement and add to a L1A product
     """
+    # msmt_start and msmt_stop are generated with the ITOS clock
     msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
 
+    # ref_time is generated with the SRON clock
     xds = open_dataset(ref_db, group='/gse_data/WaveMonitor')
     ref_time = xds['time'].values - t_diff
-    indx = np.where((ref_time >= msmt_start) & (ref_time <= msmt_stop))[0]
-    if indx.size == 0:
+    mask = ((ref_time >= msmt_start) & (ref_time <= msmt_stop))
+    if mask.sum() == 0:
         print('WaveMonitor',
               ref_time.min(), msmt_start, msmt_stop, ref_time.max())
         print('[Warning] no wavelength monitoring data found')
         return
 
     # update Level-1A product with OGSE/EGSE information
-    xds = xds.isel(time=indx)
+    xds = xds.isel(time=mask.nonzero()[0])
     xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
                   group='/gse_data/WaveMonitor')
 
