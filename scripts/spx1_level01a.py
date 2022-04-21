@@ -283,6 +283,7 @@ def main():
         #    l1a.fill_demhk(demhk['hk'])
 
         # write global attributes
+        l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'][0])
         if args.msmt_id.name.endswith('.ST3'):
             l1a.fill_global_attrs(inflight=True)
             l1a.set_attr('input_files', args.msmt_id.name)
