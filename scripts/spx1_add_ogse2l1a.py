@@ -60,16 +60,23 @@ def write_ogse(args):
     """
     if args.ref_diode:
         add_ogse_ref_diode(args.ogse_dir / DB_REF_DIODE, args.l1a_file)
+
     if args.avantes:
         add_ogse_wav_mon(args.ogse_dir / DB_WAV_MON, args.l1a_file)
+
     if args.helios:
         xds = helios_spectrum()
         xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
                       group='/gse_data/ReferenceSpectrum')
-    if args.grande is not None:
-        xds = grande_spectrum(args.grande)
-        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
-                      group='/gse_data/ReferenceSpectrum')
+
+    if args.grande:
+        for n_lamps in (1, 2, 3, 5, 9):
+            if args.l1a_file.name.find(f'-L{n_lamps:1d}_') > 0:
+                xds = grande_spectrum(n_lamps)
+                xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                              group='/gse_data/ReferenceSpectrum')
+                break
+
     if args.opo_laser:
         target_cwl = args.l1a_file.stem.split('_')[2].split('-')[-1]
         xds = read_gse_excel(args.ogse_dir, target_cwl)
@@ -106,8 +113,8 @@ def main():
                                  '  from OGSE database'))
     parser_wr.add_argument('--helios', action='store_true',
                            help='add Helios reference spectrum')
-    parser_wr.add_argument('--grande', type=int, choices=(1, 2, 3, 5, 9),
-                           help='add Grande reference spectrum for #lamps')
+    parser_wr.add_argument('--grande', action='store_true',
+                           help='add Grande reference spectrum')
     parser_wr.add_argument('--opo_laser', action='store_true',
                            help='add wavelength of OPO laser')
     parser_wr.add_argument('l1a_file', default=None, type=Path,
