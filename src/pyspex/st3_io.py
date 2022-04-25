@@ -383,7 +383,7 @@ class TmTcCCSDS():
     """
     Read SPEXone telemetry data
     """
-    VALID_APID = [0x320, 0x322, 0x331, 0x332, 0x333, 0x334]
+    VALID_APID = [0x320, 0x322, 0x331, 0x332, 0x333, 0x334, 0x335]
 
     def __init__(self, ccsds_data: tuple, verbose=False):
         """
