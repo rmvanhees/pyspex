@@ -80,8 +80,9 @@ def write_ogse(args):
     if args.opo_laser:
         target_cwl = args.l1a_file.stem.split('_')[2].split('-')[-1]
         xds = read_gse_excel(args.ogse_dir, target_cwl)
-        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
-                      group='/gse_data/OPO_laser')
+        if xds is not None:
+            xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                          group='/gse_data/OPO_laser')
 
 
 # - main function ----------------------------------
