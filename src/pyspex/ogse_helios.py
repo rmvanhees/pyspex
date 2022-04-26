@@ -387,6 +387,9 @@ def helios_spectrum() -> xr.Dataset:
     """
     Define Helios spectrum
     """
+    # Maybe we should also check the light-level value as specified
+    # in the name of the L0 file. The light level is coded as:
+    # L1: 100%, L2: 50%, L3: 30%, L4: 15%, L5: 7%, L6: 3%
     wavelength = np.linspace(350, 2400, 2051, dtype='f4')
     xar_wv = xr.DataArray(wavelength,
                           coords={'wavelength': wavelength},
