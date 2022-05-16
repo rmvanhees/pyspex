@@ -244,7 +244,9 @@ class BinningTables:
            Unbinned image data (no interpolation)
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
-            gid = fid[f'/Table_{table_id:03d}']
+            if f'Table_{table_id:03d}' not in fid.groups:
+                raise KeyError(f'Table_{table_id:03d} not defined')
+            gid = fid[f'Table_{table_id:03d}']
             binning_table = gid.variables['binning_table'][:]
             lineskip_arr = gid.variables['lineskip_arr'][:]
             count_table = gid.variables['count_table'][:]
