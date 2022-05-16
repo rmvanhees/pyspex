@@ -9,7 +9,7 @@ Environment
 -----------
 CKD_DIR :  directory with SPEXone CKD, default is CWD
 
-Copyright (c) 2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
@@ -199,6 +199,9 @@ class BinningTables:
 
         with Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
             gid = fid.createGroup(f'/Table_{table_id:03d}')
+            gid.tabel_id = table_id
+            git.REG_BINNING_TABLE_START = hex(0x80000000
+                                              + 0x400000 * (table_id - 1))
             gid.enabled_lines = np.uint16(lineskip_arr.sum())
             gid.flex_binned_pixels = np.uint32(index.max()+1)
             gid.date_created = datetime.now(timezone.utc).isoformat(
