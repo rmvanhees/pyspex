@@ -92,15 +92,19 @@ def __rd_l0_data(args) -> tuple:
     # perform data dump and exit
     if args.dump:
         # dump header information of the Science packages
-        ScienceCCSDS(ccsds_data, args.verbose).dump(
-            args.datapath / (args.msmt_id.name + '.dump'))
+        if ccsds_data:
+            ScienceCCSDS(ccsds_data, args.verbose).dump(
+                args.datapath / (args.msmt_id.name + '.dump'))
         # dump header information of the Science packages
-        TmTcCCSDS(ccsds_hk, args.verbose).dump(
-            args.datapath / (args.msmt_id.name + '_hk.dump'))
+        if ccsds_hk:
+            TmTcCCSDS(ccsds_hk, args.verbose).dump(
+                args.datapath / (args.msmt_id.name + '_hk.dump'))
         return None
 
     # read Science packages and collect all detector read-outs
-    sci_list = ScienceCCSDS(ccsds_data, args.verbose).read(args.select)
+    sci_list = []
+    if ccsds_data:
+        sci_list = ScienceCCSDS(ccsds_data, args.verbose).read(args.select)
     if not sci_list:
         print('[WARNING]: no science data found or selected')
         return None
@@ -110,7 +114,8 @@ def __rd_l0_data(args) -> tuple:
     if args.verbose:
         print(f'[INFO]: list of unique MPS {mps_list}')
 
-    tmtc_list = TmTcCCSDS(ccsds_hk, args.verbose).read()
+    if ccsds_hk:
+        tmtc_list = TmTcCCSDS(ccsds_hk, args.verbose).read()
     nomhk = np.concatenate(
         [(x,) for x in tmtc_list if ap_id(x['hdr']) == 0x320
          and x['hk']['MPS_ID'] in mps_list])

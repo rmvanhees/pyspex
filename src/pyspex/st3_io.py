@@ -213,10 +213,11 @@ class ScienceCCSDS():
         """
         Returns True if data is in CCSDS format
         """
-        hdr = np.frombuffer(self.ccsds_data[0], count=1, offset=0,
-                            dtype=hdr_dtype(st3_format=False))
-        if (hdr['type'] >> 11) == 1 and ap_id(hdr) == self.APID:
-            return True
+        if self.ccsds_data:
+            hdr = np.frombuffer(self.ccsds_data[0], count=1, offset=0,
+                                dtype=hdr_dtype(st3_format=False))
+            if (hdr['type'] >> 11) == 1 and ap_id(hdr) == self.APID:
+                return True
 
         return False
 
@@ -225,10 +226,11 @@ class ScienceCCSDS():
         """
         Returns True if data is in ST3 format
         """
-        hdr = np.frombuffer(self.ccsds_data[0], count=1, offset=0,
-                            dtype=hdr_dtype(st3_format=True))
-        if (hdr['type'] >> 11) == 1 and ap_id(hdr) == self.APID:
-            return True
+        if self.ccsds_data:
+            hdr = np.frombuffer(self.ccsds_data[0], count=1, offset=0,
+                                dtype=hdr_dtype(st3_format=True))
+            if (hdr['type'] >> 11) == 1 and ap_id(hdr) == self.APID:
+                return True
 
         return False
 
