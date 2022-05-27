@@ -32,7 +32,6 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     (input: comma separated values)
     """
     data = None
-    units = []
     unit_dict = {"Unix Time (s)": ("seconds", 'f8'),
                  "Excel Time (d)": ("days", 'f4'),
                  "Normalized Time (s)": ("seconds", 'f8'),
@@ -43,10 +42,11 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     fields_to_skip = ('', 'averaging', 'lamp_on_counter', 'record_timestamp',
                       'scale', 'tempC')
 
-    names = []
-    formats = []
-    usecols = ()
     for flname in file_list:
+        names = []
+        units = []
+        formats = []
+        usecols = ()
         all_valid_lines = ''
         with open(ogse_dir / flname, 'r', encoding='ascii') as fid:
             while True:
@@ -54,19 +54,18 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
                 if not line.startswith('Unix'):
                     continue
 
-                if not names:
-                    fields = line.split(',')
-                    for ii, field in enumerate(fields):
-                        if field in fields_to_skip:
-                            continue
-                        res = field.strip().split(' (')
-                        res[0] = res[0].replace(' ', '_')
-                        if res[0] in names:
-                            continue
-                        names.append(res[0])
-                        units.append(unit_dict[field][0])
-                        formats.append(unit_dict[field][1])
-                        usecols += (ii,)
+                fields = line.split(',')
+                for ii, field in enumerate(fields):
+                    if field in fields_to_skip:
+                        continue
+                    res = field.strip().split(' (')
+                    res[0] = res[0].replace(' ', '_')
+                    if res[0] in names:
+                        continue
+                    names.append(res[0])
+                    units.append(unit_dict[field][0])
+                    formats.append(unit_dict[field][1])
+                    usecols += (ii,)
                 break
 
             if verbose:
