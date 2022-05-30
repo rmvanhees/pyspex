@@ -241,8 +241,8 @@ def main():
     # Note that science packages and telementry packages are combined in one
     # ST3 product (in chronological order), but seperated in CCSDS products.
     parser.add_argument('msmt_id', type=Path,
-                        help=('[ST3] full name of the SPEXone level 0 file.'
-                              '[CCSDS] filename (without extension) of the'
+                        help=('[ST3] full name of the SPEXone level 0 file,'
+                              ' or [CCSDS] filename (without extension) of the'
                               ' measurement data, where the expected filenames'
                               ' of the telemetry data are msmt_id + "_hk.?"'))
     args = parser.parse_args()
