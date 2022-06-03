@@ -128,6 +128,7 @@ def main():
     packets = ()
     if not args.pdump:
         hk_files = sorted(data_dir.glob(args.msmt_id.name + '_hk.[0-9]'))
+        print(hk_files)
 
         with CCSDSio(hk_files) as ccsds:
             while True:

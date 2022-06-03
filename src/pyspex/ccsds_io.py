@@ -138,7 +138,7 @@ class CCSDSio:
     >>>     science_tm = ccsds.group_tm(packets)
     >>>     # now you may want to collect the engineering packages
     """
-    def __init__(self, file_list: str) -> None:
+    def __init__(self, file_list: list) -> None:
         """
         Initialize access to a SPEXone Level-0 product (CCSDS format)
 
@@ -154,12 +154,13 @@ class CCSDSio:
         science data are chronological and housekeeping data are chronological.
         """
         # initialize class attributes
-        self.__hdr = None
-        self.found_invalid_apid = False
         self.file_list = iter(file_list)
+        self.found_invalid_apid = False
+        self.__hdr = None
         self.fp = None
 
-        self.open_next_file()
+        if file_list:
+            self.open_next_file()
 
     def __repr__(self) -> str:
         return (f'{self.version_no:03d} 0x{self.ap_id:x}'
@@ -467,6 +468,9 @@ class CCSDSio:
         -------
         ndarray with packet data
         """
+        if self.fp is None:
+            return None
+        
         # read primary/secondary header
         hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
         if hdr.size == 0:

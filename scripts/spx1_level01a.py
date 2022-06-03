@@ -116,9 +116,11 @@ def __rd_l0_data(args) -> tuple:
 
     if ccsds_hk:
         tmtc_list = TmTcCCSDS(ccsds_hk, args.verbose).read()
-    nomhk = np.concatenate(
-        [(x,) for x in tmtc_list if ap_id(x['hdr']) == 0x320
-         and x['hk']['MPS_ID'] in mps_list])
+        nomhk = np.concatenate(
+            [(x,) for x in tmtc_list if ap_id(x['hdr']) == 0x320
+             and x['hk']['MPS_ID'] in mps_list])
+    else:
+        nomhk = np.array(())
 
     return (science, nomhk)
 
@@ -288,7 +290,8 @@ def main():
         #    l1a.fill_demhk(demhk['hk'])
 
         # write global attributes
-        l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'][0])
+        if nomhk.size > 0:
+            l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'][0])
         if args.msmt_id.name.endswith('.ST3'):
             l1a.fill_global_attrs(inflight=True)
             l1a.set_attr('input_files', args.msmt_id.name)
