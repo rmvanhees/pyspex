@@ -139,13 +139,13 @@ def main():
     clocks = Clocks()
     clocks.test()
 
-    for xx in [489023999, 489024000, 489024001]:
-        print(f'{xx}'
-              f' -> {datetime.utcfromtimestamp(xx).isoformat()}'
-              f' -> {clocks.to_tai(xx)}')
+    for kk in [489023999, 489024000, 489024001]:
+        print(f'{kk}'
+              f' -> {datetime.utcfromtimestamp(kk).isoformat()}'
+              f' -> {clocks.to_tai(kk)}')
 
-    for xx in [1120176021, 1120176022, 1120176023, 1120176024]:
-        print(f'{xx} -> {clocks.to_utc(xx)}')
+    for kk in [1120176021, 1120176022, 1120176023, 1120176024]:
+        print(f'{kk} -> {clocks.to_utc(kk)}')
 
     # check timestamp after the leap seconds file has expires
     timestamp = datetime.fromisoformat('2022-06-28T00+00:00').timestamp()

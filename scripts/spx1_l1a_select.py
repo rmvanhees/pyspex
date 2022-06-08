@@ -58,7 +58,7 @@ def main():
                         help='select on MPS-ID [comma separated?]')
     parser.add_argument('--mon_type', default=None,
                         help=('Specify monitoring type identifier: '
-                              'MON-DARK, MON-NOISE, MON-NLIN, ...')
+                              'MON-DARK, MON-NOISE, MON-NLIN, ...'))
     # parser.add_argument('--time', nargs=2, default=None,
     #                    help='select on image time [start, end]')
     # parser.add_argument('--', default=None, help='')

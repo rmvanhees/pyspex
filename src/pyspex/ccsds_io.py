@@ -470,7 +470,7 @@ class CCSDSio:
         """
         if self.fp is None:
             return None
-        
+
         # read primary/secondary header
         hdr = np.fromfile(self.fp, count=1, dtype=HDR_DTYPE)
         if hdr.size == 0:

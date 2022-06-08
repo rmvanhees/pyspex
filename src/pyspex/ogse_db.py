@@ -242,7 +242,7 @@ def read_date_stats() -> tuple:
     # by the calls of 'date' via 'ssh'. This difference is estimated at 350ms.
     t_itos = (1000 * res['ITOS'] - 350).astype(int)
     t_sron = (1000 * res['SRON(1)']).astype(int)
-    
+
     return t_itos.astype('datetime64[ms]'), t_sron.astype('datetime64[ms]')
 
 

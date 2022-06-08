@@ -33,7 +33,7 @@ def frac_poly(xx_in, coefs=None):
 
     Parameters
     ----------
-    xx    :  ndarray
+    xdata :  ndarray
     coefs :  tuple, default=None
       coefficients of fractional polynomial: r0, r1, r2, r3, r4
 
@@ -41,16 +41,16 @@ def frac_poly(xx_in, coefs=None):
     -------
     ndarray, dtype float
     """
-    xx = xx_in.astype(float)
+    xdata = xx_in.astype(float)
 
     if coefs is None:
         coefs = (273.15 + 21.19, 6.97828e+7,
                  -3.53275e-25, 7.79625e-31, -4.6505E-32)
 
     return (coefs[0]
-            + coefs[1] / xx
-            + coefs[2] * xx ** 4
-            + (coefs[3] + coefs[4] * np.log(xx)) * xx ** 5)
+            + coefs[1] / xdata
+            + coefs[2] * xdata ** 4
+            + (coefs[3] + coefs[4] * np.log(xdata)) * xdata ** 5)
 
 
 # - class LV1io -------------------------
