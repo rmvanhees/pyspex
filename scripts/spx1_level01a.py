@@ -37,185 +37,61 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import numpy as np
+from pyspex.lv0_io import (read_lv0_data, dump_lv0_data,
+                           select_lv0_data, write_lv0_data)
 
-#from pyspex import spx_product
-from pyspex.lv1_io import L1Aio
-from pyspex.st3_io import (ap_id, split_ccsds, select_science, select_hk,
-                           ScienceCCSDS, TmTcCCSDS)
 
 # - global parameters ------------------------------
-EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc)
-EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+ARG_FORMAT_HELP = """Provide data format of the input file(s):
+- raw: CCSDS packages (a.o. ambient calibration);
+- st3: CCSDS packages with ITOS and spacewire headers;
+- dsb: files recorded on the observatory data storage board;
+- default: determine file format from input files.
+"""
 
+ARG_INPUT_HELP = """Provide one or more input files:
+- raw: if you provide only the file with extension '.H' then all files of the
+       same measurement with science and house-keeping data are collected,
+       else you have to provide these files yourself;
+- st3: in general all measurement data are collected in one file;
+- dsb: please provide all files with the data of one measurement.
+"""
 
 # - local functions --------------------------------
-def get_sci_files(msmt_id: Path):
+def check_input_files(args) -> tuple:
     """
-    Returns list of all Science files used as input (OCAL, only)
+    Check input files on existence and format
     """
-    data_dir = msmt_id.parent
-    return sorted(data_dir.glob(msmt_id.name + '.[0-9]')) \
-        + sorted(data_dir.glob(msmt_id.name + '.?[0-9]'))
+    if len(args.file_list) == 1 and Path(args.file_list[0]).suffix == '.H':
+        data_dir = Path(args.file_list[0]).parent
+        file_stem = Path(args.file_list[0]).stem
+        file_list = (sorted(data_dir.glob(file_stem + '.[0-9]'))
+                     + sorted(data_dir.glob(file_stem + '.?[0-9]'))
+                     + sorted(data_dir.glob(file_stem + '_hk.[0-9]')))
 
+        return 'raw', file_list
 
-def get_hk_files(msmt_id: Path):
-    """
-    Returns list of all Science files used as input (OCAL, only)
-    """
-    data_dir = msmt_id.parent
-    return sorted(data_dir.glob(msmt_id.name + '_hk.[0-9]'))
+    file_format = args.file_format
+    file_list = []
+    for flname in args.file_list:
+        flname = Path(flname)
+        if not flname.is_file():
+            raise FileNotFoundError(flname)
 
+        if flname.suffix != '.H':
+            res = {'.spx': 'dsb',
+                   '.ST3': 'st3'}.get(flname.suffix, flname.suffix)
+            new_file_format = 'raw' if res[1:].isdigit() else res
+            if file_format == 'auto':
+                file_format = new_file_format
+            else:
+                if file_format != new_file_format:
+                    raise TypeError('inconsistent file extensions')
+            file_list.append(flname)
 
-def __rd_l0_data(args) -> tuple:
-    """
-    Read level 0 data and return Science and telemetry data
-    """
-    # concatenate CCSDS Science data of the input files
-    if args.msmt_id.name.endswith('.ST3'):
-        with open(args.msmt_id, 'rb') as fp:
-            ccsds_data, ccsds_hk = split_ccsds(fp.read())
-    else:
-        ccsds_data = ()
-        for flname in get_sci_files(args.msmt_id):
-            with open(flname, 'rb') as fp:
-                ccsds_data += select_science(fp.read())
-
-        ccsds_hk = ()
-        for flname in get_hk_files(args.msmt_id):
-            with open(flname, 'rb') as fp:
-                ccsds_hk += select_hk(fp.read())
-
-    # perform data dump and exit
-    if args.dump:
-        # dump header information of the Science packages
-        if ccsds_data:
-            ScienceCCSDS(ccsds_data, args.verbose).dump(
-                args.datapath / (args.msmt_id.name + '.dump'))
-        # dump header information of the Science packages
-        if ccsds_hk:
-            TmTcCCSDS(ccsds_hk, args.verbose).dump(
-                args.datapath / (args.msmt_id.name + '_hk.dump'))
-        return None
-
-    # read Science packages and collect all detector read-outs
-    sci_list = []
-    if ccsds_data:
-        sci_list = ScienceCCSDS(ccsds_data, args.verbose).read(args.select)
-    if not sci_list:
-        print('[WARNING]: no science data found or selected')
-        return None
-
-    science = np.concatenate(sci_list)
-    mps_list = np.unique(science['hk']['MPS_ID']).tolist()
-    if args.verbose:
-        print(f'[INFO]: list of unique MPS {mps_list}')
-
-    if ccsds_hk:
-        tmtc_list = TmTcCCSDS(ccsds_hk, args.verbose).read()
-        nomhk = np.concatenate(
-            [(x,) for x in tmtc_list if ap_id(x['hdr']) == 0x320
-             and x['hk']['MPS_ID'] in mps_list])
-    else:
-        nomhk = np.array(())
-
-    return (science, nomhk)
-
-
-def get_science_timestamps(science):
-    """
-    Return timestamps of the Science packets
-    """
-    if science['hk']['ICUSWVER'][0] > 0x123:
-        img_sec = science['icu_tm']['tai_sec']
-        img_subsec = science['icu_tm']['sub_sec']
-        return (img_sec, img_subsec)
-
-    img_sec = science['hdr']['tai_sec']
-    img_subsec = science['hdr']['sub_sec']
-    if science['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug in sub-seconds
-        us100 = np.round(10000 * img_subsec.astype(float) / 65536)
-        buff = us100 + img_sec - 10000
-        us100 = buff.astype('u8') % 10000
-        img_subsec = ((us100 << 16) // 10000).astype('u2')
-    return (img_sec, img_subsec)
-
-
-def get_nomhk_timestamps(nomhk):
-    """
-    Return timestamps of the telemetry packets
-    """
-    nomhk_sec = nomhk['hdr']['tai_sec']
-    nomhk_subsec = nomhk['hdr']['sub_sec']
-    if nomhk['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug in sub-seconds
-        us100 = np.round(10000 * nomhk_subsec.astype(float) / 65536)
-        buff = us100 + nomhk_sec - 10000
-        us100 = buff.astype('u8') % 10000
-        nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
-    return (nomhk_sec, nomhk_subsec)
-
-
-def get_l1a_name(args, science) -> str:
-    """
-    Generate name of Level-1A product, using the following filename conventions
-
-    Inflight
-    --------
-    L1A file name format, following the NASA ... naming convention:
-       PACE_SPEXone[_TTT].YYYYMMDDTHHMMSS.L1A.Vnn.nc
-    where
-       TTT is an optional data type (e.g., for the calibration data files)
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       nn file-version number
-    for example
-    [Science Product] PACE_SPEXone.20230115T123456.L1A.V01.nc
-    [Calibration Product] PACE_SPEXone_CAL.20230115T123456.L1A.V01.nc
-    [Monitoring Products] PACE_SPEXone_DARK.20230115T123456.L1A.V01.nc
-
-    OCAL
-    ----
-    L1A file name format:
-       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_yyyymmddThhmmss_vvvv.nc
-    where
-       msm_id is the measurement identifier
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       yyyymmddThhmmss is the creation time (UTC) of the product
-       vvvv is the version number of the product starting at 0001
-    """
-    img_sec, _ = get_science_timestamps(science)
-    if args.msmt_id.name.endswith('.ST3'):
-        # inflight product name
-        # ToDo: detect Diagnostic DARK measurements
-        prod_type = '_CAL' if args.select == 'fullFrame' else ''
-        #sensing_start = EPOCH_1958 + timedelta(seconds=int(img_sec[0]))
-        sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
-
-        return (f'PACE_SPEXone{prod_type}'
-                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
-                f'.V{args.file_version:02d}.nc')
-
-    # OCAL product name
-    sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
-
-    # determine measurement identifier
-    msm_id = args.msmt_id.name
-    try:
-        new_date = datetime.strptime(
-            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
-    except ValueError:
-        pass
-    else:
-        msm_id = msm_id[:-22] + new_date
-
-    return (f'SPX1_OCAL_{msm_id}_L1A'
-            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{args.file_version:04d}.nc')
+    return file_format, file_list
 
 
 # - main function ----------------------------------
@@ -227,78 +103,42 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='store Level-0 data in a new SPEXone Level-1A product')
+    parser.add_argument('--verbose', action='store_true', help='be verbose')
+    parser.add_argument('--debug', action='store_true', help='be more verbose')
     parser.add_argument('--dump', action='store_true',
                         help=('dump CCSDS packet headers in ASCII'))
-    parser.add_argument('--verbose', action='store_true', help='be verbose')
-    parser.add_argument('--file_version', type=int, default=1,
-                        help='provide file version number of level-1A product')
     parser.add_argument('--select', default='all',
-                        choices=['all', 'binned', 'fullFrame'],
-                        help=('read "all" data (default) or select'
-                              ' "binned" / "full-frame" detector-readouts'))
+                        choices=['binned', 'fullFrame'],
+                        help='Select "binned" or "fullFrame" detector-readouts')
     parser.add_argument('--datapath', type=Path, default=Path('.'),
-                        help='directory to store the Level-1A product')
+                        help='Directory to store the Level-1A product')
+    parser.add_argument('--file_version', type=int, default=1,
+                        help='Provide file version number of level-1A product')
+    parser.add_argument('--file_format', type=str, default='auto',
+                        choices=('raw', 'st3', 'dsb'), help=ARG_FORMAT_HELP)
     # parser.add_argument('--st3_nav', default=None, type=str,
     #                    help='name of ST3 file with navigation data')
-    # Note that science packages and telementry packages are combined in one
-    # ST3 product (in chronological order), but seperated in CCSDS products.
-    parser.add_argument('msmt_id', type=Path,
-                        help=('[ST3] full name of the SPEXone level 0 file,'
-                              ' or [CCSDS] filename (without extension) of the'
-                              ' measurement data, where the expected filenames'
-                              ' of the telemetry data are msmt_id + "_hk.?"'))
+    parser.add_argument('file_list', nargs='+', help=ARG_INPUT_HELP)
     args = parser.parse_args()
+    args.file_format, args.file_list = check_input_files(args)
     if args.verbose:
         print(args)
 
     # read level 0 data
-    if (res := __rd_l0_data(args)) is None:
+    res = read_lv0_data(args)
+    if args.debug:
         return
 
-    science, nomhk = res
-    if args.verbose:
-        print(f'[INFO]: number of Science packages = {science.size}')
-        print(f'[INFO]: number of telemetry packages = {nomhk.size}')
-    dims = {'number_of_images': science.size,
-            'samples_per_image': science['hk']['IMRLEN'].max() // 2,
-            'hk_packets': nomhk.size,
-            'SC_records': None}
+    # perform an ASCII dump of level 0 headers parameters
+    if args.dump:
+        dump_lv0_data(args, *res)
+        return
 
-    # generate name of the level-1A product
-    prod_name = get_l1a_name(args, science)
+    # select Science and NomHK packages from level 0 data
+    science, nomhk = select_lv0_data(args, *res)
 
-    # Generate and fill L1A product
-    with L1Aio(args.datapath / prod_name, dims=dims) as l1a:
-        # write image data, detector telemetry and image attributes
-        img_data = np.empty((science.size, dims['samples_per_image']),
-                            dtype=float)
-        for ii, data in enumerate(science['frame']):
-            img_data[ii, :data.size] = data
-        l1a.fill_science(img_data, science['hk'],
-                         np.bitwise_and(science['hdr']['sequence'], 0x3fff))
-        del img_data
-        img_sec, img_subsec = get_science_timestamps(science)
-        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
-
-        # write engineering data
-        if nomhk.size > 0:
-            l1a.fill_nomhk(nomhk['hk'])
-            nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
-            l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
-
-        # if demhk.size > 0:
-        #    l1a.fill_demhk(demhk['hk'])
-
-        # write global attributes
-        if nomhk.size > 0:
-            l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'][0])
-        if args.msmt_id.name.endswith('.ST3'):
-            l1a.fill_global_attrs(inflight=True)
-            l1a.set_attr('input_files', args.msmt_id.name)
-        else:
-            l1a.fill_global_attrs(inflight=False)
-            l1a.set_attr('input_files',
-                         [x.name for x in get_sci_files(args.msmt_id)])
+    # write L1A product
+    write_lv0_data(args, science, nomhk)
 
 
 # --------------------------------------------------
