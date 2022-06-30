@@ -414,7 +414,7 @@ def get_l1a_name(args, science) -> str:
     sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
 
     # determine measurement identifier
-    msm_id = args.file_name.stem
+    msm_id = args.file_list[0].stem
     try:
         new_date = datetime.strptime(
             msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
