@@ -202,17 +202,17 @@ def dtype_tmtc(hdr: np.dtype) -> np.dtype:
                              ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
 
 
-def read_lv0_data(file_list: list, file_format: str, debug: bool,
-                  verbose: bool) -> tuple:
+def read_lv0_data(file_list: list, file_format: str, debug=False,
+                  verbose=False) -> tuple:
     """
     Read level 0 data and return Science and telemetry data
 
     Parameters
     ----------
-    file_list : list of str
+    file_list : list of Path
     file_format : {'raw', 'st3', 'dsb'}
-    debug : bool
-    verbose : bool
+    debug : bool, default=False
+    verbose : bool, default=False
 
     Returns
     -------
@@ -318,7 +318,7 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
 
     Parameters
     ----------
-    file_list :  list of str
+    file_list :  list of Path
     datapath :  Path
     ccsds_sci :  tuple of np.ndarray
     ccsds_hk :  tuple of np.ndarray
@@ -369,7 +369,7 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
                          f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}\n")
 
 
-def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose: bool) -> tuple:
+def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     """
     Select telemetry packages and combine Science packages to contain one
     detector readout.
@@ -379,7 +379,7 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose: bool) -> tuple:
     select : {'all', ''binned', 'fullFrame'}
     ccsds_sci :  tuple of np.ndarray
     ccsds_hk :  tuple of np.ndarray
-    verbose : bool
+    verbose : bool, default=False
         be verbose (or not)
 
     Returns
@@ -493,7 +493,7 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
     Parameters
     ----------
     prod_name :  Path
-    file_list :  list of str
+    file_list :  list of Path
     file_format :  {'raw', 'st3', 'dsb'}
     science: np.ndarray
     nomhk: np.ndarray
