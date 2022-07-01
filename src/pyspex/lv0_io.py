@@ -11,7 +11,7 @@ Copyright (c) 2022 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import numpy as np
 
@@ -20,9 +20,6 @@ from pyspex.lv1_io import L1Aio
 
 
 # - global parameters ------------------------------
-EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc)
-EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
 FULLFRAME_BYTES = 2 * 2048 * 2048
 
 
@@ -31,6 +28,18 @@ def ap_id(hdr: np.ndarray) -> int:
     """
     Returns Telemetry APID, the range 0x320 to 0x351 is available to SPEXone
 
+    Parameters
+    ----------
+    hdr :  np.ndarray
+        Structured numpy array with contents of the level 0 CCSDS header
+
+    Returns
+    -------
+    int
+        Telemetry APID
+
+    Notes
+    -----
     The following values are recognized:
         0x350 : Science
         0x320 : NomHk
@@ -48,6 +57,18 @@ def grouping_flag(hdr: np.ndarray) -> int:
     """
     Returns grouping flag
 
+    Parameters
+    ----------
+    hdr :  np.ndarray
+        Structured numpy array with contents of the level 0 CCSDS header
+
+    Returns
+    -------
+    int
+        Grouping flag
+
+    Notes
+    -----
     The 2-byte flag is encoded as follows:
         00 continuation packet-data segment
         01 first packet-data segment
@@ -60,6 +81,16 @@ def grouping_flag(hdr: np.ndarray) -> int:
 def sequence(hdr: np.ndarray) -> int:
     """
     Returns sequence counter, rollover to zero at 0x3FFF
+
+    Parameters
+    ----------
+    hdr :  np.ndarray
+        Structured numpy array with contents of the level 0 CCSDS header
+
+    Returns
+    -------
+    int
+        Sequence counter
     """
     return hdr['sequence'] & 0x3FFF
 
@@ -68,25 +99,43 @@ def packet_length(hdr: np.ndarray) -> int:
     """
     Returns size of secondary header + user data - 1 in bytes
 
+    Parameters
+    ----------
+    hdr :  np.ndarray
+        Structured numpy array with contents of the level 0 CCSDS header
+
+    Returns
+    -------
+    int
+        Size of variable part of the CCSDS package
+
     Notes
     -----
     We always read the primary header and secondary header at once.
-
     Value range: 7 - 16375
     """
     return hdr['length']
 
+
 def dtype_packet_hdr(file_format: str) -> np.dtype:
     """
-    Return numpy dtype of the packet headers
+    Return definition of the CCSDS packet headers (primary and secondary)
 
     Parameters
     ----------
-    file_format: str
-       File format of level 0 products: raw, dsb or st3
-       'raw' data has no file header and standard CCSDS packet headers
-       'st3' data has no file header and ITOS + spacewire + CCSDS packet headers
-       'dsb' data has a cFE file header and spacewire + CCSDS packet headers
+    file_format : {'raw', 'dsb' or 'st3'}
+        File format of level 0 products
+
+    Returns
+    -------
+    np.dtype
+        numpy dtype of the packet headers or None if file format is unknown
+
+    Notes
+    -----
+    'raw' data has no file header and standard CCSDS packet headers
+    'st3' data has no file header and ITOS + spacewire + CCSDS packet headers
+    'dsb' data has a cFE file header and spacewire + CCSDS packet headers
     """
     if file_format == 'raw':
         return np.dtype([('type', '>u2'),
@@ -117,7 +166,17 @@ def dtype_packet_hdr(file_format: str) -> np.dtype:
 
 def dtype_tmtc(hdr: np.dtype) -> np.dtype:
     """
-    Return numpy dtype of a telemetry message or command
+    Return definition of a CCSDS TmTc package (given APID)
+
+    Parameters
+    ----------
+    hdr :  np.ndarray
+        Structured numpy array with contents of the level 0 CCSDS header
+
+    Returns
+    -------
+    np.dtype
+        numpy dtype of CCSDS TmTC package or None if APID is not implemented
     """
     return {0x320: np.dtype([('hdr', hdr.dtype),
                              ('hk', tmtc_dtype(0x320))]),
@@ -143,11 +202,25 @@ def dtype_tmtc(hdr: np.dtype) -> np.dtype:
                              ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
 
 
-def read_lv0_data(args) -> tuple:
+def read_lv0_data(file_list: list, file_format: str, debug: bool,
+                  verbose: bool) -> tuple:
     """
     Read level 0 data and return Science and telemetry data
+
+    Parameters
+    ----------
+    file_list : list of str
+    file_format : {'raw', 'st3', 'dsb'}
+    debug : bool
+    verbose : bool
+
+    Returns
+    -------
+    tuple
+         Contains all Science and TmTc CCSDS packages as numpy arrays,
+         or None if called with debug is True
     """
-    hdr_dtype = dtype_packet_hdr(args.file_format)
+    hdr_dtype = dtype_packet_hdr(file_format)
     scihk_dtype = tmtc_dtype(0x350)
     icutm_dtype = np.dtype([('tai_sec', '>u4'),
                             ('sub_sec', '>u2')])
@@ -155,13 +228,13 @@ def read_lv0_data(args) -> tuple:
     # read level 0 headers and CCSDS data of Science and TmTc data
     ccsds_sci = ()
     ccsds_hk = ()
-    for flname in args.file_list:
+    for flname in file_list:
         with open(flname, 'rb') as fp:
             offs = 0
             ccsds_data = fp.read()
 
             # read cFE file header
-            if args.file_format == 'dsb':
+            if file_format == 'dsb':
                 # read cFE file header
                 cfe_dtype = np.dtype([
                     ('ContentType', 'S4'),
@@ -178,7 +251,7 @@ def read_lv0_data(args) -> tuple:
                                         dtype=cfe_dtype)[0]
                 # Now we can check the values of the cFE File header
                 # or even write these values to the L1A product
-                if args.verbose:
+                if verbose:
                     print('[INFO] cFE File header: ', cfe_hdr)
                 offs += cfe_dtype.itemsize
 
@@ -187,7 +260,7 @@ def read_lv0_data(args) -> tuple:
                 hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
                                     dtype=hdr_dtype)[0]
                 # copy the full CCSDS package
-                if args.debug:
+                if debug:
                     print(ap_id(hdr), grouping_flag(hdr),
                           hdr_dtype.itemsize, hdr['length'], offs)
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
@@ -231,19 +304,27 @@ def read_lv0_data(args) -> tuple:
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
         del ccsds_data
 
-    if args.verbose:
+    if verbose:
         print(f'[INFO] number of Science packages: {len(ccsds_sci)}')
         print(f'[INFO] number of Engineering packages: {len(ccsds_hk)}')
 
     return ccsds_sci, ccsds_hk
 
 
-def dump_lv0_data(args, ccsds_sci, ccsds_hk) -> None:
+def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
+                  ccsds_hk: tuple) -> None:
     """
     Perform an ASCII dump of level 0 data
+
+    Parameters
+    ----------
+    file_list :  list of str
+    datapath :  Path
+    ccsds_sci :  tuple of np.ndarray
+    ccsds_hk :  tuple of np.ndarray
     """
     # dump header information of the Science packages
-    flname = args.datapath / (args.file_list[0].stem + '.dump')
+    flname = datapath / (file_list[0].stem + '.dump')
     with open(flname, 'w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'
                  ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
@@ -263,7 +344,7 @@ def dump_lv0_data(args, ccsds_sci, ccsds_hk) -> None:
                          f' {sequence(hdr):7d} {packet_length(hdr):6d}\n')
 
     # dump header information of the nominal house-keeping packages
-    flname = args.datapath / (args.file_list[0].stem + '_hk.dump')
+    flname = datapath / (file_list[0].stem + '_hk.dump')
     with open(flname, 'w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
@@ -288,9 +369,23 @@ def dump_lv0_data(args, ccsds_sci, ccsds_hk) -> None:
                          f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}\n")
 
 
-def select_lv0_data(args, ccsds_sci, ccsds_hk) -> tuple:
+def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose: bool) -> tuple:
     """
-    read Science packages and collect all detector read-outs
+    Select telemetry packages and combine Science packages to contain one
+    detector readout.
+
+    Parameters
+    ----------
+    select : {'all', ''binned', 'fullFrame'}
+    ccsds_sci :  tuple of np.ndarray
+    ccsds_hk :  tuple of np.ndarray
+    verbose : bool
+        be verbose (or not)
+
+    Returns
+    -------
+    tuple of np.ndarray
+         Contains all Science and NomHK packages as numpy arrays
     """
     ii = 0
     for segment in ccsds_sci:
@@ -312,18 +407,18 @@ def select_lv0_data(args, ccsds_sci, ccsds_hk) -> tuple:
             frame += (segment['data']['frame'][0],)
         if grouping_flag(hdr) == 2:
             buff['frame'][0] = np.concatenate(frame)
-            if args.select == 'all':
+            if select == 'all':
                 science += (buff.copy(),)
-            elif (args.select == 'binned'
+            elif (select == 'binned'
                   and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
                 science += (buff.copy(),)
-            elif (args.select == 'fullFrame'
+            elif (select == 'fullFrame'
                   and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                 science += (buff.copy(),)
 
     science = np.concatenate(science)
     mps_list = np.unique(science['hk']['MPS_ID']).tolist()
-    if args.verbose:
+    if verbose:
         print(f'[INFO]: list of unique MPS {mps_list}')
 
     if ccsds_hk:
@@ -336,9 +431,18 @@ def select_lv0_data(args, ccsds_sci, ccsds_hk) -> tuple:
     return science, nomhk
 
 
-def get_science_timestamps(science):
+def get_science_timestamps(science: np.ndarray) -> tuple:
     """
     Return timestamps of the Science packets
+
+    Parameters
+    ----------
+    science :  np.ndarray
+
+    Returns
+    -------
+    tuple
+        Tuple with timestamps and sub-seconds
     """
     if science['hk']['ICUSWVER'][0] > 0x123:
         img_sec = science['icu_tm']['tai_sec']
@@ -353,12 +457,22 @@ def get_science_timestamps(science):
         buff = us100 + img_sec - 10000
         us100 = buff.astype('u8') % 10000
         img_subsec = ((us100 << 16) // 10000).astype('u2')
-    return (img_sec, img_subsec)
+
+    return img_sec, img_subsec
 
 
-def get_nomhk_timestamps(nomhk):
+def get_nomhk_timestamps(nomhk: np.ndarray) -> tuple:
     """
     Return timestamps of the telemetry packets
+
+    Parameters
+    ----------
+    nomhk:  np.ndarray
+
+    Returns
+    -------
+    tuple
+        Tuple with timestamps and sub-seconds
     """
     nomhk_sec = nomhk['hdr']['tai_sec']
     nomhk_subsec = nomhk['hdr']['sub_sec']
@@ -368,80 +482,30 @@ def get_nomhk_timestamps(nomhk):
         buff = us100 + nomhk_sec - 10000
         us100 = buff.astype('u8') % 10000
         nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
-    return (nomhk_sec, nomhk_subsec)
+    return nomhk_sec, nomhk_subsec
 
 
-def get_l1a_name(args, science) -> str:
-    """
-    Generate name of Level-1A product, using the following filename conventions
-
-    Inflight
-    --------
-    L1A file name format, following the NASA ... naming convention:
-       PACE_SPEXone[_TTT].YYYYMMDDTHHMMSS.L1A.Vnn.nc
-    where
-       TTT is an optional data type (e.g., for the calibration data files)
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       nn file-version number
-    for example
-    [Science Product] PACE_SPEXone.20230115T123456.L1A.V01.nc
-    [Calibration Product] PACE_SPEXone_CAL.20230115T123456.L1A.V01.nc
-    [Monitoring Products] PACE_SPEXone_DARK.20230115T123456.L1A.V01.nc
-
-    OCAL
-    ----
-    L1A file name format:
-       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_yyyymmddThhmmss_vvvv.nc
-    where
-       msm_id is the measurement identifier
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       yyyymmddThhmmss is the creation time (UTC) of the product
-       vvvv is the version number of the product starting at 0001
-    """
-    img_sec, _ = get_science_timestamps(science)
-    if args.file_format != 'raw':
-        # inflight product name
-        # ToDo: detect Diagnostic DARK measurements
-        prod_type = '_CAL' if args.select == 'fullFrame' else ''
-        #sensing_start = EPOCH_1958 + timedelta(seconds=int(img_sec[0]))
-        sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
-
-        return (f'PACE_SPEXone{prod_type}'
-                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
-                f'.V{args.file_version:02d}.nc')
-
-    # OCAL product name
-    sensing_start = EPOCH_1970 + timedelta(seconds=int(img_sec[0]))
-
-    # determine measurement identifier
-    msm_id = args.file_list[0].stem
-    try:
-        new_date = datetime.strptime(
-            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
-    except ValueError:
-        pass
-    else:
-        msm_id = msm_id[:-22] + new_date
-
-    return (f'SPX1_OCAL_{msm_id}_L1A'
-            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{args.file_version:04d}.nc')
-
-def write_lv0_data(args, science, nomhk) -> None:
+def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
+                   science: np.ndarray, nomhk: np.ndarray) -> None:
     """
     Write level 0 packages to a level-1A product
+
+    Parameters
+    ----------
+    prod_name :  Path
+    file_list :  list of str
+    file_format :  {'raw', 'st3', 'dsb'}
+    science: np.ndarray
+    nomhk: np.ndarray
     """
+    # define datra dimensions
     dims = {'number_of_images': science.size,
             'samples_per_image': science['hk']['IMRLEN'].max() // 2,
             'hk_packets': nomhk.size,
             'SC_records': None}
 
-    # generate name of the level-1A product
-    prod_name = get_l1a_name(args, science)
-
     # Generate and fill L1A product
-    with L1Aio(args.datapath / prod_name, dims=dims) as l1a:
+    with L1Aio(prod_name, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
         img_data = np.empty((science.size, dims['samples_per_image']),
                             dtype=float)
@@ -465,9 +529,9 @@ def write_lv0_data(args, science, nomhk) -> None:
         # write global attributes
         if nomhk.size > 0:
             l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'])
-        if args.file_format == 'raw':
+        if file_format == 'raw':
             l1a.fill_global_attrs(inflight=False)
         else:
             l1a.fill_global_attrs(inflight=True)
         l1a.set_attr('input_files',
-                     [x.name for x in args.file_list])
+                     [x.name for x in file_list])

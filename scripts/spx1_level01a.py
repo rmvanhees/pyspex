@@ -37,13 +37,19 @@ License:  BSD-3-Clause
 """
 import argparse
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from pyspex.lv0_io import (read_lv0_data, dump_lv0_data,
-                           select_lv0_data, write_lv0_data)
-
+from pyspex.lv0_io import (dump_lv0_data,
+                           get_science_timestamps,
+                           read_lv0_data,
+                           select_lv0_data,
+                           write_lv0_data)
 
 # - global parameters ------------------------------
+EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc)
+EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 ARG_FORMAT_HELP = """Provide data format of the input file(s):
 - raw: CCSDS packages (a.o. ambient calibration);
 - st3: CCSDS packages with ITOS and spacewire headers;
@@ -58,6 +64,7 @@ ARG_INPUT_HELP = """Provide one or more input files:
 - st3: in general all measurement data are collected in one file;
 - dsb: please provide all files with the data of one measurement.
 """
+
 
 # - local functions --------------------------------
 def check_input_files(args) -> tuple:
@@ -94,6 +101,79 @@ def check_input_files(args) -> tuple:
     return file_format, file_list
 
 
+def get_l1a_name(file_list: list, file_format: str, file_version: int,
+                 select: str, timestamp0: int) -> str:
+    """
+    Generate name of Level-1A product based on filename conventions described
+    below
+
+    Parameters
+    ----------
+    file_list :  list of str
+    file_format :  str
+    file_version :  int
+    select :  str
+    timestamp0 :  int
+
+    Returns
+    -------
+    str
+        name of Level-1A product
+
+    Notes
+    -----
+
+    === Inflight ===
+    L1A file name format, following the NASA ... naming convention:
+       PACE_SPEXone[_TTT].YYYYMMDDTHHMMSS.L1A.Vnn.nc
+    where
+       TTT is an optional data type (e.g., for the calibration data files)
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       nn file-version number
+    for example
+    [Science Product] PACE_SPEXone.20230115T123456.L1A.V01.nc
+    [Calibration Product] PACE_SPEXone_CAL.20230115T123456.L1A.V01.nc
+    [Monitoring Products] PACE_SPEXone_DARK.20230115T123456.L1A.V01.nc
+
+    === OCAL ===
+    L1A file name format:
+       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_yyyymmddThhmmss_vvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       yyyymmddThhmmss is the creation time (UTC) of the product
+       vvvv is the version number of the product starting at 0001
+    """
+    if file_format != 'raw':
+        # inflight product name
+        # ToDo: detect Diagnostic DARK measurements
+        prod_type = '_CAL' if select == 'fullFrame' else ''
+        # sensing_start = EPOCH_1958 + timedelta(seconds=int(timestamp0))
+        sensing_start = EPOCH_1970 + timedelta(seconds=int(timestamp0))
+
+        return (f'PACE_SPEXone{prod_type}'
+                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
+                f'.V{file_version:02d}.nc')
+
+    # OCAL product name
+    sensing_start = EPOCH_1970 + timedelta(seconds=int(timestamp0))
+
+    # determine measurement identifier
+    msm_id = file_list[0].stem
+    try:
+        new_date = datetime.strptime(
+            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
+    except ValueError:
+        pass
+    else:
+        msm_id = msm_id[:-22] + new_date
+
+    return (f'SPX1_OCAL_{msm_id}_L1A'
+            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{datetime.utcnow().strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{file_version:04d}.nc')
+
+
 # - main function ----------------------------------
 def main():
     """
@@ -125,20 +205,27 @@ def main():
         print(args)
 
     # read level 0 data
-    res = read_lv0_data(args)
+    res = read_lv0_data(args.file_list, args.file_format,
+                        args.debug, args.verbose)
     if args.debug:
         return
 
     # perform an ASCII dump of level 0 headers parameters
     if args.dump:
-        dump_lv0_data(args, *res)
+        dump_lv0_data(args.file_list, args.datapath, *res)
         return
 
     # select Science and NomHK packages from level 0 data
-    science, nomhk = select_lv0_data(args, *res)
+    science, nomhk = select_lv0_data(args.select, res[0], res[1], args.verbose)
+
+    # generate name of the level-1A product
+    prod_name = get_l1a_name(args.file_list, args.file_format,
+                             args.file_version, args.select,
+                             get_science_timestamps(science[:1])[0])
 
     # write L1A product
-    write_lv0_data(args, science, nomhk)
+    write_lv0_data(args.datapath / prod_name, args.file_list,
+                   args.file_format, science, nomhk)
 
 
 # --------------------------------------------------
