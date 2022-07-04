@@ -11,6 +11,7 @@ Copyright (c) 2022 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -202,6 +203,35 @@ def dtype_tmtc(hdr: np.dtype) -> np.dtype:
                              ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
 
 
+def _fix_hk24_(sci_hk):
+    """
+    Correct 32-bit integers in the Science HK which originate from
+    24-bit integers in the detector register values
+
+    In addition:
+    - copy the first 4 bytes of DET_CHENA to DET_ILVDS
+    - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
+    """
+    res = sci_hk.copy()
+    if sci_hk['ICUSWVER'] < 0x129:
+        res['REG_BINNING_TABLE_START'] = \
+            sci_hk['REG_BINNING_TABLE_START'].byteswap()
+
+    res['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
+    for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
+                'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
+                'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
+                'LED2_ANODE_V', 'LED2_CATH_V', 'LED2_I',
+                'ADC1_VCC', 'ADC1_REF', 'ADC1_T',
+                'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
+                'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
+                'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
+                'DET_CHENA']:
+        res[key] = sci_hk[key] >> 8
+
+    return res
+
+
 def read_lv0_data(file_list: list, file_format: str, debug=False,
                   verbose=False) -> tuple:
     """
@@ -274,9 +304,10 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                             ('frame', 'O')]))
                         buff['hdr'] = hdr
                         offs += hdr_dtype.itemsize
-                        buff['hk'] = np.frombuffer(ccsds_data,
-                                                   count=1, offset=offs,
-                                                   dtype=scihk_dtype)[0]
+                        buff['hk'] = _fix_hk24_(
+                            np.frombuffer(ccsds_data,
+                                          count=1, offset=offs,
+                                          dtype=scihk_dtype)[0])
                         offs += scihk_dtype.itemsize
                         buff['icu_tm'] = np.frombuffer(ccsds_data,
                                                        count=1, offset=offs,
@@ -515,12 +546,22 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
                          np.bitwise_and(science['hdr']['sequence'], 0x3fff))
         del img_data
         img_sec, img_subsec = get_science_timestamps(science)
+        if file_format == 'dsb':
+            print('convert TAI 1958 to UTC 1970')
+            offs = int(datetime(1958, 1, 1, tzinfo=timezone.utc).timestamp())
+            img_sec -= offs
+            img_sec -= 37
         l1a.fill_time(img_sec, img_subsec, group='image_attributes')
 
         # write engineering data
         if nomhk.size > 0:
             l1a.fill_nomhk(nomhk['hk'])
             nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
+            if file_format == 'dsb':
+                print('convert TAI 1958 to UTC 1970')
+                offs = int(datetime(1958, 1, 1, tzinfo=timezone.utc).timestamp())
+                nomhk_sec -= offs
+                nomhk_sec -= 37
             l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
 
         # if demhk.size > 0:

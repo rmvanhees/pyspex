@@ -48,7 +48,7 @@ from pyspex.lv0_io import (dump_lv0_data,
                            write_lv0_data)
 
 # - global parameters ------------------------------
-EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc)
+EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=37)
 EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 ARG_FORMAT_HELP = """Provide data format of the input file(s):
@@ -155,7 +155,6 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
 
     if file_format != 'raw':
         # inflight product name
-        # ToDo: detect Diagnostic DARK measurements
         prod_type = '_CAL' if select == 'fullFrame' else ''
         sensing_start = epoch + timedelta(seconds=int(timestamp0))
 
