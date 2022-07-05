@@ -13,14 +13,14 @@ License:  BSD-3-Clause
 from datetime import datetime
 
 # - global parameters ------------------------------
-EPOCH_1900 = int(datetime.fromisoformat("1900-01-01T00+00:00").timestamp())
-EPOCH_1958 = int(datetime.fromisoformat("1958-01-01T00+00:00").timestamp())
+EPOCH_1900 = datetime.fromisoformat("1900-01-01T00+00:00").timestamp()
+EPOCH_1958 = datetime.fromisoformat("1958-01-01T00+00:00").timestamp()
 
 
 # - class Clocks -------------------------
 class Clocks:
     """
-    Convert TAI to UTC or visa versa
+    Convert TAI (epoch 1958) to UTC (epoch 1970)or visa versa
     """
     def __init__(self):
         """
@@ -28,11 +28,11 @@ class Clocks:
 
         Notes
         -----
-        Information obtained from IERS Bulletin C62
+        Information obtained from IERS Bulletin C
 
         origin: https://www.ietf.org/timezones/data/leap-seconds.list
 
-        Valid until:  28 June 2022
+        Valid until:  28 December 2022
         """
         # This table contains 3 columns:
         #  1) epoch as a number of seconds since 1 January 1900, 00:00:00
@@ -67,57 +67,72 @@ class Clocks:
             (3550089600, 35, "2012-07-01T00+00:00"),    # 1 Jul 2012
             (3644697600, 36, "2015-07-01T00+00:00"),    # 1 Jul 2015
             (3692217600, 37, "2017-01-01T00+00:00"),    # 1 Jan 2017
-            (3865363200, None, "2022-06-28T00+00:00")]  # expiring date
+            (3881174400, None, "2022-12-28T00+00:00")]  # expiring date
 
         # use epoch since 1970.0 instead 1900.0
-        self.table = [(x + EPOCH_1900, y, z) for x, y, z in self.table]
+        self.table = [(x + EPOCH_1900, y, z) for x, y, z in self.table[::-1]]
 
-    def to_tai(self, timestamp: int) -> int:
+    def utc_delta(self, timestamp=None) -> float:
+        """
+        Return offset between timestamp TAI (1958) and UTC (1970)
+        """
+        if timestamp is None:
+            timestamp = datetime.utcnow().timestamp()
+
+        for bgn_epoch_1970, leap_sec, _ in self.table:
+            if timestamp >= bgn_epoch_1970:
+                break
+
+        return leap_sec - EPOCH_1958
+        
+    def to_tai(self, timestamp: float) -> float:
         """
         Return TAI timestamp for given UTC timestamp
 
         Parameters
         ----------
-        timestamp :  int
-           timestamp in UTC (epoch 1970.0)
+        timestamp :  float
+            timestamp in UTC (epoch 1970.0)
 
         Return
         ------
-        int :  TAI timestamp (epoch 1958.0)
+        float
+            TAI timestamp (epoch 1958.0)
         """
-        for iers_epoch, iers_offs, _ in self.table[::-1]:
-            if timestamp >= iers_epoch:
+        for bgn_epoch_1970, leap_sec, _ in self.table:
+            if timestamp >= bgn_epoch_1970:
                 break
 
-        if iers_offs is None:
+        if leap_sec is None:
             raise ValueError('update your leap second list through'
-                             ' IERS Bulletin C62')
+                             ' IERS Bulletin C')
 
-        return timestamp + iers_offs - EPOCH_1958
+        return timestamp + leap_sec - EPOCH_1958
 
-    def to_utc(self, timestamp: int) -> int:
+    def to_utc(self, timestamp: float) -> float:
         """
         Return UTC timestamp for given TAI timestamp
 
         Parameters
         ----------
-        timestamp :  int
-           timestamp in UTC (epoch 1958.0)
+        timestamp :  float
+            timestamp in TAI (epoch 1958.0)
 
         Return
         ------
-        int :  UTC timestamp (epoch 1970.0)
+        float
+            UTC timestamp (epoch 1970.0)
         """
         timestamp += EPOCH_1958
-        for iers_epoch, iers_offs, _ in self.table[::-1]:
-            if timestamp >= iers_epoch:
+        for bgn_epoch_1970, leap_sec, _ in self.table:
+            if timestamp >= bgn_epoch_1970:
                 break
 
-        if iers_offs is None:
+        if leap_sec is None:
             raise ValueError('update your leap second list through'
-                             ' IERS Bulletin C62')
+                             ' IERS Bulletin C')
 
-        return timestamp - iers_offs
+        return timestamp - leap_sec
 
     def test(self) -> None:
         """
@@ -125,10 +140,10 @@ class Clocks:
         """
         for res in self.table:
             dt_str = datetime.fromisoformat(res[2])
-            if res[0] != int(dt_str.timestamp()):
+            if res[0] != dt_str.timestamp():
                 raise ValueError(f'Detected error in table at epoch={res[0]}')
 
-        print('INFO: current information on leap seconds expires'
+        print('[INFO] current information on leap seconds expires'
               f' at {self.table[-1][2]}')
 
 
@@ -147,8 +162,10 @@ def main():
     for kk in [1120176021, 1120176022, 1120176023, 1120176024]:
         print(f'{kk} -> {clocks.to_utc(kk)}')
 
+    print(clocks.utc_delta())
+
     # check timestamp after the leap seconds file has expires
-    timestamp = datetime.fromisoformat('2022-06-28T00+00:00').timestamp()
+    timestamp = datetime.fromisoformat('2024-06-28T00+00:00').timestamp()
     clocks.to_tai(timestamp)
 
 

@@ -11,17 +11,21 @@ Copyright (c) 2022 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
-from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 
 from pyspex.lib.tmtc_def import tmtc_dtype
+from pyspex.lib.tai_to_utc import Clocks
 from pyspex.lv1_io import L1Aio
 
 
 # - global parameters ------------------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
+
+# Note that the number of leap seconds will possibly to be increased to 38 sec
+# in the near future.
+LEAP_SEC = 37
 
 
 # - local functions --------------------------------
@@ -450,7 +454,7 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     science = np.concatenate(science)
     mps_list = np.unique(science['hk']['MPS_ID']).tolist()
     if verbose:
-        print(f'[INFO]: list of unique MPS {mps_list}')
+        print(f'[INFO] list of unique MPS {mps_list}')
 
     if ccsds_hk:
         nomhk = np.concatenate(
@@ -535,6 +539,9 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
             'hk_packets': nomhk.size,
             'SC_records': None}
 
+    # obtain offset between timestamp TAI (1958) and UTC (1970) in seconds
+    clocks = Clocks()
+
     # Generate and fill L1A product
     with L1Aio(prod_name, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
@@ -547,10 +554,7 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
         del img_data
         img_sec, img_subsec = get_science_timestamps(science)
         if file_format == 'dsb':
-            print('convert TAI 1958 to UTC 1970')
-            offs = int(datetime(1958, 1, 1, tzinfo=timezone.utc).timestamp())
-            img_sec -= offs
-            img_sec -= 37
+            img_sec -= int(clocks.utc_delta(float(img_sec[0])))
         l1a.fill_time(img_sec, img_subsec, group='image_attributes')
 
         # write engineering data
@@ -558,10 +562,7 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
             l1a.fill_nomhk(nomhk['hk'])
             nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
             if file_format == 'dsb':
-                print('convert TAI 1958 to UTC 1970')
-                offs = int(datetime(1958, 1, 1, tzinfo=timezone.utc).timestamp())
-                nomhk_sec -= offs
-                nomhk_sec -= 37
+                nomhk_sec -= int(clocks.utc_delta(float(img_sec[0])))
             l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
 
         # if demhk.size > 0:
