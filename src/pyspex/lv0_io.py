@@ -263,7 +263,11 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
     ccsds_sci = ()
     ccsds_hk = ()
     for flname in file_list:
+        buff_sci = ()          # Use chunking to speed-up memory allocation
+        buff_hk = ()
         with open(flname, 'rb') as fp:
+            if verbose:
+                print('[INFO] processing file: ', flname)
             offs = 0
             ccsds_data = fp.read()
 
@@ -328,15 +332,17 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                     buff['frame'][0] = np.frombuffer(ccsds_data,
                                                      count=nbytes // 2,
                                                      offset=offs, dtype='>u2')
-                    ccsds_sci += ({'hdr': hdr, 'data': buff.copy()},)
+                    buff_sci += ({'hdr': hdr, 'data': buff.copy()},)
                     offs += nbytes
                 elif 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
                     buff = np.frombuffer(ccsds_data, count=1, offset=offs,
                                          dtype=dtype_tmtc(hdr))[0]
-                    ccsds_hk += ({'hdr': hdr, 'data': buff},)
+                    buff_hk += ({'hdr': hdr, 'data': buff},)
                     offs += dtype_tmtc(hdr).itemsize
                 else:
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
+        ccsds_sci += buff_sci
+        ccsds_hk += buff_hk
         del ccsds_data
 
     if verbose:
@@ -386,22 +392,24 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
         for segment in ccsds_hk:
             hdr = segment['hdr']
             data = segment['data']
+            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
+
             if ap_id(hdr) == 0x320:
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                         f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}"
-                         f" {data['hk']['ICUSWVER']:8x}"
-                         f" {data['hk']['MPS_ID']:6d}\n")
-            elif ap_id(hdr) in (0x332, 0x334):
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                         f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}"
-                         f" {-1:8x} {-1:6d} {data['TcSeqControl']:12d}"
-                         f" {bin(data['TcErrorCode'])}\n")
-            else:
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                         f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}\n")
+                msg += (f" {data['hk']['ICUSWVER']:8x}"
+                        f" {data['hk']['MPS_ID']:6d}\n")
+            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
+                msg += f" {-1:8x} {-1:6d} {data['TcSeqControl']:12d}"
+                if ap_id(hdr) == 0x332:
+                    msg += (f" {bin(data['TcErrorCode'])}"
+                            f" {data['RejectParameter1']}"
+                            f" {data['RejectParameter2']}")
+                if ap_id(hdr) == 0x334:
+                    msg += (f" {bin(data['TcErrorCode'])}"
+                            f" {data['FailParameter1']}"
+                            f" {data['FailParameter2']}")
+            fp.write(msg + "\n")
 
 
 def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
