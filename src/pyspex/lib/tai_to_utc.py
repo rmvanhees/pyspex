@@ -72,13 +72,21 @@ class Clocks:
         # use epoch since 1970.0 instead 1900.0
         self.table = [(x + EPOCH_1900, y, z) for x, y, z in self.table[::-1]]
 
-    def utc_delta(self, timestamp=None) -> float:
+    def utc_delta(self, timestamp: float) -> float:
         """
-        Return offset between timestamp TAI (1958) and UTC (1970)
-        """
-        if timestamp is None:
-            timestamp = datetime.utcnow().timestamp()
+        Return difference between timestamp TAI (1958) and UTC (1970)
 
+        Parameters
+        ----------
+        timestamp :  float
+            timestamp in TAI (epoch 1958.0)
+
+        Returns
+        -------
+        float
+            number of seconds
+        """
+        timestamp += EPOCH_1958
         for bgn_epoch_1970, leap_sec, _ in self.table:
             if timestamp >= bgn_epoch_1970:
                 break
@@ -162,7 +170,8 @@ def main():
     for kk in [1120176021, 1120176022, 1120176023, 1120176024]:
         print(f'{kk} -> {clocks.to_utc(kk)}')
 
-    print(clocks.utc_delta())
+    kk = clocks.to_tai(1656374400.0)  # 2022-06-28T00+00:00
+    print(kk, clocks.utc_delta(kk), clocks.to_utc(kk))
 
     # check timestamp after the leap seconds file has expires
     timestamp = datetime.fromisoformat('2024-06-28T00+00:00').timestamp()
