@@ -22,6 +22,7 @@ from pathlib import Path
 
 from pyspex.ogse_db import (read_ref_diode, read_wav_mon,
                             add_ogse_ref_diode, add_ogse_wav_mon)
+from pyspex.ogse_dolp import gsfc_polarizer
 from pyspex.ogse_helios import helios_spectrum
 from pyspex.ogse_grande import grande_spectrum
 from pyspex.ogse_laser import read_gse_excel
@@ -70,6 +71,9 @@ def write_ogse(args):
                       group='/gse_data/ReferenceSpectrum')
 
     if args.grande:
+        xds = gsfc_polarizer()
+        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                      group='/gse_data/SpectralDolP')
         for n_lamps in (1, 2, 3, 5, 9):
             if args.l1a_file.name.find(f'-L{n_lamps:1d}_') > 0:
                 xds = grande_spectrum(n_lamps)
@@ -112,10 +116,11 @@ def main():
     parser_wr.add_argument('--avantes', action='store_true',
                            help=('add Avantes wavelength monitoring'
                                  '  from OGSE database'))
-    parser_wr.add_argument('--helios', action='store_true',
-                           help='add Helios reference spectrum')
-    parser_wr.add_argument('--grande', action='store_true',
-                           help='add Grande reference spectrum')
+    group_wr = parser_wr.add_mutually_exclusive_group()
+    group_wr.add_argument('--helios', action='store_true',
+                          help='add Helios reference spectrum')
+    group_wr.add_argument('--grande', action='store_true',
+                          help='add Grande reference spectrum')
     parser_wr.add_argument('--opo_laser', action='store_true',
                            help='add wavelength of OPO laser')
     parser_wr.add_argument('l1a_file', default=None, type=Path,
