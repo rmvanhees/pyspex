@@ -11,13 +11,15 @@ Copyright (c) 2022 SRON - Netherlands Institute for Space Research
 
 License:  BSD-3-Clause
 """
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
 
-from pyspex.lib.tmtc_def import tmtc_dtype
-from pyspex.lib.tai_to_utc import Clocks
-from pyspex.lv1_io import L1Aio
+from .lib.tmtc_def import tmtc_dtype
+from .lib.tai_to_utc import Clocks
+from .lv1_io import L1Aio
+from .tm_science import TMscience
 
 
 # - global parameters ------------------------------
@@ -26,6 +28,7 @@ FULLFRAME_BYTES = 2 * 2048 * 2048
 # Note that the number of leap seconds will possibly to be increased to 38 sec
 # in the near future.
 LEAP_SEC = 37
+EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
@@ -527,6 +530,63 @@ def get_nomhk_timestamps(nomhk: np.ndarray) -> tuple:
         nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
     return nomhk_sec, nomhk_subsec
 
+def img_sec_of_day(ccsds_sec, ccsds_subsec, img_hk) -> np.ndarray:
+    """
+    Convert Image CCSDS timestamp to seconds after midnight
+
+    Parameters
+    ----------
+    ccsds_sec : numpy array (dtype='u4')
+        Seconds since 1970-01-01
+    ccsds_subsec : numpy array (dtype='u2')
+        Sub-seconds as (1 / 2**16) seconds
+    img_hk :  numpy array
+
+    Returns
+    -------
+    numpy.ndarray with sec_of_day
+    """
+    # determine midnight before start measurement
+    tstamp0 = EPOCH_1970 + timedelta(seconds=int(ccsds_sec[0]))
+    ref_day = datetime(year=tstamp0.year,
+                       month=tstamp0.month,
+                       day=tstamp0.day, tzinfo=timezone.utc)
+
+    mps = TMscience(img_hk)
+    imro = 1e-1 * mps.get('FTI') * 2
+    mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
+
+    # return seconds since midnight
+    offs = (ref_day - EPOCH_1970).total_seconds()
+
+    return ccsds_sec - offs + ccsds_subsec / 65536 - (mcycl + imro) / 1000.
+
+
+def hk_sec_of_day(ccsds_sec, ccsds_subsec) -> np.ndarray:
+    """
+    Convert CCSDS timestamp to seconds after midnight
+
+    Parameters
+    ----------
+    ccsds_sec : numpy array (dtype='u4')
+        Seconds since 1970-01-01
+    ccsds_subsec : numpy array (dtype='u2')
+        Sub-seconds as (1 / 2**16) seconds
+
+    Returns
+    -------
+    numpy.ndarray with sec_of_day
+    """
+    # determine midnight before start measurement
+    tstamp0 = EPOCH_1970 + timedelta(seconds=int(ccsds_sec[0]))
+    ref_day = datetime(year=tstamp0.year,
+                       month=tstamp0.month,
+                       day=tstamp0.day, tzinfo=timezone.utc)
+
+    # return seconds since midnight
+    offset = (ref_day - EPOCH_1970).total_seconds()
+    return ccsds_sec - offset + ccsds_subsec / 65536
+
 
 def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
                    science: np.ndarray, nomhk: np.ndarray) -> None:
@@ -550,31 +610,40 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
     # obtain offset between timestamp TAI (1958) and UTC (1970) in seconds
     clocks = Clocks()
 
+    img_sec, img_subsec = get_science_timestamps(science)
+    if file_format == 'dsb':
+        img_sec -= int(clocks.utc_delta(float(img_sec[0])))
+    ref_date = (EPOCH_1970 + timedelta(seconds=int(img_sec[0]))).date()
+
+    nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
+    if file_format == 'dsb':
+        nomhk_sec -= int(clocks.utc_delta(float(img_sec[0])))
+
     # Generate and fill L1A product
-    with L1Aio(prod_name, dims=dims) as l1a:
+    with L1Aio(prod_name, dims=dims, ref_date=ref_date) as l1a:
         # write image data, detector telemetry and image attributes
         img_data = np.empty((science.size, dims['samples_per_image']),
-                            dtype=float)
+                            dtype='u2')
         for ii, data in enumerate(science['frame']):
             img_data[ii, :data.size] = data
         l1a.fill_science(img_data, science['hk'],
                          np.bitwise_and(science['hdr']['sequence'], 0x3fff))
         del img_data
-        img_sec, img_subsec = get_science_timestamps(science)
-        if file_format == 'dsb':
-            img_sec -= int(clocks.utc_delta(float(img_sec[0])))
-        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
+        l1a.set_dset('/image_attributes/image_sec', img_sec)
+        l1a.set_dset('/image_attributes/image_subsec', img_subsec)
+        sec_of_day = img_sec_of_day(img_sec, img_subsec, science['hk'])
+        l1a.set_dset('/image_attributes/image_time', sec_of_day)
 
         # write engineering data
         if nomhk.size > 0:
             l1a.fill_nomhk(nomhk['hk'])
-            nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
-            if file_format == 'dsb':
-                nomhk_sec -= int(clocks.utc_delta(float(img_sec[0])))
-            l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
+            sec_of_day = hk_sec_of_day(nomhk_sec, nomhk_subsec)
+            l1a.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
 
         # if demhk.size > 0:
         #    l1a.fill_demhk(demhk['hk'])
+
+        # write navigation data
 
         # write global attributes
         if nomhk.size > 0:

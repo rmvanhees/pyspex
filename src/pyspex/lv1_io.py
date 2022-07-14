@@ -95,15 +95,18 @@ class Lv1io:
     processing_level = 'unknown'
     dset_stored = {}
 
-    def __init__(self, product: str, append=False, **kwargs):
+    def __init__(self, product: str, ref_date: datetime.date,
+                 dims: dict, append=False):
         """
         Initialize access to a SPEXone Level-1 product
 
         Parameters
         ----------
-        product : str
+        product :  str
            name of the SPEXone Level-1 product
-        append : bool, default=False
+        ref_date :  datetime.date
+        dims :  dict
+        append :  bool, default=False
            do no clobber, but add new data to existing product
         """
         self.product = Path(product)
@@ -115,15 +118,13 @@ class Lv1io:
         # initialize Level-1 product
         if not append:
             if self.processing_level == 'L1A':
-                self.fid = init_l1a(product, **kwargs)
+                self.fid = init_l1a(product, ref_date, dims)
             elif self.processing_level == 'L1B':
-                self.fid = init_l1b(product, **kwargs)
-                if 'ref_date' in kwargs and kwargs['ref_date'] is not None:
-                    self.__epoch = kwargs['ref_date']
+                self.__epoch = ref_date
+                self.fid = init_l1b(product, ref_date, dims)
             elif self.processing_level == 'L1C':
-                self.fid = init_l1c(product, **kwargs)
-                if 'ref_date' in kwargs and kwargs['ref_date'] is not None:
-                    self.__epoch = kwargs['ref_date']
+                self.__epoch = ref_date
+                self.fid = init_l1c(product, ref_date, dims)
             else:
                 raise KeyError('valid processing levels are: L1A, L1B or L1C')
         else:
@@ -403,8 +404,8 @@ class L1Aio(Lv1io):
         '/image_attributes/digital_offset': 0,
         '/image_attributes/nr_coadditions': 0,
         '/image_attributes/exposure_time': 0,
-        '/image_attributes/image_CCSDS_sec': 0,
-        '/image_attributes/image_CCSDS_subsec': 0,
+        '/image_attributes/image_sec': 0,
+        '/image_attributes/image_subsec': 0,
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
         '/engineering_data/NomHK_telemetry': 0,
@@ -437,28 +438,18 @@ class L1Aio(Lv1io):
         # check of all required dataset their sizes
         self.check_stored(allow_empty=True)
 
-        # define object to access Science telemetry parameters
-        mps = TMscience(self.get_dset('/science_data/detector_telemetry')[-1])
+        # determine time_coverage_start
+        dset = self.fid['/image_attributes/image_time']
+        tstamp = datetime(int(dset.year), int(dset.month), int(dset.day),
+                          tzinfo=timezone.utc)
+        tstamp += timedelta(seconds=float(dset[0].data))
+        self.fid.time_coverage_start = tstamp.isoformat(timespec='milliseconds')
 
-        # determine duration master clock cycle
-        imro = 1e-1 * mps.get('FTI') * 2
-        mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
-
-        img_sec = self.fid['/image_attributes/image_CCSDS_sec'][:].data
-        img_subsec = self.fid['/image_attributes/image_CCSDS_subsec'][:].data
-
-        time0 = (self.epoch
-                 + timedelta(seconds=int(img_sec[0]))
-                 + timedelta(microseconds=int(1e6 * img_subsec[0] / 65536))
-                 - timedelta(milliseconds=mcycl + imro))
-
-        time1 = (self.epoch
-                 + timedelta(seconds=int(img_sec[-1]))
-                 + timedelta(microseconds=int(1e6 * img_subsec[-1] / 65536))
-                 - timedelta(milliseconds=imro))
-
-        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
-        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
+        # determine time_coverage_end
+        tstamp = datetime(int(dset.year), int(dset.month), int(dset.day),
+                          tzinfo=timezone.utc)
+        tstamp += timedelta(seconds=float(dset[-1].data))
+        self.fid.time_coverage_end = tstamp.isoformat(timespec='milliseconds')
 
         self.fid.close()
         self.fid = None
@@ -522,77 +513,6 @@ class L1Aio(Lv1io):
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def sec_of_day(self, ccsds_sec, ccsds_subsec) -> tuple:
-        """
-        Convert CCSDS timestamp to seconds after midnight
-
-        Parameters
-        ----------
-        ccsds_sec : numpy array (dtype='u4')
-          Seconds since 1970-1-1
-        ccsds_subsec : numpy array (dtype='u2')
-          Sub-seconds as (1 / 2**16) seconds
-
-        Returns
-        -------
-        tuple holding reference_day and numpy.ndarray with sec_of_day
-        """
-        # determine midnight before start measurement
-        tstamp0 = self.epoch + timedelta(seconds=int(ccsds_sec[0]))
-        reference_day = datetime(year=tstamp0.year,
-                                 month=tstamp0.month,
-                                 day=tstamp0.day, tzinfo=timezone.utc)
-
-        # store seconds since midnight
-        sec_of_day = ccsds_sec - (reference_day - self.epoch).total_seconds()
-
-        # return seconds since midnight
-        return reference_day, sec_of_day + ccsds_subsec / 65536
-
-    def fill_time(self, ccsds_sec, ccsds_subsec, group=None) -> None:
-        """
-        Write time of Science telemetry packets (UTC/TAI) to L1A product
-
-        Parameters
-        ----------
-        ccsds_sec : numpy array (dtype='u4')
-          Seconds since 1970-1-1
-        ccsds_subsec : numpy array (dtype='u2')
-          Sub-seconds as (1 / 2**16) seconds
-        group : str, default=None
-
-        Note
-        ----
-        Writes parameters: image_time, image_CCSDS_sec and image_CCSDS_subsec
-        """
-        if group is None:
-            group = 'image_attributes'
-
-        # calculate seconds of day
-        reference_day, sec_of_day = self.sec_of_day(ccsds_sec, ccsds_subsec)
-
-        if group in ('image_attributes', '/image_attributes'):
-            self.set_dset('/image_attributes/image_CCSDS_sec', ccsds_sec)
-            self.set_dset('/image_attributes/image_CCSDS_subsec', ccsds_subsec)
-            self.set_dset('/image_attributes/image_time', sec_of_day)
-            self.set_attr('units',
-                          f'seconds since {reference_day.isoformat()}',
-                          ds_name='/image_attributes/image_time')
-        elif group in ('engineering_data', '/engineering_data'):
-            self.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
-            self.set_attr('units',
-                          f'seconds since {reference_day.isoformat()}',
-                          ds_name='/engineering_data/HK_tlm_time')
-        else:
-            self.set_dset('/navigation_data/att_time', sec_of_day)
-            self.set_attr('units',
-                          f'seconds since {reference_day.isoformat()}',
-                          ds_name='/navigation_data/att_time')
-            self.set_dset('/navigation_data/orb_time', sec_of_day)
-            self.set_attr('units',
-                          f'seconds since {reference_day.isoformat()}',
-                          ds_name='/navigation_data/orb_time')
-
     def fill_science(self, img_data, img_hk, img_id) -> None:
         """
         Write Science data and housekeeping telemetry (Science) to L1A product

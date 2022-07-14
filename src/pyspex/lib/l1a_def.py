@@ -5,11 +5,12 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation of the PACE SPEX Level-1A product (inflight and onground)
 
-Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
+import datetime
 import numpy as np
 
 from netCDF4 import Dataset
@@ -17,13 +18,41 @@ from netCDF4 import Dataset
 from .tmtc_def import tmtc_def
 
 # - global parameters ------------------------------
+ORBIT_DURATION = 5904  # seconds
 
 
 # - local functions --------------------------------
+def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
+    """
+    Add CF attributes to a dataset holding 'seconds of day'
+
+    Examples
+    --------
+    double time(number_of_scans) ;
+            time:_FillValue = -32767. ;
+            time:long_name = "time" ;
+            time:units = "seconds since 2022-03-21 00:00:00" ;
+            time:description = "Earth view mid time in seconds of day" ;
+            time:year = 2022 ;
+            time:month = 3 ;
+            time:day = 21 ;
+            time:valid_min = 0. ;
+            time:valid_max = 86401. ;
+
+    Note that '_FillValue', 'long_name' and 'description' are not set by
+    this function.
+    """
+    dset.units = f"seconds since {ref_date.isoformat()} 00:00:00"
+    dset.year = f"{ref_date.year}"
+    dset.month = f"{ref_date.month}"
+    dset.day = f"{ref_date.day}"
+    dset.valid_min = 0
+    dset.valid_max = 86400 + ORBIT_DURATION
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
+# pylint: disable=too-many-statements
+def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 
@@ -35,14 +64,15 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
        Provide length of the Level-1A dimensions
        Default values:
             number_of_images : None     # number of image frames
-            samples_per_image : 184000  # depends on binning table
+            samples_per_image : None    # depends on binning table
             SC_records : None           # space-craft navigation records (1 Hz)
             hk_packets : None           # number of HK tlm-packets (1 Hz)
+    ref_date :  datetime.date
+       Date of the first detector image
 
     Notes
     -----
-    Original design Frederick S. Patt (Goddard Space Flight Center), 08-Feb-2019
-    Modified for on-ground calibration measurements, Richard M. van Hees (SRON)
+    Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
     """
     # check function parameters
     if not isinstance(dims, dict):
@@ -50,7 +80,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
 
     # initialize dimensions
     number_img = None
-    img_samples = 184000
+    img_samples = None
     hk_packets = None
     sc_records = None
 
@@ -76,34 +106,34 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
 
     # - define group /image_attributs and its datasets
     sgrp = rootgrp.createGroup('/image_attributes')
-    dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',))
-    dset.long_name = "image time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds since midnight"
-    dset = sgrp.createVariable('image_CCSDS_sec', 'u4',
+    dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
+                               fill_value=-32767)
+    dset.long_name = "Image time"
+    dset.description = "Integration start time in seconds of day"
+    attrs_sec_per_day(dset, ref_date)
+    dset = sgrp.createVariable('image_sec', 'u4',
                                ('number_of_images',))
-    dset.long_name = "image CCSDS time (seconds)"
-    dset.valid_min = np.uint32(1577500000)  # year 2020
-    dset.valid_max = np.uint32(2050000000)  # year 2035
-    dset.units = "seconds since 1958-1-1 TAI" if inflight \
-        else "seconds since 1970-1-1"
-    dset = sgrp.createVariable('image_CCSDS_subsec', 'u2',
+    dset.long_name = "Image timestamp"
+    dset.valid_min = np.uint32(1577836800)  # year 2020
+    dset.valid_max = np.uint32(2051222400)  # year 2035
+    dset.units = "seconds since 1970-01-01"
+
+    dset = sgrp.createVariable('image_subsec', 'u2',
                                ('number_of_images',))
-    dset.long_name = "image CCSDS time (sub-seconds)"
+    dset.long_name = "Image timestamp (sub-seconds)"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "1/65536 s"
     dset = sgrp.createVariable('image_ID', 'i4', ('number_of_images',))
-    dset.long_name = "image counter from power-up"
+    dset.long_name = "Image counter from power-up"
     dset.valid_min = np.int32(0)
     dset.valid_max = np.int32(0x7FFFFFFF)
     dset = sgrp.createVariable('binning_table', 'u1', ('number_of_images',))
-    dset.long_name = "binning-table ID"
+    dset.long_name = "Binning-table ID"
     dset.valid_min = np.uint8(0)
     dset.valid_max = np.uint8(0xFF)
     dset = sgrp.createVariable('digital_offset', 'i2', ('number_of_images',))
-    dset.long_name = "digital offset"
+    dset.long_name = "Digital offset"
     dset.units = "1"
     dset = sgrp.createVariable('nr_coadditions', 'u2', ('number_of_images',),
                                fill_value=0)
@@ -121,7 +151,7 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
     dset = sgrp.createVariable('detector_images', 'u2',
                                ('number_of_images', 'samples_per_image'),
                                chunksizes=chunksizes, fill_value=0xFFFF)
-    dset.long_name = "Image data from detector"
+    dset.long_name = "Detector pixel values"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFE)
     dset.units = "counts"
@@ -134,11 +164,11 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
 
     # - define group /engineering_data and its datasets
     sgrp = rootgrp.createGroup('/engineering_data')
-    dset = sgrp.createVariable('HK_tlm_time', 'f8', ('hk_packets',))
-    dset.long_name = "HK telemetry packet time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds since midnight"
+    dset = sgrp.createVariable('HK_tlm_time', 'f8', ('hk_packets',),
+                               fill_value=-32767)
+    dset.long_name = "HK telemetry packet time"
+    dset.description = "packaging time in seconds of day"
+    attrs_sec_per_day(dset, ref_date)
     hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x320)),
                                           'nomhk_dtype')
     dset = sgrp.createVariable('NomHK_telemetry', hk_dtype, ('hk_packets',))
@@ -172,14 +202,14 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
     sgrp = rootgrp.createGroup('/navigation_data')
     dset = sgrp.createVariable('adstate', 'u1',
                                ('SC_records',), fill_value=0xFF)
-    dset.long_name = "Current ADCS State"
+    dset.long_name = "ADS State"
     dset.flag_values = np.array([0, 1, 2, 3, 4, 5], dtype='u1')
     dset.flag_meanings = "Wait Detumple AcqSun Point Delta Earth"
-    dset = sgrp.createVariable('att_time', 'f8', ('SC_records',))
-    dset.long_name = "Attitude sample time (seconds of day)"
-    dset.valid_min = 0.0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds since midnight"
+    dset = sgrp.createVariable('att_time', 'f8', ('SC_records',),
+                               fill_value=-32767)
+    dset.long_name = "Attitude time"
+    dset.description = "time in seconds per day"
+    attrs_sec_per_day(dset, ref_date)
     chunksizes = None if sc_records is not None else (256, 4)
     dset = sgrp.createVariable('att_quat', 'f4',
                                ('SC_records', 'quaternion_elements'),
@@ -188,11 +218,11 @@ def init_l1a(l1a_flname: str, dims: dict, inflight=False) -> None:
     dset.valid_min = -1
     dset.valid_max = 1
     dset.units = "1"
-    dset = sgrp.createVariable('orb_time', 'f8', ('SC_records',))
-    dset.long_name = "Orbit vector time (seconds of day)"
-    dset.valid_min = 0
-    dset.valid_max = 86400.999999
-    dset.units = "seconds since midnight"
+    dset = sgrp.createVariable('orb_time', 'f8', ('SC_records',),
+                               fill_value=-32767)
+    dset.long_name = "Orbit vector time"
+    dset.description = "Orbit vector time in seconds per day"
+    attrs_sec_per_day(dset, ref_date)
     chunksizes = None if sc_records is not None else (340, 3)
     dset = sgrp.createVariable('orb_pos', 'f4',
                                ('SC_records', 'vector_elements'),

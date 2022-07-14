@@ -5,23 +5,26 @@ https://github.com/rmvanhees/pyspex.git
 
 Python implementation of the PACE SPEX Level-1C product
 
-Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
+Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
 
 License:  BSD-3-Clause
 """
+import datetime
+
 from netCDF4 import Dataset
 import numpy as np
 
 
 # - global parameters ------------------------------
-
+ORBIT_DURATION = 5904  # seconds
 
 # - local functions --------------------------------
 
 
 # - main function ----------------------------------
-def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
+# pylint: disable=too-many-statements
+def init_l1c(l1c_flname: str, ref_date: datetime.date, dims: dict) -> None:
     """
     Create an empty PACE SPEX Level-1C product
 
@@ -29,15 +32,15 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     ----------
     l1c_flname : string
        Name of Level-1C product
-    ref_date : datetime.datetime
-       Reference date for image time
+    ref_date : datetime.date
+       Date of the first detector image
     dims :   dictionary
-       Provide length of the Level-1B dimensions
+       Provide length of the Level-1C dimensions
        Default values:
-          bins_along_track :  400
-          bins_across_track :  20
-          intensity_bands_per_view :  50
-          polarization_bands_per_view :  50
+          bins_along_track: 400
+          spatial_samples_per_image: 200
+          intensity_bands_per_view: 50
+          polarization_bands_per_view: 50
 
     Notes
     -----
@@ -78,18 +81,25 @@ def init_l1c(l1c_flname: str, ref_date, dims: dict) -> None:
     chunksizes = None if n_bins_along is not None else (512,)
     dset = sgrp.createVariable('nadir_view_time', 'f8',
                                ('bins_along_track',), chunksizes=chunksizes)
-    dset.long_name = 'time bin was viewed at nadir view'
+    dset.long_name = 'Nadir view time'
+    dset.description = "time when bin was viewed at nadir"
     dset.valid_min = 0
     dset.valid_max = 86400.999999
     if ref_date is None:
-        dset.units = 'second'
+        dset.units = "second since midnight"
     else:
-        dset.units = f'seconds since {ref_date.isoformat(sep=" ")}'
+        dset.units = f"seconds since {ref_date.isoformat()} 00:00:00"
+        dset.year = f"{ref_date.year}"
+        dset.month = f"{ref_date.month}"
+        dset.day = f"{ref_date.day}"
+    dset.valid_min = 0
+    dset.valid_max = 86400 + ORBIT_DURATION
     chunksizes = None if n_bins_along is not None else (512, n_bins_across)
     dset = sgrp.createVariable('view_time_offsets', 'f8',
                                ('bins_along_track', 'bins_across_track',
                                 'number_of_views'), chunksizes=chunksizes)
-    dset.long_name = 'time offsets of views from nadir view'
+    dset.long_name = "time offsets of views"
+    dset.description = "offset of views wrt nadir view"
     dset.valid_min = -200
     dset.valid_max = 200
     dset.units = 'second'

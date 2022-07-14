@@ -22,7 +22,7 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 # - global parameters -------------------
 
 
-# - class LV1io -------------------------
+# - class HKTio -------------------------
 class HKTio:
     """
     Generic class to read PACE HKT products
