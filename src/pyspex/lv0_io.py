@@ -17,7 +17,6 @@ from pathlib import Path
 import numpy as np
 
 from .lib.tmtc_def import tmtc_dtype
-from .lib.tai_to_utc import Clocks
 from .lv1_io import L1Aio
 from .tm_science import TMscience
 
@@ -28,6 +27,7 @@ FULLFRAME_BYTES = 2 * 2048 * 2048
 # Note that the number of leap seconds will possibly to be increased to 38 sec
 # in the near future.
 LEAP_SEC = 37
+EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=37)
 EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -415,16 +415,19 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
             fp.write(msg + "\n")
 
 
-def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
+def select_lv0_data(ccsds_sci, ccsds_hk, select: str, verbose=False) -> tuple:
     """
     Select telemetry packages and combine Science packages to contain one
     detector readout.
 
     Parameters
     ----------
-    select : {'all', ''binned', 'fullFrame'}
     ccsds_sci :  tuple of np.ndarray
+        Science TM packages (ApID: 0x350)
     ccsds_hk :  tuple of np.ndarray
+        All other Telementry packages
+    select : {'all', ''binned', 'fullFrame'}
+        Select Science packages: all, binned or full-frame
     verbose : bool, default=False
         be verbose (or not)
 
@@ -477,7 +480,7 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     return science, nomhk
 
 
-def get_science_timestamps(science: np.ndarray) -> tuple:
+def science_timestamps(science: np.ndarray) -> tuple:
     """
     Return timestamps of the Science packets
 
@@ -493,8 +496,9 @@ def get_science_timestamps(science: np.ndarray) -> tuple:
     if science['hk']['ICUSWVER'][0] > 0x123:
         img_sec = science['icu_tm']['tai_sec']
         img_subsec = science['icu_tm']['sub_sec']
-        return (img_sec, img_subsec)
+        return img_sec, img_subsec
 
+    # use the inaccurate packaging timing stored in the secondary header
     img_sec = science['hdr']['tai_sec']
     img_subsec = science['hdr']['sub_sec']
     if science['hk']['ICUSWVER'][0] == 0x123:
@@ -507,7 +511,7 @@ def get_science_timestamps(science: np.ndarray) -> tuple:
     return img_sec, img_subsec
 
 
-def get_nomhk_timestamps(nomhk: np.ndarray) -> tuple:
+def nomhk_timestamps(nomhk: np.ndarray) -> tuple:
     """
     Return timestamps of the telemetry packets
 
@@ -528,64 +532,82 @@ def get_nomhk_timestamps(nomhk: np.ndarray) -> tuple:
         buff = us100 + nomhk_sec - 10000
         us100 = buff.astype('u8') % 10000
         nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
+
     return nomhk_sec, nomhk_subsec
 
-def img_sec_of_day(ccsds_sec, ccsds_subsec, img_hk) -> np.ndarray:
+
+def img_sec_of_day(img_sec, img_subsec, sci_hk) -> np.ndarray:
     """
     Convert Image CCSDS timestamp to seconds after midnight
 
     Parameters
     ----------
-    ccsds_sec : numpy array (dtype='u4')
-        Seconds since 1970-01-01
-    ccsds_subsec : numpy array (dtype='u2')
+    img_sec : numpy array (dtype='u4')
+        Seconds since 1970-01-01 (or 1958-01-01)
+    img_subsec : numpy array (dtype='u2')
         Sub-seconds as (1 / 2**16) seconds
     img_hk :  numpy array
 
     Returns
     -------
-    numpy.ndarray with sec_of_day
+    tuple
+        refence day and numpy.ndarray sec_of_day
     """
-    # determine midnight before start measurement
-    tstamp0 = EPOCH_1970 + timedelta(seconds=int(ccsds_sec[0]))
+    # determine for the first timestamp the offset with last midnight [seconds]
+    epoch = EPOCH_1970 if img_sec[0] < 1956528000 else EPOCH_1958
+    tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
     ref_day = datetime(year=tstamp0.year,
                        month=tstamp0.month,
                        day=tstamp0.day, tzinfo=timezone.utc)
+    offs = (ref_day - epoch).total_seconds()
 
-    mps = TMscience(img_hk)
+    # determine offset with start of integration time [milliseconds]
+    # ToDo: is the correction different for full-frame and binned images?
+    mps = TMscience(sci_hk)
     imro = 1e-1 * mps.get('FTI') * 2
     mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
 
     # return seconds since midnight
-    offs = (ref_day - EPOCH_1970).total_seconds()
-
-    return ccsds_sec - offs + ccsds_subsec / 65536 - (mcycl + imro) / 1000.
+    return ref_day, img_sec - offs + img_subsec / 65536 - (mcycl + imro) / 1000
 
 
-def hk_sec_of_day(ccsds_sec, ccsds_subsec) -> np.ndarray:
+def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
     """
     Convert CCSDS timestamp to seconds after midnight
 
     Parameters
     ----------
     ccsds_sec : numpy array (dtype='u4')
-        Seconds since 1970-01-01
+        Seconds since 1970-01-01 (or 1958-01-01)
     ccsds_subsec : numpy array (dtype='u2')
         Sub-seconds as (1 / 2**16) seconds
+    ref_day : datetime.datetime
 
     Returns
     -------
     numpy.ndarray with sec_of_day
     """
-    # determine midnight before start measurement
-    tstamp0 = EPOCH_1970 + timedelta(seconds=int(ccsds_sec[0]))
-    ref_day = datetime(year=tstamp0.year,
-                       month=tstamp0.month,
-                       day=tstamp0.day, tzinfo=timezone.utc)
+    # determine for the first timestamp the offset with last midnight [seconds]
+    epoch = EPOCH_1970 if ccsds_sec[0] < 1956528000 else EPOCH_1958
+    if ref_day is None:
+        tstamp0 = epoch + timedelta(seconds=int(ccsds_sec[0]))
+        ref_day = datetime(year=tstamp0.year,
+                           month=tstamp0.month,
+                           day=tstamp0.day, tzinfo=timezone.utc)
+    offs = (ref_day - epoch).total_seconds()
 
     # return seconds since midnight
-    offset = (ref_day - EPOCH_1970).total_seconds()
-    return ccsds_sec - offset + ccsds_subsec / 65536
+    return ccsds_sec - offs + ccsds_subsec / 65536
+
+
+def coverage_time(science) -> tuple:
+    """
+    Return coverage time start and end of the Science data
+    """
+    img_sec, img_subsec = science_timestamps(science)
+    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
+    return (ref_date + timedelta(seconds=img_time[0]),
+            ref_date + timedelta(seconds=img_time[-1]))
 
 
 def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
@@ -601,26 +623,26 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
     science: np.ndarray
     nomhk: np.ndarray
     """
-    # define datra dimensions
+    # Define datra dimensions
     dims = {'number_of_images': science.size,
             'samples_per_image': science['hk']['IMRLEN'].max() // 2,
             'hk_packets': nomhk.size,
             'SC_records': None}
 
-    # obtain offset between timestamp TAI (1958) and UTC (1970) in seconds
-    clocks = Clocks()
-
-    img_sec, img_subsec = get_science_timestamps(science)
-    if file_format == 'dsb':
-        img_sec -= int(clocks.utc_delta(float(img_sec[0])))
-    ref_date = (EPOCH_1970 + timedelta(seconds=int(img_sec[0]))).date()
-
-    nomhk_sec, nomhk_subsec = get_nomhk_timestamps(nomhk)
-    if file_format == 'dsb':
-        nomhk_sec -= int(clocks.utc_delta(float(img_sec[0])))
+    # Preprocess the timestamps to be stored in the L1A product
+    # [Science TM]
+    #  - the ICU time stamps are not altered!
+    #  - the variable 'image_time' holds sec_of_day and needs a reference day
+    #    in addition, the data is corrected for the start of integration time.
+    # [nomHK TM]
+    #  - the CCSDS time stamps are not altered!
+    #  - the variable 'nomhk_time' holds sec_of_day and needs a reference day
+    # Only the DSB files use EPOCH 1958 (TAI) all other use EPOCH 1970 (UTC)
+    img_sec, img_subsec = science_timestamps(science)
+    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
 
     # Generate and fill L1A product
-    with L1Aio(prod_name, dims=dims, ref_date=ref_date) as l1a:
+    with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
         # write image data, detector telemetry and image attributes
         img_data = np.empty((science.size, dims['samples_per_image']),
                             dtype='u2')
@@ -629,16 +651,16 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
         l1a.fill_science(img_data, science['hk'],
                          np.bitwise_and(science['hdr']['sequence'], 0x3fff))
         del img_data
-        l1a.set_dset('/image_attributes/image_sec', img_sec)
-        l1a.set_dset('/image_attributes/image_subsec', img_subsec)
-        sec_of_day = img_sec_of_day(img_sec, img_subsec, science['hk'])
-        l1a.set_dset('/image_attributes/image_time', sec_of_day)
+        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
+        l1a.set_dset('/image_attributes/image_time', img_time)
 
         # write engineering data
         if nomhk.size > 0:
             l1a.fill_nomhk(nomhk['hk'])
-            sec_of_day = hk_sec_of_day(nomhk_sec, nomhk_subsec)
-            l1a.set_dset('/engineering_data/HK_tlm_time', sec_of_day)
+            nomhk_sec, nomhk_subsec = nomhk_timestamps(nomhk)
+            hk_time = hk_sec_of_day(nomhk_sec, nomhk_subsec, ref_date)
+            l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
 
         # if demhk.size > 0:
         #    l1a.fill_demhk(demhk['hk'])

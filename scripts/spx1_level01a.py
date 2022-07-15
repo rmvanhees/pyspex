@@ -41,8 +41,8 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from pyspex.lv0_io import (dump_lv0_data,
-                           get_science_timestamps,
+from pyspex.lv0_io import (coverage_time,
+                           dump_lv0_data,
                            read_lv0_data,
                            select_lv0_data,
                            write_lv0_data)
@@ -108,7 +108,7 @@ def check_input_files(file_list: list, file_format: str) -> tuple:
 
 
 def get_l1a_name(file_list: list, file_format: str, file_version: int,
-                 select: str, timestamp0: int) -> str:
+                 select: str, sensing_start: datetime) -> str:
     """
     Generate name of Level-1A product based on filename conventions described
     below
@@ -119,7 +119,7 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
     file_format :  {'raw', 'st3', 'dsb'}
     file_version :  int
     select :  {'all', 'binned', 'fullFrame'}
-    timestamp0 :  int
+    sensing_start :  datetime
 
     Returns
     -------
@@ -150,21 +150,18 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
        yyyymmddThhmmss is the creation time (UTC) of the product
        vvvv is the version number of the product starting at 0001
     """
-    # set epoch of the timestamps
-    epoch = EPOCH_1958 if file_format == 'dsb' else EPOCH_1970
-
     if file_format != 'raw':
         # inflight product name
         prod_type = '_CAL' if select == 'fullFrame' else ''
-        sensing_start = epoch + timedelta(seconds=int(timestamp0))
 
         return (f'PACE_SPEXone{prod_type}'
                 f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
                 f'.V{file_version:02d}.nc')
 
-    # OCAL product name
-    sensing_start = epoch + timedelta(seconds=int(timestamp0))
+    # set epoch of the timestamps
+    epoch = EPOCH_1958 if file_format == 'dsb' else EPOCH_1970
 
+    # OCAL product name
     # determine measurement identifier
     msm_id = file_list[0].stem
     try:
@@ -214,7 +211,7 @@ def main():
     if args.verbose:
         print(args)
 
-    # read level 0 data
+    # read level 0 data as Science and TmTC packages
     res = read_lv0_data(args.file_list, args.file_format,
                         args.debug, args.verbose)
     if args.debug:
@@ -226,12 +223,12 @@ def main():
         return
 
     # select Science and NomHK packages from level 0 data
-    science, nomhk = select_lv0_data(args.select, res[0], res[1], args.verbose)
+    science, nomhk = select_lv0_data(res[0], res[1], args.select, args.verbose)
 
     # generate name of the level-1A product
     prod_name = get_l1a_name(args.file_list, args.file_format,
                              args.file_version, args.select,
-                             get_science_timestamps(science[:1])[0])
+                             coverage_time(science)[0])
 
     # write L1A product
     write_lv0_data(args.datapath / prod_name, args.file_list,

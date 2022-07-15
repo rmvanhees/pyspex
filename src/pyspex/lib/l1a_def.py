@@ -106,24 +106,24 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
 
     # - define group /image_attributs and its datasets
     sgrp = rootgrp.createGroup('/image_attributes')
+    dset = sgrp.createVariable('icu_time_sec', 'u4', ('number_of_images',))
+    dset.long_name = "ICU time stamp (seconds)"
+    dset.description = "Science TM parameter ICU_TIME_SEC"
+    dset.valid_min = np.uint32(1956528000)  # year 2020
+    dset.valid_max = np.uint32(2493072000)  # year 2037
+    dset.units = "seconds since 1958-01-01 00:00:00 TAI"
+    dset = sgrp.createVariable('icu_time_subsec', 'u2', ('number_of_images',))
+    dset.long_name = "ICU time stamp (sub-seconds)"
+    dset.description = "Science TM parameter ICU_TIME_SUNSEC"
+    dset.valid_min = np.uint16(0)
+    dset.valid_max = np.uint16(0xFFFF)
+    dset.units = "1/65536 s"
+
     dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                fill_value=-32767)
     dset.long_name = "Image time"
     dset.description = "Integration start time in seconds of day"
     attrs_sec_per_day(dset, ref_date)
-    dset = sgrp.createVariable('image_sec', 'u4',
-                               ('number_of_images',))
-    dset.long_name = "Image timestamp"
-    dset.valid_min = np.uint32(1577836800)  # year 2020
-    dset.valid_max = np.uint32(2051222400)  # year 2035
-    dset.units = "seconds since 1970-01-01"
-
-    dset = sgrp.createVariable('image_subsec', 'u2',
-                               ('number_of_images',))
-    dset.long_name = "Image timestamp (sub-seconds)"
-    dset.valid_min = np.uint16(0)
-    dset.valid_max = np.uint16(0xFFFF)
-    dset.units = "1/65536 s"
     dset = sgrp.createVariable('image_ID', 'i4', ('number_of_images',))
     dset.long_name = "Image counter from power-up"
     dset.valid_min = np.int32(0)
@@ -143,7 +143,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset = sgrp.createVariable('exposure_time', 'f8', ('number_of_images',),
                                fill_value=0)
     dset.long_name = "exposure time"
-    dset.units = "second"
+    dset.units = "s"
 
     # - define group /science_data and its datasets
     sgrp = rootgrp.createGroup('/science_data')

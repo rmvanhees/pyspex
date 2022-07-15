@@ -385,10 +385,6 @@ class L1Aio(Lv1io):
        Define global attributes in the SPEXone Level-1 products.
     check_stored(allow_empty=False)
        Check variables with the same first dimension have equal sizes.
-    sec_of_day(ccsds_sec, ccsds_subsec)
-       Convert CCSDS timestamp to seconds after midnight.
-    fill_time(ccsds_sec, ccsds_subsec, group=None)
-       Write time of Science telemetry packets (UTC/TAI) to L1A product.
     fill_science(img_data, img_hk, img_id)
        Write Science data and housekeeping telemetry (Science) to L1A product.
     fill_nomhk(nomhk_data)
@@ -404,8 +400,8 @@ class L1Aio(Lv1io):
         '/image_attributes/digital_offset': 0,
         '/image_attributes/nr_coadditions': 0,
         '/image_attributes/exposure_time': 0,
-        '/image_attributes/image_sec': 0,
-        '/image_attributes/image_subsec': 0,
+        '/image_attributes/icu_time_sec': 0,
+        '/image_attributes/icu_time_subsec': 0,
         '/image_attributes/image_time': 0,
         '/image_attributes/image_ID': 0,
         '/engineering_data/NomHK_telemetry': 0,
