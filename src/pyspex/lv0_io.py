@@ -536,7 +536,7 @@ def nomhk_timestamps(nomhk: np.ndarray) -> tuple:
     return nomhk_sec, nomhk_subsec
 
 
-def img_sec_of_day(img_sec, img_subsec, sci_hk) -> np.ndarray:
+def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
     """
     Convert Image CCSDS timestamp to seconds after midnight
 
@@ -551,7 +551,7 @@ def img_sec_of_day(img_sec, img_subsec, sci_hk) -> np.ndarray:
     Returns
     -------
     tuple
-        refence day and numpy.ndarray sec_of_day
+        reference day: float, sec_of_day: numpy.ndarray
     """
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = EPOCH_1970 if img_sec[0] < 1956528000 else EPOCH_1958
@@ -559,16 +559,22 @@ def img_sec_of_day(img_sec, img_subsec, sci_hk) -> np.ndarray:
     ref_day = datetime(year=tstamp0.year,
                        month=tstamp0.month,
                        day=tstamp0.day, tzinfo=timezone.utc)
-    offs = (ref_day - epoch).total_seconds()
+    # seconds since midnight
+    offs_sec = (ref_day - epoch).total_seconds()
 
-    # determine offset with start of integration time [milliseconds]
-    # ToDo: is the correction different for full-frame and binned images?
-    mps = TMscience(sci_hk)
-    imro = 1e-1 * mps.get('FTI') * 2
-    mcycl = 1e-1 * mps.get('FTI') * mps.get('REG_NCOADDFRAMES')
+    # Determine offset wrt start-of-integration (IMRO + 1)
+    # Where by default IMRO:
+    #  [full-frame] COADDD + 2 (no typo, this is valid for the later MPS's)
+    #  [binned] 2 * COADD + 1 (always valid)
+    mps = TMscience(img_hk)
+    if mps.get('IMRLEN') == FULLFRAME_BYTES:
+        imro = mps.get('REG_NCOADDFRAMES') + 2
+    else:
+        imro = 2 * mps.get('REG_NCOADDFRAMES') + 1
+    offs_msec = mps.get('FTI') * (imro + 1) / 10
 
     # return seconds since midnight
-    return ref_day, img_sec - offs + img_subsec / 65536 - (mcycl + imro) / 1000
+    return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
 
 
 def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
@@ -594,10 +600,10 @@ def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
         ref_day = datetime(year=tstamp0.year,
                            month=tstamp0.month,
                            day=tstamp0.day, tzinfo=timezone.utc)
-    offs = (ref_day - epoch).total_seconds()
+    offs_sec = (ref_day - epoch).total_seconds()
 
     # return seconds since midnight
-    return ccsds_sec - offs + ccsds_subsec / 65536
+    return ccsds_sec - offs_sec + ccsds_subsec / 65536
 
 
 def coverage_time(science) -> tuple:
