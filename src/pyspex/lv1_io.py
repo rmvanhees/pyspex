@@ -113,17 +113,15 @@ class Lv1io:
         self.fid = None
 
         # initialize private class-attributes
-        self.__epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        self.__epoch = ref_date
 
         # initialize Level-1 product
         if not append:
             if self.processing_level == 'L1A':
                 self.fid = init_l1a(product, ref_date, dims)
             elif self.processing_level == 'L1B':
-                self.__epoch = ref_date
                 self.fid = init_l1b(product, ref_date, dims)
             elif self.processing_level == 'L1C':
-                self.__epoch = ref_date
                 self.fid = init_l1c(product, ref_date, dims)
             else:
                 raise KeyError('valid processing levels are: L1A, L1B or L1C')
