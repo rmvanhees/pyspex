@@ -65,7 +65,7 @@ class TMscience:
         return self.__tm[key] if key in self.__tm.dtype.names else None
 
     @property
-    def binning_table_id(self) -> int:
+    def binning_table_id(self) -> np.ndarray:
         """
         Return the binning table identifier (zero for full-frame images)
 
@@ -110,7 +110,7 @@ class TMscience:
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
-    def number_channels(self) -> int:
+    def number_channels(self) -> np.ndarray:
         """
         Return number of LVDS channels used
         """

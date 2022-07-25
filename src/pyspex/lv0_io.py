@@ -480,6 +480,21 @@ def select_lv0_data(ccsds_sci, ccsds_hk, select: str, verbose=False) -> tuple:
     return science, nomhk
 
 
+def fix_sub_sec(tai_sec, sub_sec) -> tuple:
+    """
+    In ICU S/W version 0x123 a bug was introduced which corrupted the
+    read of the sub-sec parameter. Therefore, all ambient measurements
+    performed between 2020-12-02T09:34 and 2021-01-04T16:23 have to be
+    adjusted.
+    """
+    us100 = np.round(10000 * sub_sec.astype(float) / 65536)
+    buff = us100 + tai_sec - 10000
+    us100 = buff.astype('u8') % 10000
+    sub_sec = ((us100 << 16) // 10000).astype('u2')
+
+    return tai_sec, sub_sec
+
+
 def science_timestamps(science: np.ndarray) -> tuple:
     """
     Return timestamps of the Science packets
@@ -493,20 +508,20 @@ def science_timestamps(science: np.ndarray) -> tuple:
     tuple
         Tuple with timestamps and sub-seconds
     """
+    # The parameters ICU_TIME_SEC and ICU_TIME_SUBSEC contain zeros until
+    # ICU S/W version 0x125, which was first used at 2021-01-04T16:23.
+    # Note version 0x124 was not used for any OCAL measurement.
     if science['hk']['ICUSWVER'][0] > 0x123:
         img_sec = science['icu_tm']['tai_sec']
         img_subsec = science['icu_tm']['sub_sec']
         return img_sec, img_subsec
 
-    # use the inaccurate packaging timing stored in the secondary header
+    # Use the inaccurate packaging timing stored in the secondary header
     img_sec = science['hdr']['tai_sec']
     img_subsec = science['hdr']['sub_sec']
     if science['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug in sub-seconds
-        us100 = np.round(10000 * img_subsec.astype(float) / 65536)
-        buff = us100 + img_sec - 10000
-        us100 = buff.astype('u8') % 10000
-        img_subsec = ((us100 << 16) // 10000).astype('u2')
+        # fix bug parameter sub-sec
+        return fix_sub_sec(img_sec, img_subsec)
 
     return img_sec, img_subsec
 
@@ -527,11 +542,8 @@ def nomhk_timestamps(nomhk: np.ndarray) -> tuple:
     nomhk_sec = nomhk['hdr']['tai_sec']
     nomhk_subsec = nomhk['hdr']['sub_sec']
     if nomhk['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug in sub-seconds
-        us100 = np.round(10000 * nomhk_subsec.astype(float) / 65536)
-        buff = us100 + nomhk_sec - 10000
-        us100 = buff.astype('u8') % 10000
-        nomhk_subsec = ((us100 << 16) // 10000).astype('u2')
+        # fix bug parameter sub-sec
+        return fix_sub_sec(nomhk_sec, nomhk_subsec)
 
     return nomhk_sec, nomhk_subsec
 
@@ -563,15 +575,17 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
     offs_sec = (ref_day - epoch).total_seconds()
 
     # Determine offset wrt start-of-integration (IMRO + 1)
-    # Where by default IMRO:
-    #  [full-frame] COADDD + 2 (no typo, this is valid for the later MPS's)
-    #  [binned] 2 * COADD + 1 (always valid)
-    mps = TMscience(img_hk)
-    if mps.get('IMRLEN') == FULLFRAME_BYTES:
-        imro = mps.get('REG_NCOADDFRAMES') + 2
-    else:
-        imro = 2 * mps.get('REG_NCOADDFRAMES') + 1
-    offs_msec = mps.get('FTI') * (imro + 1) / 10
+    # Where by default is defined as IMRO:
+    #  [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
+    #  [binned] 2 * COADD + 1   (always valid)
+    offs_msec = 0
+    if img_hk['ICUSWVER'][0] > 0x123:
+        mps = TMscience(img_hk)
+        if np.bincount(mps.binning_table_id).argmax() == 0:
+            imro = mps.get('REG_NCOADDFRAMES') + 2
+        else:
+            imro = 2 * mps.get('REG_NCOADDFRAMES') + 1
+        offs_msec = mps.get('FTI') * (imro + 1) / 10
 
     # return seconds since midnight
     return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
@@ -680,5 +694,4 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
             l1a.fill_global_attrs(inflight=False)
         else:
             l1a.fill_global_attrs(inflight=True)
-        l1a.set_attr('input_files',
-                     [x.name for x in file_list])
+        l1a.set_attr('input_files', [x.name for x in file_list])
