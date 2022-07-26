@@ -114,7 +114,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset.units = "seconds since 1958-01-01 00:00:00 TAI"
     dset = sgrp.createVariable('icu_time_subsec', 'u2', ('number_of_images',))
     dset.long_name = "ICU time stamp (sub-seconds)"
-    dset.description = "Science TM parameter ICU_TIME_SUNSEC"
+    dset.description = "Science TM parameter ICU_TIME_SUBSEC"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "1/65536 s"

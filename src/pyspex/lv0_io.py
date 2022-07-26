@@ -415,19 +415,19 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
             fp.write(msg + "\n")
 
 
-def select_lv0_data(ccsds_sci, ccsds_hk, select: str, verbose=False) -> tuple:
+def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     """
     Select telemetry packages and combine Science packages to contain one
     detector readout.
 
     Parameters
     ----------
+    select : {'all', ''binned', 'fullFrame'}
+        Select Science packages: all, binned or full-frame
     ccsds_sci :  tuple of np.ndarray
         Science TM packages (ApID: 0x350)
     ccsds_hk :  tuple of np.ndarray
         All other Telementry packages
-    select : {'all', ''binned', 'fullFrame'}
-        Select Science packages: all, binned or full-frame
     verbose : bool, default=False
         be verbose (or not)
 
@@ -643,7 +643,7 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
     science: np.ndarray
     nomhk: np.ndarray
     """
-    # Define datra dimensions
+    # Define data dimensions
     dims = {'number_of_images': science.size,
             'samples_per_image': science['hk']['IMRLEN'].max() // 2,
             'hk_packets': nomhk.size,
@@ -672,6 +672,14 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
                          np.bitwise_and(science['hdr']['sequence'], 0x3fff))
         del img_data
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        # modify attribute units for non-DSB products
+        if file_format != 'dsb':
+            l1a.set_attr('valid_min', np.uint32(1577800000),
+                         ds_name='/image_attributes/icu_time_sec')
+            l1a.set_attr('valid_max', np.uint32(1735700000),
+                         ds_name='/image_attributes/icu_time_sec')
+            l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+                         ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
 

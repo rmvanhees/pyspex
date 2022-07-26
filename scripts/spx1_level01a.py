@@ -223,7 +223,7 @@ def main():
         return
 
     # select Science and NomHK packages from level 0 data
-    science, nomhk = select_lv0_data(res[0], res[1], args.select, args.verbose)
+    science, nomhk = select_lv0_data(args.select, res[0], res[1], args.verbose)
 
     # generate name of the level-1A product
     prod_name = get_l1a_name(args.file_list, args.file_format,
