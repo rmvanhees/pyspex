@@ -350,7 +350,6 @@ class L1Aio(Lv1io):
        Default values:
             number_of_images : None     # number of image frames
             samples_per_image : 184000  # depends on binning table
-            SC_records : None           # space-craft navigation records
             hk_packets : None           # number of HK tlm-packets
             wavelength : None
 
@@ -377,7 +376,7 @@ class L1Aio(Lv1io):
        Write data to an attribute, global or attached to a group or variable.
     get_dset(ds_name)
        Read data of a netCDF4 variable.
-    set_dset(ds_name, valu, ibgn=-1e)
+    set_dset(ds_name, value, ibgn=-1)
        Write/append data to a netCDF4 variable.
     fill_global_attrs(level, orbit=-1, bin_size=None, inflight=False)
        Define global attributes in the SPEXone Level-1 products.
@@ -407,13 +406,7 @@ class L1Aio(Lv1io):
         '/engineering_data/temp_detector': 0,
         '/engineering_data/temp_housing': 0,
         '/engineering_data/temp_radiator': 0,
-        '/engineering_data/HK_tlm_time': 0,
-        '/navigation_data/adstate': 0,
-        '/navigation_data/att_quat': 0,
-        '/navigation_data/orb_pos': 0,
-        '/navigation_data/orb_vel': 0,
-        '/navigation_data/att_time': 0,
-        '/navigation_data/orb_time': 0
+        '/engineering_data/HK_tlm_time': 0
     }
 
     def close(self):
@@ -480,21 +473,6 @@ class L1Aio(Lv1io):
         dim_sz = self.get_dim('hk_packets')
         key_list = [x for x in self.dset_stored
                     if x.startswith('/engineering_data')]
-        res = []
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        if allow_empty:
-            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
-        else:
-            indx = (res != dim_sz).nonzero()[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        # check navigation datasets
-        dim_sz = self.get_dim('SC_records')
-        key_list = [x for x in self.dset_stored
-                    if x.startswith('/navigation_data')]
         res = []
         for key in key_list:
             res.append(self.dset_stored[key])
