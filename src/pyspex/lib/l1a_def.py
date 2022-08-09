@@ -65,7 +65,6 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
        Default values:
             number_of_images : None     # number of image frames
             samples_per_image : None    # depends on binning table
-            SC_records : None           # space-craft navigation records (1 Hz)
             hk_packets : None           # number of HK tlm-packets (1 Hz)
     ref_date :  datetime.date
        Date of the first detector image
@@ -82,14 +81,11 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     number_img = None
     img_samples = None
     hk_packets = None
-    sc_records = None
 
     if 'number_of_images' in dims:
         number_img = dims['number_of_images']
     if 'samples_per_image' in dims:
         img_samples = dims['samples_per_image']
-    if 'SC_records' in dims:
-        sc_records = dims['SC_records']
     if 'hk_packets' in dims:
         hk_packets = dims['hk_packets']
 
@@ -100,9 +96,6 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     _ = rootgrp.createDimension('number_of_images', number_img)
     _ = rootgrp.createDimension('samples_per_image', img_samples)
     _ = rootgrp.createDimension('hk_packets', hk_packets)
-    _ = rootgrp.createDimension('SC_records', sc_records)
-    _ = rootgrp.createDimension('quaternion_elements', 4)
-    _ = rootgrp.createDimension('vector_elements', 3)
 
     # - define group /image_attributs and its datasets
     sgrp = rootgrp.createGroup('/image_attributes')
@@ -198,45 +191,8 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     # dset.long_name = "SPEX detector-HK telemetry"
     # dset.comment = "DEM housekeeping parameters"
 
-    # - define group /navigation_data and its datasets
+    # - define group /navigation_data, but leaf it's content empty
+    # The actual navigation data will be copied from the HKT products.
     sgrp = rootgrp.createGroup('/navigation_data')
-    dset = sgrp.createVariable('adstate', 'u1',
-                               ('SC_records',), fill_value=0xFF)
-    dset.long_name = "ADS State"
-    dset.flag_values = np.array([0, 1, 2, 3, 4, 5], dtype='u1')
-    dset.flag_meanings = "Wait Detumple AcqSun Point Delta Earth"
-    dset = sgrp.createVariable('att_time', 'f8', ('SC_records',),
-                               fill_value=-32767)
-    dset.long_name = "Attitude time"
-    dset.description = "time in seconds per day"
-    attrs_sec_per_day(dset, ref_date)
-    chunksizes = None if sc_records is not None else (256, 4)
-    dset = sgrp.createVariable('att_quat', 'f4',
-                               ('SC_records', 'quaternion_elements'),
-                               chunksizes=chunksizes)
-    dset.long_name = "Attitude quaternions (J2000 to spacecraft)"
-    dset.valid_min = -1
-    dset.valid_max = 1
-    dset.units = "1"
-    dset = sgrp.createVariable('orb_time', 'f8', ('SC_records',),
-                               fill_value=-32767)
-    dset.long_name = "Orbit vector time"
-    dset.description = "Orbit vector time in seconds per day"
-    attrs_sec_per_day(dset, ref_date)
-    chunksizes = None if sc_records is not None else (340, 3)
-    dset = sgrp.createVariable('orb_pos', 'f4',
-                               ('SC_records', 'vector_elements'),
-                               chunksizes=chunksizes)
-    dset.long_name = "Orbit positions vectors (J2000)"
-    dset.valid_min = -7200000
-    dset.valid_max = 7200000
-    dset.units = "m"
-    dset = sgrp.createVariable('orb_vel', 'f4',
-                               ('SC_records', 'vector_elements'),
-                               chunksizes=chunksizes)
-    dset.long_name = "Orbit velocity vectors (J2000)"
-    dset.valid_min = -7600
-    dset.valid_max = 7600
-    dset.units = "m/s"
 
     return rootgrp
