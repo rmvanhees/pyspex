@@ -115,16 +115,34 @@ class HKTio:
         else:
             raise KeyError('invalid name of instrument')
 
-    def navigation(self) -> xr.Dataset:
+    def navigation(self) -> dict:
         """
         Get navigation data
         """
-        res = {}
+        res = {'att_': (), 'orb_': (), 'tilt': ()}
         with h5py.File(self.filename) as fid:
             gid = fid['navigation_data']
             for key in gid:
-                res[key] = h5_to_xr(gid[key])
-        return xr.Dataset(res)
+                if key.startswith('att_'):
+                    res['att_'] += (h5_to_xr(gid[key]),)
+                elif key.startswith('orb_'):
+                    res['orb_'] += (h5_to_xr(gid[key]),)
+                elif key.startswith('tilt'):
+                    res['tilt'] += (h5_to_xr(gid[key]),)
+                else:
+                    print(f'Fail to find dataset {key}')
+
+        # repair the dimensions
+        xds1 = xr.merge(res['att_'], combine_attrs='drop_conflicts')
+        xds1 = xds1.set_coords(['att_time'])
+        xds1 = xds1.swap_dims({'att_records': 'att_time'})
+        xds2 = xr.merge(res['orb_'], combine_attrs='drop_conflicts')
+        xds2 = xds2.set_coords(['orb_time'])
+        xds2 = xds2.swap_dims({'orb_records': 'orb_time'})
+        xds3 = xr.merge(res['tilt'], combine_attrs='drop_conflicts')
+        xds3 = xds3.set_coords(['tilt_time'])
+        xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
+        return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
     def housekeeping(self, apid=None) -> np.ndarray:
         """
@@ -168,18 +186,20 @@ def test():
     """
     function test
     """
+    filename = '/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc'
     filename = '/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc'
-    filename = '/data/richardh/SPEXone/HKT/20220617/PACE.20220621T142822.HKT.nc'
 
     hkt = HKTio(filename)
     print(hkt.filename, hkt.instrument, hkt.coverage)
-    print('navigation data')
-    print(hkt.navigation())
     print('housekeeping data')
     print('spx: ', hkt.housekeeping(apid=0x320))
-
     hkt.set_instrument('sc')
     print('sc: ', hkt.housekeeping(apid=0x6c))
+
+    print('navigation data')
+    xds = hkt.navigation()
+    print(xds)
+    xds.to_netcdf('saved_dataset.nc', mode='w')
 
 
 # --------------------------------------------------
