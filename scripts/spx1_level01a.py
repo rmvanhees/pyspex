@@ -4,32 +4,7 @@ This file is part of pyspex
 
 https://github.com/rmvanhees/pyspex.git
 
-Python script to store SPEXone Level-0 data in a new Level-1A product.
-
-Examples
---------
-Read CCSDS Level-0 files in current directory, write Level-1A in different
-directory:
-
-   spx1_level01a.py --datapath L1A <Path>/NomSciCal1_20220123T121801.676167.H
-
-Note that science & telemetry data is read from:
-  <Path>/NomSciCal1_20220123T121801.676167.?
-  <Path>/NomSciCal1_20220123T121801.676167.??
-  <Path>/NomSciCal1_20220123T121801.676167_hk.?
-
-Read ST3 Level-0 file and write Level-1A in the directory $CWD/L1A:
-
-   spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3
-
-Read four DSB Level-0 files and write (one) Level-1A in the directory $CWD/L1A:
-
-   spx1_level01a.py --datapath L1A <Path>/SPX00000000[0123].spx
-
-Read ST3 Level-0 file and dump packet header information in ASCII to a file
-with suffix replaced by '.dump' in directory 'L1A':
-
-   spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3 --dump
+Python script to store SPEXone Level-0 data in a Level-1A product.
 
 Copyright (c) 2022 SRON - Netherlands Institute for Space Research
    All Rights Reserved
@@ -38,9 +13,12 @@ License:  BSD-3-Clause
 """
 import argparse
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 
+import xarray as xr
+
+from pyspex.hkt_io import HKTio
 from pyspex.lv0_io import (coverage_time,
                            dump_lv0_data,
                            read_lv0_data,
@@ -48,9 +26,6 @@ from pyspex.lv0_io import (coverage_time,
                            write_lv0_data)
 
 # - global parameters ------------------------------
-EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=37)
-EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
 ARG_FORMAT_HELP = """Provide data format of the input file(s):
 - raw: CCSDS packages (a.o. ambient calibration);
 - st3: CCSDS packages with ITOS and spacewire headers;
@@ -66,6 +41,42 @@ ARG_INPUT_HELP = """Provide one or more input files:
 - dsb: please provide all files with the data of one measurement.
 """
 
+EPILOG_HELP="""usage:
+  Read inflight Level-0 data and write Level-1A product in directory L1A:
+
+    spx1_level01a.py --datapath L1A <Path>/SPX*.spx
+
+  If the Level-0 data contains Science and diagnostig measurements then use:
+
+    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --select binned
+  or
+    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --select fullFrame
+
+  Same call but now we add navigation data from HKT products:
+
+    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --pace_hkt <Path>/PACE.20220621T14*.HKT.nc
+
+  Read OCAL Level-0 data and write Level-1A product in directory L1A:
+
+    spx1_level01a.py --datapath L1A <Path>/NomSciCal1_20220123T121801.676167.H
+
+    Note that OCAL science & telemetry data is read from the files:
+      <Path>/NomSciCal1_20220123T121801.676167.?
+      <Path>/NomSciCal1_20220123T121801.676167.??
+      <Path>/NomSciCal1_20220123T121801.676167_hk.?
+
+  Same call but now we are verbose during the data read (no output generated):
+
+    spx1_level01a.py --debug <Path>/NomSciCal1_20220123T121801.676167.H
+
+  Read ST3 Level-0 file and write Level-1A product in directory L1A:
+
+    spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3
+
+  Same call but now we dump packet header information in ASCII
+
+    spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3 --dump
+"""
 
 # - local functions --------------------------------
 def check_input_files(file_list: list, file_format: str) -> tuple:
@@ -105,6 +116,36 @@ def check_input_files(file_list: list, file_format: str) -> tuple:
             file_list_out.append(flname)
 
     return file_format_out, file_list_out
+
+
+def read_hkt_nav(file_list: list) -> xr.Dataset:
+    """
+    Read multiple HKT products and collect data in a Python dictionary
+    """
+    dim_dict = {'att_': 'att_time',
+                'orb_': 'orb_time',
+                'tilt': 'tilt_time'}
+
+    res = {}
+    for name in file_list:
+        hkt = HKTio(name)
+        nav = hkt.navigation()
+        if not res:
+            res = nav.copy()
+        else:
+            for key1, value in nav.items():
+                hdim = dim_dict.get(key1, None)
+                res[key1] = xr.concat((res[key1], value), dim=hdim)
+
+    return xr.merge((res['att_'], res['orb_'], res['tilt']),
+                    combine_attrs='drop_conflicts')
+
+
+def write_lv0_nav(l1a_file: str, xds_nav: xr.Dataset):
+    """
+    Add PACE navigation data to existing Level-1A product
+    """
+    xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
 
 
 def get_l1a_name(file_list: list, file_format: str, file_version: int,
@@ -158,9 +199,6 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
                 f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
                 f'.V{file_version:02d}.nc')
 
-    # set epoch of the timestamps
-    epoch = EPOCH_1958 if file_format == 'dsb' else EPOCH_1970
-
     # OCAL product name
     # determine measurement identifier
     msm_id = file_list[0].stem
@@ -186,7 +224,8 @@ def main():
     # parse command-line parameters
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description='store Level-0 data in a new SPEXone Level-1A product')
+        description='Store SPEXone Level-0 data in a Level-1A product',
+        epilog=EPILOG_HELP)
     parser.add_argument('--verbose', action='store_true', help='be verbose')
     parser.add_argument('--debug', action='store_true', help='be more verbose')
     parser.add_argument('--dump', action='store_true',
@@ -200,8 +239,8 @@ def main():
                         help='Provide file version number of level-1A product')
     parser.add_argument('--file_format', type=str, default='auto',
                         choices=('raw', 'st3', 'dsb'), help=ARG_FORMAT_HELP)
-    # parser.add_argument('--st3_nav', default=None, type=str,
-    #                    help='name of ST3 file with navigation data')
+    parser.add_argument('--pace_hkt', nargs='+', default=None,
+                        help='names of PACE HKT products with navigation data')
     parser.add_argument('file_list', nargs='+', help=ARG_INPUT_HELP)
     args = parser.parse_args()
 
@@ -233,6 +272,10 @@ def main():
     # write L1A product
     write_lv0_data(args.datapath / prod_name, args.file_list,
                    args.file_format, science, nomhk)
+
+    # read PACE navigation information from HKT products
+    hkt_nav = read_hkt_nav(args.pace_hkt)
+    write_lv0_nav(args.datapath / prod_name, hkt_nav)
 
 
 # --------------------------------------------------
