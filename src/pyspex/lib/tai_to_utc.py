@@ -92,7 +92,7 @@ class Clocks:
                 break
 
         return leap_sec - EPOCH_1958
-        
+
     def to_tai(self, timestamp: float) -> float:
         """
         Return TAI timestamp for given UTC timestamp

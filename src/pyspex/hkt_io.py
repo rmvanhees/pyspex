@@ -182,14 +182,15 @@ class HKTio:
 
         return res
 
+
 def test():
     """
     function test
     """
-    filename = '/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc'
-    filename = '/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc'
+    hkt_name = '/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc'
+    hkt_name = '/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc'
 
-    hkt = HKTio(filename)
+    hkt = HKTio(hkt_name)
     print(hkt.filename, hkt.instrument, hkt.coverage)
     print('housekeeping data')
     print('spx: ', hkt.housekeeping(apid=0x320))
@@ -197,9 +198,10 @@ def test():
     print('sc: ', hkt.housekeeping(apid=0x6c))
 
     print('navigation data')
-    xds = hkt.navigation()
-    print(xds)
-    xds.to_netcdf('saved_dataset.nc', mode='w')
+    res = hkt.navigation()
+    for key, xds in res.items():
+        print(key)
+        xds.to_netcdf('saved_dataset.nc', mode='w')
 
 
 # --------------------------------------------------
