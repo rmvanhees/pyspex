@@ -274,8 +274,9 @@ def main():
                    args.file_format, science, nomhk)
 
     # read PACE navigation information from HKT products
-    hkt_nav = read_hkt_nav(args.pace_hkt)
-    write_lv0_nav(args.datapath / prod_name, hkt_nav)
+    if args.pace_hkt:
+        hkt_nav = read_hkt_nav(args.pace_hkt)
+        write_lv0_nav(args.datapath / prod_name, hkt_nav)
 
 
 # --------------------------------------------------
