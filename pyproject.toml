@@ -1,6 +1,42 @@
 # pyproject.toml
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools", "wheel", "setuptools_scm[toml]"]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2", "wheel"]
+
+[project]
+name = "pyspex"
+description = "Software package to handle SPEXone Level-0 and Level-1 data"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Atmospheric Scienc",
+]
+dependencies = [
+  "h5py>=3.5",
+  "moniplot>=0.5",
+  "netCDF4>=1.5",
+  "numpy>=1.19",
+  "xarray>=0.21",
+]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/rmvanhees/pyspex"
+# Source = "https://github.com/rmvanhees/pyspex"
+# Changelog = "https://github.com/rmvanhees/pyspex/HISTORY.rst"
+"Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"
 
 [tool.setuptools_scm]
