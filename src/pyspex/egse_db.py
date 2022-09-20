@@ -117,7 +117,7 @@ def egse_dtype():
         ("C_FLEX-561nm", 'u1'),
         ("C_FLEX-660nm", 'u1'),
         ("COBOLT-785nm", 'u1'),
-        ("CRYSTA_STATUS", 'u1'),
+        ("CRYSTA_STATUS", 'u1'),   # should be C_FLEX-732nm!
         # 15 bytes, will be aligned at 16 or 18 bytes
         ("HK_TS1", 'u4'),
         ("HK_TS2", 'u4'),

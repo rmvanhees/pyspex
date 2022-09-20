@@ -1,11 +1,13 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
+title: "pyspex: software package to handle SPEXone Level-0 and Level-1 data"
 authors:
 - family-names: "van Hees"
   given-names: "Richard"
   orcid: "https://orcid.org/0000-0002-3846-0753"
-title: "pyspex: a Python interface to SPEXone Level-1 products."
-version: 1.1.11
+license: BSD 3-Clause
+license-url: "https://github.com/rmvanhees/pyspex/LICENSE"
+repository-code: "https://github.com/rmvanhees/pyspex"
 doi: 10.5281/zenodo.5705691
-date-released: 2021-11-10
+type: software
 url: "https://github.com/rmvanhees/pyspex"
