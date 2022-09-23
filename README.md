@@ -8,14 +8,11 @@
 
 Python package pyspex contains software to access SPEXone data.
 This package contains software scripts and classes to:
-* Read data packages from the SPEXone instrument and write the data in 
-Level-1A format.
-* Read Level-0 data from the SPEXone after integration on the PACE platform
-and write the data in Level-1A in-flight science and calibration products
-(not yet available).
+* Read data in CCSDS format from the SPEXone instrument and write the data in Level-1A format.
+* Read Level-0 data from the SPEXone after integration on the PACE platform and write the data in Level-1A in-flight science and calibration products.
+* Read SPEXone CKD product
+* Read in-flight PACE engineering and housekeeping (HKT) products.
 * Handle SPEXone binning tables (read, write, visualize).
-And provides the format definitions of the SPEXone level-1 products (A, B and C).
-
 
 For more information on PACE mission visit:
 * https://pace.gsfc.nasa.gov
@@ -27,10 +24,6 @@ For more information on SPEXone instrument visit:
 
 
 ## Installation
+The module pyspex requires Python3.8+ and Python modules: h5py, netCDF4, numpy and xarray.
+
 Installation instructions are provided in the INSTALL file.
-
-We installed the software successfully on Linux, MaxOS and Windows.
-
-
-## Reporting bugs
-email r.m.van.hees[at]sron.nl
