@@ -43,7 +43,7 @@ class CKDio:
     Examples
     --------
     """
-    def __init__(self, ckd_file: str, verbose=False) -> None:
+    def __init__(self, ckd_file: Path, verbose=False) -> None:
         """
         Initialize class attributes
 
@@ -54,8 +54,6 @@ class CKDio:
         verbose :  bool, default=False
            Be verbose
         """
-        if not Path(ckd_file).is_file():
-            raise FileNotFoundError(f'{ckd_file} does not exist')
         self.verbose = verbose
 
         # open access to CKD product
@@ -259,9 +257,14 @@ def main():
     """
     main function
     """
-    ckd_dir = '/data/richardh/SPEXone/share/ckd/'
-    ckd_file = 'CKD_reference_all_20220719_145838.nc'
-    with CKDio(ckd_dir + ckd_file) as ckd:
+    ckd_dir = Path('/data/richardh/SPEXone/CKD')
+    if not ckd_dir.is_dir():
+        ckd_dir = Path('/data/richardh/SPEXone/share/ckd')
+    ckd_file = ckd_dir / 'CKD_reference_20220916_174632.nc'
+    if not ckd_file.is_file():
+        raise FileNotFoundError(f'{ckd_file} does not exist')
+
+    with CKDio(ckd_file) as ckd:
         print(ckd.processor_version)
         print(ckd.date_created)
         print(ckd.dark())
