@@ -29,7 +29,7 @@ def init_plot_file(key: str, ckd, ckd_ref=None):
     fig_info_in.add('processor_version',
                     (ckd.processor_version,
                      ckd.git_commit), fmt='{} ({})')
-    fig_info_in.add('processing_date', ckd.date_created)
+    fig_info_in.add('processing_date', ckd.date_created())
 
     # open CKD product to be used as reference
     if ckd_ref is not None:
@@ -57,8 +57,12 @@ def add_dark_figs(ckd, ckd_ref=None):
     plot.set_caption('SPEXone Dark CKD')
     plot.draw_signal(dark_ckd['offset'], title='dark offset',
                      fig_info=fig_info_in.copy())
+    plot.draw_hist(dark_ckd['offset'], bins=161, vrange=[-5.5, 2.5],
+                   title='dark offset', fig_info=fig_info_in.copy())
     plot.draw_signal(dark_ckd['current'], title='dark current',
                      fig_info=fig_info_in.copy())
+    plot.draw_hist(dark_ckd['current'], bins=101, vrange=[1.5, 6.5],
+                   title='dark current', fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.dark() if ckd_ref is not None else None
     if ref_ckd is not None:
@@ -81,12 +85,16 @@ def add_noise_figs(ckd, ckd_ref=None):
 
     plot, fig_info_in = init_plot_file('noise', ckd, ckd_ref)
     plot.set_caption('SPEXone Noise CKD')
-    g_str = 'conversion gain'
-    plot.draw_signal(noise_ckd['g'], fig_info=fig_info_in.copy(),
-                     title=g_str)
+    g_str = 'inverse conversion gain'
+    plot.draw_signal(1 / noise_ckd['g'], vrange=[11.5, 15], title=g_str,
+                     fig_info=fig_info_in.copy())
+    plot.draw_hist(1 / noise_ckd['g'], bins=161, vrange=[9.5, 17.5],
+                   title=g_str, fig_info=fig_info_in.copy())
     n_str = 'read noise'
-    plot.draw_signal(noise_ckd['n'], fig_info=fig_info_in.copy(),
-                     title=n_str)
+    plot.draw_signal(noise_ckd['n'], title=n_str,
+                     fig_info=fig_info_in.copy())
+    plot.draw_hist(noise_ckd['n'], bins=161, vrange=[0, 8],
+                   title=n_str, fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.noise() if ckd_ref is not None else None
     if ref_ckd is not None:
@@ -128,6 +136,8 @@ def add_prnu_figs(ckd, ckd_ref=None):
     prnu_str = 'Pixel Response Non-Uniformity'
     plot.draw_signal(prnu_ckd, fig_info=fig_info_in.copy(),
                      title=prnu_str)
+    plot.draw_hist(prnu_ckd, bins=201, vrange=[0.95, 1.05],
+                   title=prnu_str, fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.prnu() if ckd_ref is not None else None
     if ref_ckd is not None:
