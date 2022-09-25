@@ -89,15 +89,23 @@ class CKDio:
         # pylint: disable=no-member
         return self.fid.attrs['processor_version'].decode()
 
-    @property
-    def date_created(self) -> str:
+    def date_created(self, compact=False) -> str:
         """
         Return creation date of the CKD product
+
+        Parameters
+        ----------
+        compact :  bool
+           if False then return date in isoformat, else YYYYmmddHHMMSS
         """
         # pylint: disable=no-member
         date_str = self.fid.attrs['date_created'].decode()
         date_t = datetime.strptime(date_str, "%Y %B %d %a %Z%z %H:%M:%S")
+        if compact:
+            return date_t.astimezone(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
+
         return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
+
 
     @property
     def git_commit(self) -> str:
@@ -190,7 +198,7 @@ class CKDio:
         try:
             gid = self.fid['FIELD_OF_VIEW']
         except KeyError:
-            return None            
+            return None
         res = ()
         res += (h5_to_xr(gid['fov_nfov_vp']),)
         res += (h5_to_xr(gid['fov_ifov_start_vp']),)
