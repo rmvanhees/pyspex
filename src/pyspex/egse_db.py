@@ -1,19 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Collect reference diode and Avantes fibre spectrometer data collected during
-an OCAL ambient measurement at SRON into a netCDF4 database.
-
-Using this database the data for a given time interval can be selected and
-added to a SPEXone level-1A product.
-
-Copyright (c) 2020-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 

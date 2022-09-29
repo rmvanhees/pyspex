@@ -1,16 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Various functions to read SPEXone level 0 data and write level 0 packages
-to a level-1A product.
-
-Copyright (c) 2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -49,14 +46,16 @@ def ap_id(hdr: np.ndarray) -> int:
     Notes
     -----
     The following values are recognized:
-        0x350 : Science
-        0x320 : NomHk
-        0x322 : DemHk
-        0x331 : TcAccept
-        0x332 : TcReject
-        0x333 : TcExecute
-        0x334 : TcFail
-        0x335 : EventRp
+
+    - 0x350 : Science
+    - 0x320 : NomHk
+    - 0x322 : DemHk
+    - 0x331 : TcAccept
+    - 0x332 : TcReject
+    - 0x333 : TcExecute
+    - 0x334 : TcFail
+    - 0x335 : EventRp
+
     """
     return hdr['type'] & 0x7FF
 
@@ -78,10 +77,12 @@ def grouping_flag(hdr: np.ndarray) -> int:
     Notes
     -----
     The 2-byte flag is encoded as follows:
-        00 continuation packet-data segment
-        01 first packet-data segment
-        10 last packet-data segment
-        11 packet-data unsegmented
+
+    - 00 : continuation packet-data segment
+    - 01 : first packet-data segment
+    - 10 : last packet-data segment
+    - 11 : packet-data unsegmented
+
     """
     return (hdr['sequence'] >> 14) & 0x3
 
@@ -141,9 +142,13 @@ def dtype_packet_hdr(file_format: str) -> np.dtype:
 
     Notes
     -----
-    'raw' data has no file header and standard CCSDS packet headers
-    'st3' data has no file header and ITOS + spacewire + CCSDS packet headers
-    'dsb' data has a cFE file header and spacewire + CCSDS packet headers
+
+    'raw': data has no file header and standard CCSDS packet headers
+
+    'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
+
+    'dsb': data has a cFE file header and spacewire + CCSDS packet headers
+
     """
     if file_format == 'raw':
         return np.dtype([('type', '>u2'),
@@ -216,8 +221,10 @@ def _fix_hk24_(sci_hk):
     24-bit integers in the detector register values
 
     In addition:
+
     - copy the first 4 bytes of DET_CHENA to DET_ILVDS
     - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
+
     """
     res = sci_hk.copy()
     if sci_hk['ICUSWVER'] < 0x129:
@@ -247,9 +254,13 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
     Parameters
     ----------
     file_list : list of Path
+       list of CCSDS files
     file_format : {'raw', 'st3', 'dsb'}
+       type of CCSDS data
     debug : bool, default=False
+       run in debug mode
     verbose : bool, default=False
+       be verbose
 
     Returns
     -------
@@ -363,9 +374,13 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
     Parameters
     ----------
     file_list :  list of Path
+       list of CCSDS files
     datapath :  Path
+       path to the directory to write the dump-file
     ccsds_sci :  tuple of np.ndarray
+       tuple of Science packages
     ccsds_hk :  tuple of np.ndarray
+       tuple of nomHK packages
     """
     # dump header information of the Science packages
     flname = datapath / (file_list[0].stem + '.dump')
@@ -638,10 +653,15 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
     Parameters
     ----------
     prod_name :  Path
-    file_list :  list of Path
+       name of the Level-1A product
+    file_list :  list of Paths
+       list of input CCSDS files
     file_format :  {'raw', 'st3', 'dsb'}
-    science: np.ndarray
-    nomhk: np.ndarray
+       type of input files
+    science : np.ndarray
+       Science data
+    nomhk : np.ndarray
+       nominal housekeeping data
     """
     # Define data dimensions
     dims = {'number_of_images': science.size,

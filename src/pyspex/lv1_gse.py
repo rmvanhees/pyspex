@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python class add EGSE/OGSE data to a SPEXone Level-1A product
-
-Copyright (c) 2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import numpy as np
 
 from netCDF4 import Dataset
@@ -19,40 +17,45 @@ from netCDF4 import Dataset
 class LV1gse:
     """
     Python class add EGSE/OGSE data to a SPEXone Level-1A product
+
+    Attributes
+    ----------
+    fid : netCDF4::Dataset
+        netCDF4 Dataset instance.
+
+    Methods
+    -------
+    check_egse(egse_data)
+        Check consistency of OGSE/EGSE information during measurement.
+    set_attr(name, value)
+        Add/update an attribute of the group 'gse_data'.
+    write_attr_act(angle: float, illumination)
+        Add ACT rotation angle as an group attribute.
+    write_attr_alt(angle: float, illumination)
+        Add altitude rotation angle as an group attribute.
+    write_attr_polarization(aolp: float, dolp: float)
+        Add polarization parameters AoLP & DoLP as group attributes.
+    write_viewport(viewport)
+        Add/update which viewports are illuminated.
+    write_egse(egse_time, egse_data, egse_attrs)
+        Add EGSE parameters.
+    write_data_stimulus(xds_signal)
+        Add wavelength and signal of data stimulus.
+    write_reference_diode(ref_time, ref_data, ref_attrs)
+        Add data measured by the reference diode during the measurement.
+    write_reference_signal(xds_signal)
+        Add reference signal and its error.
+    write_wavelength_monitor(xds_wavelength)
+        Add wavelength monitoring data of the Avantas fibre-spectrometer.
     """
     def __init__(self, l1a_file: str) -> None:
         """
         Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product
 
-        Attributes
+        Parameters
         ----------
-        fid : netCDF4::Dataset
-            netCDF4 Dataset instance.
-
-        Methods
-        -------
-        check_egse(egse_data)
-           Check consistency of OGSE/EGSE information during measurement.
-        set_attr(name, value)
-           Add/update an attribute of the group 'gse_data'
-        write_attr_act(angle: float, illumination)
-           Add ACT rotation angle as an group attribute.
-        write_attr_alt(angle: float, illumination)
-           Add altitude rotation angle as an group attribute.
-        write_attr_polarization(aolp: float, dolp: float)
-           Add polarization parameters AoLP & DoLP as group attributes.
-        write_viewport(viewport)
-           Add/update which viewports are illuminated.
-        write_egse(egse_time, egse_data, egse_attrs)
-           Add EGSE parameters.
-        write_data_stimulus(xds_signal)
-           Add wavelength and signal of data stimulus.
-        write_reference_diode(ref_time, ref_data, ref_attrs)
-           Add data measured by the reference diode during the measurement.
-        write_reference_signal(xds_signal)
-           Add reference signal and its error.
-        write_wavelength_monitor(xds_wavelength)
-           Add wavelength monitoring data of the Avantas fibre-spectrometer.
+        l1a_file: str
+           Name of the Level-1A product
         """
         self.fid = Dataset(l1a_file, 'r+')
 

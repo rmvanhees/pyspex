@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python implementation to convert SPEXone DEM measurements to L1A format
-
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path

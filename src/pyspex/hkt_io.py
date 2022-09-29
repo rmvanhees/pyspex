@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python class to read PACE HKT files (S-band house-keeping and navigation)
-
-Copyright (c) 2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from pathlib import Path
 
 import h5py
@@ -24,29 +22,29 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 
 # - class HKTio -------------------------
 class HKTio:
-    """
-    Generic class to read PACE HKT products
+    """Generic class to read PACE HKT products
 
     Attributes
     ----------
-    ...
-
+    filename :  pathlib.Path
+       name of the PACE HKT product.
+    coverage :  tuple
+       start and end of data time-coverage (sec of day).
+    instrument :  str
+       Returns name of the PACE instrument.
+    
     Methods
     -------
-    ...
-
-    Notes
-    -----
-    ...
-
-    Examples
-    --------
-    ...
+    set_instrument(name)
+       Set name of PACE instrument.
+    navigation()
+       Get navigation data.
+    housekeeping(apid)
+       Get housekeeping data.
 
     """
     def __init__(self, filename: str, instrument='spx') -> None:
-        """
-        Initialize access to a PACE HKT product
+        """Initialize access to a PACE HKT product
 
         Parameters
         ----------
@@ -66,8 +64,7 @@ class HKTio:
     # ---------- PUBLIC FUNCTIONS ----------
     @property
     def coverage(self) -> tuple:
-        """
-        Return selection of navigation data
+        """Return selection of navigation data
 
         Returns
         -------
@@ -77,8 +74,7 @@ class HKTio:
         return self._coverage
 
     def set_coverage(self, sec_bgn: int, sec_end: int) -> None:
-        """
-        Set start and end of data coverage in the navigation data
+        """Set start and end of data coverage in the navigation data
 
         Parameters
         ----------
@@ -89,8 +85,7 @@ class HKTio:
 
     @property
     def instrument(self) -> str:
-        """
-        Returns name of the PACE instrument
+        """Returns name of the PACE instrument
 
         Returns
         -------
@@ -100,8 +95,7 @@ class HKTio:
         return self._instrument
 
     def set_instrument(self, name: str) -> None:
-        """
-        Set name of PACE instrument
+        """Set name of PACE instrument
 
         Parameters
         ----------
@@ -116,8 +110,7 @@ class HKTio:
             raise KeyError('invalid name of instrument')
 
     def navigation(self) -> dict:
-        """
-        Get navigation data
+        """Get navigation data
         """
         res = {'att_': (), 'orb_': (), 'tilt': ()}
         with h5py.File(self.filename) as fid:
@@ -145,8 +138,7 @@ class HKTio:
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
     def housekeeping(self, apid=None) -> np.ndarray:
-        """
-        Get housekeeping data
+        """Get housekeeping data
 
         Parameters
         ----------
@@ -184,8 +176,7 @@ class HKTio:
 
 
 def test():
-    """
-    function test
+    """function test
     """
     hkt_name = '/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc'
     hkt_name = '/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc'

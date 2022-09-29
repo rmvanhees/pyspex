@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python class to create SPEXone Level-1 products
-
-Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 
@@ -66,13 +64,13 @@ class Lv1io:
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
+    epoch : datetime.datetime
+       Provide epoch for SPEXone.
 
     Methods
     -------
     close()
        Close all resources (currently a placeholder function).
-    epoch
-       Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
     get_attr(attr_name, ds_name=None)
@@ -348,10 +346,10 @@ class L1Aio(Lv1io):
     dims: dictionary, default=None
        Provide size of various dimensions (L1A only).
        Default values:
-            number_of_images : None     # number of image frames
-            samples_per_image : 184000  # depends on binning table
-            hk_packets : None           # number of HK tlm-packets
-            wavelength : None
+       - number_of_images : None     # number of image frames
+       - samples_per_image : 184000  # depends on binning table
+       - hk_packets : None           # number of HK tlm-packets
+       - wavelength : None
 
     Attributes
     ----------
@@ -361,13 +359,13 @@ class L1Aio(Lv1io):
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
+    epoch
+       Provide epoch for SPEXone.
 
     Methods
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch
-       Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
     get_attr(attr_name, ds_name=None)
@@ -610,13 +608,13 @@ class L1Bio(Lv1io):
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
+    epoch
+       Provide epoch for SPEXone.
 
     Methods
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch
-       Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
     get_attr(attr_name, ds_name=None)
@@ -764,13 +762,13 @@ class L1Cio(Lv1io):
        NetCDF4 Pointer to SPEXone Level-1 product
     dset_stored: dict
        Number of items stored for all required netCDF4 variables
+    epoch
+       Provide epoch for SPEXone.
 
     Methods
     -------
     close()
        Close product and check if required datasets are filled with data.
-    epoch
-       Provide epoch for SPEXone.
     get_dim(ds_name)
        Returns size of dimension.
     get_attr(attr_name, ds_name=None)

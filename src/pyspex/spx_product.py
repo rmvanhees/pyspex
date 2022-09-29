@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Generate product name
-
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime
 
 import re
@@ -40,7 +38,7 @@ def prod_name(utc_sensing_start, msm_id=None,
        Product type as SPX1_<data_type>, where data type can be:
        CA (calibration data), RA (radiance data), ...
     level : string
-       Level of data in product, format: ^L[012][ABCX_]$ (3 characters)
+       Level of data in product, format: '^L[012][X_BAC]$' (3 characters)
     orbit: integer, optional
        Revolution counter, zero for on-ground measurements
     version_number: integer
@@ -50,18 +48,19 @@ def prod_name(utc_sensing_start, msm_id=None,
     -----
     The general format that applies to all in-flight SPEXone products:
 
-       [Science Product] PACE_SPEXone.yyyymmddThhmmss.LLL.VVV.nc
-       [Calibration Product] PACE_SPEXone_CAL.yyyymmddThhmmss.LLL.VVV.nc
-       [Monitoring Product] PACE_SPEXone_TTTTT.yyyymmddThhmmss.LLL.VVV.nc
+    - [Science Product] PACE_SPEXone.yyyymmddThhmmss.LLL.VVV.nc
+    - [Calibration Product] PACE_SPEXone_CAL.yyyymmddThhmmss.LLL.VVV.nc
+    - [Monitoring Product] PACE_SPEXone_TTTTT.yyyymmddThhmmss.LLL.VVV.nc
 
-       A Near Real-Time identifier can be added if required
+    A Near Real-Time identifier can be added if required
 
     The general format that applies to all on-ground SPEXone products:
 
-       SPX1_OCAL_<msm_id>_LLL_yyyymmddThhmmss_YYYYMMDDTHHMMSS_vvvvv.nc
+    - SPX1_OCAL_<msm_id>_LLL_yyyymmddThhmmss_YYYYMMDDTHHMMSS_vvvvv.nc
+
     """
     # check parameters
-    if re.search(r"^L[012][ABCX_]$", level) is None:
+    if re.search(r'^L[012][ABCX_]$', level) is None:
         raise ValueError("parameter: level")
 
     if not isinstance(version_number, int):

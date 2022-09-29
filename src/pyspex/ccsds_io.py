@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Class to read SPEXone ICU packages (version 2)
-
-Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from pathlib import Path
 
 import numpy as np
@@ -69,27 +67,26 @@ class CCSDSio:
 
     Attributes
     ----------
-    found_invalid_apid :  bool
-    file_list :  iter
+    found_invalid_apid : bool
+    file_list : iter
     fp :  file pointer
+    version_no : int
+       Returns CCSDS version number.
+    type_indicator : int
+       Returns type of telemetry packet.
+    secnd_hdr_flag : bool
+       Returns flag indicating presence of a secondary header.
+    ap_id : int
+       Returns SPEXone ApID.
+    grouping_flag : int
+       Returns grouping flag.
+    sequence_count : int
+       Returns sequence counter, rollover to zero at 0x3FFF.
+    packet_length : int
+       Returns size of packet data in bytes.
 
     Methods
     -------
-    version_no
-       Returns CCSDS version number.
-    type_indicator
-       Returns type of telemetry packet.
-    secnd_hdr_flag
-       Returns flag indicating presence of a secondary header.
-    ap_id
-       Returns SPEXone ApID.
-    grouping_flag
-       Returns grouping flag.
-    sequence_count
-       Returns sequence counter, rollover to zero at 0x3FFF.
-    packet_length
-       Returns size of packet data in bytes.
-
     close()
        Close resources.
     open_next_file()

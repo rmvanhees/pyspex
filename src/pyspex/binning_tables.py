@@ -1,19 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python class to handle SPEXone binning tables
-
-Environment
------------
-CKD_DIR :  directory with SPEXone CKD, default is CWD
-
-Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime, timezone
 from os import environ
 from pathlib import Path
@@ -74,20 +68,24 @@ class BinningTables:
     Examples
     --------
     # create new binning_table CKD
+
     >>> bin_tbl = BinningTables()
     >>> bin_tbl.create_if_needed(validity_start)
     >>> bin_tbl.add_table(0, lineskip_arr, binning_table)
     >>> bin_tbl.add_table(1, lineskip_arr, binning_table)
 
     # add new binning-table to existing CKD
+
     >>> bin_tbl BinningTables()
     >>> bin_tbl.create_if_needed(validity_start)
     >>> bin_tbl.add_table(2, lineskip_arr, binning_table)
 
     # use binning-table to unbin SPEXone detector data
+
     >>> bin_tbl BinningTables()
     >>> bin_tbl.search(coverage_start)
     >>> img = bin_tbl.unbin(2, img_binned)
+
     """
     def __init__(self, ckd_dir=None) -> None:
         """

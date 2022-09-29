@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python implementation to read SPEXone DEM output
-
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from pathlib import Path
 
 import numpy as np
@@ -124,26 +122,33 @@ class DEMio:
     """
     This class can be used to read SPEXone DEM output
 
+    Attributes
+    ----------
+    bin_file : str
+       Name of binary file.
+    hdr_file : str
+       Name of header file.
+    hdr : np.ndarray
+       Returns DEM header as numpy compound array.
+    number_lines : int
+       Returns number of lines (rows).
+    number_channels : int
+       Returns number of LVDS channels used.
+    lvds_clock : bool
+       Returns flag for LVDS clock, as 0: disable, 1: enable)
+    pll_control : tuple
+       Returns PLL control parameters: (pll_range, pll_out_fre, pll_div).
+    exp_control : tuple
+       Exposure time control parameters: (inte_sync, exp_dual, exp_ext).
+    offset : int
+       Returns digital offset including ADC offset
+    pga_gain : float
+       Returns PGA gain (Volt).
+    temp_detector : int
+       Returns detector temperature as raw  counts.
+
     Methods
     -------
-    hdr
-       Returns DEM header as numpy compound array.
-    number_lines
-       Returns number of lines (rows).
-    number_channels
-       Returns number of LVDS channels used.
-    lvds_clock
-       Returns flag for LVDS clock, as 0: disable, 1: enable)
-    pll_control
-       Returns PLL control parameters: (pll_range, pll_out_fre, pll_div).
-    exp_control
-       Exposure time control parameters: (inte_sync, exp_dual, exp_ext).
-    offset
-       Returns digital offset including ADC offset
-    pga_gain
-       Returns PGA gain (Volt).
-    temp_detector
-       Returns detector temperature as raw  counts.
     exp_time(t_mcp=1e-7)
        Returns pixel exposure time [s].
     fot_time(t_mcp=1e-7)
@@ -157,14 +162,13 @@ class DEMio:
     get_data(numlines=None)
        Returns data of a detector images (numpy uint16 array).
 
-    Notes
-    -----
-
     Examples
     --------
+
     >>> dem = DEMio(dem_file)
     >>> img_hk = dem.get_sci_hk()
     >>> img_data = dem.get_data()
+
     """
     def __init__(self, flname: str) -> None:
         """
@@ -226,9 +230,9 @@ class DEMio:
                     self.__hdr[0][key] = value
 
     @property
-    def hdr(self):
+    def hdr(self) -> np.ndarray:
         """
-        Return DEM header as numpy compound array
+        Returns DEM header as numpy compound array
         """
         if self.__hdr is None:
             return None
@@ -238,7 +242,7 @@ class DEMio:
     @property
     def number_lines(self) -> int:
         """
-        Return number of lines (rows)
+        Returns number of lines (rows)
 
         Register address: [1, 2]
         """
@@ -248,14 +252,14 @@ class DEMio:
     @property
     def number_channels(self) -> int:
         """
-        Return number of LVDS channels used
+        Returns number of LVDS channels used
         """
         return 2 ** (4 - (self.hdr['OUTPUT_MODE'] & 0x3))
 
     @property
     def lvds_clock(self) -> bool:
         """
-        Return flag for LVDS clock (0: disable, 1: enable)
+        Returns flag for LVDS clock (0: disable, 1: enable)
 
         Register address: 82
         """
@@ -468,6 +472,11 @@ class DEMio:
         ----------
         numlines : int, optional
            Provide number of detector rows when no headerfile is present
+
+        Returns
+        -------
+        np.ndarray:
+           data of a detector frame, dtype np.uint16
         """
         if numlines is None:
             # obtain number of rows

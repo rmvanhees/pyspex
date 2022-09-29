@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Create or update SPEXone binning-table CKD.
-Input is binning table information in CSV format.
-The binning-table CKD is written in netCDF4 format.
-
-Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import argparse
 from pathlib import Path
 
@@ -31,6 +27,10 @@ from pyspex.binning_tables import BinningTables
 def main():
     """
     main program to build a database with SPEXone binning tables
+
+    Create or update SPEXone binning-table CKD.
+    Input is binning table information in CSV format.
+    The binning-table CKD is written in netCDF4 format.
     """
     parser = argparse.ArgumentParser(
         description='build a database with SPEXone binning tables')

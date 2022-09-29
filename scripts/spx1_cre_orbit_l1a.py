@@ -1,40 +1,14 @@
 #!/usr/bin/env python3
-"""
-This file is part of pySpexCal
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://gitlab.sron.nl/Richardh/pySpexCal
-
-Generate a L1A product with simulated data
-- one full science orbit (50% van 5900 sec), max 24 Gbit
-- [SPX1_FLIGHT_ideal_202003] 4 scenes (‘ocean_cloud’, ‘ocean_moderate_aot’,
- ‘soil_moderate_aot’ en ‘vegetation_moderate_aot’) at 3 solar zenith angles
- (10, 40 en 70 graden)
-- sampling at 3 Hz (at 50 ms, 5x coadding + 16.6 dead-time)
-- binned at 2x2 with lineskipped (1024x645)
-
-Implementation:
-1. read simulated datasets (original format, lineskip)
-2. generate 3x 5900 // 2 images SZA 70, 40, 10, 10, 40, 70
-   each SZA filled with all 4 scenes
-
-   >>> rng = np.random.default_rng()
-   >>> indx = np.arange(3 * 5900 // 10)
-   >>> rng.shuffle(indx)
-   >>> indx.repeat(5)
-
-3. fill groups: /image_attributes, /science_data of L1A product
-4. fill groups: /navigation_data, /engineering_data
-5. leave group: /gse_data empty
-
-Environment
------------
-CKD_DIR :  directory with SPEXone CKD, default is CWD
-
-Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import argparse
 from datetime import datetime, timezone
 from os import environ
@@ -208,6 +182,36 @@ def add_measurements(l1a_prod_list, repeats: int, sampling=3) -> None:
 def main():
     """
     main function
+
+    Notes
+    -----
+    Generate a L1A product with simulated data:
+
+    - one full science orbit (50% van 5900 sec), max 24 Gbit
+    - [SPX1_FLIGHT_ideal_202003] 4 scenes (‘ocean_cloud’, ‘ocean_moderate_aot’,
+      ‘soil_moderate_aot’ en ‘vegetation_moderate_aot’) at 3 solar zenith
+      angles (10, 40 en 70 graden)
+    - sampling at 3 Hz (at 50 ms, 5x coadding + 16.6 dead-time)
+    - binned at 2x2 with lineskipped (1024x645)
+
+    Implementation:
+
+    1. read simulated datasets (original format, lineskip)
+    2. generate 3x 5900 // 2 images SZA 70, 40, 10, 10, 40, 70
+       each SZA filled with all 4 scenes
+
+    >>> rng = np.random.default_rng()
+    >>> indx = np.arange(3 * 5900 // 10)
+    >>> rng.shuffle(indx)
+    >>> indx.repeat(5)
+
+    3. fill groups: /image_attributes, /science_data of L1A product
+    4. fill groups: /navigation_data, /engineering_data
+    5. leave group: /gse_data empty
+
+    Environment
+    -----------
+    CKD_DIR :  directory with SPEXone CKD, default is CWD
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser(

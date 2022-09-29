@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Add OGSE information of a OCAL measurement to a SPEXone L1A product.
-
-Possible OGSE information:
- * reference diode (Ambient/GSFC polarized, radiometric): the reference diode
- is located in the ... or Grande (GSFC) integrated sphere
- * wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength)
- * wavelength of OPO laser (GSFC spectral-radiometry)
-
-Copyright (c) 2021-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import argparse
 from pathlib import Path
 
@@ -93,6 +85,17 @@ def write_ogse(args):
 def main():
     """
     Main function
+
+    Notes
+    -----
+    Possible OGSE information:
+
+    * Reference diode (Ambient/GSFC polarized, radiometric):\
+      the reference diode is located in the ... or Grande (GSFC)
+      integrated sphere.
+    * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength)
+    * Wavelength of OPO laser (GSFC spectral-radiometry)
+
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser()

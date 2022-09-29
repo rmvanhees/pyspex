@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python implementation SPEXone instrument simulator output to L1A
-
-Environment
------------
-CKD_DIR :  directory with SPEXone CKD, default is CWD
-
-Copyright (c) 2019-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import argparse
 from datetime import datetime, timezone
 from os import environ
@@ -89,6 +83,10 @@ def get_stimulus(hdr):
 def main():
     """
     main program to illustate the creation of a L1A calibration product
+
+    Environment
+    -----------
+    CKD_DIR :  directory with SPEXone CKD, default is CWD
     """
     parser = argparse.ArgumentParser(
         description=('create SPEXone L1A product from instrument simulations'))

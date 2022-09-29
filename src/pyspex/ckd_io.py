@@ -1,18 +1,15 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python implementation to read the SPEXone CKD product.
-
-Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime, timezone
 from pathlib import Path
-# import argparse
 
 import h5py
 import xarray as xr
@@ -33,15 +30,36 @@ class CKDio:
 
     Attributes
     ----------
+    verbose :  bool
+       Be verbose.
+    fid :  h5py.File
+       h5py File object (read-only).
+    processor_version :  str
+       version of SPEXone processor.
+    git_commit :  str
+       git hash of SPEXone processor.
 
     Methods
     -------
+    date_created(self, compact=False)
+       Creation date of CKD.
+    dark()
+       Read Dark CKD.
+    noise()
+       Read Noise CKD.
+    nlin()
+       Read non-Linearity CKD.
+    prnu()
+       Read PRNU CKD.
+    fov()
+       Read field-of-view CKD.
+    wavelength()
+       Read Wavelength CKD.
+    radiometric()
+       Read Radiometric CKD.
+    polarimetric()
+       Read Polarimetric CKD.
 
-    Notes
-    -----
-
-    Examples
-    --------
     """
     def __init__(self, ckd_file: Path, verbose=False) -> None:
         """
@@ -105,7 +123,6 @@ class CKDio:
             return date_t.astimezone(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
 
         return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
-
 
     @property
     def git_commit(self) -> str:
@@ -283,6 +300,7 @@ def main():
         print(ckd.wavelength())
         print(ckd.radiometric())
         print(ckd.polarimetric())
+
 
 # --------------------------------------------------
 if __name__ == '__main__':

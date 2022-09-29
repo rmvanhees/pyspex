@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Class to convert TAI to UTC and visa versa
-
-Copyright (c) 2022 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 from datetime import datetime
 
 # - global parameters ------------------------------
@@ -95,15 +93,15 @@ class Clocks:
 
     def to_tai(self, timestamp: float) -> float:
         """
-        Return TAI timestamp for given UTC timestamp
+        Returns TAI timestamp for given UTC timestamp
 
         Parameters
         ----------
         timestamp :  float
             timestamp in UTC (epoch 1970.0)
 
-        Return
-        ------
+        Returns
+        -------
         float
             TAI timestamp (epoch 1958.0)
         """
@@ -119,15 +117,15 @@ class Clocks:
 
     def to_utc(self, timestamp: float) -> float:
         """
-        Return UTC timestamp for given TAI timestamp
+        Returns UTC timestamp for given TAI timestamp
 
         Parameters
         ----------
         timestamp :  float
             timestamp in TAI (epoch 1958.0)
 
-        Return
-        ------
+        Returns
+        -------
         float
             UTC timestamp (epoch 1970.0)
         """

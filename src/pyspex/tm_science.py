@@ -1,15 +1,13 @@
-"""
-This file is part of pyspex
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
 
-https://github.com/rmvanhees/pyspex.git
-
-Python class to access SPEXone Science telemetry data (ApID 0x350)
-
-Copyright (c) 2020-2021 SRON - Netherlands Institute for Space Research
-   All Rights Reserved
-
-License:  BSD-3-Clause
-"""
 import numpy as np
 
 
@@ -21,32 +19,35 @@ class TMscience:
     """
     Access/convert parameters of a SPEXone telemetry Science packet
 
+    Attributes
+    ----------
+    binning_table_id : np.ndarray
+       Return the binning table identifier (zero for full-frame images).
+    number_channels : np.ndarray
+       Return number of LVDS channels used.
+    lvds_clock : bool
+       Returns flag for LVDS clock: False: disabled & True: enabled.
+    offset : int
+       Returns digital offset including ADC offset [counts].
+    pga_gain : float
+       Returns PGA gain [Volt].
+    exp_time : float
+       Returns pixel exposure time [master clock periods].
+    fot_time : int
+       Returns frame overhead time [master clock periods].
+    rot_time : int
+       Returns image read-out time [master clock periods].
+    frame_period : float
+       Returns frame period [master clock periods].
+    pll_control : tuple
+       Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
+    exp_control : tuple
+       Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
+
     Methods
     -------
     get(key)
        Return (raw) SPEXone telemetry Science parameter.
-    number_channels
-       Return number of LVDS channels used.
-    binning_table_id
-       Return the binning table identifier (zero for full-frame images).
-    lvds_clock
-       Returns flag for LVDS clock: False: disabled & True: enabled.
-    offset
-       Returns digital offset including ADC offset [counts].
-    pga_gain
-       Returns PGA gain [Volt].
-    exp_time
-       Returns pixel exposure time [master clock periods].
-    fot_time
-       Returns frame overhead time [master clock periods].
-    rot_time
-       Returns image read-out time [master clock periods].
-    frame_period
-       Returns frame period [master clock periods].
-    pll_control
-       Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
-    exp_control
-       Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
     """
     def __init__(self, tm_science):
         """
@@ -75,9 +76,10 @@ class TMscience:
         only when the size of the detector data does not change. Therefore,
         a mix of Science mode and Full-frame data should not occur.
 
-        v126: Sometimes the MPS information is not updated for the first
+        v126: Sometimes the MPS information is not updated for the first \
               images. We try to fix this and warn the user.
         v129: REG_BINNING_TABLE_START is stored in BE instead of LE
+
         """
         full_frame = np.unique(self.__tm['REG_FULL_FRAME'])
         if len(full_frame) > 1:
