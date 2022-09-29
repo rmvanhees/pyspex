@@ -29,6 +29,7 @@ dependencies = [
   "moniplot>=0.5",
   "netCDF4>=1.5",
   "numpy>=1.19",
+  "numpydoc>=1.1",
   "xarray>=0.21",
 ]
 dynamic = ["version"]
