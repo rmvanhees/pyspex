@@ -8,7 +8,7 @@ name = "pyspex"
 description = "Software package to handle SPEXone Level-0 and Level-1 data"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE"}
+license = {text = "BSD-3-Clause"}
 authors = [
   {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}
 ]
@@ -25,17 +25,19 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Atmospheric Science",
 ]
 dependencies = [
-  "h5py>=3.5",
+  "h5py~=2.10.0; python_version=='3.9'",
+  "h5py>=3.5; python_version!='3.9'",
   "moniplot>=0.5",
   "netCDF4>=1.5",
   "numpy>=1.19",
-  "numpydoc>=1.1",
-  "xarray>=0.21",
+  "xarray~=0.19.0; python_version=='3.9'",
+  "xarray>=2022.3; python_version!='3.9'",
 ]
 dynamic = ["version"]
 
 [project.urls]
 homepage = "https://github.com/rmvanhees/pyspex"
+documentation = "https://pyspex.readthedocs.io/en/latest/"
 # Source = "https://github.com/rmvanhees/pyspex"
 # Changelog = "https://github.com/rmvanhees/pyspex/HISTORY.rst"
 "Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"

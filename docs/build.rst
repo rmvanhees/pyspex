@@ -3,17 +3,6 @@
 Installation
 ============
 
-We develop the code using `Python <https://www.python.org/>`_ 3.10 using the
-latest stable release of the libraries
-`HDF5 <https://hdfgroup.org/solutions/hdf5>`_ and
-`netCDF4 <https://www.unidata.ucar.edu/software/netcdf/>`_,
-and Python packages:
-`numpy <https://numpy.org>`_, `h5py <https://www.h5py.org>`_,
-`netCDF4-python <https://github.com/Unidata/netcdf4-python>`_
-and
-`xarray <https://xarray.dev/>`_, `matplotlib <https://matplotlib.org/>`_.
-
-
 Wheels
 ------
 
@@ -50,6 +39,15 @@ The latest release of `pyspex` is available from
 You can obtain the source code using::
 
   git clone https://github.com/rmvanhees/pyspex.git
+
+We develop the code using `Python <https://www.python.org/>`_ 3.10 using the
+latest stable release of the libraries
+`HDF5 <https://hdfgroup.org/solutions/hdf5>`_ and
+`netCDF4 <https://www.unidata.ucar.edu/software/netcdf/>`_,
+and Python packages:
+`numpy <https://numpy.org>`_, `h5py <https://www.h5py.org>`_,
+`netCDF4-python <https://github.com/Unidata/netcdf4-python>`_
+and `xarray <https://xarray.dev/>`_.
 
 To compile the code you need the Python packages: setuptools, setuptools-scm
 and wheels. Then you can install `pyspex` as follows::
