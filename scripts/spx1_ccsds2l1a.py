@@ -19,8 +19,9 @@ from pathlib import Path
 import numpy as np
 
 from pyspex import spx_product
-from pyspex.lib.tmtc_def import tmtc_def
+from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.ccsds_io import CCSDSio
+from pyspex.lv0_io import img_sec_of_day, hk_sec_of_day
 from pyspex.lv1_io import L1Aio
 
 # - global parameters ------------------------------
@@ -173,7 +174,7 @@ def main():
     img_sec = np.empty(len(science_tm), dtype='u4')
     img_subsec = np.empty(len(science_tm), dtype='u2')
     img_id = np.empty(len(science_tm), dtype='u4')
-    img_hk = np.empty(len(science_tm), dtype=np.dtype(tmtc_def(0x350)))
+    img_hk = np.empty(len(science_tm), dtype=tmtc_dtype(0x350))
     img_data = []
     for ii, packet in enumerate(science_tm):
         if packet['science_hk']['ICUSWVER'] > 0x123:
@@ -194,11 +195,13 @@ def main():
         us100 = buff.astype('u8') % 10000
         img_subsec = ((us100 << 16) // 10000).astype('u2')
 
+    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)
+
     # extract timestaps and telemetry of NomHK data
     if nomhk_tm:
         nomhk_sec = np.empty(len(nomhk_tm), dtype='u4')
         nomhk_subsec = np.empty(len(nomhk_tm), dtype='u2')
-        nomhk_data = np.empty(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x320)))
+        nomhk_data = np.empty(len(nomhk_tm), dtype=tmtc_dtype(0x320))
         for ii, packet in enumerate(nomhk_tm):
             nomhk_sec[ii] = packet['packet_header']['tai_sec']
             nomhk_subsec[ii] = packet['packet_header']['sub_sec']
@@ -216,7 +219,7 @@ def main():
 
     # if we have DemHK data then demhk_data should be equal in size with NomHK
     if demhk_tm:
-        demhk_data = np.zeros(len(nomhk_tm), dtype=np.dtype(tmtc_def(0x322)))
+        demhk_data = np.zeros(len(nomhk_tm), dtype=tmtc_dtype(0x322))
         for ii in range(min(len(nomhk_tm), len(demhk_tm))):
             demhk_data[ii] = demhk_tm[ii]['detector_hk']
 
@@ -244,15 +247,19 @@ def main():
             'SC_records': None}
 
     # Generate L1A product
-    with L1Aio(args.datapath / prod_name, dims=dims) as l1a:
+    with L1Aio(args.datapath / prod_name, dims=dims,
+               ref_date=ref_date.date()) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
-        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
+        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
+        l1a.set_dset('/image_attributes/image_time', img_time)
 
         # write engineering data
         if nomhk_tm:
             l1a.fill_nomhk(nomhk_data)
-            l1a.fill_time(nomhk_sec, nomhk_subsec, group='engineering_data')
+            hk_time = hk_sec_of_day(nomhk_sec, nomhk_subsec, ref_date)
+            l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
 
         if demhk_tm:
             l1a.fill_demhk(demhk_data)

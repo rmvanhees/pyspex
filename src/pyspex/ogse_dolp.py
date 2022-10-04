@@ -46,10 +46,10 @@ def gsfc_polarizer() -> xr.Dataset:
                        'Extinction_Ratio': xar_ratio}, attrs=DOLP_ATTRS)
 
 
-def test(l1a_file: str) -> None:
+def __test(l1a_file: str) -> None:
+    """Small function to test this module.
     """
-    Create a netCDF4 file containing the spectralDoLP
-    """
+    # Create a netCDF4 file containing the spectralDoLP
     xds = gsfc_polarizer()
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',
                   group='/gse_data/Polarizer')
@@ -60,4 +60,4 @@ if __name__ == '__main__':
     print('---------- SHOW DATASET ----------')
     print(gsfc_polarizer())
     print('---------- WRITE DATASET ----------')
-    test('test_netcdf.nc')
+    __test('test_netcdf.nc')

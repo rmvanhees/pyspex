@@ -16,46 +16,15 @@ from netCDF4 import Dataset
 # --------------------------------------------------
 class LV1gse:
     """
-    Python class add EGSE/OGSE data to a SPEXone Level-1A product
+    Python class add EGSE/OGSE data to a SPEXone Level-1A product.
 
-    Attributes
+    Parameters
     ----------
-    fid : netCDF4::Dataset
-        netCDF4 Dataset instance.
-
-    Methods
-    -------
-    check_egse(egse_data)
-        Check consistency of OGSE/EGSE information during measurement.
-    set_attr(name, value)
-        Add/update an attribute of the group 'gse_data'.
-    write_attr_act(angle: float, illumination)
-        Add ACT rotation angle as an group attribute.
-    write_attr_alt(angle: float, illumination)
-        Add altitude rotation angle as an group attribute.
-    write_attr_polarization(aolp: float, dolp: float)
-        Add polarization parameters AoLP & DoLP as group attributes.
-    write_viewport(viewport)
-        Add/update which viewports are illuminated.
-    write_egse(egse_time, egse_data, egse_attrs)
-        Add EGSE parameters.
-    write_data_stimulus(xds_signal)
-        Add wavelength and signal of data stimulus.
-    write_reference_diode(ref_time, ref_data, ref_attrs)
-        Add data measured by the reference diode during the measurement.
-    write_reference_signal(xds_signal)
-        Add reference signal and its error.
-    write_wavelength_monitor(xds_wavelength)
-        Add wavelength monitoring data of the Avantas fibre-spectrometer.
+    l1a_file: str
+        Name of the Level-1A product
     """
     def __init__(self, l1a_file: str) -> None:
-        """
-        Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product
-
-        Parameters
-        ----------
-        l1a_file: str
-           Name of the Level-1A product
+        """Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product.
         """
         self.fid = Dataset(l1a_file, 'r+')
 
@@ -119,21 +88,18 @@ class LV1gse:
                 yield attr
 
     def __enter__(self):
-        """
-        method called to initiate the context manager
+        """Method called to initiate the context manager.
         """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """
-        method called when exiting the context manager
+        """Method called when exiting the context manager.
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """
-        Close all resources (currently a placeholder function)
+        """Close all resources (currently a placeholder function).
         """
         if self.fid is None:
             return
@@ -142,8 +108,7 @@ class LV1gse:
         self.fid = None
 
     def check_egse(self, egse_data) -> None:
-        """
-        Check consistency of OGSE/EGSE information during measurement
+        """Check consistency of OGSE/EGSE information during measurement.
         """
         for key, fmt in egse_data.dtype.fields.items():
             if fmt[0] == np.uint8:
@@ -162,8 +127,7 @@ class LV1gse:
                 print('[WARNING] ', 'ALT_ANGLE', egse_data['ALT_ANGLE'])
 
     def set_attr(self, name: str, value) -> None:
-        """
-        Add attribute to group 'gse_data'
+        """Add attribute to group 'gse_data'.
 
         Parameters
         ----------
@@ -173,8 +137,7 @@ class LV1gse:
         self.fid['/gse_data'].setncattr(name, value)
 
     def write_attr_act(self, angle: float, illumination=None) -> None:
-        """
-        Add act rotation angle as an group attribute
+        """Add act rotation angle as an group attribute.
 
         Parameters
         ----------
@@ -186,8 +149,7 @@ class LV1gse:
             self.fid['/gse_data'].ACT_illumination = illumination
 
     def write_attr_alt(self, angle: float, illumination=None) -> None:
-        """
-        Add altitude rotation angle as an group attribute
+        """Add altitude rotation angle as an group attribute.
 
         Parameters
         ----------
@@ -199,8 +161,7 @@ class LV1gse:
             self.fid['/gse_data'].ALT_illumination = illumination
 
     def write_attr_polarization(self, aolp: float, dolp: float) -> None:
-        """
-        Add polarization parameters AoLP & DoLP as group attributes
+        """Add polarization parameters AoLP & DoLP as group attributes.
 
         Parameters
         ----------
@@ -215,8 +176,7 @@ class LV1gse:
             self.fid['/gse_data'].DoLP = dolp
 
     def write_egse(self, egse_time, egse_data, egse_attrs: dict) -> None:
-        """
-        Add EGSE parameters
+        """Add EGSE parameters.
 
         Parameters
         ----------
@@ -241,8 +201,7 @@ class LV1gse:
         dset[:] = egse_data
 
     def write_viewport(self, viewport: int) -> None:
-        """
-        Add/update which viewports are illuminated
+        """Add/update which viewports are illuminated.
 
         Parameters
         ----------
@@ -251,8 +210,7 @@ class LV1gse:
         self.fid['/gse_data/viewport'][:] = viewport
 
     def write_reference_signal(self, signal, stdev) -> None:
-        """
-        Write reference detector signal and variance
+        """Write reference detector signal and variance.
 
         Parameters
         ----------
@@ -280,8 +238,7 @@ class LV1gse:
         dset[:] = stdev
 
     def write_reference_diode(self, ref_time, ref_data, ref_attrs) -> None:
-        """
-        Add data measured by the reference diode during the measurement
+        """Add data measured by the reference diode during the measurement.
 
         Parameters
         ----------
@@ -303,8 +260,7 @@ class LV1gse:
         dset[:] = ref_data
 
     def write_wavelength_monitor(self, xds_wav_mon) -> None:
-        """
-        Add wavelength monitoring data of the Avantas fibre-spectrometer
+        """Add wavelength monitoring data of the Avantas fibre-spectrometer.
 
         Parameters
         ----------

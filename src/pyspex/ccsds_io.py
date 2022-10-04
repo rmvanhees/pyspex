@@ -62,47 +62,12 @@ MSG_CORRUPT_FRAME = 'corrupted segements - previous frame not closed'
 
 # - class CCSDSio -------------------------
 class CCSDSio:
-    """
-    Read SPEXone telemetry packets.
+    """Read SPEXone telemetry packets.
 
-    Attributes
+    Parameters
     ----------
-    found_invalid_apid : bool
-    file_list : iter
-    fp :  file pointer
-    version_no : int
-       Returns CCSDS version number.
-    type_indicator : int
-       Returns type of telemetry packet.
-    secnd_hdr_flag : bool
-       Returns flag indicating presence of a secondary header.
-    ap_id : int
-       Returns SPEXone ApID.
-    grouping_flag : int
-       Returns grouping flag.
-    sequence_count : int
-       Returns sequence counter, rollover to zero at 0x3FFF.
-    packet_length : int
-       Returns size of packet data in bytes.
-
-    Methods
-    -------
-    close()
-       Close resources.
-    open_next_file()
-       Open next file from file_list.
-    fix_dem_hk24(sci_hk)
-       Correct 32-bit integers in the DemHK which originate from
-       24-bit integers in the detector register values.
-    fix_sci_hk24(sci_hk)
-       Correct 32-bit integers in the Science_HK which originate from
-       24-bit integers in the detector register values.
-    read_packet()
-       Read next telemetry packet.
-    select_tm(packets, ap_id)
-       Select NomHK telemetry packages
-    science_tm(packets_in)
-       Combine segmented Science telemetry packages.
+    file_list: list of strings
+        list of file-names, where each file contains parts of a measurement
 
     Notes
     -----
@@ -118,8 +83,13 @@ class CCSDSio:
 
     Doc: TMTC handbook (SPX1-TN-005), issue 12, 15-May-2020
 
+    The files with science and telemetry data needs to be in chronological
+    order. However, you may mix science and housekeeping data as long as
+    science data are chronological and housekeeping data are chronological.
+
     Examples
     --------
+
     >>> packets = ()
     >>> with CCSDSio(file_list) as ccsds:
     >>>     while True:
@@ -134,21 +104,10 @@ class CCSDSio:
     >>>     # combine segmented Science packages
     >>>     science_tm = ccsds.group_tm(packets)
     >>>     # now you may want to collect the engineering packages
+
     """
     def __init__(self, file_list: list) -> None:
-        """
-        Initialize access to a SPEXone Level-0 product (CCSDS format)
-
-        Parameters
-        ----------
-        file_list: list of strings
-           list of file-names, where each file contains parts of a measurement
-
-        Notes
-        -----
-        The files with science and telemetry data needs to be in chronological
-        order. However, you may mix science and housekeeping data as long as
-        science data are chronological and housekeeping data are chronological.
+        """Initialize access to a SPEXone Level-0 product (CCSDS format).
         """
         # initialize class attributes
         self.file_list = iter(file_list)
@@ -170,21 +129,18 @@ class CCSDSio:
                 yield attr
 
     def __enter__(self):
-        """
-        method called to initiate the context manager
+        """Method called to initiate the context manager.
         """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """
-        method called when exiting the context manager
+        """Method called when exiting the context manager.
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """
-        Close resources
+        """Close resources.
         """
         if self.fp is not None:
             if self.found_invalid_apid:
@@ -195,8 +151,7 @@ class CCSDSio:
     # ---------- define some class properties ----------
     @property
     def version_no(self) -> int:
-        """
-        Returns CCSDS version number
+        """Returns CCSDS version number.
         """
         if self.__hdr is None:
             return None
@@ -205,8 +160,7 @@ class CCSDSio:
 
     @property
     def type_indicator(self) -> int:
-        """
-        Returns type of telemetry packet
+        """Returns type of telemetry packet.
         """
         if self.__hdr is None:
             return None
@@ -215,8 +169,7 @@ class CCSDSio:
 
     @property
     def secnd_hdr_flag(self) -> bool:
-        """
-        Returns flag indicating presence of a secondary header
+        """Returns flag indicating presence of a secondary header.
         """
         if self.__hdr is None:
             return None
@@ -225,8 +178,7 @@ class CCSDSio:
 
     @property
     def ap_id(self) -> int:
-        """
-        Returns SPEXone ApID
+        """Returns SPEXone ApID.
         """
         if self.__hdr is None:
             return None
@@ -235,14 +187,15 @@ class CCSDSio:
 
     @property
     def grouping_flag(self) -> int:
-        """
-        Returns grouping flag
+        """Returns grouping flag
 
-        Possible values:
+        The meaning of the grouping flag values are::
+
           00 continuation packet-data segment
           01 first packet-data segment
           10 last packet-data segment
           11 packet-data unsegmented
+
         """
         if self.__hdr is None:
             return None
@@ -251,8 +204,7 @@ class CCSDSio:
 
     @property
     def sequence_count(self) -> int:
-        """
-        Returns sequence counter, rollover to zero at 0x3FFF
+        """Returns sequence counter, rollover to zero at 0x3FFF.
         """
         if self.__hdr is None:
             return None
@@ -261,11 +213,8 @@ class CCSDSio:
 
     @property
     def packet_length(self) -> int:
-        """
-        Returns size of packet data in bytes
+        """Returns size of packet data in bytes.
 
-        Notes
-        -----
         Value equals secondary header + user data (always odd)
         """
         if self.__hdr is None:
@@ -275,8 +224,7 @@ class CCSDSio:
 
     # ---------- define empty telemetry packet ----------
     def open_next_file(self) -> None:
-        """
-        Open next file from file_list
+        """Open next file from file_list.
         """
         flname = next(self.file_list)
         if not Path(flname).is_file():
@@ -288,9 +236,18 @@ class CCSDSio:
 
     @staticmethod
     def fix_dem_hk24(dem_hk):
-        """
-        Correct 32-bit integers in the DemHK which originate from
-        24-bit integers in the detector register values
+        """Correct 32-bit integers in the DemHK which originate from
+        24-bit integers in the detector register values.
+
+        Parameters
+        ----------
+        dem_hk : numpy.ndarray
+           SPEXone DEM housekeeping packages
+
+        Returns
+        -------
+        numpy.ndarray
+           SPEXone DEM housekeeping packages
         """
         for key in ['DET_EXPTIME', 'DET_EXPSTEP',
                     'DET_KP1', 'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2']:
@@ -300,13 +257,22 @@ class CCSDSio:
 
     @staticmethod
     def fix_sci_hk24(sci_hk):
-        """
-        Correct 32-bit integers in the Science HK which originate from
-        24-bit integers in the detector register values
+        """Correct 32-bit integers in the Science HK which originate from
+        24-bit integers in the detector register values.
 
         In addition:
          - copy the first 4 bytes of DET_CHENA to DET_ILVDS
          - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
+
+        Parameters
+        ----------
+        sci_hk : numpy.ndarray
+           SPEXone Science telemetry packages
+
+        Returns
+        -------
+        numpy.ndarray
+           SPEXone Science telemetry packages
         """
         if np.all(sci_hk['ICUSWVER'] < 0x129):
             key = 'REG_BINNING_TABLE_START'
@@ -330,8 +296,17 @@ class CCSDSio:
         return sci_hk
 
     def __rd_science(self, hdr) -> np.ndarray:
-        """
-        Read Science telemetry packet
+        """Read Science telemetry packet.
+
+        Parameters
+        ----------
+        hdr :  numpy.ndarray
+           CCSDS header information
+
+        Returns
+        -------
+        numpy.ndarray
+           SPEXone Science telemetry packages
         """
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
         packet = np.empty(1, dtype=np.dtype([
@@ -356,8 +331,17 @@ class CCSDSio:
         return packet
 
     def __rd_nomhk(self, hdr) -> np.ndarray:
-        """
-        Read NomHK telemetry packet
+        """Read NomHK telemetry packet.
+
+        Parameters
+        ----------
+        hdr :  numpy.ndarray
+           CCSDS header information
+
+        Returns
+        -------
+        numpy.ndarray
+           SPEXone Nominal housekeeping packages
         """
         packet = np.empty(1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -368,8 +352,17 @@ class CCSDSio:
         return packet
 
     def __rd_demhk(self, hdr) -> np.ndarray:
-        """
-        Read DemHK telemetry packet
+        """Read DemHK telemetry packet.
+
+        Parameters
+        ----------
+        hdr :  numpy.ndarray
+           CCSDS header information
+
+        Returns
+        -------
+        numpy.ndarray
+           SPEXone detector housekeeping packages
         """
         packet = np.empty(1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -380,8 +373,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_accept(self, _) -> np.ndarray:
-        """
-        Read/dump TcAccept packet
+        """Read/dump TcAccept packet.
         """
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
@@ -393,8 +385,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_execute(self, _) -> np.ndarray:
-        """
-        Read/dump TcExecute packet
+        """Read/dump TcExecute packet.
         """
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
@@ -406,8 +397,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_fail(self, _) -> np.ndarray:
-        """
-        Read/dump TcFail packet
+        """Read/dump TcFail packet.
         """
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
@@ -424,8 +414,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_reject(self, _) -> np.ndarray:
-        """
-        Read/dump TcReject packet
+        """Read/dump TcReject packet.
         """
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
@@ -441,8 +430,7 @@ class CCSDSio:
         return packet
 
     def __rd_other(self, hdr) -> np.ndarray:
-        """
-        Read other telemetry packet
+        """Read other telemetry packet.
         """
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
         if not 0x320 <= self.ap_id <= 0x350:
@@ -458,12 +446,12 @@ class CCSDSio:
         return packet
 
     def read_packet(self) -> np.ndarray:
-        """
-        Read next telemetry packet
+        """Read next telemetry packet.
 
         Returns
         -------
-        ndarray with packet data
+        numpy.ndarray
+           CCSDS packet data
         """
         if self.fp is None:
             return None
@@ -497,19 +485,19 @@ class CCSDSio:
 
     @staticmethod
     def select_tm(packets_in: tuple, ap_id: int) -> tuple:
-        """
-        Select telemetry packages on SPEXone ApID
+        """Select telemetry packages on SPEXone ApID.
 
         Parameters
         ----------
         packets: tuple
            Tuple with mix of SPEXone telemetry packages
         ap_id: int
-          SPEXone ApID
+           SPEXone ApID
 
         Returns
         -------
-        Tuple with selected telemetry packages
+        tuple
+           selected telemetry packages
         """
         packets = ()
         for packet in packets_in:
@@ -522,8 +510,7 @@ class CCSDSio:
         return packets
 
     def science_tm(self, packets_in: tuple) -> tuple:
-        """
-        Combine segmented Science telemetry packages
+        """Combine segmented Science telemetry packages.
 
         Parameters
         ----------
@@ -532,7 +519,8 @@ class CCSDSio:
 
         Returns
         -------
-        Tuple with unsegmented Science telemetry packages
+        tuple
+           unsegmented Science telemetry packages
         """
         # reject non-Science telemetry packages
         packets = self.select_tm(packets_in, 0x350)

@@ -16,20 +16,21 @@ from pyspex import version
 # - local functions --------------------------------
 def attrs_def(level: str, inflight=True, origin=None) -> dict:
     """
-    Defines all global attributes for SPEXone Level-1 products
+    Defines all global attributes for SPEXone Level-1 products.
 
     Parameters
     ----------
     level : str
-      Product processing level 'L1A', 'L1B' or 'L1C'
+       Product processing level 'L1A', 'L1B' or 'L1C'
     inflight : bool
-      Flag for in-flight or on-ground products
+       Flag for in-flight or on-ground products
     origin : str
-      Product origin: 'SRON' or 'NASA'
+       Product origin: 'SRON' or 'NASA'
 
     Returns
     -------
     dict
+       Global attributes for a Level-1A product
     """
     if origin is None:
         origin = 'NASA' if inflight else 'SRON'

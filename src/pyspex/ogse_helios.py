@@ -404,10 +404,10 @@ def helios_spectrum() -> xr.Dataset:
                       attrs=HELIOS_ATTRS)
 
 
-def test(l1a_file: str) -> None:
+def __test(l1a_file: str) -> None:
+    """Small function to test this module.
     """
-    Create a netCDF4 file containing the Helios reference spectrum
-    """
+    # Create a netCDF4 file containing the Helios reference spectrum
     xds = helios_spectrum()
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',
                   group='/gse_data/ReferenceSpectrum')
@@ -418,4 +418,4 @@ if __name__ == '__main__':
     print('---------- SHOW DATASET ----------')
     print(helios_spectrum())
     print('---------- WRITE DATASET ----------')
-    test('test_netcdf.nc')
+    __test('test_netcdf.nc')

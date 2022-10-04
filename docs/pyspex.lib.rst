@@ -12,14 +12,6 @@ pyspex.lib.attrs\_def module
    :undoc-members:
    :show-inheritance:
 
-pyspex.lib.before\_launch module
---------------------------------
-
-.. automodule:: pyspex.lib.before_launch
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyspex.lib.l1a\_def module
 --------------------------
 

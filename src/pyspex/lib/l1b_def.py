@@ -32,7 +32,8 @@ def init_l1b(l1b_flname: str, ref_date: datetime.date, dims: dict) -> None:
        Date of the first detector image
     dims :   dictionary
        Provide length of the Level-1B dimensions
-       Default values:
+       Default values::
+
           bins_along_track: 400
           spatial_samples_per_image: 200
           intensity_bands_per_view: 50
@@ -256,11 +257,3 @@ def init_l1b(l1b_flname: str, ref_date: datetime.date, dims: dict) -> None:
                     ' at each polarization band and view.')
 
     return rootgrp
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    fid = init_l1b('PACE_SPEX.20230115T123456.L1B.2.5km.V01.nc',
-                   ref_date=None, dims={})
-    fid.fill_global_attrs(orbit=12345, bin_size='2.5km')
-    fid.close()

@@ -13,8 +13,10 @@ from pathlib import Path
 import numpy as np
 try:
     import pytiff
-except Exception as exc:
-    raise RuntimeError('Module pytiff is required to run this module') from exc
+except ModuleNotFoundError:
+    FOUND_PYTIFF = False
+else:
+    FOUND_PYTIFF = True
 
 # - global parameters ------------------------------
 
@@ -23,39 +25,10 @@ except Exception as exc:
 
 
 # - class TIFio -------------------------
-class TIFio():
-    """
-    This class can be used to read SPEXone instrument simulator output
-
-    Attributes
-    ----------
-    dir_name :  pathlib.Path
-    filename :  str
-    inp_tif :  bool
-    lineskip :  bool
-
-    Methods
-    -------
-    header()
-       Read header as dictionary.
-    tags()
-       Return TIFF tags as dictionary.
-    images(n_frame=None)
-       Return TIFF data as numpy array.
-
-    Notes
-    -----
-
-    Examples
-    --------
-    >>>  tif = TIFio(filename)
-    >>>  print(tif.header())
-    >>>  print(tif.tags()[0])
-    >>>  print(tif.images().shape)
-    """
-    def __init__(self, hdr_file: str, inp_tif=False, lineskip=False):
+if FOUND_PYTIFF:
+    class TIFio():
         """
-        Initialize class TIFio
+        This class can be used to read SPEXone instrument simulator output
 
         Parameters
         ----------
@@ -63,122 +36,131 @@ class TIFio():
         inp_tif : bool
         lineskip : bool
 
+        Examples
+        --------
+
+        >>>  tif = TIFio(filename)
+        >>>  print(tif.header())
+        >>>  print(tif.tags()[0])
+        >>>  print(tif.images().shape)
+
         """
-        if not Path(hdr_file).is_file():
-            raise FileNotFoundError(f'file {hdr_file} not found')
+        def __init__(self, hdr_file: str, inp_tif=False, lineskip=False):
+            """Initialize TIFio object
+            """
+            if not Path(hdr_file).is_file():
+                raise FileNotFoundError(f'file {hdr_file} not found')
 
-        # initialize class-attributes
-        self.filename = hdr_file
-        self.dir_name = Path(hdr_file).parent
-        self.__stem = Path(hdr_file).stem
-        self.__header = None
-        self.inp_tif = inp_tif
-        self.lineskip = lineskip
+            # initialize class-attributes
+            self.filename = Path(hdr_file)
+            self.dir_name = Path(hdr_file).parent
+            self.__stem = Path(hdr_file).stem
+            self.__header = None
+            self.inp_tif = inp_tif
+            self.lineskip = lineskip
 
-    def __repr__(self):
-        class_name = type(self).__name__
-        return f'{class_name}({self.filename!r})'
+        def __repr__(self):
+            class_name = type(self).__name__
+            return f'{class_name}({self.filename.name!r})'
 
-    # --------------------------------------------------
-    def header(self) -> dict:
-        """
-        Read header as dictionary
-        """
-        res = {}
-        with Path(self.filename).open(encoding='ascii', errors='ignore') as fp:
-            res['history'] = fp.readline()[:-1]
-            _ = fp.readline()
-            for line in fp:
-                if line == '-\n':
-                    break
-                key, value = line[:-1].split(':')
-                if value.strip(' ') != 'None':
-                    res[key.rstrip(' ')] = value.strip(' ')
-
-            # read Spectral data stimulus
-            line = fp.readline()
-            buff = line[:-1].split('[')
-            key = buff[0].rstrip(' ')
-            if key == 'Spectral data stimulus':
-                ds_sets = buff[1].replace(']', '').split(', ')
-
-                ds_dict = {}
-                for name in ds_sets:
-                    line = fp.readline()
-                    if not line:
+        # --------------------------------------------------
+        def header(self) -> dict:
+            """Read header as dictionary.
+            """
+            res = {}
+            with self.filename.open(encoding='ascii', errors='ignore') as fp:
+                res['history'] = fp.readline()[:-1]
+                _ = fp.readline()
+                for line in fp:
+                    if line == '-\n':
                         break
-                    ds_dict[name] = np.array(line[:-1].split(','), dtype=float)
+                    key, value = line[:-1].split(':')
+                    if value.strip(' ') != 'None':
+                        res[key.rstrip(' ')] = value.strip(' ')
 
-                if ds_dict:
-                    res[key] = ds_dict
+                # read Spectral data stimulus
+                line = fp.readline()
+                buff = line[:-1].split('[')
+                key = buff[0].rstrip(' ')
+                if key == 'Spectral data stimulus':
+                    ds_sets = buff[1].replace(']', '').split(', ')
 
-        self.__header = res
-        return res
+                    ds_dict = {}
+                    for name in ds_sets:
+                        line = fp.readline()
+                        if not line:
+                            break
+                        ds_dict[name] = np.array(line[:-1].split(','),
+                                                 dtype=float)
 
-    # --------------------------------------------------
-    def tags(self) -> dict:
-        """
-        return TIFF tags as dictionary
-        """
-        if self.__header is None:
-            self.header()
-        n_frame = int(self.__header['Number of measurements'])
+                    if ds_dict:
+                        res[key] = ds_dict
 
-        res = []
-        for num in range(n_frame):
-            tif_path = self.dir_name / f'{self.__stem}_{num}.tif'
-            with pytiff.Tiff(str(tif_path)) as handle:
-                res.append(handle.read_tags())
+            self.__header = res
+            return res
 
-        return res
+        # --------------------------------------------------
+        def tags(self) -> dict:
+            """return TIFF tags as dictionary.
+            """
+            if self.__header is None:
+                self.header()
+            n_frame = int(self.__header['Number of measurements'])
 
-    # --------------------------------------------------
-    def images(self, n_frame=None):
-        """
-        Return TIFF data as numpy array
+            res = []
+            for num in range(n_frame):
+                tif_path = self.dir_name / f'{self.__stem}_{num}.tif'
+                with pytiff.Tiff(str(tif_path)) as handle:
+                    res.append(handle.read_tags())
 
-        Parameters
-        ----------
-        n_frame :  int, optional
-           Distribute coadded signal (32-bit) over n_frame images (16-bit)
-        """
-        if self.__header is None:
-            self.header()
+            return res
 
-        if self.inp_tif:
-            tif_path = self.dir_name / f'{self.__stem}_inp.tif'
-            with pytiff.Tiff(str(tif_path)) as handle:
-                data = handle[:]
+        # --------------------------------------------------
+        def images(self, n_frame=None):
+            """Return TIFF data as numpy array.
 
-            if n_frame is None:
-                n_frame = 1 + (data.max() // 0xFFFF)
-            elif n_frame < 1 + (data.max() // 0xFFFF):
-                print('Warning: n_frame too small - precision will be lost')
+            Parameters
+            ----------
+            n_frame :  int, optional
+            Distribute coadded signal (32-bit) over n_frame images (16-bit)
+            """
+            if self.__header is None:
+                self.header()
 
-            if n_frame == 1:
-                return data.astype('u2')
+            if self.inp_tif:
+                tif_path = self.dir_name / f'{self.__stem}_inp.tif'
+                with pytiff.Tiff(str(tif_path)) as handle:
+                    data = handle[:]
 
-            frames = np.zeros((n_frame,) + data.shape, dtype='u2')
-            frames += (data // n_frame)
-            diff = data - np.sum(frames, axis=0)
-            for img in frames:
-                mask = diff > 0
-                img[mask] += 1
-                diff[mask] -= 1
+                if n_frame is None:
+                    n_frame = 1 + (data.max() // 0xFFFF)
+                elif n_frame < 1 + (data.max() // 0xFFFF):
+                    print('Warning: n_frame too small - precision will be lost')
 
-            return frames
+                if n_frame == 1:
+                    return data.astype('u2')
 
-        # convert regular TIFF files
-        n_frame = int(self.__header['Number of measurements'])
+                frames = np.zeros((n_frame,) + data.shape, dtype='u2')
+                frames += (data // n_frame)
+                diff = data - np.sum(frames, axis=0)
+                for img in frames:
+                    mask = diff > 0
+                    img[mask] += 1
+                    diff[mask] -= 1
 
-        if self.lineskip:
-            tif_fmt = str(self.dir_name / '{}_lineskip_{}.tif')
-        else:
-            tif_fmt = str(self.dir_name / '{}_{}.tif')
+                return frames
 
-        res = []
-        for num in range(n_frame):
-            with pytiff.Tiff(tif_fmt.format(self.__stem, num)) as handle:
-                res.append(handle[:])
+            # convert regular TIFF files
+            n_frame = int(self.__header['Number of measurements'])
 
-        return np.array(res)
+            if self.lineskip:
+                tif_fmt = str(self.dir_name / '{}_lineskip_{}.tif')
+            else:
+                tif_fmt = str(self.dir_name / '{}_{}.tif')
+
+            res = []
+            for num in range(n_frame):
+                with pytiff.Tiff(tif_fmt.format(self.__stem, num)) as handle:
+                    res.append(handle[:])
+
+            return np.array(res)

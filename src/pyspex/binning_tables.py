@@ -27,23 +27,15 @@ class BinningTables:
     """
     Defines class to store and obtain SPEXone binning CKD
 
-    Attributes
+    Parameters
     ----------
-    ckd_dir : pathlib.Path
-       Directory with binning table CKD
-    ckd_file : str
-       Filename of the binning table CKD
+    ckd_dir : str
+        Name of directory for the binning table CKD
 
-    Methods
-    -------
-    create_if_needed(validity_start, release=1)
-       Initialize CKD file with binning tables (netCDF4 format).
-    add_table(table_id, lineskip_arr, binning_table)
-       Add a binning table definition to existing CKD file.
-    search(coverage_start)
-       Search current CKD file with binning tables.
-    unbin(table_id: int, img_binned)
-       Return unbinned detector data.
+    Raises
+    ------
+    FileNotFoundError
+        directory with SPEXone CKD does not exist
 
     Notes
     -----
@@ -88,18 +80,7 @@ class BinningTables:
 
     """
     def __init__(self, ckd_dir=None) -> None:
-        """
-        Initialize class attributes
-
-        Parameters
-        ----------
-        ckd_dir : str
-           Name of directory for the binning table CKD
-
-        Raises
-        ------
-        FileNotFoundError
-           directory with SPEXone CKD does not exist
+        """Initialize class attributes
         """
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
@@ -242,6 +223,7 @@ class BinningTables:
 
         Returns
         -------
+        numpy.ndarray
            Unbinned image data (no interpolation)
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:

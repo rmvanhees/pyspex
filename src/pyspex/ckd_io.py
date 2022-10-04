@@ -19,58 +19,31 @@ from moniplot.image_to_xarray import h5_to_xr
 
 # - global parameters ------------------------------
 
-
 # - local functions --------------------------------
-
 
 # - class CKDio -------------------------
 class CKDio:
-    """
-    Defines a class to read SPEXone CKD parameters
+    """Defines a class to read SPEXone CKD parameters.
 
-    Attributes
+    Parameters
     ----------
-    verbose :  bool
-       Be verbose.
-    fid :  h5py.File
-       h5py File object (read-only).
-    processor_version :  str
-       version of SPEXone processor.
-    git_commit :  str
-       git hash of SPEXone processor.
+    ckd_file :  str
+        Name of CKD file
+    verbose :  bool, default=False
+        Be verbose
 
-    Methods
-    -------
-    date_created(self, compact=False)
-       Creation date of CKD.
-    dark()
-       Read Dark CKD.
-    noise()
-       Read Noise CKD.
-    nlin()
-       Read non-Linearity CKD.
-    prnu()
-       Read PRNU CKD.
-    fov()
-       Read field-of-view CKD.
-    wavelength()
-       Read Wavelength CKD.
-    radiometric()
-       Read Radiometric CKD.
-    polarimetric()
-       Read Polarimetric CKD.
+    Examples
+    --------
+
+    Read several CKD parameters:
+
+    >>> with CKDio('SPX1_CKD.nc') as ckd:
+    >>>    dark = ckd.dark()
+    >>>    fov = ckd.fov()
 
     """
     def __init__(self, ckd_file: Path, verbose=False) -> None:
-        """
-        Initialize class attributes
-
-        Parameters
-        ----------
-        ckd_file :  str
-           Name of CKD file
-        verbose :  bool, default=False
-           Be verbose
+        """Initialize class attributes.
         """
         self.verbose = verbose
 
@@ -80,36 +53,31 @@ class CKDio:
             raise RuntimeError('CKD product in complete?')
 
     def __enter__(self):
-        """
-        method called to initiate the context manager
+        """Method called to initiate the context manager.
         """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """
-        method called when exiting the context manager
+        """Method called when exiting the context manager.
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """
-        Make sure that we close all resources
+        """Make sure that we close all resources.
         """
         if self.fid is not None:
             self.fid.close()
 
     @property
     def processor_version(self) -> str:
-        """
-        Return the version of the spexone_cal program
+        """Return the version of the spexone_cal program.
         """
         # pylint: disable=no-member
         return self.fid.attrs['processor_version'].decode()
 
     def date_created(self, compact=False) -> str:
-        """
-        Return creation date of the CKD product
+        """Return creation date of the CKD product.
 
         Parameters
         ----------
@@ -126,19 +94,18 @@ class CKDio:
 
     @property
     def git_commit(self) -> str:
-        """
-        Return git hash of repository spexone_cal, used to generate the CKD
+        """Return git hash of repository spexone_cal, used to generate the CKD.
         """
         # pylint: disable=no-member
         return self.fid.attrs['git_commit'].decode()
 
     def dark(self) -> xr.Dataset:
-        """
-        Read Dark CKD
+        """Read Dark CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone Dark CKD
         """
         try:
             gid = self.fid['DARK']
@@ -154,12 +121,12 @@ class CKDio:
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def noise(self) -> xr.Dataset:
-        """
-        Read Noise CKD
+        """Read Noise CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone Noise CKD
         """
         try:
             gid = self.fid['NOISE']
@@ -171,12 +138,12 @@ class CKDio:
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def nlin(self) -> xr.Dataset:
-        """
-        Read non-linearity CKD
+        """Read non-linearity CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone non-linearity CKD
         """
         try:
             gid = self.fid['NON_LINEARITY']
@@ -191,12 +158,12 @@ class CKDio:
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def prnu(self) -> xr.DataArray:
-        """
-        Read PRNU CKD
+        """Read PRNU CKD.
 
         Returns
         -------
         xr.DataArray
+           parameters of the SPEXone PRNU CKD
         """
         try:
             gid = self.fid['PRNU']
@@ -205,12 +172,12 @@ class CKDio:
         return h5_to_xr(gid['prnu'])
 
     def fov(self) -> xr.Dataset:
-        """
-        Read field-of-view CKD
+        """Read field-of-view CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone field-of-view CKD
         """
         try:
             gid = self.fid['FIELD_OF_VIEW']
@@ -224,12 +191,12 @@ class CKDio:
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def wavelength(self) -> xr.Dataset:
-        """
-        Read Wavelength CKD
+        """Read Wavelength CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone Wavelength CKD
         """
         try:
             gid = self.fid['WAVELENGTH']
@@ -245,12 +212,12 @@ class CKDio:
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def radiometric(self) -> xr.DataArray:
-        """
-        Read Radiometric CKD
+        """Read Radiometric CKD.
 
         Returns
         -------
         xr.DataArray
+           parameters of the SPEXone Radiometric CKD
         """
         try:
             gid = self.fid['RADIOMETRIC']
@@ -259,12 +226,12 @@ class CKDio:
         return h5_to_xr(gid['rad_spectra'])
 
     def polarimetric(self) -> xr.Dataset:
-        """
-        Read Polarimetric CKD
+        """Read Polarimetric CKD.
 
         Returns
         -------
-        xr.Dataset
+        xarray.Dataset
+           parameters of the SPEXone Polarimetric CKD
         """
         try:
             gid = self.fid['POLARIMETRIC']
@@ -278,9 +245,8 @@ class CKDio:
 
 
 # - main function ----------------------------------
-def main():
-    """
-    main function
+def __test():
+    """Small function to test this module.
     """
     ckd_dir = Path('/data/richardh/SPEXone/CKD')
     if not ckd_dir.is_dir():
@@ -304,4 +270,4 @@ def main():
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    main()
+    __test()

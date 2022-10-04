@@ -17,8 +17,9 @@ import h5py
 import numpy as np
 
 from pyspex import spx_product
-from pyspex.lib.tmtc_def import tmtc_def
+from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.dem_io import DEMio
+from pyspex.lv0_io import img_sec_of_day
 from pyspex.lv1_io import L1Aio
 from pyspex.lv1_gse import LV1gse
 
@@ -90,8 +91,8 @@ def main():
 
     # Measurement Parameters Settings
     n_images = len(args.file_list)
-    img_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
-    hk_data = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))
+    img_hk = np.zeros(n_images, dtype=tmtc_dtype(0x350))
+    hk_data = np.zeros(n_images, dtype=tmtc_dtype(0x320))
     t_exp = np.empty(n_images, dtype=float)
     t_frm = np.empty(n_images, dtype=float)
     offset = np.empty(n_images, dtype=float)
@@ -161,6 +162,8 @@ def main():
         img_sec[ii] = (tval - EPOCH).total_seconds()
         img_subsec[ii] = tval.microsecond * 2**16 // 1000000
 
+    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)
+
     # generate name of L1A product
     prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
     if args.output is not None:
@@ -182,15 +185,17 @@ def main():
             'nv': 1}
 
     # generate L1A product
-    with L1Aio(prod_name, dims=dims) as l1a:
+    with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, n_samples), img_hk,
                          np.arange(n_images))
-        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
+        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
+        l1a.set_dset('/image_attributes/image_time', img_time)
 
         # Engineering data
         l1a.fill_nomhk(hk_data)
-        l1a.fill_time(img_sec, img_subsec, group='engineering_data')
+        l1a.set_dset('/engineering_data/HK_tlm_time', img_time)
 
         # Global attributes
         l1a.fill_global_attrs(inflight=False)

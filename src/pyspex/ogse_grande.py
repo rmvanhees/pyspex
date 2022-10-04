@@ -123,10 +123,10 @@ def grande_spectrum(n_lamps: int) -> xr.Dataset:
                       attrs=GRANDE_ATTRS)
 
 
-def test(l1a_file: str) -> None:
+def __test(l1a_file: str) -> None:
+    """Small function to test this module.
     """
-    Create a netCDF4 file containing a Grande reference spectrum
-    """
+    # Create a netCDF4 file containing a Grande reference spectrum
     xds = grande_spectrum(3)
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',
                   group='/gse_data/ReferenceSpectrum')
@@ -137,4 +137,4 @@ if __name__ == '__main__':
     print('---------- SHOW DATASET ----------')
     print(grande_spectrum(5))
     print('---------- WRITE DATASET ----------')
-    test('test_netcdf.nc')
+    __test('test_netcdf.nc')

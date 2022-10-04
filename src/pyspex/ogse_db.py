@@ -321,10 +321,8 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
                   group='/gse_data/WaveMonitor')
 
 
-# --------------------------------------------------
-def test():
-    """
-    Test module
+def __test():
+    """Small function to test this module.
     """
     ogse_dir = Path('/data/richardh/SPEXone/ambient/polarimetric/calibration/'
                     'light_level/Logs/')
@@ -342,5 +340,6 @@ def test():
     # create_wav_mon_db(ogse_dir, file_list)
 
 
+# --------------------------------------------------
 if __name__ == '__main__':
-    test()
+    __test()

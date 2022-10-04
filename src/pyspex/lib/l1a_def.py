@@ -13,7 +13,7 @@ import numpy as np
 
 from netCDF4 import Dataset
 
-from .tmtc_def import tmtc_def
+from .tmtc_def import tmtc_dtype
 
 # - global parameters ------------------------------
 ORBIT_DURATION = 5904  # seconds
@@ -24,18 +24,36 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
     """
     Add CF attributes to a dataset holding 'seconds of day'
 
+    Parameters
+    ----------
+    dset : h5py.Dataset
+       Variable containing a timestamp as seconds since referencce date
+    ref_date : datetime.date
+       Reference date
+
     Examples
     --------
-    double time(number_of_scans) ;
-            time:_FillValue = -32767. ;
-            time:long_name = "time" ;
-            time:units = "seconds since 2022-03-21 00:00:00" ;
-            time:description = "Earth view mid time in seconds of day" ;
-            time:year = 2022 ;
-            time:month = 3 ;
-            time:day = 21 ;
-            time:valid_min = 0. ;
-            time:valid_max = 86401. ;
+    Update the attributes of variable 'time':
+
+    >>> ref_date = datetime.date(2022, 03, 21)
+    >>> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
+    >>>                            fill_value=-32767)
+    >>> dset.long_name = "Image time"
+    >>> dset.description = "Integration start time in seconds of day"
+    >>> attrs_sec_per_day(dset, ref_date)
+
+    In CDL the variable `time` will be defined as::
+
+       double time(number_of_scans) ;
+          time:_FillValue = -32767. ;
+          time:long_name = "time" ;
+          time:units = "seconds since 2022-03-21 00:00:00" ;
+          time:description = "Earth view mid time in seconds of day" ;
+          time:year = 2022 ;
+          time:month = 3 ;
+          time:day = 21 ;
+          time:valid_min = 0. ;
+          time:valid_max = 86401. ;
 
     Note that '_FillValue', 'long_name' and 'description' are not set by
     this function.
@@ -58,14 +76,14 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     ----------
     l1a_flname : string
        Name of L1A product
-    dims :   dictionary
-       Provide length of the Level-1A dimensions
-       Default values:
-            number_of_images : None     # number of image frames
-            samples_per_image : None    # depends on binning table
-            hk_packets : None           # number of HK tlm-packets (1 Hz)
     ref_date :  datetime.date
        Date of the first detector image
+    dims :   dictionary
+       Provide length of the Level-1A dimensions. Default values::
+
+          number_of_images : None     # number of image frames
+          samples_per_image : None    # depends on binning table
+          hk_packets : None           # number of HK tlm-packets (1 Hz)
 
     Notes
     -----
@@ -146,8 +164,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFE)
     dset.units = "counts"
-    hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x350)),
-                                          'science_dtype')
+    hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x350), 'science_dtype')
     dset = sgrp.createVariable('detector_telemetry', hk_dtype,
                                dimensions=('number_of_images',))
     dset.long_name = "SPEX science telemetry"
@@ -160,8 +177,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset.long_name = "HK telemetry packet time"
     dset.description = "packaging time in seconds of day"
     attrs_sec_per_day(dset, ref_date)
-    hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x320)),
-                                          'nomhk_dtype')
+    hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x320), 'nomhk_dtype')
     dset = sgrp.createVariable('NomHK_telemetry', hk_dtype, ('hk_packets',))
     dset.long_name = "SPEX nominal-HK telemetry"
     dset.comment = "an extended subset of the housekeeping parameters"
@@ -183,8 +199,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
-    # hk_dtype = rootgrp.createCompoundType(np.dtype(tmtc_def(0x322)),
-    #                                      'demhk_dtype')
+    # hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x322)), 'demhk_dtype')
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
     # dset.comment = "DEM housekeeping parameters"

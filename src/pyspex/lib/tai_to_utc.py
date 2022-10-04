@@ -19,18 +19,17 @@ EPOCH_1958 = datetime.fromisoformat("1958-01-01T00+00:00").timestamp()
 class Clocks:
     """
     Convert TAI (epoch 1958) to UTC (epoch 1970)or visa versa
+
+    Notes
+    -----
+    Information obtained from IERS Bulletin C
+
+    origin: https://www.ietf.org/timezones/data/leap-seconds.list
+
+    Valid until:  28 December 2022
     """
     def __init__(self):
-        """
-        Initializes class Clocks with table to convert TAI to UTC
-
-        Notes
-        -----
-        Information obtained from IERS Bulletin C
-
-        origin: https://www.ietf.org/timezones/data/leap-seconds.list
-
-        Valid until:  28 December 2022
+        """Initializes Clocks object
         """
         # This table contains 3 columns:
         #  1) epoch as a number of seconds since 1 January 1900, 00:00:00
@@ -153,9 +152,9 @@ class Clocks:
               f' at {self.table[-1][2]}')
 
 
-def main():
+def __test():
     """
-    main function
+    Small test function
     """
     clocks = Clocks()
     clocks.test()
@@ -177,4 +176,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    __test()

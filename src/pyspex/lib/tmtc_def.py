@@ -11,25 +11,20 @@
 import numpy as np
 
 
-def tmtc_def(apid):
+def __tmtc_def(apid) -> list:
     """
-    Returns definition of a SPEXone telemetry packet structure
+    Returns SPEXone telemetry packet structure as a list of tuples
 
     Parameters
     ----------
     apid : int
-       Telemetry APID range between 0x320 and 0x350 for SPEXone.
-       Implemented APIDs are 0x350: Science TM, 0x320: NomHK, 0x322: DemHK
+       SPEXone telemetry APID.
+       Implemented APIDs: 0x350 (Science), 0x320 (NomHK) and 0x322 (DemHK).
 
     Returns
     -------
-    list of tuples to create a Numpy structured datatype
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from pyspex.lib.tmtc_def import tmtc_def
-    >>> mps_dtype = np.dtype(tmtc_def(0x350))
+    list of tuples
+       definition of a numpy structured datatype
     """
     if apid == 0x350:                           # *** Science TM ***
         return [                                # offs  start in packet
@@ -458,7 +453,25 @@ def tmtc_def(apid):
 
 
 def tmtc_dtype(apid):
+    """Obtain Spexone telemetry packet definition
+
+    Parameters
+    ----------
+    apid : int
+       SPEXone telemetry APID.
+       Implemented APIDs: 0x350 (Science), 0x320 (NomHK) and 0x322 (DemHK).
+
+    Returns
+    -------
+    numpy.dtype
+       definition of Spexone telemetry packet
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> from pyspex.lib.tmtc_def import tmtc_dtype
+    >>> mps_dtype = tmtc_dtype(0x350)
+
     """
-    Returns Telemetry packet structure as a numpy data-type
-    """
-    return np.dtype(tmtc_def(apid))
+    return np.dtype(__tmtc_def(apid))

@@ -76,12 +76,12 @@ def grouping_flag(hdr: np.ndarray) -> int:
 
     Notes
     -----
-    The 2-byte flag is encoded as follows:
+    The 2-byte flag is encoded as follows::
 
-    - 00 : continuation packet-data segment
-    - 01 : first packet-data segment
-    - 10 : last packet-data segment
-    - 11 : packet-data unsegmented
+       00: continuation packet-data segment
+       01: first packet-data segment
+       10: last packet-data segment
+       11: packet-data unsegmented
 
     """
     return (hdr['sequence'] >> 14) & 0x3

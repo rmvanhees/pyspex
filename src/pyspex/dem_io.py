@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .lib.tmtc_def import tmtc_def
+from .lib.tmtc_def import tmtc_dtype
 
 # - global parameters ------------------------------
 
@@ -122,45 +122,10 @@ class DEMio:
     """
     This class can be used to read SPEXone DEM output
 
-    Attributes
+    Parameters
     ----------
-    bin_file : str
-       Name of binary file.
-    hdr_file : str
-       Name of header file.
-    hdr : np.ndarray
-       Returns DEM header as numpy compound array.
-    number_lines : int
-       Returns number of lines (rows).
-    number_channels : int
-       Returns number of LVDS channels used.
-    lvds_clock : bool
-       Returns flag for LVDS clock, as 0: disable, 1: enable)
-    pll_control : tuple
-       Returns PLL control parameters: (pll_range, pll_out_fre, pll_div).
-    exp_control : tuple
-       Exposure time control parameters: (inte_sync, exp_dual, exp_ext).
-    offset : int
-       Returns digital offset including ADC offset
-    pga_gain : float
-       Returns PGA gain (Volt).
-    temp_detector : int
-       Returns detector temperature as raw  counts.
-
-    Methods
-    -------
-    exp_time(t_mcp=1e-7)
-       Returns pixel exposure time [s].
-    fot_time(t_mcp=1e-7)
-       Returns frame overhead time [s].
-    rot_time(t_mcp=1e-7)
-       Returns image read-out time [s].
-    frame_period(n_coad=1)
-       Returns frame period [s].
-    get_sci_hk()
-       Returns Science telemetry, a subset of MPS and housekeeping parameters
-    get_data(numlines=None)
-       Returns data of a detector images (numpy uint16 array).
+    flname :  str
+        filename with header or binary data of DEM measurement
 
     Examples
     --------
@@ -171,11 +136,7 @@ class DEMio:
 
     """
     def __init__(self, flname: str) -> None:
-        """
-        Parameters
-        ----------
-        flname :  str
-           filename with header or binary data of DEM measurement
+        """Initialize DEMio object.
         """
         self.__hdr = None
         if flname.endswith('a.txt'):
@@ -191,8 +152,7 @@ class DEMio:
             self.__get_hdr()
 
     def __get_hdr(self) -> None:
-        """
-        Read DEM header data
+        """Read DEM header data.
         """
         self.__hdr = np.zeros((1,), dtype=det_dtype())
         with open(self.hdr_file, 'r', encoding='ascii', errors='ignore') as fp:
@@ -231,8 +191,7 @@ class DEMio:
 
     @property
     def hdr(self) -> np.ndarray:
-        """
-        Returns DEM header as numpy compound array
+        """Returns DEM header as numpy compound array.
         """
         if self.__hdr is None:
             return None
@@ -241,8 +200,7 @@ class DEMio:
 
     @property
     def number_lines(self) -> int:
-        """
-        Returns number of lines (rows)
+        """Returns number of lines (rows).
 
         Register address: [1, 2]
         """
@@ -251,15 +209,13 @@ class DEMio:
 
     @property
     def number_channels(self) -> int:
-        """
-        Returns number of LVDS channels used
+        """Returns number of LVDS channels used
         """
         return 2 ** (4 - (self.hdr['OUTPUT_MODE'] & 0x3))
 
     @property
     def lvds_clock(self) -> bool:
-        """
-        Returns flag for LVDS clock (0: disable, 1: enable)
+        """Returns flag for LVDS clock (0: disable, 1: enable).
 
         Register address: 82
         """
@@ -268,8 +224,7 @@ class DEMio:
                 and (self.hdr['CHANNEL_EN'][2] & 0x4) != 0)
 
     def pll_control(self) -> tuple:
-        """
-        Returns PLL control parameters: pll_range, pll_out_fre, pll_div
+        """Returns PLL control parameters: pll_range, pll_out_fre, pll_div.
 
         PLL_range:    range (0 or 1)
         PLL_out_fre:  output frequency (0, 1, 2 or 5)
@@ -285,8 +240,7 @@ class DEMio:
 
     @property
     def exp_control(self) -> tuple:
-        """
-        Exposure time control parameters: (inte_sync, exp_dual, exp_ext)
+        """Exposure time control parameters: (inte_sync, exp_dual, exp_ext).
 
         Register address: 41
         """
@@ -298,8 +252,7 @@ class DEMio:
 
     @property
     def offset(self) -> int:
-        """
-        Returns digital offset including ADC offset
+        """Returns digital offset including ADC offset.
 
         Register address: [100, 101]
         """
@@ -310,8 +263,7 @@ class DEMio:
 
     @property
     def pga_gain(self) -> float:
-        """
-        Returns PGA gain (Volt)
+        """Returns PGA gain (Volt).
 
         Register address: 102
         """
@@ -323,8 +275,7 @@ class DEMio:
 
     @property
     def temp_detector(self) -> int:
-        """
-        Returns detector temperature as raw  counts
+        """Returns detector temperature as raw counts.
 
         Notes
         -----
@@ -333,8 +284,7 @@ class DEMio:
         return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
 
     def exp_time(self, t_mcp=1e-7):
-        """
-        Returns pixel exposure time [s].
+        """Returns pixel exposure time [s].
         """
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
@@ -346,8 +296,7 @@ class DEMio:
         return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
 
     def fot_time(self, t_mcp=1e-7):
-        """
-        Returns frame overhead time [s]
+        """Returns frame overhead time [s].
         """
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
@@ -355,25 +304,24 @@ class DEMio:
         return 129 * t_mcp * (reg_fot + 2 * (16 // self.number_channels))
 
     def rot_time(self, t_mcp=1e-7):
-        """
-        Returns image read-out time [s]
+        """Returns image read-out time [s].
         """
         return 129 * t_mcp * (16 // self.number_channels) * self.number_lines
 
     def frame_period(self, n_coad=1):
-        """
-        Returns frame period [s]
+        """Returns frame period [s].
         """
         return 2.38 + (n_coad
                        * (self.exp_time() + self.fot_time() + self.rot_time()))
 
     def get_sci_hk(self):
-        """
-        Returns Science telemetry, a subset of MPS and housekeeping parameters
+        """Returns Science telemetry.
+
+        A subset of MPS and housekeeping parameters.
 
         Returns
         -------
-        numpy array
+        numpy.ndarray
         """
         def convert_val(key):
             """
@@ -456,7 +404,7 @@ class DEMio:
             'DET_T': convert_val('TEMP')
         }
 
-        sci_hk = np.zeros((1,), dtype=np.dtype(tmtc_def(0x350)))
+        sci_hk = np.zeros((1,), dtype=tmtc_dtype(0x350))
         sci_hk[0]['REG_FULL_FRAME'] = 1
         sci_hk[0]['REG_CMV_OUTPUTMODE'] = 3
         for key, value in convert_det_params.items():
@@ -465,8 +413,7 @@ class DEMio:
         return sci_hk
 
     def get_data(self, numlines=None):
-        """
-        Returns data of a detector frame (numpy uint16 array)
+        """Returns data of a detector frame (numpy uint16 array).
 
         Parameters
         ----------
@@ -475,7 +422,7 @@ class DEMio:
 
         Returns
         -------
-        np.ndarray:
+        numpy.ndarray:
            data of a detector frame, dtype np.uint16
         """
         if numlines is None:

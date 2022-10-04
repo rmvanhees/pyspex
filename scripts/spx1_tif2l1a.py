@@ -19,7 +19,7 @@ import numpy as np
 import xarray as xr
 
 from pyspex import spx_product
-from pyspex.lib.tmtc_def import tmtc_def
+from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.tif_io import TIFio
 from pyspex.lv1_io import L1Aio
 from pyspex.lv1_gse import LV1gse
@@ -186,9 +186,10 @@ def main():
     secnds = (1 + np.arange(n_images, dtype=float)) * intg_time
     img_sec = (offs + secnds // 1).astype('u4')
     img_subsec = np.round((secnds % 1) * 2**16).astype('u2')
+    img_time = secnds
 
-    nom_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x320)))
-    sci_hk = np.zeros(n_images, dtype=np.dtype(tmtc_def(0x350)))
+    nom_hk = np.zeros(n_images, dtype=tmtc_dtype(0x320))
+    sci_hk = np.zeros(n_images, dtype=tmtc_dtype(0x350))
     if table_id == 0:
         sci_hk['REG_FULL_FRAME'] = 1
         sci_hk['REG_CMV_OUTPUTMODE'] = 3
@@ -203,15 +204,17 @@ def main():
     sci_hk['REG_NCOADDFRAMES'] = int(hdr['Co-additions'])
 
     # Generate L1A product
-    with L1Aio(prod_name, dims=dims) as l1a:
+    with L1Aio(prod_name, dims=dims, ref_date=utc_start.date()) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, -1), sci_hk,
                          np.arange(n_images))
-        l1a.fill_time(img_sec, img_subsec, group='image_attributes')
+        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
+        l1a.set_dset('/image_attributes/image_time', img_time)
 
         # Engineering data
         l1a.fill_nomhk(nom_hk)
-        l1a.fill_time(img_sec, img_subsec, group='engineering_data')
+        l1a.set_dset('/engineering_data/HK_tlm_time', img_time)
 
         # Global attributes
         l1a.fill_global_attrs(inflight=False)

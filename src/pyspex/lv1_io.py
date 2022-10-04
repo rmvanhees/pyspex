@@ -26,8 +26,7 @@ MCP_TO_SEC = 1e-7
 
 
 def frac_poly(xx_in, coefs=None):
-    """
-    Temperature [K] calibration derived by Paul Tol (2020-10-21)
+    """Temperature [K] calibration derived by Paul Tol (2020-10-21).
 
     Parameters
     ----------
@@ -56,33 +55,14 @@ class Lv1io:
     """
     Generic class to create SPEXone Level-1 products
 
-    Attributes
+    Parameters
     ----------
-    product: pathlib.Path object
-       Concrete path object to SPEXone Level-1 product
-    fid: netCDF5.Dataset object
-       NetCDF4 Pointer to SPEXone Level-1 product
-    dset_stored: dict
-       Number of items stored for all required netCDF4 variables
-    epoch : datetime.datetime
-       Provide epoch for SPEXone.
-
-    Methods
-    -------
-    close()
-       Close all resources (currently a placeholder function).
-    get_dim(ds_name)
-       Returns size of dimension.
-    get_attr(attr_name, ds_name=None)
-       Read data of an attribute, global or attached to a group or variable.
-    set_attr(attr_name, value, ds_name=None)
-       Write data to an attribute, global or attached to a group or variable.
-    get_dset(ds_name)
-       Read data of a netCDF4 variable.
-    set_dset(ds_name, value, ibgn=-1)
-       Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None, inflight=False)
-       Define global attributes in the SPEXone Level-1 products.
+    product :  str
+        name of the SPEXone Level-1 product
+    ref_date :  datetime.date
+    dims :  dict
+    append :  bool, default=False
+        do no clobber, but add new data to existing product
 
     Notes
     -----
@@ -95,17 +75,7 @@ class Lv1io:
 
     def __init__(self, product: str, ref_date: datetime.date,
                  dims: dict, append=False):
-        """
-        Initialize access to a SPEXone Level-1 product
-
-        Parameters
-        ----------
-        product :  str
-           name of the SPEXone Level-1 product
-        ref_date :  datetime.date
-        dims :  dict
-        append :  bool, default=False
-           do no clobber, but add new data to existing product
+        """Initialize access to a SPEXone Level-1 product.
         """
         self.product = Path(product)
         self.fid = None
@@ -141,21 +111,18 @@ class Lv1io:
                 yield attr
 
     def __enter__(self):
-        """
-        method called to initiate the context manager
+        """Method called to initiate the context manager.
         """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """
-        method called when exiting the context manager
+        """Method called when exiting the context manager.
         """
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """
-        Close all resources (currently a placeholder function)
+        """Close all resources (currently a placeholder function).
         """
         if self.fid is None:
             return
@@ -166,21 +133,20 @@ class Lv1io:
     # ---------- PUBLIC FUNCTIONS ----------
     @property
     def epoch(self) -> datetime:
-        """
-        Provide epoch for SPEXone
+        """Provide epoch for SPEXone.
         """
         return self.__epoch
 
     def get_dim(self, name: str):
-        """
-        Get size of a netCDF4 dimension
+        """Get size of a netCDF4 dimension.
         """
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------
     def get_attr(self, name: str, ds_name=None):
-        """
-        Read data of an attribute, global or attached to a group or variable
+        """Read data of an attribute.
+
+        Global or attached to a group or variable.
 
         Parameters
         ----------
@@ -208,8 +174,9 @@ class Lv1io:
         return res
 
     def set_attr(self, name: str, value, ds_name=None) -> None:
-        """
-        Write data to an attribute, global or attached to a group or variable
+        """Write data to an attribute.
+
+        Global or attached to a group or variable.
 
         Parameters
         ----------
@@ -245,8 +212,7 @@ class Lv1io:
 
     # ----- VARIABLES --------------------
     def get_dset(self, name: str):
-        """
-        Read data of a netCDF4 variable
+        """Read data of a netCDF4 variable.
 
         Parameters
         ----------
@@ -270,8 +236,7 @@ class Lv1io:
         return self.fid[name][:]
 
     def set_dset(self, name: str, value, ibgn=-1) -> None:
-        """
-        Write/append data to a netCDF4 variable
+        """Write/append data to a netCDF4 variable.
 
         Parameters
         ----------
@@ -309,8 +274,7 @@ class Lv1io:
     def fill_global_attrs(self, orbit=-1,
                           bin_size=None,
                           inflight=False) -> None:
-        """
-        Define global attributes in the SPEXone Level-1 products
+        """Define global attributes in the SPEXone Level-1 products.
 
         Parameters
         ----------
@@ -344,48 +308,13 @@ class L1Aio(Lv1io):
     append : boolean, default=False
        If the file is opened in append mode, then parameter 'dims' is ignored
     dims: dictionary, default=None
-       Provide size of various dimensions (L1A only).
-       Default values:
-       - number_of_images : None     # number of image frames
-       - samples_per_image : 184000  # depends on binning table
-       - hk_packets : None           # number of HK tlm-packets
-       - wavelength : None
+       Provide size of various dimensions (L1A only). Default values::
 
-    Attributes
-    ----------
-    product: pathlib.Path object
-       Concrete path object to SPEXone Level-1 product
-    fid: netCDF5.Dataset object
-       NetCDF4 Pointer to SPEXone Level-1 product
-    dset_stored: dict
-       Number of items stored for all required netCDF4 variables
-    epoch
-       Provide epoch for SPEXone.
+       number_of_images : None     # number of image frames
+       samples_per_image : 184000  # depends on binning table
+       hk_packets : None           # number of HK tlm-packets
+       wavelength : None
 
-    Methods
-    -------
-    close()
-       Close product and check if required datasets are filled with data.
-    get_dim(ds_name)
-       Returns size of dimension.
-    get_attr(attr_name, ds_name=None)
-       Read data of an attribute, global or attached to a group or variable.
-    set_attr(attr_name, value, ds_name=None)
-       Write data to an attribute, global or attached to a group or variable.
-    get_dset(ds_name)
-       Read data of a netCDF4 variable.
-    set_dset(ds_name, value, ibgn=-1)
-       Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None, inflight=False)
-       Define global attributes in the SPEXone Level-1 products.
-    check_stored(allow_empty=False)
-       Check variables with the same first dimension have equal sizes.
-    fill_science(img_data, img_hk, img_id)
-       Write Science data and housekeeping telemetry (Science) to L1A product.
-    fill_nomhk(nomhk_data)
-       Write nominal housekeeping telemetry packets (NomHK) to L1A product.
-    fill_demhk(demhk_data)
-       Write detector housekeeping telemetry packets (DemHK) to L1A product.
     """
     processing_level = 'L1A'
     dset_stored = {
@@ -408,8 +337,7 @@ class L1Aio(Lv1io):
     }
 
     def close(self):
-        """
-        Close product and check if required datasets are filled with data
+        """Close product and check if required datasets are filled with data.
         """
         if self.fid is None:
             return
@@ -441,8 +369,7 @@ class L1Aio(Lv1io):
 
     # -------------------------
     def check_stored(self, allow_empty=False):
-        """
-        Check variables with the same first dimension have equal sizes
+        """Check variables with the same first dimension have equal sizes.
 
         Parameters
         ----------
@@ -484,8 +411,7 @@ class L1Aio(Lv1io):
 
     # ---------- PUBLIC FUNCTIONS ----------
     def fill_science(self, img_data, img_hk, img_id) -> None:
-        """
-        Write Science data and housekeeping telemetry (Science) to L1A product
+        """Write Science data and housekeeping telemetry (Science).
 
         Parameters
         ----------
@@ -520,8 +446,7 @@ class L1Aio(Lv1io):
         self.set_dset('/image_attributes/image_ID', img_id)
 
     def fill_nomhk(self, nomhk_data):
-        """
-        Write nominal house-keeping telemetry packets (NomHK) to L1A product
+        """Write nominal house-keeping telemetry packets (NomHK).
 
         Parameters
         ----------
@@ -562,8 +487,7 @@ class L1Aio(Lv1io):
                           frac_poly(nomhk_data['TS3_RADIATOR_N_T']))
 
     def fill_demhk(self, demhk_data):
-        """
-        Write detector housekeeping telemetry packets (DemHK) to L1A product
+        """Write detector housekeeping telemetry packets (DemHK).
 
         Parameters
         ----------
@@ -585,8 +509,7 @@ class L1Aio(Lv1io):
 
 # - class L1Bio -------------------------
 class L1Bio(Lv1io):
-    """
-    This class can be used to create a SPEXone Level-1B product
+    """This class can be used to create a SPEXone Level-1B product
 
     Parameters
     ----------
@@ -599,36 +522,6 @@ class L1Bio(Lv1io):
        This dimension is by default UNLIMITED.
     spatial_samples: int, default=200
        Total number of spatial samples from all viewport
-
-    Attributes
-    ----------
-    product: pathlib.Path object
-       Concrete path object to SPEXone Level-1 product
-    fid: netCDF5.Dataset object
-       NetCDF4 Pointer to SPEXone Level-1 product
-    dset_stored: dict
-       Number of items stored for all required netCDF4 variables
-    epoch
-       Provide epoch for SPEXone.
-
-    Methods
-    -------
-    close()
-       Close product and check if required datasets are filled with data.
-    get_dim(ds_name)
-       Returns size of dimension.
-    get_attr(attr_name, ds_name=None)
-       Read data of an attribute, global or attached to a group or variable.
-    set_attr(attr_name, value, ds_name=None)
-       Write data to an attribute, global or attached to a group or variable.
-    get_dset(ds_name)
-       Read data of a netCDF4 variable.
-    set_dset(ds_name, value, ibgn=-1)
-       Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None)
-       Define global attributes in the SPEXone Level-1 products.
-    check_stored()
-       Check variables with the same first dimension have equal sizes.
 
     Notes
     -----
@@ -665,8 +558,7 @@ class L1Bio(Lv1io):
     }
 
     def close(self):
-        """
-        Close product and check if required datasets are filled with data
+        """Close product and check if required datasets are filled with data.
         """
         if self.fid is None:
             return
@@ -699,8 +591,7 @@ class L1Bio(Lv1io):
 
     # -------------------------
     def check_stored(self):
-        """
-        Check variables with the same first dimension have equal sizes
+        """Check variables with the same first dimension have equal sizes.
         """
         warn_str = ('SPEX Level-1B format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
@@ -739,8 +630,7 @@ class L1Bio(Lv1io):
 
 # - class L1Cio -------------------------
 class L1Cio(Lv1io):
-    """
-    This class can be used to create a SPEXone Level-1C product
+    """This class can be used to create a SPEXone Level-1C product.
 
     Parameters
     ----------
@@ -751,38 +641,6 @@ class L1Cio(Lv1io):
     number_of_images: int, default=None
        Number of images used as input to generate the L1B product.
        This dimension is by default UNLIMITED.
-
-    Attributes
-    ----------
-    product: pathlib.Path object
-       Concrete path object to SPEXone Level-1 product
-    inflight: boolean
-       Flag to indicate data collected during in-flight of on-ground
-    fid: netCDF5.Dataset object
-       NetCDF4 Pointer to SPEXone Level-1 product
-    dset_stored: dict
-       Number of items stored for all required netCDF4 variables
-    epoch
-       Provide epoch for SPEXone.
-
-    Methods
-    -------
-    close()
-       Close product and check if required datasets are filled with data.
-    get_dim(ds_name)
-       Returns size of dimension.
-    get_attr(attr_name, ds_name=None)
-       Read data of an attribute, global or attached to a group or variable.
-    set_attr(attr_name, value, ds_name=None)
-       Write data to an attribute, global or attached to a group or variable.
-    get_dset(ds_name)
-       Read data of a netCDF4 variable.
-    set_dset(ds_name, value)
-       Write/append data to a netCDF4 variable.
-    fill_global_attrs(level, orbit=-1, bin_size=None)
-       Define global attributes in the SPEXone Level-1 products.
-    check_stored()
-       Check variables with the same first dimension have equal sizes.
 
     Notes
     -----
@@ -827,8 +685,7 @@ class L1Cio(Lv1io):
     }
 
     def close(self):
-        """
-        Close product and check if required datasets are filled with data
+        """Close product and check if required datasets are filled with data.
         """
         if self.fid is None:
             return
@@ -861,8 +718,7 @@ class L1Cio(Lv1io):
 
     # -------------------------
     def check_stored(self):
-        """
-        Check variables with the same first dimension have equal sizes
+        """Check variables with the same first dimension have equal sizes.
         """
         warn_str = ('SPEX Level-1C format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')

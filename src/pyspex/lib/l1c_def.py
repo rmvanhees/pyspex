@@ -34,15 +34,12 @@ def init_l1c(l1c_flname: str, ref_date: datetime.date, dims: dict) -> None:
        Date of the first detector image
     dims :   dictionary
        Provide length of the Level-1C dimensions
-       Default values:
+       Default values::
+
           bins_along_track: 400
           spatial_samples_per_image: 200
           intensity_bands_per_view: 50
           polarization_bands_per_view: 50
-
-    Notes
-    -----
-    ...
     """
     # check function parameters
     if not isinstance(dims, dict):
@@ -324,11 +321,3 @@ def init_l1c(l1c_flname: str, ref_date: datetime.date, dims: dict) -> None:
                     ' a swath independent value at TOA.')
 
     return rootgrp
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    fid = init_l1c('PACE_SPEX.20230115T123456.L1C.5km.V01.nc',
-                   ref_date=None, dims={})
-    fid.fill_global_attrs(orbit=12345, bin_size='5km')
-    fid.close()

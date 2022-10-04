@@ -17,58 +17,26 @@ import numpy as np
 # - class TMscience -------------------------
 class TMscience:
     """
-    Access/convert parameters of a SPEXone telemetry Science packet
+    Access/convert parameters of a SPEXone telemetry Science packet.
 
-    Attributes
+    Parameters
     ----------
-    binning_table_id : np.ndarray
-       Return the binning table identifier (zero for full-frame images).
-    number_channels : np.ndarray
-       Return number of LVDS channels used.
-    lvds_clock : bool
-       Returns flag for LVDS clock: False: disabled & True: enabled.
-    offset : int
-       Returns digital offset including ADC offset [counts].
-    pga_gain : float
-       Returns PGA gain [Volt].
-    exp_time : float
-       Returns pixel exposure time [master clock periods].
-    fot_time : int
-       Returns frame overhead time [master clock periods].
-    rot_time : int
-       Returns image read-out time [master clock periods].
-    frame_period : float
-       Returns frame period [master clock periods].
-    pll_control : tuple
-       Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
-    exp_control : tuple
-       Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
-
-    Methods
-    -------
-    get(key)
-       Return (raw) SPEXone telemetry Science parameter.
+    tm_science :  ndarray
+        SPEXone telemetry Science data
     """
     def __init__(self, tm_science):
-        """
-        Initialize class TMscience
-
-        Parameters
-        tm_science :  ndarray
-           SPEXone telemetry Science data
+        """Initialize class TMscience.
         """
         self.__tm = tm_science
 
     def get(self, key: str):
-        """
-        Return (raw) Science telemetry parameter
+        """Return (raw) Science telemetry parameter.
         """
         return self.__tm[key] if key in self.__tm.dtype.names else None
 
     @property
     def binning_table_id(self) -> np.ndarray:
-        """
-        Return the binning table identifier (zero for full-frame images)
+        """Return the binning table identifier (zero for full-frame images).
 
         Notes
         -----
@@ -113,15 +81,13 @@ class TMscience:
 
     @property
     def number_channels(self) -> np.ndarray:
-        """
-        Return number of LVDS channels used
+        """Return number of LVDS channels used.
         """
         return 2 ** (4 - (self.__tm['DET_OUTMODE'] & 0x3))
 
     @property
     def lvds_clock(self) -> bool:
-        """
-        Returns flag for LVDS clock: False: disabled & True: enabled
+        """Returns flag for LVDS clock: False: disabled & True: enabled.
         """
         return ((self.__tm['DET_PLLENA'] & 0x3) == 0
                 and (self.__tm['DET_PLLBYP'] & 0x3) != 0
@@ -129,8 +95,7 @@ class TMscience:
 
     @property
     def offset(self) -> int:
-        """
-        Returns digital offset including ADC offset
+        """Returns digital offset including ADC offset.
         """
         buff = self.__tm['DET_OFFSET'].astype('i4')
         if np.isscalar(buff):
@@ -143,8 +108,7 @@ class TMscience:
 
     @property
     def pga_gain(self) -> float:
-        """
-        Returns PGA gain [Volt]
+        """Returns PGA gain [Volt].
         """
         # need first bit of address 121
         reg_pgagainfactor = self.__tm['DET_BLACKCOL'] & 0x1
@@ -155,39 +119,34 @@ class TMscience:
 
     @property
     def exp_time(self) -> float:
-        """
-        Returns pixel exposure time [master clock periods]
+        """Returns pixel exposure time [master clock periods].
         """
         return 129 * (0.43 * self.__tm['DET_FOTLEN']
                       + self.__tm['DET_EXPTIME'])
 
     @property
     def fot_time(self) -> int:
-        """
-        Returns frame overhead time [master clock periods]
+        """Returns frame overhead time [master clock periods].
         """
         return 129 * (self.__tm['DET_FOTLEN']
                       + 2 * (16 // self.number_channels))
 
     @property
     def rot_time(self) -> int:
-        """
-        Returns image read-out time [master clock periods]
+        """Returns image read-out time [master clock periods].
         """
         return 129 * (16 // self.number_channels) * self.__tm['DET_NUMLINES']
 
     @property
     def frame_period(self) -> float:
-        """
-        Returns frame period [master clock periods]
+        """Returns frame period [master clock periods].
         """
         return 2.38e-7 + (self.__tm['REG_NCOADDFRAMES']
                           * (self.exp_time + self.fot_time + self.rot_time))
 
     @property
     def pll_control(self) -> tuple:
-        """
-        Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div
+        """Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div
 
         Notes
         -----
@@ -205,8 +164,7 @@ class TMscience:
 
     @property
     def exp_control(self) -> tuple:
-        """
-        Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
+        """Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
         """
         inte_sync = (self.__tm['INTE_SYNC'] >> 2) & 0x1
         exp_dual = (self.__tm['INTE_SYNC'] >> 1) & 0x1

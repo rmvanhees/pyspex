@@ -63,10 +63,10 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
                        'signal': xar_sign})
 
 
-def test(l1a_file: str) -> None:
+def __test(l1a_file: str) -> None:
+    """Small function to test this module.
     """
-    Create a netCDF4 file with the Helios data in it
-    """
+    # Create a netCDF4 file with the Helios data in it
     gse_dir = Path('/data/richardh/SPEXone/GSFC')
     xds = read_gse_excel(gse_dir, '465.4nm')
     xds = read_gse_excel(gse_dir, '360nm', )
@@ -77,4 +77,4 @@ def test(l1a_file: str) -> None:
 
 # --------------------------------------------------
 if __name__ == '__main__':
-    test('test_netcdf.nc')
+    __test('test_netcdf.nc')
