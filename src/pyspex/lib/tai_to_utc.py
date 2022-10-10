@@ -148,7 +148,7 @@ class Clocks:
             if res[0] != dt_str.timestamp():
                 raise ValueError(f'Detected error in table at epoch={res[0]}')
 
-        print('[INFO] current information on leap seconds expires'
+        print('[INFO]: current information on leap seconds expires'
               f' at {self.table[-1][2]}')
 
 

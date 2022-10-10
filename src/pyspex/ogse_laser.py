@@ -34,7 +34,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
     indx = np.argmin(np.abs(actual_cwl - float(target_cwl[:-2])))
     print(f'{target_cwl:>8s}: {actual_cwl[indx]:.3f} at index={indx:d}')
     if abs(float(target_cwl[:-2]) - actual_cwl[indx]) > 2:
-        print('*** WARNING: no GSE information found')
+        print('[WARNING]: no GSE information found')
         wbook.close()
         return None
 

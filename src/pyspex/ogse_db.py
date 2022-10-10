@@ -289,7 +289,7 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
     if indx.size == 0:
         print('ReferenceDiode',
               ref_time.min(), msmt_start, msmt_stop, ref_time.max())
-        print('[Warning] no reference-diode data found')
+        print('[WARNING]: no reference-diode data found')
         return
 
     # update Level-1A product with OGSE/EGSE information
@@ -312,7 +312,7 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
     if mask.sum() == 0:
         print('WaveMonitor',
               ref_time.min(), msmt_start, msmt_stop, ref_time.max())
-        print('[Warning] no wavelength monitoring data found')
+        print('[WARNING]: no wavelength monitoring data found')
         return
 
     # update Level-1A product with OGSE/EGSE information

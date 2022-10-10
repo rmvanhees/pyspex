@@ -281,7 +281,7 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
         buff_hk = ()
         with open(flname, 'rb') as fp:
             if verbose:
-                print('[INFO] processing file: ', flname)
+                print(f'[INFO]: processing file "{flname}"')
             offs = 0
             ccsds_data = fp.read()
 
@@ -299,12 +299,12 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                     ('TimeSubSec', '>u4'),
                     ('Filename', 'S32'),
                 ])
+                if verbose:
+                    print(f'[INFO]: read cFE File header "{cfe_hdr}"')
                 cfe_hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
                                         dtype=cfe_dtype)[0]
                 # Now we can check the values of the cFE File header
                 # or even write these values to the L1A product
-                if verbose:
-                    print('[INFO] cFE File header: ', cfe_hdr)
                 offs += cfe_dtype.itemsize
 
             # read CCSDS header and user data
@@ -360,8 +360,8 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
         del ccsds_data
 
     if verbose:
-        print(f'[INFO] number of Science packages: {len(ccsds_sci)}')
-        print(f'[INFO] number of Engineering packages: {len(ccsds_hk)}')
+        print(f'[INFO]: number of Science packages {len(ccsds_sci)}')
+        print(f'[INFO]: number of Engineering packages {len(ccsds_hk)}')
 
     return ccsds_sci, ccsds_hk
 
@@ -451,6 +451,7 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     tuple of np.ndarray
          Contains all Science and NomHK packages as numpy arrays
     """
+    print(len(ccsds_sci))
     ii = 0
     for segment in ccsds_sci:
         if grouping_flag(segment['hdr']) == 1:
@@ -480,10 +481,11 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
                   and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                 science += (buff.copy(),)
 
+    print(len(science))
     science = np.concatenate(science)
     mps_list = np.unique(science['hk']['MPS_ID']).tolist()
     if verbose:
-        print(f'[INFO] list of unique MPS {mps_list}')
+        print(f'[INFO]: list of unique MPS {mps_list}')
 
     if ccsds_hk:
         nomhk = np.concatenate(
