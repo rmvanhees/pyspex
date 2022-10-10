@@ -12,8 +12,7 @@ import numpy as np
 
 
 def __tmtc_def(apid) -> list:
-    """
-    Returns SPEXone telemetry packet structure as a list of tuples
+    """Returns SPEXone telemetry packet structure as a list of tuples.
 
     Parameters
     ----------
@@ -24,7 +23,7 @@ def __tmtc_def(apid) -> list:
     Returns
     -------
     list of tuples
-       definition of a numpy structured datatype
+       Definition of a numpy structured datatype.
     """
     if apid == 0x350:                           # *** Science TM ***
         return [                                # offs  start in packet
@@ -453,7 +452,7 @@ def __tmtc_def(apid) -> list:
 
 
 def tmtc_dtype(apid):
-    """Obtain Spexone telemetry packet definition
+    """Obtain Spexone telemetry packet definition.
 
     Parameters
     ----------
@@ -464,7 +463,7 @@ def tmtc_dtype(apid):
     Returns
     -------
     numpy.dtype
-       definition of Spexone telemetry packet
+       Definition of Spexone telemetry packet.
 
     Examples
     --------

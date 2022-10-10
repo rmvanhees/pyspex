@@ -7,6 +7,10 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+This module contains the `BinningTables` class to deal with SPEXone
+binning-tables or to generate a file with binning-table definitions.
+"""
 
 from datetime import datetime, timezone
 from os import environ
@@ -24,22 +28,21 @@ FILL_VALUE = 0xFFFFFFFF  # 0X7FFFFFFF
 
 # - local functions --------------------------------
 class BinningTables:
-    """
-    Defines class to store and obtain SPEXone binning CKD
+    """Class to handle SPEXone binning-table definitions.
 
     Parameters
     ----------
     ckd_dir : str
-        Name of directory for the binning table CKD
+        Specify the name of directory with SPEXone binning-table files.
 
     Raises
     ------
     FileNotFoundError
-        directory with SPEXone CKD does not exist
+        Directory with SPEXone SPEXone binning-table files does not exist.
 
     Notes
     -----
-    The name of the binning-table CKD files is defined as follows:
+    Syntax of the file name with SPEXone binning-tables:
 
           SPX1_CKD_BIN_TBL_<yyyymmddTHHMMSS>_<NNN>.nc
 
@@ -47,40 +50,38 @@ class BinningTables:
     release number of the file format.
 
     The binning tables as defined on-ground are supposed to be available
-    during the whole mission at the same memory location. Because these
-    original binning tables are necessary for re-processing and may
-    facilitate instrument performance monitoring. Therefore, it is prefered
-    that new binning tables are added to the current CKD product, without
-    changing the validity start string. In case any of the binning tables
-    are overwritten or moved in memory, a new CKD product should be released.
-
-    If the format of the CKD changes then new CKD files should be created with
-    the release number should be increased by one.
+    during the whole mission at the same on-board memory location.
+    Because these original binning tables are necessary for re-processing
+    and may facilitate instrument performance monitoring.
+    Therefore, it is prefered that a new binning table is added to the
+    current set, without changing the validity start string. 
+    However, new binning-table file should be released in case any of the
+    binning tables are overwritten.
 
     Examples
     --------
-    # create new binning_table CKD
+    # create new file with binning-table definitions:
 
     >>> bin_tbl = BinningTables()
     >>> bin_tbl.create_if_needed(validity_start)
     >>> bin_tbl.add_table(0, lineskip_arr, binning_table)
     >>> bin_tbl.add_table(1, lineskip_arr, binning_table)
 
-    # add new binning-table to existing CKD
+    # add a new binning-table to an existing file:
 
     >>> bin_tbl BinningTables()
     >>> bin_tbl.create_if_needed(validity_start)
     >>> bin_tbl.add_table(2, lineskip_arr, binning_table)
 
-    # use binning-table to unbin SPEXone detector data
+    # use binning-table '130' to unbin SPEXone detector data
 
     >>> bin_tbl BinningTables()
     >>> bin_tbl.search(coverage_start)
-    >>> img = bin_tbl.unbin(2, img_binned)
+    >>> img = bin_tbl.unbin(130, img_binned)
 
     """
     def __init__(self, ckd_dir=None) -> None:
-        """Initialize class attributes
+        """Initialize class attributes.
         """
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
@@ -94,13 +95,12 @@ class BinningTables:
         self.ckd_file = None
 
     def create_if_needed(self, validity_start: str, release=1) -> None:
-        """
-        Initialize CKD file for binning tables if not exist
+        """Initialize CKD file for binning tables if not exist.
 
         Parameters
         ----------
         validity_start: str
-           Validity start of the CKD data, as yyyymmddTHHMMSS
+           Validity start of the CKD data, as ``yyyymmddTHHMMSS``
         release :  int, default=1
            Release number, start at 1
         """
@@ -126,8 +126,7 @@ class BinningTables:
             fid.createDimension('column', 1024)
 
     def search(self, coverage_start=None) -> None:
-        """
-        Search CKD file with binning tables
+        """Search CKD file with binning tables.
 
         Parameters
         ----------
@@ -161,17 +160,16 @@ class BinningTables:
             raise FileNotFoundError('No valid CKD with binning tables found')
 
     def add_table(self, table_id: int, lineskip_arr, binning_table) -> None:
-        """
-        Add a binning table definition to existing CKD file
+        """Add a binning table definition to existing file.
 
         Parameters
         ----------
         table_id :  int
-          Table identifier (integer between 1 and 255)
+           Table identifier (integer between 1 and 255)
         lineskip_arr :  ndarray
-          Lineskip array definition
+           Lineskip array definition
         binning_table :  ndarray
-          Binning table definition
+           Binning table definition
         """
         index, count = np.unique(binning_table[lineskip_arr == 1, :],
                                  return_counts=True)
@@ -211,20 +209,19 @@ class BinningTables:
             dset[:] = count.astype('u2')
 
     def unbin(self, table_id: int, img_binned):
-        """
-        Return unbinned detector data
+        """Return unbinned detector data.
 
         Parameters
         ----------
         table_id :  int
            Table identifier (integer between 1 and 255)
-        img_binned : ndarray
-           Binned image data
+        img_binned : np.ndarray
+           Binned image data (1D array)
 
         Returns
         -------
         numpy.ndarray
-           Unbinned image data (no interpolation)
+           Unbinned image data (no interpolation).
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
             if f'Table_{table_id:03d}' not in fid.groups:
