@@ -10,9 +10,9 @@
 # License:  BSD-3-Clause
 
 import argparse
-
 from datetime import datetime
 from pathlib import Path
+import sys
 
 import xarray as xr
 
@@ -218,6 +218,11 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
 def main():
     """
     main function
+
+    Returns
+    -------
+    err_code : int
+       Non-zero value indicates error code, or zero on success.
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser(
@@ -257,7 +262,13 @@ def main():
     # perform an ASCII dump of level 0 headers parameters
     if args.dump:
         dump_lv0_data(args.file_list, args.datapath, *res)
-        return
+        sys.exit(0)
+
+    # do not write empty products, or products without Science data
+    if not res[0]:
+        # inform the caller with a warning message and exit status
+        print('[WARNING]: no science data found in L0 data, exit')
+        sys.exit(110)
 
     # select Science and NomHK packages from level 0 data
     science, nomhk = select_lv0_data(args.select, res[0], res[1], args.verbose)
@@ -275,6 +286,9 @@ def main():
     if args.pace_hkt:
         hkt_nav = read_hkt_nav(args.pace_hkt)
         write_lv0_nav(args.datapath / prod_name, hkt_nav)
+
+    # return with exit status zero
+    sys.exit(0)
 
 
 # --------------------------------------------------
