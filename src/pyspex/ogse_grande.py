@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Defines the Grande spectrum for a given number of lamps, used at NASA GSFC.
+"""
 import numpy as np
 import xarray as xr
 

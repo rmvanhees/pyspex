@@ -8,6 +8,13 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Create or update SPEXone binning-table CKD.
+
+- Input is binning table information in CSV format.
+
+- The binning-table CKD is written in netCDF4 format.
+"""
 
 import argparse
 from pathlib import Path

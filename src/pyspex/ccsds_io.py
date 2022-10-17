@@ -7,6 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Contains the class `CCSDSio` to read SPEXone telemetry packets.
+"""
 
 from pathlib import Path
 

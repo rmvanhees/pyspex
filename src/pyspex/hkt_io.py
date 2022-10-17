@@ -7,6 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Contains the class `HKTio` to read PACE HKT products.
+"""
 
 from pathlib import Path
 
@@ -22,7 +25,7 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 
 # - class HKTio -------------------------
 class HKTio:
-    """Generic class to read PACE HKT products.
+    """Read PACE HKT products.
 
     Parameters
     ----------

@@ -7,6 +7,18 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Contains a collection of routines to read and write SPEXone CCSDS data::
+
+   `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`, `read_lv0_data`,
+   `select_lv0_data`, `write_lv0_data`
+
+And handy routines to convert CCSDS parameters::
+
+   `ap_id`, `coverage_time`, , `fix_sub_sec`, `grouping_flag`, `hk_sec_of_day`,
+   `img_sec_of_day`, `nomhk_timestamps`, `packet_length`,
+   `science_timestamps`, `sequence`
+"""
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -451,7 +463,6 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     tuple of np.ndarray
          Contains all Science and NomHK packages as numpy arrays
     """
-    print(len(ccsds_sci))
     ii = 0
     for segment in ccsds_sci:
         if grouping_flag(segment['hdr']) == 1:
@@ -481,7 +492,6 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
                   and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                 science += (buff.copy(),)
 
-    print(len(science))
     science = np.concatenate(science)
     mps_list = np.unique(science['hk']['MPS_ID']).tolist()
     if verbose:

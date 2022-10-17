@@ -8,6 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Python implementation to convert SPEXone DEM measurements to L1A format.
+"""
 
 import argparse
 from datetime import datetime, timezone

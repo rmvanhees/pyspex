@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Contains the class `TIFio` to read simulated SPEXone measurements.
+"""
 from pathlib import Path
 
 import numpy as np

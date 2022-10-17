@@ -8,6 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Quick and dirty script to generate simple Quick-Look figures.
+"""
 
 import argparse
 

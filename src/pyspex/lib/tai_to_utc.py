@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Contains the class `Clocks` to convert TAI and UTC timestamps.
+"""
 from datetime import datetime
 
 # - global parameters ------------------------------

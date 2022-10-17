@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Defines the Helios spectrum, used at SRON.
+"""
 import numpy as np
 import xarray as xr
 

@@ -8,7 +8,14 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Python implementation SPEXone instrument simulator output to L1A.
 
+Environment::
+
+   CKD_DIR:  directory with SPEXone CKD, default is CWD.
+
+"""
 import argparse
 from datetime import datetime, timezone
 from os import environ

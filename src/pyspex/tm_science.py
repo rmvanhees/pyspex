@@ -7,7 +7,10 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Contains the class `TMscience` to access/convert parameters of SPEXone
+Science telemetry data.
+"""
 import numpy as np
 
 
@@ -17,7 +20,7 @@ import numpy as np
 # - class TMscience -------------------------
 class TMscience:
     """
-    Access/convert parameters of a SPEXone telemetry Science packet.
+    Access/convert parameters of a SPEXone Science telemetry data.
 
     Parameters
     ----------

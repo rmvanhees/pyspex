@@ -7,7 +7,10 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Contains the class `LV1gse` which checks EGSE/OGSE data and/or writes it to
+a SPEXone Level-1A product.
+"""
 import numpy as np
 
 from netCDF4 import Dataset
@@ -15,8 +18,7 @@ from netCDF4 import Dataset
 
 # --------------------------------------------------
 class LV1gse:
-    """
-    Python class add EGSE/OGSE data to a SPEXone Level-1A product.
+    """Adds EGSE/OGSE data to a SPEXone Level-1A product.
 
     Parameters
     ----------

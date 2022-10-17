@@ -7,6 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Contains the class `DEMio` to read SPEXone CMV4000 detector data.
+"""
 
 from pathlib import Path
 
@@ -119,8 +122,7 @@ def det_dtype():
 
 # - class DEMio -------------------------
 class DEMio:
-    """
-    This class can be used to read SPEXone DEM output
+    """Read SPEXone DEM output.
 
     Parameters
     ----------

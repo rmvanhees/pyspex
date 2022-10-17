@@ -8,6 +8,16 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Add OGSE information of a OCAL measurement to a SPEXone L1A product.
+
+Possible OGSE information::
+
+ * reference diode (Ambient/GSFC polarized, radiometric): the reference diode
+ is located in the ... or Grande (GSFC) integrated sphere.
+ * wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
+ * wavelength of OPO laser (GSFC spectral-radiometry).
+"""
 
 import argparse
 from pathlib import Path

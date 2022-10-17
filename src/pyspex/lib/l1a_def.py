@@ -7,6 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Defines the format of a SPEXone Level-1A product.
+"""
 
 import datetime
 import numpy as np

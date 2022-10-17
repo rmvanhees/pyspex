@@ -8,6 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Python script to store SPEXone Level-0 data in a Level-1A product.
+"""
 
 import argparse
 from datetime import datetime
@@ -83,8 +86,25 @@ def check_input_files(file_list: list, file_format: str) -> tuple:
 
     Parameters
     ----------
-    file_list :  list of Path
-    file_format :  {'raw', 'st3', 'dsb'}
+    file_list :  list of str
+       List of file names
+    file_format :  {'auto', 'raw', 'st3', 'dsb'}
+       Expected Level-0 file format. Use 'auto' to let this function derive
+       the file format from the file-names listed in `file_list`.
+
+    Returns
+    -------
+    tuple
+       file_format, file_list
+    file_format : {'raw', 'st3', 'dsb'}
+    file_list : list of Path
+
+    Raises
+    ------
+    FileNotFoundError
+       If files are not found on the system.
+    TypeError
+       If determined file type differs from value supplied by user.
     """
     if len(file_list) == 1 and Path(file_list[0]).suffix == '.H':
         data_dir = Path(file_list[0]).parent
@@ -92,6 +112,10 @@ def check_input_files(file_list: list, file_format: str) -> tuple:
         file_list = (sorted(data_dir.glob(file_stem + '.[0-9]'))
                      + sorted(data_dir.glob(file_stem + '.?[0-9]'))
                      + sorted(data_dir.glob(file_stem + '_hk.[0-9]')))
+        if not file_list:
+            raise FileNotFoundError(file_stem)
+        if file_format not in ('auto', 'raw'):
+            raise TypeError('inconsistent file extensions')
 
         return 'raw', file_list
 
@@ -110,7 +134,7 @@ def check_input_files(file_list: list, file_format: str) -> tuple:
                 file_format_out = new_file_format
             else:
                 if file_format_out != new_file_format:
-                    raise TypeError('inconsistent file extensions')
+                    raise TypeError('inconsistent file extension')
             file_list_out.append(flname)
 
     return file_format_out, file_list_out
@@ -223,6 +247,27 @@ def main():
     -------
     err_code : int
        Non-zero value indicates error code, or zero on success.
+
+    Notes
+    -----
+    Currently, the following return values are implemented:
+
+      * 100 if one of the input files is unreadable.
+
+      * 110 if we have issues in reading science data, e.g. no science
+        packages, no image headers, corrupted science data.
+
+      * 130 if the writing of the Level-1A failed due to permissio denied.
+
+      * 131 if the writing of the Level-1A failed due netCDF/HDF5 errors.
+
+      * 139 if the writing of the Level-1A failed with a 'Segmentation fault',
+        caused by a 'Disk full error.
+
+    The following return values will be implemented:
+
+      * 120 if we have problems with ancillary info, e.g. start/stop time of
+        data.
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser(
@@ -248,23 +293,39 @@ def main():
     args = parser.parse_args()
 
     # check list of input files and detect file format
-    args.file_format, args.file_list = check_input_files(args.file_list,
-                                                         args.file_format)
+    try:
+        res = check_input_files(args.file_list, args.file_format)
+    except FileNotFoundError as exc:
+        print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
+        sys.exit(100)
+    except TypeError as exc:
+        print(f'[FATAL]: TypeError exception raised with "{exc}".')
+        sys.exit(1)
+    else:
+        args.file_format, args.file_list = res
+
+    # show the user command-line steeings after calling `check_input_files`
     if args.verbose:
         print(args)
 
     # read level 0 data as Science and TmTC packages
-    res = read_lv0_data(args.file_list, args.file_format,
-                        args.debug, args.verbose)
+    try:
+        res = read_lv0_data(args.file_list, args.file_format,
+                            args.debug, args.verbose)
+    except ValueError as exc:
+        print(f'[FATAL]: ValueError exception raised with "{exc}".')
+        sys.exit(100)
     if args.debug:
         return
 
     # perform an ASCII dump of level 0 headers parameters
     if args.dump:
         dump_lv0_data(args.file_list, args.datapath, *res)
-        sys.exit(0)
+        if args.verbose:
+            print(f'Wrote ASCII dump in directory: {args.datapath}')
+        return
 
-    # do not write empty products, or products without Science data
+    # we will not create a Level-1A product without Science data.
     if not res[0]:
         # inform the caller with a warning message and exit status
         print('[WARNING]: no science data found in L0 data, exit')
@@ -279,16 +340,27 @@ def main():
                              coverage_time(science)[0])
 
     # write L1A product
-    write_lv0_data(args.datapath / prod_name, args.file_list,
-                   args.file_format, science, nomhk)
+    try:
+        write_lv0_data(args.datapath / prod_name, args.file_list,
+                       args.file_format, science, nomhk)
+    except PermissionError as exc:
+        print(f'[FATAL] exception raised with "{exc}".')
+        sys.exit(130)
+    except RuntimeError as exc:
+        print(f'[FATAL] exception raised with "{exc}".')
+        sys.exit(131)
 
     # read PACE navigation information from HKT products
     if args.pace_hkt:
         hkt_nav = read_hkt_nav(args.pace_hkt)
+        # select HKT data collocated with Science data
+        # - issue a warning if selection is empty
         write_lv0_nav(args.datapath / prod_name, hkt_nav)
 
     # return with exit status zero
-    sys.exit(0)
+    if args.verbose:
+        print(f'[INFO]: Successfully generated: {args.datapath / prod_name}')
+    return
 
 
 # --------------------------------------------------

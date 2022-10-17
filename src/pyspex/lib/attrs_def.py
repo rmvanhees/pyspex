@@ -7,6 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Provides the common global-attributes for SPEXone Level-1 products.
+"""
 
 from datetime import datetime, timezone
 

@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Contains the class CKDio to read SPEXone CKD.
+"""
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -203,9 +205,12 @@ class CKDio:
         except KeyError:
             return None
         res = ()
+        # Before radiometric calibration S and P have separate wavelength grids
         buff = h5_to_xr(gid['wave_full'])
         buff.name = 'full'
         res += (buff,)
+        # After radiometric calibration S and P are interpolated to a common
+        # wavelength grid.
         buff = h5_to_xr(gid['wave_common'])
         buff.name = 'common'
         res += (buff,)

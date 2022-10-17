@@ -8,6 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Add ITOS EGSE information of OCAL measurements to a SPEXone level-1A product.
+"""
 
 import argparse
 

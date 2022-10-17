@@ -7,6 +7,10 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Contains the class `Lv1io` to write SPEXone instrument data to a Level-1A
+product.
+"""
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath

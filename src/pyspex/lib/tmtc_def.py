@@ -7,7 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Defines the SPEXone telemetry packets as numpy data-types.
+"""
 import numpy as np
 
 
@@ -452,7 +454,7 @@ def __tmtc_def(apid) -> list:
 
 
 def tmtc_dtype(apid):
-    """Obtain Spexone telemetry packet definition.
+    """Obtain SPEXone telemetry packet definition.
 
     Parameters
     ----------

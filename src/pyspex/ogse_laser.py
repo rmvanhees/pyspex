@@ -7,7 +7,10 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-
+"""
+Read characteristics of the OPO laser used at NASA GSFC for the ISRF and
+Straylight measurements.
+"""
 from pathlib import Path
 
 import numpy as np
@@ -66,7 +69,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
 def __test(l1a_file: str) -> None:
     """Small function to test this module.
     """
-    # Create a netCDF4 file with the Helios data in it
+    # Create a netCDF4 file with the ISRF data in it
     gse_dir = Path('/data/richardh/SPEXone/GSFC')
     xds = read_gse_excel(gse_dir, '465.4nm')
     xds = read_gse_excel(gse_dir, '360nm', )

@@ -8,6 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""
+Python script to generate a report from the CKD in a CKD product.
+"""
 
 import argparse
 
@@ -189,15 +192,15 @@ def add_wave_figs(ckd, ckd_ref=None):
 
     plot, fig_info_in = init_plot_file('wave', ckd, ckd_ref)
     plot.set_caption('SPEXone Wavelength CKD')
-    wave_str = wave_ckd['common'].attrs['long_name']
-    plot.draw_signal(wave_ckd['common'], fig_info=fig_info_in.copy(),
-                     title=wave_str)
-    wave_s_str = 'wavelengths of S spectra'
+    wave_s_str = 'wavelength grid of the S spectra'
     plot.draw_signal(wave_ckd['full'][0, ...], fig_info=fig_info_in.copy(),
                      title=wave_s_str)
-    wave_p_str = 'wavelengths of P spectra'
+    wave_p_str = 'wavelength grid of the P spectra'
     plot.draw_signal(wave_ckd['full'][1, ...], fig_info=fig_info_in.copy(),
                      title=wave_p_str)
+    wave_str = 'common wavelength grid for S and P'
+    plot.draw_signal(wave_ckd['common'], fig_info=fig_info_in.copy(),
+                     title=wave_str)
 
     ref_ckd = ckd_ref.wavelength() if ckd_ref is not None else None
     if ref_ckd is not None:

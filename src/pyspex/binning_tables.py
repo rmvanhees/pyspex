@@ -54,7 +54,7 @@ class BinningTables:
     Because these original binning tables are necessary for re-processing
     and may facilitate instrument performance monitoring.
     Therefore, it is prefered that a new binning table is added to the
-    current set, without changing the validity start string. 
+    current set, without changing the validity start string.
     However, new binning-table file should be released in case any of the
     binning tables are overwritten.
 
