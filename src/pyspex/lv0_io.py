@@ -8,12 +8,12 @@
 #
 # License:  BSD-3-Clause
 """
-Contains a collection of routines to read and write SPEXone CCSDS data::
+Contains a collection of routines to read and write SPEXone CCSDS data:
 
    `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`, `read_lv0_data`,
    `select_lv0_data`, `write_lv0_data`
 
-And handy routines to convert CCSDS parameters::
+And handy routines to convert CCSDS parameters:
 
    `ap_id`, `coverage_time`, `fix_sub_sec`, `grouping_flag`, `hk_sec_of_day`,
    `img_sec_of_day`, `nomhk_timestamps`, `packet_length`,

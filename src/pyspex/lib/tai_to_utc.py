@@ -22,7 +22,7 @@ EPOCH_1958 = datetime.fromisoformat("1958-01-01T00+00:00").timestamp()
 # - class Clocks -------------------------
 class Clocks:
     """
-    Convert TAI (epoch 1958) to UTC (epoch 1970)or visa versa
+    Convert TAI (epoch 1958) to UTC (epoch 1970) or visa versa
 
     Notes
     -----

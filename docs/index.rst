@@ -43,6 +43,15 @@ Quick-start
     quick
     build
 
+Tools
+-----
+
+.. autosummary::
+   
+.. toctree::
+
+   tools
+
 Module Documentation
 --------------------
 
