@@ -10,7 +10,6 @@
 """
 Python implementation to convert SPEXone OCAL measurement data to L1A format.
 """
-
 import argparse
 
 from datetime import datetime, timedelta, timezone
@@ -119,7 +118,7 @@ def main():
             continue
 
         mps_length = max(mps_sz, mps_length)
-        if not mps_id in mps_list:
+        if mps_id not in mps_list:
             mps_list.append(mps_id)
         num_packets += 1
     if args.verbose:

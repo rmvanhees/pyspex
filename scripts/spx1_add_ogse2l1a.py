@@ -18,7 +18,6 @@ Possible OGSE information::
  * wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
  * wavelength of OPO laser (GSFC spectral-radiometry).
 """
-
 import argparse
 from pathlib import Path
 
@@ -122,8 +121,8 @@ def main():
     parser_db.set_defaults(func=create_ogse_db)
 
     parser_wr = subparsers.add_parser('add',
-                                       help=("add OGSE information"
-                                             " to a SPEXone Level-1A product"))
+                                      help=("add OGSE information"
+                                            " to a SPEXone Level-1A product"))
     parser_wr.add_argument('--ref_diode', action='store_true',
                            help='add reference-diode data from OGSE database')
     parser_wr.add_argument('--avantes', action='store_true',

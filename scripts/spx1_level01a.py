@@ -11,7 +11,6 @@
 """
 Python script to store SPEXone Level-0 data in a Level-1A product.
 """
-
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -42,7 +41,7 @@ ARG_INPUT_HELP = """Provide one or more input files:
 - dsb: please provide all files with the data of one measurement.
 """
 
-EPILOG_HELP="""usage:
+EPILOG_HELP = """Usage:
   Read inflight Level-0 data and write Level-1A product in directory L1A:
 
     spx1_level01a.py --datapath L1A <Path>/SPX*.spx
@@ -78,6 +77,7 @@ EPILOG_HELP="""usage:
 
     spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3 --dump
 """
+
 
 # - local functions --------------------------------
 def check_input_files(file_list: list, file_format: str) -> tuple:
@@ -280,7 +280,7 @@ def main():
                         help=('dump CCSDS packet headers in ASCII'))
     parser.add_argument('--select', default='all',
                         choices=['binned', 'fullFrame'],
-                        help='Select "binned" or "fullFrame" detector-readouts')
+                        help='Select "binned" or "fullFrame" readouts')
     parser.add_argument('--datapath', type=Path, default=Path('.'),
                         help='Directory to store the Level-1A product')
     parser.add_argument('--file_version', type=int, default=1,

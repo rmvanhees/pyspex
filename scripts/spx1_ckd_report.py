@@ -11,7 +11,6 @@
 """
 Python script to generate a report from the CKD in a CKD product.
 """
-
 import argparse
 
 from moniplot.lib.fig_info import FIGinfo
@@ -123,6 +122,7 @@ def add_nlin_figs(ckd, ckd_ref=None):
     ref_ckd = ckd_ref.nlin() if ckd_ref is not None else None
     # plot commands...
     plot.close()
+
 
 def add_prnu_figs(ckd, ckd_ref=None):
     """
