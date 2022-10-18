@@ -9,10 +9,13 @@
 # License:  BSD-3-Clause
 """
 This module contain routines to read reference diode measurements and
-wavelength monitor data. These data are supposed to be written tpoo a HDF5
+wavelength monitor data. These data are supposed to be written to a HDF5
 database. From which collocated data can be added to a SPEXone Level-1A
 product.
 """
+__all__ = ['read_ref_diode', 'read_wav_mon',
+           'add_ogse_ref_diode', 'add_ogse_wav_mon']
+
 from datetime import datetime
 from io import StringIO
 from pathlib import Path

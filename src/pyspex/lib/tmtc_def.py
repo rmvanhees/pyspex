@@ -10,6 +10,8 @@
 """
 Defines the SPEXone telemetry packets as numpy data-types.
 """
+__all__ = ['tmtc_dtype']
+
 import numpy as np
 
 

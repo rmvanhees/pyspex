@@ -11,8 +11,9 @@
 Contains the class `TMscience` to access/convert parameters of SPEXone
 Science telemetry data.
 """
-import numpy as np
+__all__ = ['TMscience']
 
+import numpy as np
 
 # - global parameters -------------------
 

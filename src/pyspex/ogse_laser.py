@@ -11,6 +11,8 @@
 Read characteristics of the OPO laser used at NASA GSFC for the ISRF and
 Straylight measurements.
 """
+__all__ = ['read_gse_excel']
+
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +20,7 @@ from openpyxl import load_workbook
 import xarray as xr
 
 
-# - local functions ----------------------------
+# - main functions ----------------------------
 def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
     """
     Return GSE info on central wavelength, line-width and laser radiance
@@ -44,7 +46,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
     indx += 1
     wavelength = np.array([wsheet['E'][indx].value])
     xar_wv = xr.DataArray(wavelength,
-                          coords={'wavelength':wavelength },
+                          coords={'wavelength': wavelength},
                           attrs={'long_name': 'central wavelength',
                                  'units': 'nm'})
     xar_std = xr.DataArray([wsheet['F'][indx].value],

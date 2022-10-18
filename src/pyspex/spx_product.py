@@ -10,6 +10,7 @@
 """
 Generate file-name of the SPEXone Level-1A products.
 """
+__all__ = ['prod_name']
 
 from datetime import datetime
 

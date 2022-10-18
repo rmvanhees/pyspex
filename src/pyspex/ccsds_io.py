@@ -10,6 +10,7 @@
 """
 Contains the class `CCSDSio` to read SPEXone telemetry packets.
 """
+__all__ = ['CCSDSio']
 
 from pathlib import Path
 

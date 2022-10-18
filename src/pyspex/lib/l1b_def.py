@@ -10,6 +10,7 @@
 """
 Defines the format of a SPEXone Level-1B product.
 """
+__all__ = ['init_l1b']
 
 import datetime
 

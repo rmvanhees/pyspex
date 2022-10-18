@@ -11,6 +11,8 @@
 Contains the class `LV1gse` which checks EGSE/OGSE data and/or writes it to
 a SPEXone Level-1A product.
 """
+__all__ = ['LV1gse']
+
 import numpy as np
 
 from netCDF4 import Dataset

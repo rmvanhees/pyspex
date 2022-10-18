@@ -8,9 +8,10 @@
 #
 # License:  BSD-3-Clause
 """
-Contains the class `Lv1io` to write SPEXone instrument data to a Level-1A
-product.
+Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
+PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 """
+__all__ = ['L1Aio', 'L1Bio', 'L1Cio']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath

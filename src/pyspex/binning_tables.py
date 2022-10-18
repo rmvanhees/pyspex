@@ -8,9 +8,10 @@
 #
 # License:  BSD-3-Clause
 """
-This module contains the `BinningTables` class to deal with SPEXone
+This module contains the class `BinningTables` to deal with SPEXone
 binning-tables or to generate a file with binning-table definitions.
 """
+__all__ = ['BinningTables']
 
 from datetime import datetime, timezone
 from os import environ

@@ -10,6 +10,8 @@
 """
 Contains the class `TIFio` to read simulated SPEXone measurements.
 """
+__all__ = ['TIFio']
+
 from pathlib import Path
 
 import numpy as np

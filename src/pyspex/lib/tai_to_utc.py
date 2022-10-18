@@ -10,6 +10,8 @@
 """
 Contains the class `Clocks` to convert TAI and UTC timestamps.
 """
+__all__ = ['Clocks']
+
 from datetime import datetime
 
 # - global parameters ------------------------------

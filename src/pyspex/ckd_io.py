@@ -10,6 +10,8 @@
 """
 Contains the class CKDio to read SPEXone CKD.
 """
+__all__ = ['CKDio']
+
 from datetime import datetime, timezone
 from pathlib import Path
 
