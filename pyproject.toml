@@ -5,9 +5,9 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2", "wheel"]
 
 [project]
 name = "pyspex"
+dynamic = ["version"]
 description = "Software package to handle SPEXone Level-0 and Level-1 data"
 readme = "README.md"
-requires-python = ">=3.8"
 license = {text = "BSD-3-Clause"}
 authors = [
   {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}
@@ -24,6 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Topic :: Scientific/Engineering :: Atmospheric Science",
 ]
+requires-python = ">=3.8"
 dependencies = [
   "h5py~=2.10.0; python_version=='3.9'",
   "h5py>=3.5; python_version!='3.9'",
@@ -33,7 +34,6 @@ dependencies = [
   "xarray~=0.19.0; python_version=='3.9'",
   "xarray>=2022.3; python_version!='3.9'",
 ]
-dynamic = ["version"]
 
 [project.urls]
 homepage = "https://github.com/rmvanhees/pyspex"
