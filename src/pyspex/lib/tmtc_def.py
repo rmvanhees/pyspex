@@ -9,6 +9,10 @@
 # License:  BSD-3-Clause
 """
 Defines the SPEXone telemetry packets as numpy data-types.
+
+References
+----------
+* SPX1-TN-005 Telemetry and Telecommand Handbook, issue 14, date 15-Mar-2021
 """
 __all__ = ['tmtc_dtype']
 

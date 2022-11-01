@@ -27,9 +27,9 @@ from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
 
 # - global parameters -------------------
-MCP_TO_SEC = 1e-7
 
 
+# - local functions ---------------------
 def frac_poly(xx_in, coefs=None):
     """Temperature [K] calibration derived by Paul Tol (2020-10-21).
 
@@ -425,7 +425,7 @@ class L1Aio(Lv1io):
         img_hk : numpy array ()
            Structured array with all Science telemetry parameters
         img_id : numpy array (uint16)
-           Detector image counter
+           Detector frame counter modulo 0x3FFF
 
         Notes
         -----
@@ -440,15 +440,13 @@ class L1Aio(Lv1io):
 
         self.set_dset('/science_data/detector_images', img_data)
         self.set_dset('/science_data/detector_telemetry', img_hk)
-
-        mps = TMscience(img_hk)
-        self.set_dset('/image_attributes/binning_table', mps.binning_table_id)
-        self.set_dset('/image_attributes/digital_offset', mps.offset)
-        self.set_dset('/image_attributes/exposure_time',
-                      MCP_TO_SEC * mps.exp_time)
-        self.set_dset('/image_attributes/nr_coadditions',
-                      mps.get('REG_NCOADDFRAMES'))
         self.set_dset('/image_attributes/image_ID', img_id)
+
+        tm_sc = TMscience(img_hk)
+        self.set_dset('/image_attributes/binning_table', tm_sc.binning_table)
+        self.set_dset('/image_attributes/digital_offset', tm_sc.digital_offset)
+        self.set_dset('/image_attributes/exposure_time', tm_sc.exposure_time)
+        self.set_dset('/image_attributes/nr_coadditions', tm_sc.nr_coadditions)
 
     def fill_nomhk(self, nomhk_data):
         """Write nominal house-keeping telemetry packets (NomHK).

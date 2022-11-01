@@ -8,20 +8,24 @@
 #
 # License:  BSD-3-Clause
 """
-Contains the class `TMscience` to access/convert parameters of SPEXone
-Science telemetry data.
+Contains the class `TMscience` to access/convert the parameters of SPEXone
+Science telemetry data as stored in a L1A product.
+
+References
+----------
+* SPX1-TN-005 Telemetry and Telecommand Handbook, issue 14, date 15-Mar-2021
+* CMV4000 Datasheet, version 4.0, date 11-Nov-2021
 """
 __all__ = ['TMscience']
 
 import numpy as np
 
-# - global parameters -------------------
+# - global parameters -----------------------
 
 
 # - class TMscience -------------------------
 class TMscience:
-    """
-    Access/convert parameters of a SPEXone Science telemetry data.
+    """Access/convert parameters of SPEXone Science telemetry data.
 
     Parameters
     ----------
@@ -33,13 +37,13 @@ class TMscience:
         """
         self.__tm = tm_science
 
-    def get(self, key: str):
+    def get(self, key: str) -> np.ndarray:
         """Return (raw) Science telemetry parameter.
         """
         return self.__tm[key] if key in self.__tm.dtype.names else None
 
     @property
-    def binning_table_id(self) -> np.ndarray:
+    def binning_table(self) -> int:
         """Return the binning table identifier (zero for full-frame images).
 
         Notes
@@ -84,7 +88,11 @@ class TMscience:
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
-    def number_channels(self) -> np.ndarray:
+    def nr_coaddings(self) -> int:
+        return self.__tm['REG_NCOADDFRAMES']
+
+    @property
+    def number_channels(self) -> int:
         """Return number of LVDS channels used.
         """
         return 2 ** (4 - (self.__tm['DET_OUTMODE'] & 0x3))
@@ -98,8 +106,8 @@ class TMscience:
                 and (self.__tm['DET_CHENA'] & 0x40000) != 0)
 
     @property
-    def offset(self) -> int:
-        """Returns digital offset including ADC offset.
+    def digital_offset(self) -> int:
+        """Returns digital offset including ADC offset [count].
         """
         buff = self.__tm['DET_OFFSET'].astype('i4')
         if np.isscalar(buff):
@@ -109,6 +117,12 @@ class TMscience:
             buff[buff >= 8192] -= 16384
 
         return buff + 70
+
+    @property
+    def adc_gain(self) -> float:
+        """Returns ADC gain [Volt].
+        """
+        return self.__tm['DET_ADCGAIN']
 
     @property
     def pga_gain(self) -> float:
@@ -127,6 +141,10 @@ class TMscience:
         """
         return 129 * (0.43 * self.__tm['DET_FOTLEN']
                       + self.__tm['DET_EXPTIME'])
+
+    @property
+    def exposure_time(self) -> float:
+        return MCP_TO_SEC * self.exp_time
 
     @property
     def fot_time(self) -> int:
@@ -150,28 +168,28 @@ class TMscience:
 
     @property
     def pll_control(self) -> tuple:
-        """Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div
+        """Returns raw PLL control parameters: pll_range, pll_out_fre, pll_div.
 
-        Notes
-        -----
+        Other PLL registers are: PLL_enable, PLL_in_fre, PLL_bypass, PLL_load
+
+        Returns
+        -------
         PLL_range:    bits [7], valid values: 0 or 1
         PLL_out_fre:  bits [4:7], valid values:  0, 1, 2 or 5
         PLL_div:      bits [0:3], valid values 9 (10-bit) or 11 (12-bit)
-
-        Other PLL registers are: PLL_enable, PLL_in_fre, PLL_bypass, PLL_load
         """
         pll_div = self.__tm['DET_PLLRATE'] & 0xF             # bit [0:4]
         pll_out_fre = (self.__tm['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
         pll_range = (self.__tm['DET_PLLRATE'] >> 7)          # bit [7]
 
-        return (pll_range, pll_out_fre, pll_div)
+        return pll_range, pll_out_fre, pll_div
 
     @property
     def exp_control(self) -> tuple:
-        """Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext
+        """Returns raw exposure time parameters: inte_sync, exp_dual, exp_ext.
         """
         inte_sync = (self.__tm['INTE_SYNC'] >> 2) & 0x1
         exp_dual = (self.__tm['INTE_SYNC'] >> 1) & 0x1
         exp_ext = self.__tm['INTE_SYNC'] & 0x1
 
-        return (inte_sync, exp_dual, exp_ext)
+        return inte_sync, exp_dual, exp_ext
