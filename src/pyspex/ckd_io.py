@@ -9,6 +9,10 @@
 # License:  BSD-3-Clause
 """
 Contains the class CKDio to read SPEXone CKD.
+
+References
+----------
+* https://spexone-cal-doc.readthedocs.io/en/latest/
 """
 __all__ = ['CKDio']
 
@@ -38,7 +42,6 @@ class CKDio:
 
     Examples
     --------
-
     Read several CKD parameters:
 
     >>> with CKDio('SPX1_CKD.nc') as ckd:
@@ -54,7 +57,7 @@ class CKDio:
         # open access to CKD product
         self.fid = h5py.File(ckd_file, "r")
         if 'processor_configuration' not in self.fid:
-            raise RuntimeError('CKD product in complete?')
+            raise RuntimeError('SPEXone CKD product corrupted?')
 
     def __enter__(self):
         """Method called to initiate the context manager.
@@ -86,7 +89,7 @@ class CKDio:
         Parameters
         ----------
         compact :  bool
-           if False then return date in isoformat, else YYYYmmddHHMMSS
+           return date in isoformat if not compact else return 'YYYYmmddHHMMSS'
         """
         # pylint: disable=no-member
         date_str = self.fid.attrs['date_created'].decode()
@@ -116,12 +119,8 @@ class CKDio:
         except KeyError:
             return None
         res = ()
-        buff = h5_to_xr(gid['dark_offset'])
-        buff.name = 'offset'
-        res += (buff,)
-        buff = h5_to_xr(gid['dark_current'])
-        buff.name = 'current'
-        res += (buff,)
+        res += (h5_to_xr(gid['dark_offset']),)
+        res += (h5_to_xr(gid['dark_current']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def noise(self) -> xr.Dataset:
@@ -208,14 +207,10 @@ class CKDio:
             return None
         res = ()
         # Before radiometric calibration S and P have separate wavelength grids
-        buff = h5_to_xr(gid['wave_full'])
-        buff.name = 'full'
-        res += (buff,)
+        res += (h5_to_xr(gid['wave_full']),)
         # After radiometric calibration S and P are interpolated to a common
         # wavelength grid.
-        buff = h5_to_xr(gid['wave_common'])
-        buff.name = 'common'
-        res += (buff,)
+        res += (h5_to_xr(gid['wave_common']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def radiometric(self) -> xr.DataArray:
@@ -264,14 +259,22 @@ def __test():
 
     with CKDio(ckd_file) as ckd:
         print(ckd.processor_version)
-        print(ckd.date_created)
+        print(ckd.date_created())
+        print('# --- dark ---')
         print(ckd.dark())
+        print('# --- noise ---')
         print(ckd.noise())
+        print('# --- nlin ---')
         print(ckd.nlin())
+        print('# --- prnu ---')
         print(ckd.prnu())
+        print('# --- fov ---')
         print(ckd.fov())
+        print('# --- wavelength ---')
         print(ckd.wavelength())
+        print('# --- radiometric ---')
         print(ckd.radiometric())
+        print('# --- polarimetric ---')
         print(ckd.polarimetric())
 
 

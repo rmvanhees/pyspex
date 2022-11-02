@@ -18,8 +18,9 @@ from moniplot.mon_plot import MONplot
 
 from pyspex.ckd_io import CKDio
 
-
 # - global parameters ------------------------------
+
+
 # - local functions --------------------------------
 def init_plot_file(key: str, ckd, ckd_ref=None):
     """
@@ -46,8 +47,7 @@ def init_plot_file(key: str, ckd, ckd_ref=None):
 
 
 def add_dark_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Dark CKD
+    """Generate figures of Dark CKD.
     """
     dark_ckd = ckd.dark()
     if dark_ckd is None:
@@ -55,29 +55,28 @@ def add_dark_figs(ckd, ckd_ref=None):
 
     plot, fig_info_in = init_plot_file('dark', ckd, ckd_ref)
     plot.set_caption('SPEXone Dark CKD')
-    plot.draw_signal(dark_ckd['offset'], title='dark offset',
+    plot.draw_signal(dark_ckd['dark_offset'], title='dark offset',
                      fig_info=fig_info_in.copy())
-    plot.draw_hist(dark_ckd['offset'], bins=161, vrange=[-5.5, 2.5],
+    plot.draw_hist(dark_ckd['dark_offset'], bins=161, vrange=[-5.5, 2.5],
                    title='dark offset', fig_info=fig_info_in.copy())
-    plot.draw_signal(dark_ckd['current'], title='dark current',
+    plot.draw_signal(dark_ckd['dark_current'], title='dark current',
                      fig_info=fig_info_in.copy())
-    plot.draw_hist(dark_ckd['current'], bins=101, vrange=[1.5, 6.5],
+    plot.draw_hist(dark_ckd['dark_current'], bins=101, vrange=[1.5, 6.5],
                    title='dark current', fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.dark() if ckd_ref is not None else None
     if ref_ckd is not None:
-        plot.draw_signal(dark_ckd['offset'] - ref_ckd['offset'],
+        plot.draw_signal(dark_ckd['dark_offset'] - ref_ckd['dark_offset'],
                          title='dark offset - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
-        plot.draw_signal(dark_ckd['current'] - ref_ckd['current'],
+        plot.draw_signal(dark_ckd['dark_current'] - ref_ckd['dark_current'],
                          title='dark current - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
     plot.close()
 
 
 def add_noise_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Noise CKD
+    """Generate figures of Noise CKD.
     """
     noise_ckd = ckd.noise()
     if noise_ckd is None:
@@ -108,8 +107,7 @@ def add_noise_figs(ckd, ckd_ref=None):
 
 
 def add_nlin_figs(ckd, ckd_ref=None):
-    """
-    Add figures of non-linearity CKD
+    """Generate figures of non-linearity CKD.
     """
     nlin_ckd = ckd.nlin()
     if nlin_ckd is None:
@@ -125,8 +123,7 @@ def add_nlin_figs(ckd, ckd_ref=None):
 
 
 def add_prnu_figs(ckd, ckd_ref=None):
-    """
-    Add figures of PRNU CKD
+    """Generate figures of PRNU CKD.
     """
     prnu_ckd = ckd.prnu()
     if prnu_ckd is None:
@@ -149,8 +146,7 @@ def add_prnu_figs(ckd, ckd_ref=None):
 
 
 def add_fov_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Field-of-View CKD
+    """Generate figures of Field-of-View CKD.
     """
     fov_ckd = ckd.fov()
     if fov_ckd is None:
@@ -166,8 +162,7 @@ def add_fov_figs(ckd, ckd_ref=None):
 
 
 def add_swath_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Swath CKD
+    """Generate figures of Swath CKD.
     """
     swath_ckd = ckd.swath()
     if swath_ckd is None:
@@ -183,8 +178,7 @@ def add_swath_figs(ckd, ckd_ref=None):
 
 
 def add_wave_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Wavelength CKD
+    """Generate figures of Wavelength CKD.
     """
     wave_ckd = ckd.wavelength()
     if wave_ckd is None:
@@ -193,32 +187,31 @@ def add_wave_figs(ckd, ckd_ref=None):
     plot, fig_info_in = init_plot_file('wave', ckd, ckd_ref)
     plot.set_caption('SPEXone Wavelength CKD')
     wave_s_str = 'wavelength grid of the S spectra'
-    plot.draw_signal(wave_ckd['full'][0, ...], fig_info=fig_info_in.copy(),
+    plot.draw_signal(wave_ckd['wave_full'][0, ...], fig_info=fig_info_in.copy(),
                      title=wave_s_str)
     wave_p_str = 'wavelength grid of the P spectra'
-    plot.draw_signal(wave_ckd['full'][1, ...], fig_info=fig_info_in.copy(),
+    plot.draw_signal(wave_ckd['wave_full'][1, ...], fig_info=fig_info_in.copy(),
                      title=wave_p_str)
     wave_str = 'common wavelength grid for S and P'
-    plot.draw_signal(wave_ckd['common'], fig_info=fig_info_in.copy(),
+    plot.draw_signal(wave_ckd['wave_common'], fig_info=fig_info_in.copy(),
                      title=wave_str)
 
     ref_ckd = ckd_ref.wavelength() if ckd_ref is not None else None
     if ref_ckd is not None:
-        plot.draw_signal(wave_ckd['common'] - ref_ckd['common'],
+        plot.draw_signal(wave_ckd['wave_common'] - ref_ckd['wave_common'],
                          title=wave_str + ' - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
-        plot.draw_signal(wave_ckd['full'][0, ...] - ref_ckd['full'][0, ...],
+        plot.draw_signal(wave_ckd['wave_full'][0, ...] - ref_ckd['wave_full'][0, ...],
                          title=wave_s_str + ' - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
-        plot.draw_signal(wave_ckd['full'][1, ...] - ref_ckd['full'][1, ...],
+        plot.draw_signal(wave_ckd['wave_full'][1, ...] - ref_ckd['wave_full'][1, ...],
                          title=wave_p_str + ' - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
     plot.close()
 
 
 def add_rad_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Radiometric CKD
+    """Generate figures of Radiometric CKD.
     """
     rad_ckd = ckd.radiometric()
     if rad_ckd is None:
@@ -245,8 +238,7 @@ def add_rad_figs(ckd, ckd_ref=None):
 
 
 def add_pol_figs(ckd, ckd_ref=None):
-    """
-    Add figures of Polarimetric CKD
+    """Generate figures of Polarimetric CKD.
     """
     pol_ckd = ckd.polarimetric()
     if pol_ckd is None:
