@@ -432,7 +432,7 @@ class L1Aio(Lv1io):
         Adds detector_telemetry data to the group /science_data
 
         Parameters: binning_table, digital_offset, exposure_time
-        and nr_coadding are extracted from the telemetry packets and writen
+        and nr_coadditions are extracted from the telemetry packets and writen
         in the group /image_attributes
         """
         if len(img_hk) == 0:

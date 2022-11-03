@@ -21,6 +21,7 @@ __all__ = ['TMscience']
 import numpy as np
 
 # - global parameters -----------------------
+MCP_TO_SEC = 1e-7
 
 
 # - class TMscience -------------------------
@@ -88,7 +89,7 @@ class TMscience:
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
-    def nr_coaddings(self) -> int:
+    def nr_coadditions(self) -> int:
         return self.__tm['REG_NCOADDFRAMES']
 
     @property
