@@ -219,13 +219,13 @@ def main():
         gse.set_attr('measurement', msm_id)
         gse.set_attr('dem_id', args.dem_id)
         if args.reference is not None:
-            sec_bgn = int((tstamp[0] - EPOCH).total_seconds())
-            sec_end = round((tstamp[-1] - EPOCH).total_seconds())
+            sec_bgn = int(tstamp[0].timestamp())
+            sec_end = int(tstamp[-1].timestamp())
             with h5py.File(args.reference, 'r') as fid:
                 secnd = fid['sec'][:]
-                data = fid['amps_nlin'][((secnd >= sec_bgn)
-                                         & (secnd <= sec_end))]
-            gse.write_reference_signal(data.mean(), data.std())
+                data = fid['amps'][((secnd >= sec_bgn)
+                                    & (secnd <= sec_end))]
+            gse.write_reference_signal(np.median(data), data.std())
 
 
 # --------------------------------------------------
