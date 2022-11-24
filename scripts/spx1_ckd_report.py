@@ -53,25 +53,61 @@ def add_dark_figs(ckd, ckd_ref=None):
     if dark_ckd is None:
         return
 
+    ckd_version = 'v1' if 'dark_offset' in dark_ckd.data_vars else 'v2'
+
     plot, fig_info_in = init_plot_file('dark', ckd, ckd_ref)
     plot.set_caption('SPEXone Dark CKD')
-    plot.draw_signal(dark_ckd['dark_offset'], title='dark offset',
-                     fig_info=fig_info_in.copy())
-    plot.draw_hist(dark_ckd['dark_offset'], bins=161, vrange=[-5.5, 2.5],
-                   title='dark offset', fig_info=fig_info_in.copy())
+    if ckd_version == 'v1':
+        plot.draw_signal(dark_ckd['dark_offset'], title='dark offset',
+                         fig_info=fig_info_in.copy())
+        plot.draw_hist(dark_ckd['dark_offset'], bins=161, vrange=[-5.5, 2.5],
+                       title='dark offset', fig_info=fig_info_in.copy())
+    else:
+        plot.draw_signal(dark_ckd['offset_long'], title='offset (long)',
+                         fig_info=fig_info_in.copy())
+        plot.draw_hist(dark_ckd['offset_long'], bins=161, vrange=[-5.5, 2.5],
+                       title='offset (long)', fig_info=fig_info_in.copy())
+        plot.draw_signal(dark_ckd['offset_short'], title='offset (short)',
+                         fig_info=fig_info_in.copy())
+        plot.draw_hist(dark_ckd['offset_short'], bins=161, vrange=[-5.5, 2.5],
+                       title='offset (short)', fig_info=fig_info_in.copy())
     plot.draw_signal(dark_ckd['dark_current'], title='dark current',
                      fig_info=fig_info_in.copy())
     plot.draw_hist(dark_ckd['dark_current'], bins=101, vrange=[1.5, 6.5],
                    title='dark current', fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.dark() if ckd_ref is not None else None
-    if ref_ckd is not None:
-        plot.draw_signal(dark_ckd['dark_offset'] - ref_ckd['dark_offset'],
-                         title='dark offset - reference',
-                         fig_info=fig_info_in.copy(), zscale='diff')
-        plot.draw_signal(dark_ckd['dark_current'] - ref_ckd['dark_current'],
-                         title='dark current - reference',
-                         fig_info=fig_info_in.copy(), zscale='diff')
+    if ref_ckd is None:
+        plot.close()
+        return
+
+    ref_version = 'v1' if 'dark_offset' in ref_ckd.data_vars else 'v2'
+
+    if ckd_version == 'v1':
+        if ref_version == 'v1':
+            plot.draw_signal(dark_ckd['dark_offset'] - ref_ckd['dark_offset'],
+                             title='dark offset - reference',
+                             fig_info=fig_info_in.copy(), zscale='diff')
+        else:
+            plot.draw_signal(dark_ckd['dark_offset'] - ref_ckd['offset_long'],
+                             title='dark offset - reference',
+                             fig_info=fig_info_in.copy(), zscale='diff')
+    else:
+        if ref_version == 'v1':
+            plot.draw_signal(dark_ckd['offset_long'] - ref_ckd['dark_offset'],
+                             title='offset (long) - reference',
+                             fig_info=fig_info_in.copy(), zscale='diff')
+        else:
+            plot.draw_signal(dark_ckd['offset_short'] - ref_ckd['offset_short'],
+                             title='offset (short) - reference',
+                             fig_info=fig_info_in.copy(), zscale='diff')
+            plot.draw_signal(dark_ckd['offset_long'] - ref_ckd['offset_long'],
+                             title='offset (long) - reference',
+                             fig_info=fig_info_in.copy(), zscale='diff')
+
+    plot.draw_signal(dark_ckd['dark_current'] - ref_ckd['dark_current'],
+                     title='dark current - reference',
+                     fig_info=fig_info_in.copy(), zscale='diff')
     plot.close()
 
 
@@ -129,16 +165,25 @@ def add_prnu_figs(ckd, ckd_ref=None):
     if prnu_ckd is None:
         return
 
+    ref_ckd = ckd_ref.prnu() if ckd_ref is not None else None
+
     plot, fig_info_in = init_plot_file('prnu', ckd, ckd_ref)
     plot.set_caption('SPEXone PRNU CKD')
+
     prnu_str = 'Pixel Response Non-Uniformity'
     plot.draw_signal(prnu_ckd, fig_info=fig_info_in.copy(),
                      title=prnu_str)
+    if ref_ckd is not None:
+        prnu_str = 'Pixel Response Non-Uniformity (reference)'
+        plot.draw_signal(ref_ckd, fig_info=fig_info_in.copy(),
+                         title=prnu_str)
     plot.draw_hist(prnu_ckd, bins=201, vrange=[0.95, 1.05],
                    title=prnu_str, fig_info=fig_info_in.copy())
-
-    ref_ckd = ckd_ref.prnu() if ckd_ref is not None else None
     if ref_ckd is not None:
+        prnu_str = 'Pixel Response Non-Uniformity (reference)'
+        plot.draw_hist(ref_ckd, bins=201, vrange=[0.95, 1.05],
+                       title=prnu_str, fig_info=fig_info_in.copy())
+        prnu_str = 'Pixel Response Non-Uniformity'
         plot.draw_signal(prnu_ckd - ref_ckd,
                          title=prnu_str + ' - reference',
                          fig_info=fig_info_in.copy(), zscale='diff')
