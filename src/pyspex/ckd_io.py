@@ -119,7 +119,11 @@ class CKDio:
         except KeyError:
             return None
         res = ()
-        res += (h5_to_xr(gid['dark_offset']),)
+        if 'dark_offset' in gid:
+            res += (h5_to_xr(gid['dark_offset']),)
+        else:
+            res += (h5_to_xr(gid['offset_long']),)
+            res += (h5_to_xr(gid['offset_short']),)
         res += (h5_to_xr(gid['dark_current']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
