@@ -86,10 +86,10 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
         res['title'] = f"SPEXone Level-{level[1:]} data"
         res['instrument'] = "SPEXone"
         res['institution'] = "SRON Netherlands Institute for Space Research"
-        res['creator_name'] = "SRON/Earth Science"
+        res['creator_name'] = "SRON/Earth"
         res['creator_email'] = "SPEXone-MPC@sron.nl"
         res['creator_url'] = "https://www.sron.nl/missions-earth/pace-spexone"
-        res['publisher_name'] = "SRON/Earth Science"
+        res['publisher_name'] = "SRON/Earth"
         res['publisher_email'] = "SPEXone-MPC@sron.nl"
         res['publisher_url'] = "https://www.sron.nl/missions-earth/pace-spexone"
 

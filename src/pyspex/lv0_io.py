@@ -613,7 +613,7 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
     offs_msec = 0
     if img_hk['ICUSWVER'][0] > 0x123:
         mps = TMscience(img_hk)
-        if np.bincount(mps.binning_table_id).argmax() == 0:
+        if np.bincount(mps.binning_table).argmax() == 0:
             imro = mps.get('REG_NCOADDFRAMES') + 2
         else:
             imro = 2 * mps.get('REG_NCOADDFRAMES') + 1
@@ -734,7 +734,7 @@ def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
 
         # write global attributes
         if nomhk.size > 0:
-            l1a.set_attr('icu_sw_version', nomhk[0]['hk']['ICUSWVER'])
+            l1a.set_attr('icu_sw_version', f'0x{nomhk["hk"]["ICUSWVER"][0]:x}')
         if file_format == 'raw':
             l1a.fill_global_attrs(inflight=False)
         else:
