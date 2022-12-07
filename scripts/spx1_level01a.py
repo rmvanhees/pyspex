@@ -15,6 +15,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 import sys
+import yaml
 
 import xarray as xr
 
@@ -31,6 +32,23 @@ ARG_FORMAT_HELP = """Provide data format of the input file(s):
 - st3: CCSDS packages with ITOS and spacewire headers;
 - dsb: files recorded on the observatory data storage board;
 - default: determine file format from input files.
+"""
+
+ARG_YAML_HELP = """Provide settings file in YAML format as:
+
+ # define output directory, CWD when empty
+ outdir: CWD
+ # define name of output file, will be generated automatically when empty
+ outfile: ''
+ # define file-version as nn, neglected when outfile not empty
+ file_version: 1
+ # flag to indicate measurements taken in eclipse or day-side
+ eclipse: True
+ # provide list, directory, file-glob or empty
+ hkt_list: ''
+ # must be a list, directory or glob. Fails when empty
+ l0_list: L0/SPX0000000??.spx
+
 """
 
 ARG_INPUT_HELP = """Provide one or more input files:
@@ -275,41 +293,36 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
         description='Store SPEXone Level-0 data in a Level-1A product',
         epilog=EPILOG_HELP)
-    parser.add_argument('--verbose', action='store_true', help='be verbose')
     parser.add_argument('--debug', action='store_true', help='be more verbose')
     parser.add_argument('--dump', action='store_true',
                         help=('dump CCSDS packet headers in ASCII'))
-    parser.add_argument('--file_format', type=str, default='auto',
-                        choices=('raw', 'st3', 'dsb'), help=ARG_FORMAT_HELP)
-    parser.add_argument('--select', default='all',
-                        choices=['binned', 'fullFrame'],
-                        help='Select "binned" or "fullFrame" readouts')
-    parser.add_argument('--outdir', type=Path, default=Path('.'),
-                        help='Directory to store the Level-1A product')
-    parser.add_argument('--outfile', type=str, default='',
-                        help='Output Level-1A product filename')
-    parser.add_argument('--file_version', type=int, default=1,
-                        help='Provide file version number of level-1A product')
-    parser.add_argument('--input_hkt_list', nargs='+', default=None,
-                        help='names of PACE HKT products with navigation data')
-    parser.add_argument('file_list', nargs='+', help=ARG_INPUT_HELP)
+    parser.add_argument('--verbose', action='store_true', help='be verbose')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
+    group.add_argument('--spex_lv0', nargs='+', help=ARG_INPUT_HELP)
     args = parser.parse_args()
+    print(args)
 
-    # check list of input files and detect file format
-    try:
-        res = check_input_files(args.file_list, args.file_format)
-    except FileNotFoundError as exc:
-        print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-        sys.exit(100)
-    except TypeError as exc:
-        print(f'[FATAL]: TypeError exception raised with "{exc}".')
-        sys.exit(1)
+    # YAML file or input files
+    if args.yaml is not None:
+        if not args.yaml.is_file():
+            raise FileNotFoundError('settings file not found')
     else:
-        args.file_format, args.file_list = res
+        try:
+            res = check_input_files(args.file_list, args.file_format)
+        except FileNotFoundError as exc:
+            print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
+            sys.exit(100)
+        except TypeError as exc:
+            print(f'[FATAL]: TypeError exception raised with "{exc}".')
+            sys.exit(1)
+        else:
+            args.file_format, args.file_list = res
 
     # show the user command-line steeings after calling `check_input_files`
     if args.verbose:
         print(args)
+    return
 
     # read level 0 data as Science and TmTC packages
     try:
