@@ -30,19 +30,13 @@ from pathlib import Path
 
 import numpy as np
 
+from .lib.leap_sec import get_leap_seconds
 from .lib.tmtc_def import tmtc_dtype
 from .lv1_io import L1Aio
 from .tm_science import TMscience
 
-
 # - global parameters ------------------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
-
-# Note that the number of leap seconds will possibly to be increased to 38 sec
-# in the near future.
-LEAP_SEC = 37
-EPOCH_1958 = datetime(1958, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=37)
-EPOCH_1970 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
@@ -580,6 +574,17 @@ def nomhk_timestamps(nomhk: np.ndarray) -> tuple:
     return nomhk_sec, nomhk_subsec
 
 
+def which_epoch(timestamp: int) -> datetime:
+    """
+    Determine year of epoch, 1970 (UTC) or 1958 (TAI).
+    """
+    if timestamp < 1956528000:
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    return (datetime(1958, 1, 1, tzinfo=timezone.utc)
+            - timedelta(seconds=get_leap_seconds(timestamp)))
+
+
 def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
     """
     Convert Image CCSDS timestamp to seconds after midnight
@@ -598,7 +603,7 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
         reference day: float, sec_of_day: numpy.ndarray
     """
     # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = EPOCH_1970 if img_sec[0] < 1956528000 else EPOCH_1958
+    epoch = which_epoch(img_sec[0])
     tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
     ref_day = datetime(year=tstamp0.year,
                        month=tstamp0.month,
@@ -640,7 +645,7 @@ def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
     numpy.ndarray with sec_of_day
     """
     # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = EPOCH_1970 if ccsds_sec[0] < 1956528000 else EPOCH_1958
+    epoch = which_epoch(ccsds_sec[0])
     if ref_day is None:
         tstamp0 = epoch + timedelta(seconds=int(ccsds_sec[0]))
         ref_day = datetime(year=tstamp0.year,

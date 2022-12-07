@@ -1,7 +1,7 @@
 # pyproject.toml
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2", "wheel"]
+requires = ["setuptools>=58", "setuptools_scm[toml]>=6.2", "wheel"]
 
 [project]
 name = "pyspex"
@@ -29,6 +29,7 @@ requires-python = ">=3.8"
 dependencies = [
   "h5py~=2.10.0; python_version=='3.9'",
   "h5py>=3.5; python_version!='3.9'",
+  "julian",
   "moniplot>=0.5",
   "netCDF4>=1.5",
   "numpy>=1.19",
@@ -40,7 +41,7 @@ dependencies = [
 homepage = "https://github.com/rmvanhees/pyspex"
 documentation = "https://pyspex.readthedocs.io/en/latest/"
 # Source = "https://github.com/rmvanhees/pyspex"
-# Changelog = "https://github.com/rmvanhees/pyspex/HISTORY.rst"
+# Changelog = ""
 "Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"
 
 [tool.setuptools_scm]

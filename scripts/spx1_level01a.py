@@ -44,21 +44,21 @@ ARG_INPUT_HELP = """Provide one or more input files:
 EPILOG_HELP = """Usage:
   Read inflight Level-0 data and write Level-1A product in directory L1A:
 
-    spx1_level01a.py --datapath L1A <Path>/SPX*.spx
+    spx1_level01a.py --outdir L1A <Path>/SPX*.spx
 
   If the Level-0 data contains Science and diagnostig measurements then use:
 
-    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --select binned
+    spx1_level01a.py --outdir L1A <Path>/SPX*.spx --select binned
   or
-    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --select fullFrame
+    spx1_level01a.py --outdir L1A <Path>/SPX*.spx --select fullFrame
 
   Same call but now we add navigation data from HKT products:
 
-    spx1_level01a.py --datapath L1A <Path>/SPX*.spx --pace_hkt <Path>/PACE.20220621T14*.HKT.nc
+    spx1_level01a.py --outdir L1A <Path>/SPX*.spx --pace_hkt <Path>/PACE.20220621T14*.HKT.nc
 
   Read OCAL Level-0 data and write Level-1A product in directory L1A:
 
-    spx1_level01a.py --datapath L1A <Path>/NomSciCal1_20220123T121801.676167.H
+    spx1_level01a.py --outdir L1A <Path>/NomSciCal1_20220123T121801.676167.H
 
     Note that OCAL science & telemetry data is read from the files:
       <Path>/NomSciCal1_20220123T121801.676167.?
@@ -71,11 +71,11 @@ EPILOG_HELP = """Usage:
 
   Read ST3 Level-0 file and write Level-1A product in directory L1A:
 
-    spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3
+    spx1_level01a.py --outdir L1A <Path>/SCI_20220124_174737_419.ST3
 
   Same call but now we dump packet header information in ASCII
 
-    spx1_level01a.py --datapath L1A <Path>/SCI_20220124_174737_419.ST3 --dump
+    spx1_level01a.py --outdir L1A <Path>/SCI_20220124_174737_419.ST3 --dump
 """
 
 
@@ -194,15 +194,15 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
 
     === Inflight ===
     L1A file name format, following the NASA ... naming convention:
-       PACE_SPEXone[_TTT].YYYYMMDDTHHMMSS.L1A.Vnn.nc
+       PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
     where
        TTT is an optional data type (e.g., for the calibration data files)
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       nn file-version number
-    for example
-    [Science Product] PACE_SPEXone.20230115T123456.L1A.V01.nc
-    [Calibration Product] PACE_SPEXone_CAL.20230115T123456.L1A.V01.nc
-    [Monitoring Products] PACE_SPEXone_DARK.20230115T123456.L1A.V01.nc
+       Vnn file-version number (ommited when nn=1)
+    for example (file-version = 1):
+       [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
+       [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
+       [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
 
     === OCAL ===
     L1A file name format:
@@ -216,10 +216,11 @@ def get_l1a_name(file_list: list, file_format: str, file_version: int,
     if file_format != 'raw':
         # inflight product name
         prod_type = '_CAL' if select == 'fullFrame' else ''
+        prod_ver = '' if file_version==1 else f'.V{file_version:02d}'
 
-        return (f'PACE_SPEXone{prod_type}'
+        return (f'PACE_SPEXONE{prod_type}'
                 f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
-                f'.V{file_version:02d}.nc')
+                f'.{prod_ver}.nc')
 
     # OCAL product name
     # determine measurement identifier
@@ -278,16 +279,18 @@ def main():
     parser.add_argument('--debug', action='store_true', help='be more verbose')
     parser.add_argument('--dump', action='store_true',
                         help=('dump CCSDS packet headers in ASCII'))
+    parser.add_argument('--file_format', type=str, default='auto',
+                        choices=('raw', 'st3', 'dsb'), help=ARG_FORMAT_HELP)
     parser.add_argument('--select', default='all',
                         choices=['binned', 'fullFrame'],
                         help='Select "binned" or "fullFrame" readouts')
-    parser.add_argument('--datapath', type=Path, default=Path('.'),
+    parser.add_argument('--outdir', type=Path, default=Path('.'),
                         help='Directory to store the Level-1A product')
+    parser.add_argument('--outfile', type=str, default='',
+                        help='Output Level-1A product filename')
     parser.add_argument('--file_version', type=int, default=1,
                         help='Provide file version number of level-1A product')
-    parser.add_argument('--file_format', type=str, default='auto',
-                        choices=('raw', 'st3', 'dsb'), help=ARG_FORMAT_HELP)
-    parser.add_argument('--pace_hkt', nargs='+', default=None,
+    parser.add_argument('--input_hkt_list', nargs='+', default=None,
                         help='names of PACE HKT products with navigation data')
     parser.add_argument('file_list', nargs='+', help=ARG_INPUT_HELP)
     args = parser.parse_args()
@@ -320,9 +323,9 @@ def main():
 
     # perform an ASCII dump of level 0 headers parameters
     if args.dump:
-        dump_lv0_data(args.file_list, args.datapath, *res)
+        dump_lv0_data(args.file_list, args.outdir, *res)
         if args.verbose:
-            print(f'Wrote ASCII dump in directory: {args.datapath}')
+            print(f'Wrote ASCII dump in directory: {args.outdir}')
         return
 
     # we will not create a Level-1A product without Science data.
@@ -335,13 +338,16 @@ def main():
     science, nomhk = select_lv0_data(args.select, res[0], res[1], args.verbose)
 
     # generate name of the level-1A product
-    prod_name = get_l1a_name(args.file_list, args.file_format,
-                             args.file_version, args.select,
-                             coverage_time(science)[0])
+    if args.outfile:
+        prod_name = args.outfile
+    else:
+        prod_name = get_l1a_name(args.file_list, args.file_format,
+                                 args.file_version, args.select,
+                                 coverage_time(science)[0])
 
     # write L1A product
     try:
-        write_lv0_data(args.datapath / prod_name, args.file_list,
+        write_lv0_data(args.outdir / prod_name, args.file_list,
                        args.file_format, science, nomhk)
     except PermissionError as exc:
         print(f'[FATAL] exception raised with "{exc}".')
@@ -355,11 +361,11 @@ def main():
         hkt_nav = read_hkt_nav(args.pace_hkt)
         # select HKT data collocated with Science data
         # - issue a warning if selection is empty
-        write_lv0_nav(args.datapath / prod_name, hkt_nav)
+        write_lv0_nav(args.outdir / prod_name, hkt_nav)
 
     # return with exit status zero
     if args.verbose:
-        print(f'[INFO]: Successfully generated: {args.datapath / prod_name}')
+        print(f'[INFO]: Successfully generated: {args.outdir / prod_name}')
     return
 
 
