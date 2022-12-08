@@ -154,14 +154,34 @@ class CKDio:
         """
         try:
             gid = self.fid['NON_LINEARITY']
+            sigmoidal = 'A' in gid
         except KeyError:
             return None
+
         res = ()
-        res += (h5_to_xr(gid['nonlin_order']),)
-        res += (h5_to_xr(gid['nonlin_knots']),)
-        res += (h5_to_xr(gid['nonlin_exptimes']),)
-        res += (h5_to_xr(gid['nonlin_signal_scale']),)
-        res += (h5_to_xr(gid['nonlin_fit']),)
+        if sigmoidal:
+            res += (h5_to_xr(gid['A']),)
+            res += (h5_to_xr(gid['B']),)
+            res += (h5_to_xr(gid['C']),)
+            if '/DEBUG/NON_LINEARITY' in self.fid:
+                gid = self.fid['/DEBUG/NON_LINEARITY']
+                res += (h5_to_xr(gid['f1']),)
+                res += (h5_to_xr(gid['f2']),)
+                res += (h5_to_xr(gid['c']),)
+                res += (h5_to_xr(gid['r0']),)
+                res += (h5_to_xr(gid['r1']),)
+                res += (h5_to_xr(gid['r2']),)
+                res += (h5_to_xr(gid['r3']),)
+                res += (h5_to_xr(gid['r4']),)
+                res += (h5_to_xr(gid['m0']),)
+                # res += (h5_to_xr(gid['m1']),)
+                # res += (h5_to_xr(gid['m2']),)
+        else:
+            res += (h5_to_xr(gid['nonlin_order']),)
+            res += (h5_to_xr(gid['nonlin_knots']),)
+            res += (h5_to_xr(gid['nonlin_exptimes']),)
+            res += (h5_to_xr(gid['nonlin_signal_scale']),)
+            res += (h5_to_xr(gid['nonlin_fit']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
     def prnu(self) -> xr.DataArray:

@@ -151,7 +151,36 @@ def add_nlin_figs(ckd, ckd_ref=None):
 
     plot, fig_info_in = init_plot_file('nlin', ckd, ckd_ref)
     plot.set_caption('SPEXone non-linearity CKD')
-    # plot commands...
+    # if 'A' in nlin_ckd:
+    #    plot.draw_signal(nlin_ckd['A'], title='parameter A',
+    #                     fig_info=fig_info_in.copy())
+    #    plot.draw_signal(nlin_ckd['B'], title='parameter B',
+    #                     fig_info=fig_info_in.copy())
+    #    plot.draw_signal(nlin_ckd['C'], title='parameter C',
+    #                     fig_info=fig_info_in.copy())
+    if 'c' in nlin_ckd:
+        plot.draw_signal(nlin_ckd['f1'], title='parameter f1',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['f2'], title='parameter f2',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['c'], title='sigmoid parameter c',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['r0'], title='sigmoid parameter r0',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['r1'], title='sigmoid parameter r1',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['r2'], title='sigmoid parameter r2',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['r3'], title='sigmoid parameter r3',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['r4'], title='sigmoid parameter r4',
+                         fig_info=fig_info_in.copy())
+        plot.draw_signal(nlin_ckd['m0'], title='sigmoid parameter m0',
+                         fig_info=fig_info_in.copy())
+        # plot.draw_signal(nlin_ckd['m1'], title='sigmoid parameter m1',
+        #                 fig_info=fig_info_in.copy())
+        # plot.draw_signal(nlin_ckd['m2'], title='sigmoid parameter m2',
+        #                 fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.nlin() if ckd_ref is not None else None
     # plot commands...
@@ -341,7 +370,7 @@ def main() -> None:
     # add CKD's to report
     add_dark_figs(ckd, ckd_ref)
     add_noise_figs(ckd, ckd_ref)
-    # add_nlin_figs(ckd, ckd_ref)
+    add_nlin_figs(ckd, ckd_ref)
     add_prnu_figs(ckd, ckd_ref)
     # add_fov_figs(ckd, ckd_ref)
     # add_swath_figs(ckd, ckd_ref)
