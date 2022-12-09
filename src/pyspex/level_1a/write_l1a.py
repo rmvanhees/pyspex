@@ -1,9 +1,29 @@
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+"""
+Write Level-0 data to new Level-1A product.
+"""
+from datetime import datetime
+from dataclasses import dataclass
+
+import xarray as xr
 
 from pyspex import version
+from pyspex.hkt_io import HKTio
+from pyspex.lv0_io import (coverage_time,
+                           select_lv0_data,
+                           write_lv0_data)
 
 
-def get_l1a_name(datatype: str, file_list: list, file_format: str, 
-                 file_version: int, sensing_start: datetime) -> str:
+def get_l1a_name(datatype: str, config: dataclass,
+                 sensing_start: datetime) -> str:
     """
     Generate name of Level-1A product based on filename conventions described
     below
@@ -11,9 +31,7 @@ def get_l1a_name(datatype: str, file_list: list, file_format: str,
     Parameters
     ----------
     datatype :  {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
-    file_list :  list of Path
-    file_format :  {'raw', 'st3', 'dsb'}
-    file_version :  int
+    config :  dataclass
     sensing_start :  datetime
 
     Returns
@@ -45,12 +63,16 @@ def get_l1a_name(datatype: str, file_list: list, file_format: str,
        yyyymmddThhmmss is the creation time (UTC) of the product
        vvvv is the version number of the product starting at 0001
     """
-    if file_format != 'raw':
+    if config.outfile:
+        return config.outfile
+
+    if config.file_format != 'raw':
         # inflight product name
         prod_type = {'DARK': '_DARK',
                      'CAL': '_CAL',
                      'SCIENCE': ''}.get(datatype.upper(), '')
-        prod_ver = '' if file_version==1 else f'.V{file_version:02d}'
+        prod_ver = '' if config.file_version == 1\
+            else f'.V{config.file_version:02d}'
 
         return (f'PACE_SPEXONE{prod_type}'
                 f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
@@ -58,7 +80,7 @@ def get_l1a_name(datatype: str, file_list: list, file_format: str,
 
     # OCAL product name
     # determine measurement identifier
-    msm_id = file_list[0].stem
+    msm_id = config.file_list[0].stem
     try:
         new_date = datetime.strptime(
             msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
@@ -69,7 +91,7 @@ def get_l1a_name(datatype: str, file_list: list, file_format: str,
 
     return (f'SPX1_OCAL_{msm_id}_L1A'
             f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{version(githash=True)}.nc')
+            f'_{version.get(githash=True)}.nc')
 
 
 def read_hkt_nav(file_list: list) -> xr.Dataset:
@@ -104,41 +126,29 @@ def write_lv0_nav(l1a_file: str, xds_nav: xr.Dataset):
 
 # --------------------------------------------------
 def write_l1a(config, science_in, nomhk_in):
-    """
+    """Write Level-1A product.
     """
     if config.eclipse is None:
         # this are "OCAL data" try to write all data to one L1A product.
-        if config.outfile:
-            prod_name = config.outfile
-        else:
-            prod_name = get_l1a_name(config.l0_list, config.l0_format,
-                                     config.file_version, 'OCAL',
-                                     coverage_time(science)[0])
-
         science, nomhk = select_lv0_data('OCAL', science_in, nomhk_in,
                                          config.verbose)
         # write L1A product
+        prod_name = get_l1a_name('OCAL', config, coverage_time(science)[0])
         write_lv0_data(config.outdir / prod_name, config.l0_list,
                        config.l0_format, science, nomhk)
         return
-        
+
     if not config.eclipse:
         # this are "Science data": binned data in "Science mode".
-        if config.outfile:
-            prod_name = config.outfile
-        else:
-            prod_name = get_l1a_name(config.l0_list, config.l0_format,
-                                     config.file_version, 'Science',
-                                     coverage_time(science)[0])
-
         science, nomhk = select_lv0_data('Science', science_in, nomhk_in,
                                          config.verbose)
         # write L1A product
+        prod_name = get_l1a_name('Science', config, coverage_time(science)[0])
         try:
             write_lv0_data(config.outdir / prod_name, config.l0_list,
                            config.l0_format, science, nomhk)
-        except:
-            pass
+        except (PermissionError, RuntimeError) as exc:
+            raise RuntimeError from exc
 
         # add PACE navigation information from HKT products
         if config.pace_hkt:
@@ -147,28 +157,22 @@ def write_l1a(config, science_in, nomhk_in):
             # - issue a warning if selection is empty
             write_lv0_nav(config.outdir / prod_name, hkt_nav)
         return
-    
+
     # this can be "Dark data": binned data using "Science mode" MPSes
     # and/or "Calibration data”: full frame data in "Diagonstic mode".
-    for dtype in ['Dark', 'CAL']:
-        if config.outfile:
-            prod_name = config.outfile
-        else:
-            prod_name = get_l1a_name(config.l0_list, config.l0_format,
-                                     config.file_version, dtype,
-                                     coverage_time(science)[0])
-
+    for dtype in ['DARK', 'CAL']:
         science, nomhk = select_lv0_data(dtype, science_in, nomhk_in,
                                          config.verbose)
         if science is None:
             continue
 
         # write L1A product
+        prod_name = get_l1a_name(dtype, config, coverage_time(science)[0])
         try:
             write_lv0_data(config.outdir / prod_name, config.l0_list,
                            config.l0_format, science, nomhk)
-        except:
-            pass
+        except (PermissionError, RuntimeError) as exc:
+            raise RuntimeError from exc
 
         # add PACE navigation information from HKT products
         if config.pace_hkt:

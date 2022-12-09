@@ -441,15 +441,15 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
             fp.write(msg + "\n")
 
 
-def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
+def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     """
     Select telemetry packages and combine Science packages to contain one
     detector readout.
 
     Parameters
     ----------
-    select : {'all', ''binned', 'fullFrame'}
-        Select Science packages: all, binned or full-frame
+    datatype : {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
+        Select Science packages
     ccsds_sci :  tuple of np.ndarray
         Science TM packages (ApID: 0x350)
     ccsds_hk :  tuple of np.ndarray
@@ -482,12 +482,16 @@ def select_lv0_data(select: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
             frame += (segment['data']['frame'][0],)
         if grouping_flag(hdr) == 2:
             buff['frame'][0] = np.concatenate(frame)
-            if select == 'all':
+
+            # OCAL is all
+            # SCIENCE or DARK: binned
+            # CAL: fullFrame
+            if datatype == 'OCAL':
                 science += (buff.copy(),)
-            elif (select == 'binned'
+            elif (datatype in ('SCIENCE', 'DARK')
                   and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
                 science += (buff.copy(),)
-            elif (select == 'fullFrame'
+            elif (datatype == 'CAL'
                   and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                 science += (buff.copy(),)
 
