@@ -10,7 +10,7 @@
 """
 Contains the class `HKTio` to read PACE HKT products.
 """
-__all__ = ['HKTio']
+__all__ = ['HKTio', 'read_hkt_nav', 'write_hkt_nav']
 
 from pathlib import Path
 
@@ -21,7 +21,53 @@ import xarray as xr
 from moniplot.image_to_xarray import h5_to_xr
 from pyspex.lib.tmtc_def import tmtc_dtype
 
-# - global parameters -------------------
+
+# - high-level r/w functions ------------
+def read_hkt_nav(hkt_list: list[Path]) -> xr.Dataset:
+    """
+    Read multiple HKT products and collect data in a Python dictionary
+
+    Parameters
+    ----------
+    hkt_list : list[Path]
+       list of PACE-HKT products collocated with SPEXone measurements
+
+    Returns
+    -------
+    xr.Dataset
+       xarray dataset with PACE navigation data
+    """
+    dim_dict = {'att_': 'att_time',
+                'orb_': 'orb_time',
+                'tilt': 'tilt_time'}
+
+    res = {}
+    for name in hkt_list:
+        hkt = HKTio(name)
+        nav = hkt.navigation()
+        if not res:
+            res = nav.copy()
+        else:
+            for key1, value in nav.items():
+                hdim = dim_dict.get(key1, None)
+                res[key1] = xr.concat((res[key1], value), dim=hdim)
+
+    return xr.merge((res['att_'], res['orb_'], res['tilt']),
+                    combine_attrs='drop_conflicts')
+
+
+def write_hkt_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
+    """
+    Add PACE navigation data to existing Level-1A product
+
+    Parameters
+    ----------
+    l1a_file :  Path
+       name of the SPEXone level-1A product
+    xds_nav :  xr.Dataset
+       xarray dataset with PACE navigation data
+    """
+    xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
 
 
 # - class HKTio -------------------------

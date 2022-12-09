@@ -11,8 +11,9 @@
 Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
 PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 """
-__all__ = ['L1Aio', 'L1Bio', 'L1Cio']
+__all__ = ['L1Aio', 'L1Bio', 'L1Cio', 'write_l1a']
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 
@@ -20,6 +21,10 @@ import numpy as np
 
 from netCDF4 import Dataset
 
+from . import version
+from .hkt_io import read_hkt_nav, write_hkt_nav
+from .lv0_io import (coverage_time, hk_sec_of_day, img_sec_of_day,
+                     nomhk_timestamps, science_timestamps, select_lv0_data)
 from .tm_science import TMscience
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
@@ -37,7 +42,7 @@ def frac_poly(xx_in, coefs=None):
     ----------
     xdata :  ndarray
     coefs :  tuple, default=None
-      coefficients of fractional polynomial: r0, r1, r2, r3, r4
+      Coefficients of fractional polynomial: r0, r1, r2, r3, r4
 
     Returns
     -------
@@ -53,6 +58,205 @@ def frac_poly(xx_in, coefs=None):
             + coefs[1] / xdata
             + coefs[2] * xdata ** 4
             + (coefs[3] + coefs[4] * np.log(xdata)) * xdata ** 5)
+
+
+def get_l1a_name(datatype: str, config: dataclass,
+                 sensing_start: datetime) -> str:
+    """
+    Generate name of Level-1A product based on filename conventions described
+    below
+
+    Parameters
+    ----------
+    datatype :  {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
+       Product datatypes as defined by NASA/GSFC & OB.DAAC.
+    config :  dataclass
+       Settings for the L0->l1A processing.
+    sensing_start :  datetime
+       Start date/time of the first detector frame
+
+    Returns
+    -------
+    str
+        Name of Level-1A product.
+
+    Notes
+    -----
+
+    === Inflight ===
+    L1A file name format, following the NASA ... naming convention:
+       PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
+    where
+       TTT is an optional data type (e.g., for the calibration data files)
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       Vnn file-version number (ommited when nn=1)
+    for example (file-version=1):
+       [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
+       [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
+       [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
+
+    === OCAL ===
+    L1A file name format:
+       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_vvvvvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       vvvvvvv is the git-hash string of the pyspex repository
+    """
+    if config.outfile:
+        return config.outfile
+
+    if config.l0_format != 'raw':
+        # inflight product name
+        prod_type = {'DARK': '_DARK',
+                     'CAL': '_CAL',
+                     'OCAL': '_OCAL',
+                     'SCIENCE': ''}.get(datatype.upper(), '')
+        prod_ver = '' if config.file_version == 1\
+            else f'.V{config.file_version:02d}'
+
+        return (f'PACE_SPEXONE{prod_type}'
+                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
+                f'.{prod_ver}.nc')
+
+    # OCAL product name
+    # determine measurement identifier
+    msm_id = config.file_list[0].stem
+    try:
+        new_date = datetime.strptime(
+            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
+    except ValueError:
+        pass
+    else:
+        msm_id = msm_id[:-22] + new_date
+
+    return (f'SPX1_OCAL_{msm_id}_L1A'
+            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
+            f'_{version.get(githash=True)}.nc')
+
+
+def write_lv0_data(prod_name: str, config: dataclass,
+                   science: np.ndarray, nomhk: np.ndarray) -> None:
+    """
+    Write level 0 packages to a level-1A product
+
+    Parameters
+    ----------
+    prod_name :  str
+       Name of the Level-1A product.
+    config :  dataclass
+       Settings for the L0->l1A processing.
+    science : np.ndarray
+       L0 detector data.
+    nomhk : np.ndarray
+       L0 nominal housekeeping data.
+    """
+    # Define data dimensions
+    dims = {'number_of_images': science.size,
+            'samples_per_image': science['hk']['IMRLEN'].max() // 2,
+            'hk_packets': nomhk.size,
+            'SC_records': None}
+
+    # Preprocess the timestamps to be stored in the L1A product
+    # [Science TM]
+    #  - the ICU time stamps are not altered!
+    #  - the variable 'image_time' holds sec_of_day and needs a reference day
+    #    in addition, the data is corrected for the start of integration time.
+    # [nomHK TM]
+    #  - the CCSDS time stamps are not altered!
+    #  - the variable 'nomhk_time' holds sec_of_day and needs a reference day
+    # Only the DSB files use EPOCH 1958 (TAI) all other use EPOCH 1970 (UTC)
+    img_sec, img_subsec = science_timestamps(science)
+    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
+
+    # Generate and fill L1A product
+    with L1Aio(config.outdir / prod_name, dims=dims,
+               ref_date=ref_date.date()) as l1a:
+        # write image data, detector telemetry and image attributes
+        img_data = np.empty((science.size, dims['samples_per_image']),
+                            dtype='u2')
+        for ii, data in enumerate(science['frame']):
+            img_data[ii, :data.size] = data
+        l1a.fill_science(img_data, science['hk'],
+                         np.bitwise_and(science['hdr']['sequence'], 0x3fff))
+        del img_data
+        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        # modify attribute units for non-DSB products
+        if config.l0_format != 'dsb':
+            l1a.set_attr('valid_min', np.uint32(1577800000),
+                         ds_name='/image_attributes/icu_time_sec')
+            l1a.set_attr('valid_max', np.uint32(1735700000),
+                         ds_name='/image_attributes/icu_time_sec')
+            l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+                         ds_name='/image_attributes/icu_time_sec')
+        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
+        l1a.set_dset('/image_attributes/image_time', img_time)
+
+        # write engineering data
+        if nomhk.size > 0:
+            l1a.fill_nomhk(nomhk['hk'])
+            nomhk_sec, nomhk_subsec = nomhk_timestamps(nomhk)
+            hk_time = hk_sec_of_day(nomhk_sec, nomhk_subsec, ref_date)
+            l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
+
+        # write global attributes
+        if nomhk.size > 0:
+            l1a.set_attr('icu_sw_version', f'0x{nomhk["hk"]["ICUSWVER"][0]:x}')
+        if config.l0_format == 'raw':
+            l1a.fill_global_attrs(inflight=False)
+        else:
+            l1a.fill_global_attrs(inflight=True)
+        l1a.set_attr('input_files', [x.name for x in config.l0_list])
+
+
+# - high-level write function -----------
+def write_l1a(config, science_in, nomhk_in) -> None:
+    """Write Level-1A product.
+
+    Parameters
+    ----------
+    config :  dataclass
+       Settings for the L0->l1A processing.
+    science : np.ndarray
+       L0 detector data.
+    nomhk : np.ndarray
+       L0 nominal housekeeping data.
+    """
+    if config.eclipse is None:
+        # this are "OCAL data" try to write all data to one L1A product.
+        dtype_list = ['OCAL']
+    elif not config.eclipse:
+        # this are "Science data": binned data in "Science mode".
+        dtype_list = ['SCIENCE']
+    else:
+        # this can be "Dark data": binned data using "Science mode" MPSes
+        # and/or "Calibration data”: full frame data in "Diagonstic mode".
+        dtype_list = ['DARK', 'CAL']
+
+    for dtype in dtype_list:
+        # selected L0 data-packages
+        # and group Science packages to detector-frames
+        science, nomhk = select_lv0_data(dtype, science_in, nomhk_in,
+                                         config.verbose)
+        if science.size == 0:
+            continue
+
+        # write L1A product
+        prod_name = get_l1a_name(dtype, config, coverage_time(science)[0])
+        try:
+            write_lv0_data(prod_name, config, science, nomhk)
+        except (PermissionError, RuntimeError) as exc:
+            raise RuntimeError from exc
+
+        # add PACE navigation information from HKT products
+        if config.pace_hkt:
+            hkt_nav = read_hkt_nav(config.pace_hkt)
+            # select HKT data collocated with Science data
+            # - issue a warning if selection is empty
+            write_hkt_nav(config.outdir / prod_name, hkt_nav)
+
+    if config.verbose:
+        print(f'[INFO]: Successfully generated: {config.outdir / prod_name}')
 
 
 # - class LV1io -------------------------

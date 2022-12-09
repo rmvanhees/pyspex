@@ -23,7 +23,7 @@ __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
            'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data', 'read_lv0_data',
-           'select_lv0_data', 'write_lv0_data']
+           'select_lv0_data']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -32,7 +32,6 @@ import numpy as np
 
 from .lib.leap_sec import get_leap_seconds
 from .lib.tmtc_def import tmtc_dtype
-from .lv1_io import L1Aio
 from .tm_science import TMscience
 
 # - global parameters ------------------------------
@@ -441,75 +440,6 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
             fp.write(msg + "\n")
 
 
-def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
-    """
-    Select telemetry packages and combine Science packages to contain one
-    detector readout.
-
-    Parameters
-    ----------
-    datatype : {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
-        Select Science packages
-    ccsds_sci :  tuple of np.ndarray
-        Science TM packages (ApID: 0x350)
-    ccsds_hk :  tuple of np.ndarray
-        All other Telementry packages
-    verbose : bool, default=False
-        be verbose (or not)
-
-    Returns
-    -------
-    tuple of np.ndarray
-         Contains all Science and NomHK packages as numpy arrays
-    """
-    ii = 0
-    for segment in ccsds_sci:
-        if grouping_flag(segment['hdr']) == 1:
-            break
-        ii += 1
-
-    if ii > 0:
-        print(f'[WARNING]: found first valid segment at {ii}')
-
-    frame = ()
-    science = ()
-    for segment in ccsds_sci[ii:]:
-        hdr = segment['hdr']
-        if grouping_flag(hdr) == 1:
-            buff = segment['data']
-            frame = (buff['frame'][0],)
-        else:
-            frame += (segment['data']['frame'][0],)
-        if grouping_flag(hdr) == 2:
-            buff['frame'][0] = np.concatenate(frame)
-
-            # OCAL is all
-            # SCIENCE or DARK: binned
-            # CAL: fullFrame
-            if datatype == 'OCAL':
-                science += (buff.copy(),)
-            elif (datatype in ('SCIENCE', 'DARK')
-                  and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
-                science += (buff.copy(),)
-            elif (datatype == 'CAL'
-                  and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
-                science += (buff.copy(),)
-
-    science = np.concatenate(science)
-    mps_list = np.unique(science['hk']['MPS_ID']).tolist()
-    if verbose:
-        print(f'[INFO]: list of unique MPS {mps_list}')
-
-    if ccsds_hk:
-        nomhk = np.concatenate(
-            [(x['data'],) for x in ccsds_hk if ap_id(x['hdr']) == 0x320
-             and x['data']['hk']['MPS_ID'] in mps_list])
-    else:
-        nomhk = np.array(())
-
-    return science, nomhk
-
-
 def fix_sub_sec(tai_sec, sub_sec) -> tuple:
     """
     In ICU S/W version 0x123 a bug was introduced which corrupted the
@@ -671,81 +601,70 @@ def coverage_time(science) -> tuple:
             ref_date + timedelta(seconds=img_time[-1]))
 
 
-def write_lv0_data(prod_name: Path, file_list: list, file_format: str,
-                   science: np.ndarray, nomhk: np.ndarray) -> None:
+def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     """
-    Write level 0 packages to a level-1A product
+    Select telemetry packages and combine Science packages to contain one
+    detector readout.
 
     Parameters
     ----------
-    prod_name :  Path
-       name of the Level-1A product
-    file_list :  list of Paths
-       list of input CCSDS files
-    file_format :  {'raw', 'st3', 'dsb'}
-       type of input files
-    science : np.ndarray
-       Science data
-    nomhk : np.ndarray
-       nominal housekeeping data
+    datatype : {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
+        Select Science packages
+    ccsds_sci :  tuple of np.ndarray
+        Science TM packages (ApID: 0x350)
+    ccsds_hk :  tuple of np.ndarray
+        All other Telementry packages
+    verbose : bool, default=False
+        be verbose (or not)
+
+    Returns
+    -------
+    tuple of np.ndarray
+         Contains all Science and NomHK packages as numpy arrays
     """
-    # Define data dimensions
-    dims = {'number_of_images': science.size,
-            'samples_per_image': science['hk']['IMRLEN'].max() // 2,
-            'hk_packets': nomhk.size,
-            'SC_records': None}
+    ii = 0
+    for segment in ccsds_sci:
+        if grouping_flag(segment['hdr']) == 1:
+            break
+        ii += 1
 
-    # Preprocess the timestamps to be stored in the L1A product
-    # [Science TM]
-    #  - the ICU time stamps are not altered!
-    #  - the variable 'image_time' holds sec_of_day and needs a reference day
-    #    in addition, the data is corrected for the start of integration time.
-    # [nomHK TM]
-    #  - the CCSDS time stamps are not altered!
-    #  - the variable 'nomhk_time' holds sec_of_day and needs a reference day
-    # Only the DSB files use EPOCH 1958 (TAI) all other use EPOCH 1970 (UTC)
-    img_sec, img_subsec = science_timestamps(science)
-    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
+    if ii > 0:
+        print(f'[WARNING]: found first valid segment at {ii}')
 
-    # Generate and fill L1A product
-    with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
-        # write image data, detector telemetry and image attributes
-        img_data = np.empty((science.size, dims['samples_per_image']),
-                            dtype='u2')
-        for ii, data in enumerate(science['frame']):
-            img_data[ii, :data.size] = data
-        l1a.fill_science(img_data, science['hk'],
-                         np.bitwise_and(science['hdr']['sequence'], 0x3fff))
-        del img_data
-        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
-        # modify attribute units for non-DSB products
-        if file_format != 'dsb':
-            l1a.set_attr('valid_min', np.uint32(1577800000),
-                         ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('valid_max', np.uint32(1735700000),
-                         ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
-                         ds_name='/image_attributes/icu_time_sec')
-        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
-        l1a.set_dset('/image_attributes/image_time', img_time)
-
-        # write engineering data
-        if nomhk.size > 0:
-            l1a.fill_nomhk(nomhk['hk'])
-            nomhk_sec, nomhk_subsec = nomhk_timestamps(nomhk)
-            hk_time = hk_sec_of_day(nomhk_sec, nomhk_subsec, ref_date)
-            l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
-
-        # if demhk.size > 0:
-        #    l1a.fill_demhk(demhk['hk'])
-
-        # write navigation data
-
-        # write global attributes
-        if nomhk.size > 0:
-            l1a.set_attr('icu_sw_version', f'0x{nomhk["hk"]["ICUSWVER"][0]:x}')
-        if file_format == 'raw':
-            l1a.fill_global_attrs(inflight=False)
+    frame = ()
+    science = ()
+    for segment in ccsds_sci[ii:]:
+        hdr = segment['hdr']
+        if grouping_flag(hdr) == 1:
+            buff = segment['data']
+            frame = (buff['frame'][0],)
         else:
-            l1a.fill_global_attrs(inflight=True)
-        l1a.set_attr('input_files', [x.name for x in file_list])
+            frame += (segment['data']['frame'][0],)
+        if grouping_flag(hdr) == 2:
+            buff['frame'][0] = np.concatenate(frame)
+
+            # OCAL is all
+            # SCIENCE or DARK: binned
+            # CAL: fullFrame
+            if datatype == 'OCAL':
+                science += (buff.copy(),)
+            elif (datatype in ('SCIENCE', 'DARK')
+                  and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
+                science += (buff.copy(),)
+            elif (datatype == 'CAL'
+                  and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
+                science += (buff.copy(),)
+
+    science = np.concatenate(science)
+    mps_list = np.unique(science['hk']['MPS_ID']).tolist()
+    if verbose:
+        print(f'[INFO]: list of unique MPS {mps_list}')
+
+    if ccsds_hk:
+        nomhk = np.concatenate(
+            [(x['data'],) for x in ccsds_hk if ap_id(x['hdr']) == 0x320
+             and x['data']['hk']['MPS_ID'] in mps_list])
+    else:
+        nomhk = np.array(())
+
+    return science, nomhk

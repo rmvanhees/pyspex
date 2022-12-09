@@ -11,29 +11,16 @@
 """
 Python script to store SPEXone Level-0 data in a Level-1A product.
 """
-import argparse
-from datetime import datetime
-from pathlib import Path
 import sys
-import yaml
 
-import xarray as xr
+from pyspex.lv0_io import dump_lv0_data, read_lv0_data
+from pyspex.lv1_io import write_l1a
 
-from pyspex.hkt_io import HKTio
-from pyspex.lv0_io import (coverage_time,
-                           dump_lv0_data,
-                           read_lv0_data,
-                           select_lv0_data,
-                           write_lv0_data)
-
-from pyspex.level_1a.options import get_settings
+from pyspex.lv1_args import get_l1a_settings
 
 # - global parameters ------------------------------
 
-
 # - local functions --------------------------------
-
-
 
 
 # - main function ----------------------------------
@@ -69,7 +56,7 @@ def main():
     """
     # parse command-line parameters and YAML file for settings
     try:
-        config = get_settings()
+        config = get_l1a_settings()
     except FileNotFoundError as exc:
         print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
         sys.exit(100)
@@ -104,49 +91,10 @@ def main():
         print('[WARNING]: no science data found in L0 data, exit')
         sys.exit(110)
 
-    # select Science and NomHK packages from level 0 data
-    if config.eclipse is None:
-        # this are "OCAL data" try to write all data to one L1A product.
-        pass
-    elif not config.eclipse:
-        # this are "Science data": binned data in "Science mode".
-        pass
-    else:
-        # this can be "Dark data": binned data using "Science mode" MPSes
-        # and/or "Calibration data”: full frame data in "Diagonstic mode".
-    science, nomhk = select_lv0_data(args.select, res[0], res[1],
-                                     config.verbose)
-
-    # generate name of the level-1A product
-    if config.outfile:
-        prod_name = config.outfile
-    else:
-        prod_name = get_l1a_name(config.l0_list, config.l0_format,
-                                 config.file_version, args.select,
-                                 coverage_time(science)[0])
-
-    # write L1A product
-    try:
-        write_lv0_data(config.outdir / prod_name, config.l0_list,
-                       config.l0_format, science, nomhk)
-    except PermissionError as exc:
-        print(f'[FATAL] exception raised with "{exc}".')
-        sys.exit(130)
-    except RuntimeError as exc:
-        print(f'[FATAL] exception raised with "{exc}".')
-        sys.exit(131)
-
-    # read PACE navigation information from HKT products
-    if config.pace_hkt:
-        hkt_nav = read_hkt_nav(config.pace_hkt)
-        # select HKT data collocated with Science data
-        # - issue a warning if selection is empty
-        write_lv0_nav(config.outdir / prod_name, hkt_nav)
-
-    # return with exit status zero
-    if config.verbose:
-        print(f'[INFO]: Successfully generated: {config.outdir / prod_name}')
-    return
+    # Write Level-1A product.
+    # ToDo add try/except
+    write_l1a(config, res[0], res[1])
+    sys.exit(0)
 
 
 # --------------------------------------------------

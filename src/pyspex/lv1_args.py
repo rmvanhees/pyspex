@@ -11,6 +11,8 @@
 Handle command-line parameters and settings from the YAML file
 for L1A generation.
 """
+__all__ = ['get_l1a_settings']
+
 import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -88,8 +90,10 @@ EPILOG_HELP = """Usage:
 
 
 # - local functions --------------------------------
+# pylint: disable=too-many-instance-attributes
 @dataclass(slots=True)
 class Config:
+    """Initiate class to hold settings for L0->L1a processing."""
     debug: bool = False
     dump: bool = False
     verbose: bool = False
@@ -103,7 +107,7 @@ class Config:
     l0_list: list[Path] = field(default_factory=list)
 
 
-def get_commandline_settings():
+def __commandline_settings():
     """Parse command-line parameters."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
@@ -138,7 +142,7 @@ def get_commandline_settings():
     return config
 
 
-def get_yaml_settings(config):
+def __yaml_settings(config):
     """Read YAML configuration file."""
     with open(config.yaml_fl, encoding='ascii') as fid:
         config_yaml = yaml.safe_load(fid)
@@ -217,7 +221,7 @@ def check_input_files(config):
 
         if flname.suffix == '.H':
             continue
-        
+
         res = {'.spx': 'dsb',
                '.ST3': 'st3'}.get(flname.suffix, flname.suffix)
         new_file_format = 'raw' if res[1:].isdigit() else res
@@ -230,18 +234,24 @@ def check_input_files(config):
 
     config.l0_format = file_format
     config.l0_list = file_list
-            
+
     return config
 
 
-def get_settings():
+# - main function ----------------------------------
+def get_l1a_settings() -> dataclass:
     """Obtain settings from both command-line and YAML file (when provided).
+
+    Returns
+    -------
+    dataclass
+       settings from both command-line arguments and YAML config-file
     """
-    config = get_commandline_settings()
+    config = __commandline_settings()
     if config.yaml_fl is not None:
         if not config.yaml_fl.is_file():
             raise FileNotFoundError('settings file not found')
 
-        config = get_yaml_settings(config)
+        config = __yaml_settings(config)
 
     return check_input_files(config)
