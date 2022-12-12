@@ -19,11 +19,14 @@ from pathlib import Path
 import yaml
 
 # - global parameters ------------------------------
-ARG_FORMAT_HELP = """Provide data format of the input file(s):
-- raw: CCSDS packages (a.o. ambient calibration);
-- st3: CCSDS packages with ITOS and spacewire headers;
-- dsb: files recorded on the observatory data storage board;
-- default: determine file format from input files.
+ARG_INPUT_HELP = """Provide one or more input files:
+- raw: `OCAL ambient measurement` -- provide name of one file with extension
+       '.H'. The files with science and house-keeping data are collected using
+       Unix filename pattern matching.
+- st3: CCSDS packages with ITOS and spacewire headers -- provide name of
+       one file with extension '.ST3'.
+- dsb: CCSDS packages with PACE headers -- provide list of filenames with
+       extension '.spx'.
 """
 
 ARG_YAML_HELP = """Provide settings file in YAML format as:
@@ -41,14 +44,6 @@ ARG_YAML_HELP = """Provide settings file in YAML format as:
  # must be a list, directory or glob. Fails when empty
  l0_list: L0/SPX0000000??.spx
 
-"""
-
-ARG_INPUT_HELP = """Provide one or more input files:
-- raw: if you provide only the file with extension '.H' then all files of the
-       same measurement with science and house-keeping data are collected,
-       else you have to provide these files yourself;
-- st3: in general all measurement data are collected in one file;
-- dsb: please provide all files with the data of one measurement.
 """
 
 EPILOG_HELP = """Usage:
@@ -120,7 +115,7 @@ def __commandline_settings():
     parser.add_argument('--outdir', type=Path, default=None,
                         help=('Directory to store the generated'
                               ' level-1A product(s)'))
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
     group.add_argument('--spex_lv0', nargs='+', help=ARG_INPUT_HELP)
     args = parser.parse_args()
@@ -198,41 +193,39 @@ def check_input_files(config):
        If determined file type differs from value supplied by user.
     """
     file_list = config.l0_list
-    if len(file_list) == 1 and Path(file_list[0]).suffix == '.H':
-        data_dir = Path(file_list[0]).parent
-        file_stem = Path(file_list[0]).stem
+    if file_list[0].suffix == '.H':
+        if not file_list[0].is_file():
+            raise FileNotFoundError(file_list[0])
+        data_dir = file_list[0].parent
+        file_stem = file_list[0].stem
         file_list = (sorted(data_dir.glob(file_stem + '.[0-9]'))
                      + sorted(data_dir.glob(file_stem + '.?[0-9]'))
                      + sorted(data_dir.glob(file_stem + '_hk.[0-9]')))
         if not file_list:
-            raise FileNotFoundError(file_stem)
+            raise FileNotFoundError('No measurement or housekeeping data found')
 
         config.l0_format = 'raw'
-        config.l0_list = file_list
+        config.l0_list = [file_list[0]]
+    elif file_list[0].suffix == '.ST3':
+        if not file_list[0].is_file():
+            raise FileNotFoundError(file_list[0])
+        config.l0_format = 'st3'
+        config.l0_list = [file_list[0]]
+    elif file_list[0].suffix == '.spx':
+        file_list_out = []
+        for flname in file_list:
+            if not flname.is_file():
+                raise FileNotFoundError(flname)
 
-        return config
+            if flname.suffix == '.spx':
+                file_list_out.append(flname)
 
-    file_format = 'auto'
-    file_list_out = []
-    for flname in file_list:
-        if not flname.is_file():
-            raise FileNotFoundError(flname)
-
-        if flname.suffix == '.H':
-            continue
-
-        res = {'.spx': 'dsb',
-               '.ST3': 'st3'}.get(flname.suffix, flname.suffix)
-        new_file_format = 'raw' if res[1:].isdigit() else res
-        if file_format == 'auto':
-            file_format = new_file_format
-        else:
-            if file_format != new_file_format:
-                raise TypeError('inconsistent file extension')
-        file_list_out.append(flname)
-
-    config.l0_format = file_format
-    config.l0_list = file_list
+        if not file_list:
+            raise FileNotFoundError('No measurement or housekeeping data found')
+        config.l0_format = 'dsb'
+        config.l0_list = file_list_out
+    else:
+        raise TypeError('File not recognized as SPEXone level-0 data')
 
     return config
 
