@@ -215,7 +215,6 @@ def check_input_files(config):
     file_format = 'auto'
     file_list_out = []
     for flname in file_list:
-        print(flname)
         if not flname.is_file():
             raise FileNotFoundError(flname)
 

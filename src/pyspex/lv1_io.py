@@ -97,7 +97,7 @@ def get_l1a_name(datatype: str, config: dataclass,
 
     === OCAL ===
     L1A file name format:
-       SPX1_OCAL_<msm_id>_L1A_YYYYMMDDTHHMMSS_vvvvvvv.nc
+       SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
     where
        msm_id is the measurement identifier
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
@@ -117,11 +117,11 @@ def get_l1a_name(datatype: str, config: dataclass,
 
         return (f'PACE_SPEXONE{prod_type}'
                 f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
-                f'.{prod_ver}.nc')
+                f'{prod_ver}.nc')
 
     # OCAL product name
     # determine measurement identifier
-    msm_id = config.file_list[0].stem
+    msm_id = config.l0_list[0].stem
     try:
         new_date = datetime.strptime(
             msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
@@ -130,9 +130,7 @@ def get_l1a_name(datatype: str, config: dataclass,
     else:
         msm_id = msm_id[:-22] + new_date
 
-    return (f'SPX1_OCAL_{msm_id}_L1A'
-            f'_{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}'
-            f'_{version.get(githash=True)}.nc')
+    return (f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc')
 
 
 def write_lv0_data(prod_name: str, config: dataclass,
@@ -249,8 +247,8 @@ def write_l1a(config, science_in, nomhk_in) -> None:
             raise RuntimeError from exc
 
         # add PACE navigation information from HKT products
-        if config.pace_hkt:
-            hkt_nav = read_hkt_nav(config.pace_hkt)
+        if config.hkt_list:
+            hkt_nav = read_hkt_nav(config.hkt_list)
             # select HKT data collocated with Science data
             # - issue a warning if selection is empty
             write_hkt_nav(config.outdir / prod_name, hkt_nav)
