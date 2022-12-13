@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2022 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+"""Command-line implementation of spx1_level01a."""
 # import sys
 
 from ..lv0_io import dump_lv0_data, read_lv0_data
@@ -59,15 +70,17 @@ def main() -> int:
     # Write Level-1A product.
     # ToDo add try/except
     try:
+        if not config.outdir.is_dir():
+            config.outdir.mkdir(mode=0o755, parents=True)
         write_l1a(config, res[0], res[1])
-    except PermissionError as exc:
-        print(f'[FATAL]: "{exc}"')
-        # sys.exit(130)
-        return 130
     except (KeyError, RuntimeError) as exc:
-        print(f'[FATAL]: "{exc}"')
+        print(f'[FATAL]: RuntimeError with "{exc}"')
         # sys.exit(131)
         return 131
+    except Exception as exc:
+        print(f'[FATAL]: PermissionError with "{exc}"')
+        # sys.exit(130)
+        return 130
 
     # sys.exit(0)
     return 0

@@ -291,22 +291,21 @@ class Lv1io:
         self.__epoch = ref_date
 
         # initialize Level-1 product
-        if not append:
-            if self.processing_level == 'L1A':
-                self.fid = init_l1a(product, ref_date, dims)
-            elif self.processing_level == 'L1B':
-                self.fid = init_l1b(product, ref_date, dims)
-            elif self.processing_level == 'L1C':
-                self.fid = init_l1c(product, ref_date, dims)
-            else:
-                raise KeyError('valid processing levels are: L1A, L1B or L1C')
-        else:
+        if append:
             # open Level-1 product in append mode
             self.fid = Dataset(self.product, "r+")
 
             # store current length of the first dimension
             for key in self.dset_stored:
                 self.dset_stored[key] = self.fid[key].shape[0]
+        elif self.processing_level == 'L1A':
+            self.fid = init_l1a(product, ref_date, dims)
+        elif self.processing_level == 'L1B':
+            self.fid = init_l1b(product, ref_date, dims)
+        elif self.processing_level == 'L1C':
+            self.fid = init_l1c(product, ref_date, dims)
+        else:
+            raise KeyError('valid processing levels are: L1A, L1B or L1C')
 
     def __repr__(self) -> str:
         class_name = type(self).__name__

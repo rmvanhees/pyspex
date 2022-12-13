@@ -98,19 +98,15 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
         raise TypeError("dims should be a dictionary")
 
     # initialize dimensions
-    number_img = None
-    img_samples = None
-    hk_packets = None
-
-    if 'number_of_images' in dims:
-        number_img = dims['number_of_images']
-    if 'samples_per_image' in dims:
-        img_samples = dims['samples_per_image']
-    if 'hk_packets' in dims:
-        hk_packets = dims['hk_packets']
+    number_img = dims.get('number_of_images', None)
+    img_samples = dims.get('samples_per_image',None)
+    hk_packets = dims.get('hk_packets',None)
 
     # create/overwrite netCDF4 product
-    rootgrp = Dataset(l1a_flname, 'w')
+    try:
+        rootgrp = Dataset(l1a_flname, 'w')
+    except Exception as exc:
+        raise Exception(f'Failed to create netCDF4 file {l1a_flname}') from exc
 
     # - define global dimensions
     _ = rootgrp.createDimension('number_of_images', number_img)
