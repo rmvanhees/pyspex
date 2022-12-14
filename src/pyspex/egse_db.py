@@ -178,12 +178,11 @@ def read_egse(egse_file: str, verbose=False) -> tuple:
             # define dtype of the data
             formats = ('f8',) + 14 * ('f4',) + ('u1',) + 2 * ('i4',)\
                 + ('f4', 'u1',) + 2 * ('u1',) + 3 * ('f4', 'u1',) + 7 * ('u1',)
-            usecols = None
         else:
             # define dtype of the data
             formats = ('f8',) + 14 * ('f4',) + ('u1',) + 2 * ('i4',)\
                 + ('f4', 'u1',) + 2 * ('u1',) + 5 * ('f4', 'u1',) + 7 * ('u1',)
-            usecols = None
+        usecols = list(range(len(names)))
 
         if 'NOMHK_packets_time' in names:
             formats = ('f8',) + formats

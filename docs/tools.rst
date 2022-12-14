@@ -9,13 +9,11 @@ Write raw data (Level-0) from the SPEXone instrument to a Level-1A product.
 
 Usage::
 
-  spx1_level01a.py [-h] [--verbose] [--debug] [--dump] 
-		   [--datapath DATAPATH]
-                   [--file_version FILE_VERSION]
-		   [--file_format {raw,st3,dsb}]
-                   [--select {binned,fullFrame}]
-                   [--pace_hkt PACE_HKT [PACE_HKT ...]]
-		   SPX1_LV0 [SPX1_LV0 ...]
+  spx1_level01a  [-h] [--debug] [--dump] [--verbose]
+		 [--outdir OUTDIR]
+		 [[--spex_lv0 SPEX_LV0 [SPEX_LV0 ...]]
+		  [--yaml_fl YAML_FL]]
+
 
 Positional arguments::
   
@@ -30,24 +28,40 @@ Positional arguments::
 Options::
 
   -h, --help            show this help message and exit
-  --verbose             be verbose
-  --debug               be more verbose
+  --debug               be more verbose and do not write any output products
   --dump                dump CCSDS packet headers in ASCII
-  --select {binned,fullFrame}
-                        Select "binned" or "fullFrame" detector-readouts
-  --datapath DATAPATH   Directory to store the Level-1A product
-  --file_version FILE_VERSION
-                        Provide file version number of level-1A product
-  --file_format {raw,st3,dsb}
-                        Provide data format of the input file(s):
-                        - raw: CCSDS packages (a.o. ambient calibration);
-                        - st3: CCSDS packages with ITOS and spacewire headers;
-                        - dsb: files recorded on the observatory data storage
-			       board;
-                        - default: determine file format from input files.
-  --pace_hkt PACE_HKT [PACE_HKT ...]
-                        names of PACE HKT products with navigation data
+  --verbose             be verbose
+  --outdir OUTDIR       Directory to store the Level-1A product
+  --spex_lv0 SPEX_LV0 [SPEX_LV0 ...]
+  --yaml_fl YAML_FL
 
+
+Return values::
+
+  2      Failed to parse command-line parameters.
+  100    Input file not found error.
+  101    Input file not recognized as a SPEXone level-0 product.
+  110    Corrupted SPEXone level-0 data.
+  130    Output file permission error.
+  131    Output file write error from netCDF/HDF5 library.
+
+Content of YAML file::
+
+  # define output directory, CWD when empty
+  outdir: CWD
+  # define name of output file, will be generated automatically when empty
+  outfile: ''
+  # define file-version as nn, neglected when outfile not empty
+  file_version: 1
+  # flag to indicate measurements taken in eclipse or day-side
+  eclipse: True
+  # provide list, directory, file-glob or empty
+  hkt_list: ''
+  # must be a list, directory or glob. Fails when empty
+  l0_list: L0/SPX0000000??.spx
+
+Examples::
+  
   
 Script: spx1_add_egse2l1a.py
 ----------------------------

@@ -205,7 +205,7 @@ def check_input_files(config):
             raise FileNotFoundError('No measurement or housekeeping data found')
 
         config.l0_format = 'raw'
-        config.l0_list = [file_list[0]]
+        config.l0_list = file_list
     elif file_list[0].suffix == '.ST3':
         if not file_list[0].is_file():
             raise FileNotFoundError(file_list[0])

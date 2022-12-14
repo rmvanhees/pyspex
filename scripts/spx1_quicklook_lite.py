@@ -91,7 +91,7 @@ def main():
         # open plot object
         plot = MONplot((data_dir / flname.name).with_suffix('.pdf'))
         plot.set_institute('SRON')
-        plot.set_cmap(tol_cmap('rainbow_WhBr_condense'))
+        plot.set_cmap(tol_cmap('rainbow_WhBr'))
 
         # which images are requested?
         n_img = images.shape[0]
@@ -137,6 +137,7 @@ def main():
             else:
                 suptitle = f'frame: {ii}'
             plot.draw_signal(img2d, fig_info=figinfo, title=suptitle)
+
         # close plot object
         plot.close()
 

@@ -42,8 +42,8 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
     >>> ref_date = datetime.date(2022, 03, 21)
     >>> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
     >>>                            fill_value=-32767)
-    >>> dset.long_name = "Image time"
-    >>> dset.description = "Integration start time in seconds of day"
+    >>> dset.long_name = "image time"
+    >>> dset.description = "Integration start time in seconds of day."
     >>> attrs_sec_per_day(dset, ref_date)
 
     In CDL the variable `time` will be defined as::
@@ -117,32 +117,32 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     sgrp = rootgrp.createGroup('/image_attributes')
     dset = sgrp.createVariable('icu_time_sec', 'u4', ('number_of_images',))
     dset.long_name = "ICU time stamp (seconds)"
-    dset.description = "Science TM parameter ICU_TIME_SEC"
+    dset.description = "Science TM parameter ICU_TIME_SEC."
     dset.valid_min = np.uint32(1956528000)  # year 2020
     dset.valid_max = np.uint32(2493072000)  # year 2037
     dset.units = "seconds since 1958-01-01 00:00:00 TAI"
     dset = sgrp.createVariable('icu_time_subsec', 'u2', ('number_of_images',))
     dset.long_name = "ICU time stamp (sub-seconds)"
-    dset.description = "Science TM parameter ICU_TIME_SUBSEC"
+    dset.description = "Science TM parameter ICU_TIME_SUBSEC."
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "1/65536 s"
 
     dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                fill_value=-32767)
-    dset.long_name = "Image time"
-    dset.description = "Integration start time in seconds of day"
+    dset.long_name = "image time"
+    dset.description = "Integration start time in seconds of day."
     attrs_sec_per_day(dset, ref_date)
     dset = sgrp.createVariable('image_ID', 'i4', ('number_of_images',))
-    dset.long_name = "Image counter from power-up"
+    dset.long_name = "image counter from power-up"
     dset.valid_min = np.int32(0)
     dset.valid_max = np.int32(0x7FFFFFFF)
     dset = sgrp.createVariable('binning_table', 'u1', ('number_of_images',))
-    dset.long_name = "Binning-table ID"
+    dset.long_name = "binning-table ID"
     dset.valid_min = np.uint8(0)
     dset.valid_max = np.uint8(0xFF)
     dset = sgrp.createVariable('digital_offset', 'i2', ('number_of_images',))
-    dset.long_name = "Digital offset"
+    dset.long_name = "digital offset"
     dset.units = "1"
     dset = sgrp.createVariable('nr_coadditions', 'u2', ('number_of_images',),
                                fill_value=0)
@@ -160,7 +160,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset = sgrp.createVariable('detector_images', 'u2',
                                ('number_of_images', 'samples_per_image'),
                                chunksizes=chunksizes, fill_value=0xFFFF)
-    dset.long_name = "Detector pixel values"
+    dset.long_name = "detector pixel values"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFE)
     dset.units = "counts"
@@ -168,41 +168,41 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     dset = sgrp.createVariable('detector_telemetry', hk_dtype,
                                dimensions=('number_of_images',))
     dset.long_name = "SPEX science telemetry"
-    dset.comment = "a subset of MPS and housekeeping parameters"
+    dset.comment = "A subset of MPS and housekeeping parameters."
 
     # - define group /engineering_data and its datasets
     sgrp = rootgrp.createGroup('/engineering_data')
     dset = sgrp.createVariable('HK_tlm_time', 'f8', ('hk_packets',),
                                fill_value=-32767)
     dset.long_name = "HK telemetry packet time"
-    dset.description = "packaging time in seconds of day"
+    dset.description = "Packaging time in seconds of day."
     attrs_sec_per_day(dset, ref_date)
     hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x320), 'nomhk_dtype')
     dset = sgrp.createVariable('NomHK_telemetry', hk_dtype, ('hk_packets',))
     dset.long_name = "SPEX nominal-HK telemetry"
-    dset.comment = "an extended subset of the housekeeping parameters"
+    dset.comment = "An extended subset of the housekeeping parameters."
     dset = sgrp.createVariable('temp_detector', 'f4', ('hk_packets',))
-    dset.long_name = "Detector temperature"
-    dset.comment = "TS1 DEM Temperature (nominal)"
+    dset.long_name = "detector temperature"
+    dset.comment = "TS1 DEM Temperature (nominal)."
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
     dset = sgrp.createVariable('temp_housing', 'f4', ('hk_packets',))
-    dset.long_name = "Housing temperature"
-    dset.comment = "TS2 Housing Temperature (nominal)"
+    dset.long_name = "housing temperature"
+    dset.comment = "TS2 Housing Temperature (nominal)."
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
     dset = sgrp.createVariable('temp_radiator', 'f4', ('hk_packets',))
-    dset.long_name = "Radiator temperature"
-    dset.comment = "TS3 Radiator Temperature (nominal)"
+    dset.long_name = "radiator temperature"
+    dset.comment = "TS3 Radiator Temperature (nominal)."
     dset.valid_min = 260
     dset.valid_max = 300
     dset.units = "K"
     # hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x322)), 'demhk_dtype')
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
-    # dset.comment = "DEM housekeeping parameters"
+    # dset.comment = "DEM housekeeping parameters."
 
     # - define group /navigation_data, but leaf it's content empty
     # The actual navigation data will be copied from the HKT products.
