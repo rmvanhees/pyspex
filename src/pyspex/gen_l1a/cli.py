@@ -9,7 +9,6 @@
 #
 # License:  BSD-3-Clause
 """Command-line implementation of spx1_level01a."""
-# import sys
 
 from ..lv0_io import dump_lv0_data, read_lv0_data
 from ..lv1_io import write_l1a
@@ -25,11 +24,9 @@ def main() -> int:
         config = get_l1a_settings()
     except FileNotFoundError as exc:
         print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-        # sys.exit(100)
         return 100
     except TypeError as exc:
         print(f'[FATAL]: TypeError exception raised with "{exc}".')
-        # sys.exit(101)
         return 101
 
     # show the user command-line steeings after calling `check_input_files`
@@ -42,7 +39,6 @@ def main() -> int:
                             config.debug, config.verbose)
     except ValueError as exc:
         print(f'[FATAL]: ValueError exception raised with "{exc}".')
-        # sys.exit(110)
         return 110
     if config.debug:
         return 0
@@ -53,7 +49,6 @@ def main() -> int:
             dump_lv0_data(config.l0_list, config.outdir, *res)
         except FileNotFoundError as exc:
             print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-            # sys.exit(132)
             return 132
 
         if config.verbose:
@@ -64,7 +59,6 @@ def main() -> int:
     if not res[0]:
         # inform the caller with a warning message and exit status
         print('[WARNING]: no science data found in L0 data, exit')
-        # sys.exit(110)
         return 110
 
     # Write Level-1A product.
@@ -75,12 +69,9 @@ def main() -> int:
         write_l1a(config, res[0], res[1])
     except (KeyError, RuntimeError) as exc:
         print(f'[FATAL]: RuntimeError with "{exc}"')
-        # sys.exit(131)
         return 131
     except Exception as exc:
         print(f'[FATAL]: PermissionError with "{exc}"')
-        # sys.exit(130)
         return 130
 
-    # sys.exit(0)
     return 0
