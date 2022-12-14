@@ -156,18 +156,18 @@ def __yaml_settings(config):
         else:
             mypath = Path(config_yaml['hkt_list'])
             if mypath.is_dir():
-                config.hkt_list = list(Path(mypath).glob('*'))
+                config.hkt_list = sorted(Path(mypath).glob('*'))
             else:
-                config.hkt_list = list(Path(mypath.parent).glob(mypath.name))
+                config.hkt_list = sorted(Path(mypath.parent).glob(mypath.name))
     if 'l0_list' in config_yaml and config_yaml['l0_list']:
         if isinstance(config_yaml['l0_list'], list):
             config.l0_list = [Path(x) for x in config_yaml['l0_list']]
         else:
             mypath = Path(config_yaml['l0_list'])
             if mypath.is_dir():
-                config.l0_list = list(Path(mypath).glob('*'))
+                config.l0_list = sorted(Path(mypath).glob('*'))
             else:
-                config.l0_list = list(Path(mypath.parent).glob(mypath.name))
+                config.l0_list = sorted(Path(mypath.parent).glob(mypath.name))
 
     return config
 
