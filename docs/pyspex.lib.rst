@@ -36,10 +36,10 @@ pyspex.lib.l1c\_def module
    :undoc-members:
    :show-inheritance:
 
-pyspex.lib.tai\_to\_utc module
-------------------------------
+pyspex.lib.leap\_sec module
+---------------------------
 
-.. automodule:: pyspex.lib.tai_to_utc
+.. automodule:: pyspex.lib.leap_sec
    :members:
    :undoc-members:
    :show-inheritance:

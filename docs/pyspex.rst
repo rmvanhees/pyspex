@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   pyspex.gen_l1a
    pyspex.lib
 
 Submodules
@@ -64,6 +65,14 @@ pyspex.lv0\_io module
 ---------------------
 
 .. automodule:: pyspex.lv0_io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyspex.lv1\_args module
+-----------------------
+
+.. automodule:: pyspex.lv1_args
    :members:
    :undoc-members:
    :show-inheritance:

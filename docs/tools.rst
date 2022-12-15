@@ -5,7 +5,7 @@ The package pyspex comes with several tools, these are desccribed in this
 section.
 
 Script: spx1_level01a
-------------------------
+---------------------
 Generate level-1A product from SPEXone level-0 data.
 
 Usage::
@@ -110,15 +110,18 @@ Script: spx1_add_egse2l1a.py
 Add ITOS EGSE information of OCAL measurements to a SPEXone level-1A product.
 
 Usage::
+
    spx1_add_egse2l1a.py [-h] [--verbose] [--egse_dir EGSE_DIR]
                         {create_db,add} ...
 
 positional arguments::
+
   {create_db,add}      sub-command help.
-    create_db          create new EGSE database.
-    add                add EGSE information to a SPEXone level-1A product.
+   create_db           create new EGSE database.
+   add                 add EGSE information to a SPEXone level-1A product.
 
 options::
+
   -h, --help            show this help message and exit.
   --verbose             be verbose.
   --egse_dir EGSE_DIR   directory with EGSE information.
@@ -129,24 +132,25 @@ Script: spx1_add_ogse2l1a.py
 Add OGSE information of a OCAL measurement to a SPEXone L1A product.
 
 Possible OGSE information:
+ * Reference diode (Ambient/GSFC polarized, radiometric) located in the integrated sphere.
 
-* Reference diode (Ambient/GSFC polarized, radiometric): the reference diode
-  is located in the ... or Grande (GSFC) integrated sphere.
+ * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
 
-* Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
-
-* Wavelength of OPO laser (GSFC spectral-radiometry).
+ * Wavelength of OPO laser (GSFC spectral-radiometry).
 
 usage::
-   spx1_add_ogse2l1a.py [-h] [--verbose] [--ogse_dir oGSE_DIR]
+
+  spx1_add_ogse2l1a.py [-h] [--verbose] [--ogse_dir oGSE_DIR]
                         {create_db,add} ...
 
 positional arguments::
-  {create_db,add}      sub-command help.
-    create_db          create new OGSE database.
-    add                add OGSE information to a SPEXone level-1A product.
+
+  {create_db,add}     sub-command help.
+   create_db          create new OGSE database.
+   add                add OGSE information to a SPEXone level-1A product.
 
 options::
+
   -h, --help            show this help message and exit.
   --verbose             be verbose.
   --ogse_dir OGSE_DIR   directory with OGSE information.
