@@ -319,8 +319,13 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
 
             # read CCSDS header and user data
             while offs < len(ccsds_data):
-                hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
-                                    dtype=hdr_dtype)[0]
+                try:
+                    hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
+                                        dtype=hdr_dtype)[0]
+                except Exception as exc:
+                    print(f'[Warning]: header reading error with "{exc}"')
+                    break
+                
                 # copy the full CCSDS package
                 if debug:
                     print(ap_id(hdr), grouping_flag(hdr),
