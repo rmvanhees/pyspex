@@ -99,8 +99,8 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
 
     # initialize dimensions
     number_img = dims.get('number_of_images', None)
-    img_samples = dims.get('samples_per_image',None)
-    hk_packets = dims.get('hk_packets',None)
+    img_samples = dims.get('samples_per_image', None)
+    hk_packets = dims.get('hk_packets', None)
 
     # create/overwrite netCDF4 product
     try:

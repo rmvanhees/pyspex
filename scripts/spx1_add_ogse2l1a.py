@@ -11,12 +11,14 @@
 """
 Add OGSE information of a OCAL measurement to a SPEXone L1A product.
 
-Possible OGSE information::
+Possible OGSE information:
 
- * reference diode (Ambient/GSFC polarized, radiometric): the reference diode
- is located in the ... or Grande (GSFC) integrated sphere.
- * wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
- * wavelength of OPO laser (GSFC spectral-radiometry).
+ * Reference diode (Ambient/GSFC polarized, radiometric): the reference diode
+   is located in the ... or Grande (GSFC) integrated sphere.
+
+ * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
+
+ * Wavelength of OPO laser (GSFC spectral-radiometry).
 """
 import argparse
 from pathlib import Path
@@ -92,23 +94,10 @@ def write_ogse(args):
 
 # - main function ----------------------------------
 def main():
-    """
-    Main function
-
-    Notes
-    -----
-    Possible OGSE information:
-
-    * Reference diode (Ambient/GSFC polarized, radiometric):\
-      the reference diode is located in the ... or Grande (GSFC)
-      integrated sphere.
-    * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength)
-    * Wavelength of OPO laser (GSFC spectral-radiometry)
-
-    """
+    """Main function."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--verbose', action='store_true', default=False)
+    parser.add_argument('--verbose', action='store_true', help="be verbose")
     parser.add_argument('--ogse_dir', default='Logs', type=Path,
                         help="directory with OGSE data")
     subparsers = parser.add_subparsers(help='sub-command help')
@@ -121,20 +110,20 @@ def main():
     parser_db.set_defaults(func=create_ogse_db)
 
     parser_wr = subparsers.add_parser('add',
-                                      help=("add OGSE information"
-                                            " to a SPEXone Level-1A product"))
+                                      help=("add OGSE information to a"
+                                            " SPEXone Level-1A product"))
     parser_wr.add_argument('--ref_diode', action='store_true',
-                           help='add reference-diode data from OGSE database')
+                           help="add reference-diode data from OGSE database")
     parser_wr.add_argument('--avantes', action='store_true',
-                           help=('add Avantes wavelength monitoring'
-                                 '  from OGSE database'))
+                           help=("add Avantes wavelength monitoring"
+                                 "  from OGSE database"))
     group_wr = parser_wr.add_mutually_exclusive_group()
     group_wr.add_argument('--helios', action='store_true',
-                          help='add Helios reference spectrum')
+                          help="add Helios reference spectrum")
     group_wr.add_argument('--grande', action='store_true',
-                          help='add Grande reference spectrum')
+                          help="add Grande reference spectrum")
     parser_wr.add_argument('--opo_laser', action='store_true',
-                           help='add wavelength of OPO laser')
+                           help="add wavelength of OPO laser")
     parser_wr.add_argument('l1a_file', default=None, type=Path,
                            help="SPEXone L1A product")
     parser_wr.set_defaults(func=write_ogse)

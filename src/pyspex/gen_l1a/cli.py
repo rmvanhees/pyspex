@@ -18,7 +18,7 @@ from ..lv1_args import get_l1a_settings
 
 def main() -> int:
     """Execute the main bit of the application."""
-    
+
     # parse command-line parameters and YAML file for settings
     try:
         config = get_l1a_settings()
@@ -62,7 +62,6 @@ def main() -> int:
         return 110
 
     # Write Level-1A product.
-    # ToDo add try/except
     try:
         if not config.outdir.is_dir():
             config.outdir.mkdir(mode=0o755, parents=True)

@@ -130,7 +130,7 @@ def get_l1a_name(datatype: str, config: dataclass,
     else:
         msm_id = msm_id[:-22] + new_date
 
-    return (f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc')
+    return f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc'
 
 
 def write_lv0_data(prod_name: str, config: dataclass,

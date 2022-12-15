@@ -26,12 +26,10 @@ from pyspex.egse_db import add_egse_data, create_egse_db
 
 # - main function ----------------------------------
 def main():
-    """
-    Main function
-    """
+    """Main function."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--verbose', action='store_true', help="be verbose")
     parser.add_argument('--egse_dir', default='Logs', type=Path,
                         help="directory with EGSE data")
     subparsers = parser.add_subparsers(help='sub-command help')
@@ -42,8 +40,8 @@ def main():
     parser_db.set_defaults(func=create_egse_db)
 
     parser_wr = subparsers.add_parser('add',
-                                      help=("add EGSE information"
-                                            " to a SPEXone level-1A product"))
+                                      help=("add EGSE information to a"
+                                            " SPEXone level-1A product"))
     parser_wr.add_argument('l1a_file', default=None, type=str,
                            help="SPEXone L1A product")
     parser_wr.set_defaults(func=add_egse_data)
