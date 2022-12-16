@@ -10,6 +10,11 @@
 # License:  BSD-3-Clause
 """
 Python implementation to convert SPEXone DEM measurements to L1A format.
+The DEM measurements are performed at SRON between 17-10-2019 and 13-12-2019.
+
+References
+----------
+* SRON-SPEX-TN-2020-001_0_5_SPEXone_Detector_Characterization.pdf
 """
 
 import argparse
