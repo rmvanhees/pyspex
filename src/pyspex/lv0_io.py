@@ -322,8 +322,8 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                 try:
                     hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
                                         dtype=hdr_dtype)[0]
-                except Exception as exc:
-                    print(f'[Warning]: header reading error with "{exc}"')
+                except ValueError as exc:
+                    print(f'[WARNING]: header reading error with "{exc}"')
                     break
                 
                 # copy the full CCSDS package
@@ -399,7 +399,7 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
     """
     # dump header information of the Science packages
     flname = datapath / (file_list[0].stem + '.dump')
-    with open(flname, 'w', encoding='ascii') as fp:
+    with flname.open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'
                  ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
         for segment in ccsds_sci:
@@ -419,7 +419,7 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
 
     # dump header information of the nominal house-keeping packages
     flname = datapath / (file_list[0].stem + '_hk.dump')
-    with open(flname, 'w', encoding='ascii') as fp:
+    with flname.open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
         for segment in ccsds_hk:
