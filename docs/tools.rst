@@ -104,6 +104,42 @@ Environment::
          `https://maia.usno.navy.mil/ser7/tai-utc.dat`.
    When OCVARROOT is set the path should be '$OCVARROOT/common/tai-utc.dat'.
 
+Inflight measurements
+~~~~~~~~~~~~~~~~~~~~~
+The SPEXone instrument can generate data in 2 “modes”:
+
+* Science mode: this is binned data according to various binning tables that are present in the flash memory of the detector module.
+
+* Diagnostic mode: this is full frame data (2048x2048 pixels).
+   
+The data that is taken during an orbit can be divided into 3 ‘types’:
+
+1. “Science data”: data taken during the dayside of the nomimal orbit, only science mode MPSes.
+
+2. “Dark data”: data taken during the eclipse in order to obtain dark measurements (both Earth viewing and during lunar cal) with the same science mode MPSes as used during the dayside of an orbit. These are to be used for direct offset and dark current correction of science data.
+
+3. “Calibration data”: data taken during the eclipse using only diagnostic mode MPSes. The purpose is to obtain full frame detector images, both with and without the LED on, which are to be used for detector monitoring and recalibration (offset, dark current, non-linearity, PRNU).
+
+Note:
+
+* There is no unique division based on MPSes possible that separates dayside data from eclipse data, since the same science mode MPSes are used in both orbit periods.
+
+So for processing of data during nominal operations, the data types will be stored as follows:
+
+* PACE_SPEXONE.YYYYmmddTHHMMSS.L1A.nc for “Science data”
+
+* PACE_SPEXONE_DARK.YYYYmmddTHHMMSS.L1A.nc for “Dark data”
+
+* PACE_SPEXONE_CAL.YYYYmmddTHHMMSS.L1A.nc for “Calibration data”
+
+This means that if the dayside data is captured into a single L0-file,
+this L0-file can be processed with a single command to L1A-data
+(parameter `eclipse=False`).
+The eclipse data would also be captured into a single L0-file and distributed
+bij the level 0->1a processor over two L1A-files: diagnostic mode MPSes to
+the CAL-file and science mode MPSes to the DARK-file
+(parameter `eclipse=True`).
+
 
 Script: spx1_add_egse2l1a.py
 ----------------------------
