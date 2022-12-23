@@ -173,7 +173,7 @@ def main():
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)
 
     # generate name of L1A product
-    prod_name = spx_product.prod_name(tstamp[0], msm_id=msm_id.strip(' '))
+    prod_name = spx_product.get_l1a_name(msm_id.strip(' '), tstamp[0])
     if args.output is not None:
         dest_dir = Path(args.output)
         if not dest_dir.is_dir():
