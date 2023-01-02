@@ -19,7 +19,7 @@ from . import version
 
 # - main function ----------------------------------
 # pylint: disable=too-many-arguments
-def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
+def get_l1a_name(msm_id: str, utc_sensing_start: datetime | None) -> str:
     """
     Return name of SPEXone product
 
@@ -38,6 +38,10 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
        vvvvvvv is the git-hash string of the pyspex repository
     """
     # define string of sensing start as yyyymmddThhmmss
+    if utc_sensing_start is None:
+        return f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc'
+
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
-    return f'SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{version.get(githash=True)}.nc'
+    return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
+            f'_L1A_{version.get(githash=True)}.nc')

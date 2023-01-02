@@ -25,7 +25,7 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from pyspex import spx_product
+from pyspex.spx_product import get_l1a_name
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.tif_io import TIFio
 from pyspex.lv1_io import L1Aio
@@ -140,7 +140,7 @@ def main():
                 str_date.replace(':', '-') + 'T' + str_time + '+00:00')
             break
 
-    prod_name = spx_product.prod_name(utc_start, msm_id=msm_id)
+    prod_name = get_l1a_name(msm_id, utc_start)
     if args.inp_tif:
         prod_name = prod_name.replace('_L1A_', '_inp_L1A_')
     if args.output is not None:

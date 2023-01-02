@@ -16,7 +16,6 @@ References
 ----------
 * SRON-SPEX-TN-2020-001_0_5_SPEXone_Detector_Characterization.pdf
 """
-
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,12 +23,12 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyspex import spx_product
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.dem_io import DEMio
 from pyspex.lv0_io import img_sec_of_day
 from pyspex.lv1_io import L1Aio
 from pyspex.lv1_gse import LV1gse
+from pyspex.spx_product import get_l1a_name
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -173,7 +172,7 @@ def main():
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)
 
     # generate name of L1A product
-    prod_name = spx_product.get_l1a_name(msm_id.strip(' '), tstamp[0])
+    prod_name = get_l1a_name(msm_id.strip(' '), tstamp[0])
     if args.output is not None:
         dest_dir = Path(args.output)
         if not dest_dir.is_dir():
