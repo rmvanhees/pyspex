@@ -325,7 +325,7 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                 except ValueError as exc:
                     print(f'[WARNING]: header reading error with "{exc}"')
                     break
-                
+
                 # copy the full CCSDS package
                 if debug:
                     print(ap_id(hdr), grouping_flag(hdr),
