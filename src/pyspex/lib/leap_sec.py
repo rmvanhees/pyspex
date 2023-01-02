@@ -16,9 +16,12 @@ The source for the latest version of tai-utc.dat is the US Naval Observatory:
    https://maia.usno.navy.mil/ser7/tai-utc.dat
 """
 from datetime import datetime, timezone
-from importlib import resources
-from pathlib import Path
+try:
+    from importlib.resources import files
+except ImportError:
+    from importlib_resources import files
 from os import environ
+from pathlib import Path
 
 import julian
 
@@ -31,7 +34,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     # determine location of the file 'tai-utc.dat'
     ocvarroot = environ['OCVARROOT'] if 'OCVARROOT' in environ else None
     if ocvarroot is None:
-        taiutc = resources.files('pyspex.data').joinpath('tai-utc.dat')
+        taiutc = files('pyspex.data').joinpath('tai-utc.dat')
     else:
         taiutc = Path(ocvarroot) / 'common' / 'tai-utc.dat'
 
