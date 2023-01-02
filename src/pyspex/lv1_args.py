@@ -11,6 +11,8 @@
 Handle command-line parameters and settings from the YAML file
 for L1A generation.
 """
+from __future__ import annotations
+
 __all__ = ['get_l1a_settings']
 
 import argparse
@@ -101,7 +103,7 @@ Environment:
 
 # - local functions --------------------------------
 # pylint: disable=too-many-instance-attributes
-@dataclass(slots=True)
+@dataclass()
 class Config:
     """Initiate class to hold settings for L0->L1a processing."""
     debug: bool = False

@@ -10,6 +10,8 @@
 """
 Contains the class `HKTio` to read PACE HKT products.
 """
+from __future__ import annotations
+
 __all__ = ['HKTio', 'read_hkt_nav', 'write_hkt_nav']
 
 from pathlib import Path
