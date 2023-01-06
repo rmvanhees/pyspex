@@ -187,9 +187,7 @@ def main():
 
     dims = {'number_of_images': n_images,
             'samples_per_image': n_samples,
-            'SC_records': None,
-            'tlm_packets': None,
-            'nv': 1}
+            'hk_packets': 0}
 
     # generate L1A product
     with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
@@ -197,12 +195,18 @@ def main():
         l1a.fill_science(images.reshape(n_images, n_samples), img_hk,
                          np.arange(n_images))
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_attr('valid_min', np.uint32(1577800000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('valid_max', np.uint32(1735700000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+                     ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
 
         # Engineering data
-        l1a.fill_nomhk(hk_data)
-        l1a.set_dset('/engineering_data/HK_tlm_time', img_time)
+        #l1a.fill_nomhk(hk_data)
+        #l1a.set_dset('/engineering_data/HK_tlm_time', img_time)
 
         # Global attributes
         l1a.fill_global_attrs(inflight=False)
