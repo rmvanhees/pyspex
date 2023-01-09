@@ -602,8 +602,9 @@ def coverage_time(science) -> tuple:
     """
     img_sec, img_subsec = science_timestamps(science)
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
+    frame_period = 1e-7 * TMscience(science['hk'][-1]).frame_period
     return (ref_date + timedelta(seconds=img_time[0]),
-            ref_date + timedelta(seconds=img_time[-1]))
+            ref_date + timedelta(seconds=img_time[-1] + frame_period))
 
 
 def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:

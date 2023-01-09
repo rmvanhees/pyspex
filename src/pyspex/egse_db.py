@@ -280,8 +280,10 @@ def add_egse_data(args):
             fid.attrs['time_coverage_start'].decode('ascii'))
         msmt_stop = datetime.fromisoformat(
             fid.attrs['time_coverage_end'].decode('ascii'))
-        # print(fid.attrs['time_coverage_start'].decode('ascii'),
-        #      fid.attrs['time_coverage_end'].decode('ascii'))
+        if args.verbose:
+            print('L1A time-coverage:',
+                  fid.attrs['time_coverage_start'].decode('ascii'),
+                  fid.attrs['time_coverage_end'].decode('ascii'))
         duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
     # use the timestamp in the filename to correct ICU time
@@ -289,11 +291,15 @@ def add_egse_data(args):
     msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
     msmt_start = msmt_start.replace(microsecond=0)
     msmt_stop = msmt_start + timedelta(seconds=int(duration))
-    # print(msmt_start, msmt_stop)
+    if args.verbose:
+        print('Corrected time-coverage:',
+              msmt_start.timestamp(), msmt_stop.timestamp())
 
     # open EGSE database
     with Dataset(args.egse_dir / DB_EGSE, 'r') as fid:
         egse_time = fid['time'][:].data
+        if args.verbose:
+            print('EGSE time-coverage:', egse_time.min(), egse_time.max())
         mask = ((egse_time >= msmt_start.timestamp())
                 & (egse_time <= msmt_stop.timestamp()))
         if mask.sum() == 0:

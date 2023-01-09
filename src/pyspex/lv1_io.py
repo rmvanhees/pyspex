@@ -14,7 +14,7 @@ PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 __all__ = ['L1Aio', 'L1Bio', 'L1Cio', 'write_l1a']
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 
 import numpy as np
@@ -152,8 +152,7 @@ def write_lv0_data(prod_name: str, config: dataclass,
     # Define data dimensions
     dims = {'number_of_images': science.size,
             'samples_per_image': science['hk']['IMRLEN'].max() // 2,
-            'hk_packets': nomhk.size,
-            'SC_records': None}
+            'hk_packets': nomhk.size}
 
     # Preprocess the timestamps to be stored in the L1A product
     # [Science TM]
@@ -204,6 +203,11 @@ def write_lv0_data(prod_name: str, config: dataclass,
             l1a.fill_global_attrs(inflight=False)
         else:
             l1a.fill_global_attrs(inflight=True)
+        tstamp = coverage_time(science)
+        l1a.set_attr('time_coverage_start',
+                     tstamp[0].isoformat(timespec='milliseconds'))
+        l1a.set_attr('time_coverage_end',
+                     tstamp[1].isoformat(timespec='milliseconds'))
         l1a.set_attr('input_files', [x.name for x in config.l0_list])
 
 
@@ -556,20 +560,6 @@ class L1Aio(Lv1io):
 
         # check of all required dataset their sizes
         self.check_stored(allow_empty=True)
-
-        # determine time_coverage_start
-        dset = self.fid['/image_attributes/image_time']
-        tstamp = datetime(int(dset.year), int(dset.month), int(dset.day),
-                          tzinfo=timezone.utc)
-        tstamp += timedelta(seconds=float(dset[0].data))
-        self.fid.time_coverage_start = tstamp.isoformat(timespec='milliseconds')
-
-        # determine time_coverage_end
-        tstamp = datetime(int(dset.year), int(dset.month), int(dset.day),
-                          tzinfo=timezone.utc)
-        tstamp += timedelta(seconds=float(dset[-1].data))
-        self.fid.time_coverage_end = tstamp.isoformat(timespec='milliseconds')
-
         self.fid.close()
         self.fid = None
 
