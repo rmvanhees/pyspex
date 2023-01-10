@@ -91,6 +91,9 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
 
     Notes
     -----
+    The optional groups '/gse_data' and '/navigation_data' are not created
+    by this script.
+
     Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
     """
     # check function parameters
@@ -203,9 +206,5 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
     # dset.comment = "DEM housekeeping parameters."
-
-    # - define group /navigation_data, but leaf it's content empty
-    # The actual navigation data will be copied from the HKT products.
-    sgrp = rootgrp.createGroup('/navigation_data')
 
     return rootgrp
