@@ -246,7 +246,8 @@ def write_l1a(config, science_in, nomhk_in) -> None:
         dtype_list = ['DARK', 'CAL']
 
     for dtype in dtype_list:
-        print(f'[INFO]: write L1A product with subtype "{dtype}"')
+        if config.verbose:
+            print(f'[INFO]: write L1A product with subtype "{dtype}"')
         # selected L0 data-packages
         # and group Science packages to detector-frames
         science, nomhk = select_lv0_data(dtype, science_in, nomhk_in,
