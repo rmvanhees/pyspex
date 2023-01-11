@@ -637,6 +637,7 @@ def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     if ii > 0:
         print(f'[WARNING]: found first valid segment at {ii}')
 
+    # select measurement data
     frame = ()
     science = ()
     for segment in ccsds_sci[ii:]:
@@ -661,7 +662,12 @@ def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
                   and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
                 science += (buff.copy(),)
 
+    # return empty arrays when no measurement data found
+    if not science:
+        return np.array(()), np.array(())
     science = np.concatenate(science)
+
+    # select housekeeping data
     mps_list = np.unique(science['hk']['MPS_ID']).tolist()
     if verbose:
         print(f'[INFO]: list of unique MPS {mps_list}')
