@@ -210,6 +210,16 @@ def write_lv0_data(prod_name: str, config: dataclass,
                      tstamp[1].isoformat(timespec='milliseconds'))
         l1a.set_attr('input_files', [x.name for x in config.l0_list])
 
+    # add processor_configuration
+    if config.yaml_fl:
+        with Dataset(config.outdir / prod_name, 'r+') as fid:
+            dset = fid.createVariable('processor_configuration', str)
+            dset.comment = ('Configuration parameters used during'
+                            ' the processor run that produced this file.')
+            dset[0] = ''.join(
+                [s for s in config.yaml_fl.open(encoding='ascii').readlines()
+                 if not (s == '\n' or s.startswith('#'))])
+
 
 # - high-level write function -----------
 def write_l1a(config, science_in, nomhk_in) -> None:
@@ -236,6 +246,7 @@ def write_l1a(config, science_in, nomhk_in) -> None:
         dtype_list = ['DARK', 'CAL']
 
     for dtype in dtype_list:
+        print(f'[INFO]: write L1A product with subtype "{dtype}"')
         # selected L0 data-packages
         # and group Science packages to detector-frames
         science, nomhk = select_lv0_data(dtype, science_in, nomhk_in,
