@@ -4,16 +4,19 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
 """Python script to store SPEXone Level-0 data in a Level-1A product."""
 
 import sys
+from datetime import datetime, timezone
 
+from pyspex import version
 from pyspex.gen_l1a.cli import main
 
-
 if __name__ == '__main__':
+    now_str = datetime.now(timezone.utc).isoformat(sep=' ', timespec='seconds')
+    print(f'l1agen_spex.py {version.get()} ({now_str})\n')
     sys.exit(main())
