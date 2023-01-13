@@ -99,7 +99,6 @@ def main():
     # Measurement Parameters Settings
     n_images = len(args.file_list)
     img_hk = np.zeros(n_images, dtype=tmtc_dtype(0x350))
-    hk_data = np.zeros(n_images, dtype=tmtc_dtype(0x320))
     t_exp = np.empty(n_images, dtype=float)
     t_frm = np.empty(n_images, dtype=float)
     offset = np.empty(n_images, dtype=float)
@@ -203,10 +202,6 @@ def main():
                      ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
-
-        # Engineering data
-        #l1a.fill_nomhk(hk_data)
-        #l1a.set_dset('/engineering_data/HK_tlm_time', img_time)
 
         # Global attributes
         l1a.fill_global_attrs(inflight=False)
