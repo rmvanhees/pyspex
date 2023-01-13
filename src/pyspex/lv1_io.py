@@ -32,6 +32,7 @@ from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
 
 # - global parameters -------------------
+ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
@@ -234,6 +235,30 @@ def write_l1a(config, science_in, nomhk_in) -> None:
     nomhk : np.ndarray
        L0 nominal housekeeping data.
     """
+    def reject_tm(tm_sec, array):
+        """reject corrupted timestamps.
+
+        Notes
+        -----
+        This function is implemented for the day-in-a-life test at Godard.
+        Date: Jan, 2023
+        """
+        indx = (np.abs(tm_sec[1:] - tm_sec[:-1]) > ONE_DAY).nonzero()[0]
+        print(f'[WARNING] found large jumps between timestamps at {indx}')
+        if len(indx) == 1:
+            array = array[:indx[0]+1] \
+                if indx[0] > array.size // 2 else array[indx[0]+1:]
+        elif len(indx) == 2:
+            if indx[1] - indx[0] > array.size // 2:
+                array = array[indx[0]+1:indx[1]+1]
+            else:
+                mask = np.ones(array.size, dtype=bool)
+                mask[indx[0]+1:indx[1]+1] = False
+                array = array[mask]
+        else:
+            print('[WARNING] cound not reject corrupted timestamps')
+        return array
+
     if config.eclipse is None:
         # this are "OCAL data" try to write all data to one L1A product.
         dtype_list = ['OCAL']
@@ -243,11 +268,9 @@ def write_l1a(config, science_in, nomhk_in) -> None:
     else:
         # this can be "Dark data": binned data using "Science mode" MPSes
         # and/or "Calibration data”: full frame data in "Diagonstic mode".
-        dtype_list = ['DARK', 'CAL']
+        dtype_list = ['CAL', 'DARK']
 
     for dtype in dtype_list:
-        if config.verbose:
-            print(f'[INFO]: write L1A product with subtype "{dtype}"')
         # selected L0 data-packages
         # and group Science packages to detector-frames
         science, nomhk = select_lv0_data(dtype, science_in, nomhk_in,
@@ -255,7 +278,21 @@ def write_l1a(config, science_in, nomhk_in) -> None:
         if science.size == 0:
             continue
 
+        # reject corrupted timestamps in science data
+        img_sec, _ = science_timestamps(science)
+        img_sec = img_sec.astype(int)
+        if np.any(np.abs(img_sec[1:] - img_sec[:-1]) > ONE_DAY):
+            science = reject_tm(img_sec, science)
+
+        # reject corrupted timestamps in house-keeping data
+        hk_sec, _ = nomhk_timestamps(nomhk)
+        hk_sec = hk_sec.astype(int)
+        if np.any(np.abs(hk_sec[1:] - hk_sec[:-1]) > ONE_DAY):
+            nomhk = reject_tm(hk_sec, nomhk)
+
         # write L1A product
+        if config.verbose:
+            print(f'[INFO]: write L1A product with subtype "{dtype}"')
         prod_name = get_l1a_name(dtype, config, coverage_time(science)[0])
         try:
             write_lv0_data(prod_name, config, science, nomhk)
@@ -269,8 +306,8 @@ def write_l1a(config, science_in, nomhk_in) -> None:
             # - issue a warning if selection is empty
             write_hkt_nav(config.outdir / prod_name, hkt_nav)
 
-    if config.verbose:
-        print(f'[INFO]: Successfully generated: {config.outdir / prod_name}')
+        if config.verbose:
+            print(f'[INFO]: Successfully generated: {prod_name}')
 
 
 # - class LV1io -------------------------
@@ -314,14 +351,17 @@ class Lv1io:
             # store current length of the first dimension
             for key in self.dset_stored:
                 self.dset_stored[key] = self.fid[key].shape[0]
-        elif self.processing_level == 'L1A':
-            self.fid = init_l1a(product, ref_date, dims)
-        elif self.processing_level == 'L1B':
-            self.fid = init_l1b(product, ref_date, dims)
-        elif self.processing_level == 'L1C':
-            self.fid = init_l1c(product, ref_date, dims)
         else:
-            raise KeyError('valid processing levels are: L1A, L1B or L1C')
+            if self.processing_level == 'L1A':
+                self.fid = init_l1a(product, ref_date, dims)
+            elif self.processing_level == 'L1B':
+                self.fid = init_l1b(product, ref_date, dims)
+            elif self.processing_level == 'L1C':
+                self.fid = init_l1c(product, ref_date, dims)
+            else:
+                raise KeyError('valid processing levels are: L1A, L1B or L1C')
+            for key in self.dset_stored:
+                self.dset_stored[key] = 0
 
     def __repr__(self) -> str:
         class_name = type(self).__name__
