@@ -643,24 +643,22 @@ def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
     for segment in ccsds_sci[ii:]:
         hdr = segment['hdr']
         if grouping_flag(hdr) == 1:
-            buff = segment['data']
-            frame = (buff['frame'][0],)
-        else:
-            frame += (segment['data']['frame'][0],)
+            buff = segment['data'].copy()
+            frame = ()
+
+        frame += (segment['data']['frame'][0],)
         if grouping_flag(hdr) == 2:
             buff['frame'][0] = np.concatenate(frame)
 
-            # OCAL is all
-            # SCIENCE or DARK: binned
-            # CAL: fullFrame
-            if datatype == 'OCAL':
-                science += (buff.copy(),)
-            elif (datatype in ('SCIENCE', 'DARK')
-                  and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES):
-                science += (buff.copy(),)
-            elif (datatype == 'CAL'
-                  and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES):
-                science += (buff.copy(),)
+            # OCAL: no need for a selection on frame size
+            # CAL: select only fullFrame
+            # SCIENCE or DARK: selected binned
+            if (datatype == 'OCAL'
+                or (datatype == 'CAL'
+                    and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES)
+                or (datatype in ('SCIENCE', 'DARK')
+                    and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES)):
+                science += (buff,)
 
     # return empty arrays when no measurement data found
     if not science:
