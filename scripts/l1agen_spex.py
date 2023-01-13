@@ -11,12 +11,10 @@
 """Python script to store SPEXone Level-0 data in a Level-1A product."""
 
 import sys
-from datetime import datetime, timezone
 
 from pyspex import version
 from pyspex.gen_l1a.cli import main
 
 if __name__ == '__main__':
-    now_str = datetime.now(timezone.utc).isoformat(sep=' ', timespec='seconds')
-    print(f'l1agen_spex.py {version.get()} ({now_str})\n')
+    print(f'l1agen_spex.py {version.get()}\n')
     sys.exit(main())
