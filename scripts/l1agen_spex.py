@@ -11,10 +11,14 @@
 """Python script to store SPEXone Level-0 data in a Level-1A product."""
 
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from pyspex import version
 from pyspex.gen_l1a.cli import main
 
 if __name__ == '__main__':
-    print(f'l1agen_spex.py {version.get()}\n')
+    mtime_str = datetime.fromtimestamp(
+        Path(__file__).stat().st_mtime).isoformat(sep=' ', timespec='seconds')
+    print(f'l1agen_spex.py {version.get()} ({mtime_str})\n')
     sys.exit(main())
