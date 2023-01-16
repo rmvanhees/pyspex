@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -11,7 +11,7 @@
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
    `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`, `read_lv0_data`,
-   `select_lv0_data`, `write_lv0_data`
+   'select_nomhk', `select_science`
 
 And handy routines to convert CCSDS parameters:
 
@@ -22,8 +22,8 @@ And handy routines to convert CCSDS parameters:
 __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
-           'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data', 'read_lv0_data',
-           'select_lv0_data']
+           'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
+           'read_lv0_data', 'select_nomhk', 'select_science']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -607,74 +607,113 @@ def coverage_time(science) -> tuple:
             ref_date + timedelta(seconds=img_time[-1] + frame_period))
 
 
-def select_lv0_data(datatype: str, ccsds_sci, ccsds_hk, verbose=False) -> tuple:
+def select_nomhk(ccsds_hk: tuple[np.ndarray],
+                 mps_list: tuple[int]) -> np.ndarray:
     """
-    Select telemetry packages and combine Science packages to contain one
+    Select nominal housekeeping telemetry packages on MPS-IDs.
+
+    Parameters
+    ----------
+    ccsds_hk :  tuple of np.ndarray
+        All non-Science telementry packages
+    mps_list :  list of integers
+        Select telementry packages on MPS-IDs
+
+    Returns
+    -------
+    np.ndarray
+         Selected nominal housekeeping telemetry packages as numpy array
+    """
+    if not ccsds_hk:
+        return np.array(())
+
+    return np.concatenate(
+        [(x['data'],) for x in ccsds_hk if ap_id(x['hdr']) == 0x320
+         and x['data']['hk']['MPS_ID'] in mps_list])
+
+
+def select_science(ccsds_sci: tuple[np.ndarray],
+                   mode='all') -> tuple[np.ndarray]:
+    """
+    Select Science telemetry packages and combine image data to contain one
     detector readout.
 
     Parameters
     ----------
-    datatype : {'OCAL', 'DARK', 'CAL', 'SCIENCE'}
-        Select Science packages
     ccsds_sci :  tuple of np.ndarray
         Science TM packages (ApID: 0x350)
-    ccsds_hk :  tuple of np.ndarray
-        All other Telementry packages
-    verbose : bool, default=False
-        be verbose (or not)
+    mode :  {'all', 'full', 'binned'}, default='all'
+        Select Science packages with full-frame image or binned images
 
     Returns
     -------
     tuple of np.ndarray
-         Contains all Science and NomHK packages as numpy arrays
+         Contains Science telemetry per full detector readout. The detector
+         readouts are stored in a seperate 2-D array
     """
-    ii = 0
-    for segment in ccsds_sci:
-        if grouping_flag(segment['hdr']) == 1:
-            break
-        ii += 1
+    sci = iter(ccsds_sci)
 
-    if ii > 0:
-        print(f'[WARNING]: found first valid segment at {ii}')
-
-    # select measurement data
-    frame = ()
+    images = ()
     science = ()
-    for segment in ccsds_sci[ii:]:
-        hdr = segment['hdr']
-        if grouping_flag(hdr) == 1:
-            buff = segment['data'].copy()
-            frame = ()
+    stop_iter = False
+    while True:
+        while True:
+            try:
+                segment = next(sci)
+            except StopIteration:
+                stop_iter = True
+                break
 
-        frame += (segment['data']['frame'][0],)
-        if grouping_flag(hdr) == 2:
-            buff['frame'][0] = np.concatenate(frame)
+            if grouping_flag(segment['hdr']) == 1:
+                break
 
-            # OCAL: no need for a selection on frame size
-            # CAL: select only fullFrame
-            # SCIENCE or DARK: selected binned
-            if (datatype == 'OCAL'
-                or (datatype == 'CAL'
-                    and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES)
-                or (datatype in ('SCIENCE', 'DARK')
-                    and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES)):
-                science += (buff,)
+        if stop_iter:
+            break
+
+        # found start of detector read-out
+        buff = segment['data'].copy()
+        buff['frame'][0] = np.array(())
+
+        read_frame = False
+        frame = ()
+        if (mode == 'all'
+            or (mode == 'full'
+                and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES)
+            or (mode == 'binned'
+                and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES)):
+            read_frame = True
+            frame = (segment['data']['frame'][0],)
+
+        # perform loop over all detector segments of this frame
+        while True:
+            try:
+                segment = next(sci)
+            except StopIteration:
+                stop_iter = True
+                break
+
+            if stop_iter:
+                break
+
+            if read_frame:
+                frame += (segment['data']['frame'][0],)
+            if grouping_flag(segment['hdr']) == 2:
+                if read_frame:
+                    science += (buff,)
+                    images += (np.concatenate(frame),)
+                break
 
     # return empty arrays when no measurement data found
     if not science:
         return np.array(()), np.array(())
-    science = np.concatenate(science)
 
-    # select housekeeping data
-    mps_list = np.unique(science['hk']['MPS_ID']).tolist()
-    if verbose:
-        print(f'[INFO]: list of unique MPS {mps_list}')
+    img_dims = [frame.size for frame in images]
+    if len(np.unique(img_dims)) == 1:
+        return np.concatenate(science), np.vstack(images)
 
-    if ccsds_hk:
-        nomhk = np.concatenate(
-            [(x['data'],) for x in ccsds_hk if ap_id(x['hdr']) == 0x320
-             and x['data']['hk']['MPS_ID'] in mps_list])
-    else:
-        nomhk = np.array(())
+    # fill image data to the dimension of the largest read-out
+    img_data = np.empty((len(img_dims), img_dims.max()), dtype='u2')
+    for ii, data in enumerate(images):
+        img_data[ii, :data.size] = data
 
-    return science, nomhk
+    return np.concatenate(science), img_data
