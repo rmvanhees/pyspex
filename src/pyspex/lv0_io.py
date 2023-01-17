@@ -19,6 +19,8 @@ And handy routines to convert CCSDS parameters:
    `img_sec_of_day`, `nomhk_timestamps`, `packet_length`,
    `science_timestamps`, `sequence`
 """
+from __future__ import annotations
+
 __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
