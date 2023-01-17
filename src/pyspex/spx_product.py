@@ -16,7 +16,8 @@ __all__ = ['get_l1a_name']
 
 from datetime import datetime
 
-from . import version
+#from . import version
+from .version import pyspex_version
 
 
 # - main function ----------------------------------
@@ -41,9 +42,9 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime | None) -> str:
     """
     # define string of sensing start as yyyymmddThhmmss
     if utc_sensing_start is None:
-        return f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc'
+        return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
 
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
     return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
-            f'_L1A_{version.get(githash=True)}.nc')
+            f'_L1A_{pyspex_version(githash=True)}.nc')

@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 from netCDF4 import Dataset
 
-from pyspex import version
+from .version import pyspex_version
 
 
 # - global parameters ------------------------------
@@ -117,7 +117,7 @@ class BinningTables:
             fid.project = 'PACE Project'
             fid.instrument = 'SPEXone'
             fid.institution = 'SRON Netherlands Institute for Space Research'
-            fid.processing_version = version.get()
+            fid.processing_version = pyspex_version()
             fid.validity_start = validity_start + '+00:00'
             fid.release_number = np.uint16(release)
             fid.date_created = datetime.now(timezone.utc).isoformat(

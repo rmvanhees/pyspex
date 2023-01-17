@@ -14,7 +14,7 @@ __all__ = ['attrs_def']
 
 from datetime import datetime, timezone
 
-from pyspex import version
+from ..version import pyspex_version
 
 
 # - main functions --------------------------------
@@ -73,7 +73,7 @@ def attrs_def(level: str, inflight=True, origin=None) -> dict:
         "date_created": datetime.now(timezone.utc).isoformat(
             timespec='milliseconds'),
         "software_name": 'https://github.com/rmvanhees/pyspex',
-        "software_version": version.get(),
+        "software_version": pyspex_version(),
         "sun_earth_distance": None,
         "terrain_data_source": None,
         "spectral_response_function": None,

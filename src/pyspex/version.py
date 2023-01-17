@@ -10,12 +10,12 @@
 """
 Provide access to the software version as obtained from git.
 """
-__all__ = ['get']
+__all__ = ['pyspex_version']
 
 from pyspex import __version__
 
 
-def get(full=False, githash=False):
+def pyspex_version(full=False, githash=False):
     """Returns software version as obtained from git.
     """
     if full:

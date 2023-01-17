@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import yaml
 
-from . import version
+from .version import pyspex_version
 
 
 # - global parameters ------------------------------
@@ -129,7 +129,7 @@ def __commandline_settings():
         description='Generate PACE level-1A product from SPEXone level-0 data.',
         epilog=EPILOG_HELP)
     parser.add_argument('-v', '--version', action='version',
-                        version='%(prog)s v' + version.get())
+                        version='%(prog)s v' + pyspex_version())
     parser.add_argument('--debug', action='store_true',
                         help="be extra verbose, no output files generated")
     parser.add_argument('--dump', action='store_true',

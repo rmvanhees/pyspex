@@ -21,7 +21,7 @@ import numpy as np
 
 from netCDF4 import Dataset
 
-from . import version
+from .version import pyspex_version
 from .hkt_io import read_hkt_nav, write_hkt_nav
 from .lv0_io import (coverage_time, hk_sec_of_day, img_sec_of_day,
                      nomhk_timestamps, science_timestamps,
@@ -134,7 +134,7 @@ def get_l1a_name(config: dataclass, mode: str,
     else:
         msm_id = msm_id[:-22] + new_date
 
-    return f'SPX1_OCAL_{msm_id}_L1A_{version.get(githash=True)}.nc'
+    return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
 
 
 def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
