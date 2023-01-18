@@ -72,22 +72,26 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
 
 # - main function ----------------------------------
 # pylint: disable=too-many-statements
-def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
+def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
+             compression=False) -> None:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 
     Parameters
     ----------
-    l1a_flname : string
+    l1a_flname : str
        Name of L1A product
     ref_date :  datetime.date
        Date of the first detector image
-    dims :   dictionary
+    dims :  dict
        Provide length of the Level-1A dimensions. Default values::
 
           number_of_images : None     # number of image frames
           samples_per_image : None    # depends on binning table
           hk_packets : None           # number of HK tlm-packets (1 Hz)
+
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images.
 
     Notes
     -----
@@ -159,10 +163,15 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict) -> None:
 
     # - define group /science_data and its datasets
     sgrp = rootgrp.createGroup('/science_data')
-    chunksizes = None if number_img is not None else (1, img_samples)
+    chunksizes = (64, img_samples) if img_samples < 1048576 \
+        else (4, img_samples)
+    if not compression and number_img is not None:
+        chunksizes = None
     dset = sgrp.createVariable('detector_images', 'u2',
                                ('number_of_images', 'samples_per_image'),
-                               chunksizes=chunksizes, fill_value=0xFFFF)
+                               compression='zlib' if compression else None,
+                               complevel=1, chunksizes=chunksizes,
+                               fill_value=0xFFFF)
     dset.long_name = "detector pixel values"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFE)
