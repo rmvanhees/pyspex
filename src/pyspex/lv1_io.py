@@ -173,8 +173,8 @@ def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
 
     # Generate and fill L1A product
-    with L1Aio(config.outdir / prod_name, dims=dims,
-               ref_date=ref_date.date()) as l1a:
+    with L1Aio(config.outdir / prod_name, ref_date.date(), dims,
+               compression=config.compression) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images, science['hk'],
                          np.bitwise_and(science['hdr']['sequence'], 0x3fff))
@@ -320,11 +320,13 @@ class Lv1io:
     Parameters
     ----------
     product :  str
-        name of the SPEXone Level-1 product
+       Name of the SPEXone Level-1 product
     ref_date :  datetime.date
+       Date of the first detector image
     dims :  dict
-    append :  bool, default=False
-        do no clobber, but add new data to existing product
+       Dimensions of the datasets (differs for L1A, L1B, L1C)
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images [L1A, only]
 
     Notes
     -----
@@ -336,7 +338,7 @@ class Lv1io:
     dset_stored = {}
 
     def __init__(self, product: str, ref_date: datetime.date,
-                 dims: dict, append=False):
+                 dims: dict, compression=False):
         """Initialize access to a SPEXone Level-1 product.
         """
         self.product = Path(product)
@@ -346,24 +348,16 @@ class Lv1io:
         self.__epoch = ref_date
 
         # initialize Level-1 product
-        if append:
-            # open Level-1 product in append mode
-            self.fid = Dataset(self.product, "r+")
-
-            # store current length of the first dimension
-            for key in self.dset_stored:
-                self.dset_stored[key] = self.fid[key].shape[0]
+        if self.processing_level == 'L1A':
+            self.fid = init_l1a(product, ref_date, dims, compression)
+        elif self.processing_level == 'L1B':
+            self.fid = init_l1b(product, ref_date, dims)
+        elif self.processing_level == 'L1C':
+            self.fid = init_l1c(product, ref_date, dims)
         else:
-            if self.processing_level == 'L1A':
-                self.fid = init_l1a(product, ref_date, dims)
-            elif self.processing_level == 'L1B':
-                self.fid = init_l1b(product, ref_date, dims)
-            elif self.processing_level == 'L1C':
-                self.fid = init_l1c(product, ref_date, dims)
-            else:
-                raise KeyError('valid processing levels are: L1A, L1B or L1C')
-            for key in self.dset_stored:
-                self.dset_stored[key] = 0
+            raise KeyError('valid processing levels are: L1A, L1B or L1C')
+        for key in self.dset_stored:
+            self.dset_stored[key] = 0
 
     def __repr__(self) -> str:
         class_name = type(self).__name__
@@ -499,8 +493,8 @@ class Lv1io:
 
         return self.fid[name][:]
 
-    def set_dset(self, name: str, value, ibgn=-1) -> None:
-        """Write/append data to a netCDF4 variable.
+    def set_dset(self, name: str, value) -> None:
+        """Write data to a netCDF4 variable.
 
         Parameters
         ----------
@@ -508,9 +502,6 @@ class Lv1io:
            Name of Level-1 dataset
         value : scalar or array_like
            Value or values to be written
-        ibgn : int, default=-1
-           Index of the first (unlimited) dimension where to store the new data
-           Default is to append the data
         """
         value = np.asarray(value)
         grp_name = str(PurePosixPath(name).parent)
@@ -522,16 +513,7 @@ class Lv1io:
             if var_name not in self.fid.variables:
                 raise KeyError(f'dataset {name} not present in Level-1 product')
 
-        dims = self.fid[name].get_dims()
-        if not dims:
-            self.fid[name][...] = value
-        elif dims[0].isunlimited():
-            if ibgn < 0:
-                ibgn = self.dset_stored[name]
-            self.fid[name][ibgn:, ...] = value
-        else:
-            self.fid[name][...] = value
-
+        self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
@@ -567,18 +549,20 @@ class L1Aio(Lv1io):
 
     Parameters
     ----------
-    lv1_product: string
-       Name of the Level-1A product
-    append : boolean, default=False
-       If the file is opened in append mode, then parameter 'dims' is ignored
-    dims: dictionary, default=None
-       Provide size of various dimensions (L1A only). Default values::
+    product :  str
+       Name of the SPEXone Level-1A product
+    ref_date :  datetime.date
+       Date of the first detector image
+    dims :  dict
+       Dimensions of the datasets, default values::
 
-       number_of_images : None     # number of image frames
-       samples_per_image : 184000  # depends on binning table
-       hk_packets : None           # number of HK tlm-packets
-       wavelength : None
+          number_of_images : None     # number of image frames
+          samples_per_image : 184000  # depends on binning table
+          hk_packets : None           # number of HK tlm-packets
+          wavelength : None
 
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images
     """
     processing_level = 'L1A'
     dset_stored = {
@@ -761,15 +745,17 @@ class L1Bio(Lv1io):
 
     Parameters
     ----------
-    lv1_product: string
-       Name of the Level-1B product
-    append : boolean, default=False
-       If the file is opened in append mode, then parameter 'dims' is ignored
-    number_of_images: int, default=None
-       Number of images used as input to generate the L1B product.
-       This dimension is by default UNLIMITED.
-    spatial_samples: int, default=200
-       Total number of spatial samples from all viewport
+    product :  str
+       Name of the SPEXone Level-1B product
+    ref_date :  datetime.date
+       Date of the first detector image
+    dims :  dict
+       Dimensions of the datasets, default values::
+
+          bins_along_track: 400
+          spatial_samples_per_image: 200
+          intensity_bands_per_view: 50
+          polarization_bands_per_view: 50
 
     Notes
     -----
@@ -882,13 +868,17 @@ class L1Cio(Lv1io):
 
     Parameters
     ----------
-    lv1_product :  str
-       Name of the Level-1C product
-    append :  bool, default=False
-       If the file is opened in append mode, then parameter 'dims' is ignored
-    number_of_images: int, default=None
-       Number of images used as input to generate the L1B product.
-       This dimension is by default UNLIMITED.
+    product :  str
+       Name of the SPEXone Level-1B product
+    ref_date :  datetime.date
+       Date of the first detector image
+    dims :  dict
+       Dimensions of the datasets, default values::
+
+          bins_along_track: 400
+          spatial_samples_per_image: 200
+          intensity_bands_per_view: 50
+          polarization_bands_per_view: 50
 
     Notes
     -----
