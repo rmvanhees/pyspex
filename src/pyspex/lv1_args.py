@@ -41,6 +41,8 @@ ARG_YAML_HELP = """provide settings file in YAML format (inflight example):
 outdir: .
 # define name of output file, will be generated automatically when empty
 outfile: ''
+# compress the dataset /science_data/detector_images
+compression: True
 # define file-version as nn, neglected when outfile not empty
 file_version: 1
 # flag to indicate measurements taken in eclipse or day-side
@@ -112,6 +114,7 @@ class Config:
     debug: bool = False
     dump: bool = False
     verbose: bool = False
+    compression: bool = False
     outdir: Path = Path('.').resolve()
     outfile: str = ''
     file_version: int = 1
@@ -170,6 +173,8 @@ def __yaml_settings(config):
         config.outdir = Path(config_yaml['outdir'])
     if 'outfile' in config_yaml and config_yaml['outfile']:
         config.outfile = config_yaml['outfile']
+    if 'compression' in config_yaml and config_yaml['compression']:
+        config.compression = True
     if 'file_version' in config_yaml and config_yaml['file_version'] != 1:
         config.file_version = config_yaml['file_version']
     if 'eclipse' in config_yaml and config_yaml['eclipse'] is not None:
