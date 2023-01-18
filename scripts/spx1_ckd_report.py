@@ -183,7 +183,9 @@ def add_nlin_figs(ckd, ckd_ref=None):
         #                 fig_info=fig_info_in.copy())
 
     ref_ckd = ckd_ref.nlin() if ckd_ref is not None else None
-    # plot commands...
+    if ref_ckd is not None:
+        # plot commands...
+        pass
     plot.close()
 
 
@@ -219,36 +221,40 @@ def add_prnu_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_fov_figs(ckd, ckd_ref=None):
-    """Generate figures of Field-of-View CKD.
-    """
-    fov_ckd = ckd.fov()
-    if fov_ckd is None:
-        return
+# def add_fov_figs(ckd, ckd_ref=None):
+#    """Generate figures of Field-of-View CKD.
+#    """
+#    fov_ckd = ckd.fov()
+#    if fov_ckd is None:
+#        return
+#
+#    plot, fig_info_in = init_plot_file('fov', ckd, ckd_ref)
+#    plot.set_caption('SPEXone field-of-view CKD')
+#    # plot commands...
+#
+#    ref_ckd = ckd_ref.fov() if ckd_ref is not None else None
+#    if ref_ckd is not None:
+#        # plot commands...
+#        pass
+#    plot.close()
 
-    plot, fig_info_in = init_plot_file('fov', ckd, ckd_ref)
-    plot.set_caption('SPEXone field-of-view CKD')
-    # plot commands...
 
-    ref_ckd = ckd_ref.fov() if ckd_ref is not None else None
-    # plot commands...
-    plot.close()
-
-
-def add_swath_figs(ckd, ckd_ref=None):
-    """Generate figures of Swath CKD.
-    """
-    swath_ckd = ckd.swath()
-    if swath_ckd is None:
-        return
-
-    plot, fig_info_in = init_plot_file('swath', ckd, ckd_ref)
-    plot.set_caption('SPEXone Swath CKD')
-    # plot commands...
-
-    ref_ckd = ckd_ref.swath() if ckd_ref is not None else None
-    # plot commands...
-    plot.close()
+# def add_swath_figs(ckd, ckd_ref=None):
+#    """Generate figures of Swath CKD.
+#    """
+#    swath_ckd = ckd.swath()
+#    if swath_ckd is None:
+#        return
+#
+#    plot, fig_info_in = init_plot_file('swath', ckd, ckd_ref)
+#    plot.set_caption('SPEXone Swath CKD')
+#    # plot commands...
+#
+#    ref_ckd = ckd_ref.swath() if ckd_ref is not None else None
+#    if ref_ckd is not None:
+#        # plot commands...
+#        pass
+#    plot.close()
 
 
 def add_wave_figs(ckd, ckd_ref=None):
