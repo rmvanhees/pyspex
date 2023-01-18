@@ -49,6 +49,9 @@ Content of YAML file::
   outfile: ''
   # define file-version as nn, neglected when outfile not empty
   file_version: 1
+  # flag to compress netCDF4 variable: '/science_data/detector_images'
+  # createVariable parameters: compression='zlib', complevel=1, shuffle=True.
+  compression: True
   # flag to indicate measurements taken in eclipse or day-side
   eclipse: True
   # provide list, directory, file-glob or empty

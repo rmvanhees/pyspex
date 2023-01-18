@@ -14,11 +14,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from pyspex import version
+from pyspex.version import pyspex_version
 from pyspex.gen_l1a.cli import main
 
 if __name__ == '__main__':
     mtime_str = datetime.fromtimestamp(
         Path(__file__).stat().st_mtime).isoformat(sep=' ', timespec='seconds')
-    print(f'l1agen_spex.py {version.get()} ({mtime_str})\n')
+    print(f'l1agen_spex.py {pyspex_version()} ({mtime_str})\n')
     sys.exit(main())
