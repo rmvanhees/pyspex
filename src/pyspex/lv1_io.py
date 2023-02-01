@@ -270,6 +270,8 @@ def write_l1a(config, science_in, nomhk_in) -> None:
         # and/or "Calibration data”: full frame data in "Diagonstic mode".
         mode_list = ['binned', 'full']
 
+    # print(mode_list, len(science_in), type(science_in),
+    #       len(nomhk_in), type(nomhk_in))
     for mode in mode_list:
         # selected L0 data-packages
         # and group Science packages to detector-frames
