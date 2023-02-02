@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -13,6 +13,7 @@ Defines the format of a SPEXone Level-1B product.
 __all__ = ['init_l1b']
 
 import datetime
+
 import netCDF4 as nc4
 
 # - global parameters ------------------------------

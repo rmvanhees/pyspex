@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -25,11 +25,11 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from pyspex.spx_product import get_l1a_name
 from pyspex.lib.tmtc_def import tmtc_dtype
-from pyspex.tif_io import TIFio
-from pyspex.lv1_io import L1Aio
 from pyspex.lv1_gse import LV1gse
+from pyspex.lv1_io import L1Aio
+from pyspex.spx_product import get_l1a_name
+from pyspex.tif_io import TIFio
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)

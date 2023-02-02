@@ -4,25 +4,22 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
 """
 Quick and dirty script to generate simple Quick-Look figures.
 """
-
 import argparse
-
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import h5py
 import numpy as np
-
 from moniplot.lib.fig_info import FIGinfo
-from moniplot.tol_colors import tol_cmap
 from moniplot.mon_plot import MONplot
+from moniplot.tol_colors import tol_cmap
 
 from pyspex.binning_tables import BinningTables
 

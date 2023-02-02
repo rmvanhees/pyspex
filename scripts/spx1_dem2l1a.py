@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -23,11 +23,11 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.dem_io import DEMio
+from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv0_io import img_sec_of_day
-from pyspex.lv1_io import L1Aio
 from pyspex.lv1_gse import LV1gse
+from pyspex.lv1_io import L1Aio
 from pyspex.spx_product import get_l1a_name
 
 # - global parameters ------------------------------

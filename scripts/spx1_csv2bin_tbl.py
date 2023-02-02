@@ -4,25 +4,21 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Create or update SPEXone binning-table CKD.
+"""Create or update SPEXone binning-table CKD.
 
 - Input is binning table information in CSV format.
-
 - The binning-table CKD is written in netCDF4 format.
 """
-
 import argparse
 from pathlib import Path
 
 import numpy as np
 
 from pyspex.binning_tables import BinningTables
-
 
 # - global parameters ------------------------------
 

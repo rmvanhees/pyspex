@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -15,19 +15,17 @@ Possible OGSE information:
 
  * Reference diode (Ambient/GSFC polarized, radiometric): the reference diode
    is located in the ... or Grande (GSFC) integrated sphere.
-
  * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
-
  * Wavelength of OPO laser (GSFC spectral-radiometry).
 """
 import argparse
 from pathlib import Path
 
-from pyspex.ogse_db import (read_ref_diode, read_wav_mon,
-                            add_ogse_ref_diode, add_ogse_wav_mon)
+from pyspex.ogse_db import (add_ogse_ref_diode, add_ogse_wav_mon,
+                            read_ref_diode, read_wav_mon)
 from pyspex.ogse_dolp import gsfc_polarizer
-from pyspex.ogse_helios import helios_spectrum
 from pyspex.ogse_grande import grande_spectrum
+from pyspex.ogse_helios import helios_spectrum
 from pyspex.ogse_laser import read_gse_excel
 
 # - global parameters ------------------------------

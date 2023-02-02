@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # Author: Sean Bailey - DAAC Manager, OB.DAAC, NASA/GSFC Code 619
@@ -16,10 +16,12 @@ The source for the latest version of tai-utc.dat is the US Naval Observatory:
    https://maia.usno.navy.mil/ser7/tai-utc.dat
 """
 from datetime import datetime, timezone
+
 try:
     from importlib.resources import files
 except ImportError:
     from importlib_resources import files
+
 from os import environ
 from pathlib import Path
 

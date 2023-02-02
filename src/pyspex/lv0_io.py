@@ -40,7 +40,7 @@ from .tm_science import TMscience
 FULLFRAME_BYTES = 2 * 2048 * 2048
 
 # define numpy data-type to read the cFE file-header
-DTYPE_CFE =  np.dtype([
+DTYPE_CFE = np.dtype([
     ('ContentType', 'S4'),
     ('SubType', 'S4'),
     ('FileHeaderLength', '>u4'),

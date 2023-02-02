@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -18,10 +18,10 @@ __all__ = ['get_l1a_settings']
 import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
+
 import yaml
 
 from .version import pyspex_version
-
 
 # - global parameters ------------------------------
 ARG_INPUT_HELP = """provide one or more input files:

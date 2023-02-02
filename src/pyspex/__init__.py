@@ -10,7 +10,7 @@
 """Python package pyspex contains software to access
    and create SPEXone L1A and L1B products.
 """
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version(__name__)

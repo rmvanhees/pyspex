@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -16,8 +16,8 @@ __all__ = ['read_gse_excel']
 from pathlib import Path
 
 import numpy as np
-from openpyxl import load_workbook
 import xarray as xr
+from openpyxl import load_workbook
 
 
 # - main functions ----------------------------

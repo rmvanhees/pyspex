@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -19,9 +19,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 import xarray as xr
-
 from moniplot.image_to_xarray import h5_to_xr
-from pyspex.lib.tmtc_def import tmtc_dtype
+
+from .lib.tmtc_def import tmtc_dtype
 
 
 # - high-level r/w functions ------------
