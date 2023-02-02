@@ -10,7 +10,7 @@
 """
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
-   `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`, 'read_cfe_hdr',
+   'dtype_cfe_hdr', `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`,
    `read_lv0_data`, 'select_nomhk', `select_science`
 
 And handy routines to convert CCSDS parameters:
@@ -24,8 +24,8 @@ from __future__ import annotations
 __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
-           'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
-           'read_cfe_hdr', 'read_lv0_data', 'select_nomhk',
+           'dtype_cfe_hdr', 'dtype_packet_hdr', 'dtype_tmtc',
+           'dump_lv0_data', 'read_lv0_data', 'select_nomhk',
            'select_science']
 
 from datetime import datetime, timedelta, timezone
@@ -39,6 +39,18 @@ from .tm_science import TMscience
 
 # - global parameters ------------------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
+
+# define numpy data-type to read the cFE file-header
+DTYPE_CFE =  np.dtype([
+    ('ContentType', 'S4'),
+    ('SubType', 'S4'),
+    ('FileHeaderLength', '>u4'),
+    ('SpacecraftID', 'S4'),
+    ('ProcessorID', '>u4'),
+    ('InstrumentID', 'S4'),
+    ('TimeSec', '>u4'),
+    ('TimeSubSec', '>u4'),
+    ('Filename', 'S32')])
 
 
 # - local functions --------------------------------
@@ -160,7 +172,7 @@ def dtype_packet_hdr(file_format: str) -> np.dtype:
 
     'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
 
-    'dsb': data has a cFE file header and spacewire + CCSDS packet headers
+    'dsb': data has a cFE file-header and spacewire + CCSDS packet headers
 
     """
     if file_format == 'raw':
@@ -259,27 +271,6 @@ def _fix_hk24_(sci_hk):
     return res
 
 
-def read_cfe_hdr(ccsds_data, verbose=False) -> int:
-    """read cFE file header
-    """
-    cfe_dtype = np.dtype([
-        ('ContentType', 'S4'),
-        ('SubType', 'S4'),
-        ('FileHeaderLength', '>u4'),
-        ('SpacecraftID', 'S4'),
-        ('ProcessorID', '>u4'),
-        ('InstrumentID', 'S4'),
-        ('TimeSec', '>u4'),
-        ('TimeSubSec', '>u4'),
-        ('Filename', 'S32'),
-    ])
-    cfe_hdr = np.frombuffer(ccsds_data, count=1, offset=0, dtype=cfe_dtype)[0]
-    if verbose:
-        print(f'[INFO]: content of cFE header "{cfe_hdr}"')
-
-    return cfe_dtype.itemsize
-
-
 def read_lv0_data(file_list: list, file_format: str, debug=False,
                   verbose=False) -> tuple:
     """
@@ -320,8 +311,16 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
 
             offs = 0
             if file_format == 'dsb':
-                # read cFE file header
-                offs = read_cfe_hdr(ccsds_data, verbose)
+                # read cFE file-header from buffer
+                cfe_hdr = np.frombuffer(ccsds_data, count=1, offset=0,
+                                        dtype=DTYPE_CFE)[0]
+                if verbose:
+                    print(f'[INFO]: content of cFE header "{cfe_hdr}"')
+                if cfe_hdr['FileHeaderLength'] != DTYPE_CFE.itemsize:
+                    print('[WARNING]: size of cFE header is'
+                          f' {cfe_hdr['FileHeaderLength']} bytes, expected'
+                          f' {DTYPE_CFE.itemsize} bytes')
+                offs += cfe_hdr['FileHeaderLength']
 
             # read CCSDS header and user data
             while offs < len(ccsds_data):

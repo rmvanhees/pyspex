@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2022 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -16,7 +16,6 @@ __all__ = ['get_l1a_name']
 
 from datetime import datetime
 
-#from . import version
 from .version import pyspex_version
 
 
