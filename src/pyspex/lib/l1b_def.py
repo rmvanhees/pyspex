@@ -13,8 +13,7 @@ Defines the format of a SPEXone Level-1B product.
 __all__ = ['init_l1b']
 
 import datetime
-
-from netCDF4 import Dataset
+import netCDF4 as nc4
 
 # - global parameters ------------------------------
 ORBIT_DURATION = 5904  # seconds
@@ -65,7 +64,7 @@ def init_l1b(l1b_flname: str, ref_date: datetime.date, dims: dict) -> None:
         n_polar_bands = dims['polarization_bands_per_view']
 
     # create/overwrite netCDF4 product
-    rootgrp = Dataset(l1b_flname, "w")
+    rootgrp = nc4.Dataset(l1b_flname, "w")
 
     # create global dimensions
     _ = rootgrp.createDimension('number_of_views', n_views)

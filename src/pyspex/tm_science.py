@@ -90,6 +90,8 @@ class TMscience:
 
     @property
     def nr_coadditions(self) -> int:
+        """Returns number of coadditions.
+        """
         return self.__tm['REG_NCOADDFRAMES']
 
     @property
@@ -145,6 +147,8 @@ class TMscience:
 
     @property
     def exposure_time(self) -> float:
+        """Returns exposure time in seconds.
+        """
         return MCP_TO_SEC * self.exp_time
 
     @property
@@ -181,7 +185,7 @@ class TMscience:
         """
         pll_div = self.__tm['DET_PLLRATE'] & 0xF             # bit [0:4]
         pll_out_fre = (self.__tm['DET_PLLRATE'] >> 4) & 0x7  # bit [4:7]
-        pll_range = (self.__tm['DET_PLLRATE'] >> 7)          # bit [7]
+        pll_range = self.__tm['DET_PLLRATE'] >> 7            # bit [7]
 
         return pll_range, pll_out_fre, pll_div
 

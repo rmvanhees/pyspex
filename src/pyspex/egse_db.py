@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import h5py
-from netCDF4 import Dataset
+import netCDF4 as nc4
 import numpy as np
 
 # - global parameters ------------------------------
@@ -232,7 +232,7 @@ def create_egse_db(args):
 
         egse = res[0] if egse is None else np.concatenate((egse, res[0]))
 
-    with Dataset(args.egse_dir / DB_EGSE, 'w', format='NETCDF4') as fid:
+    with nc4.Dataset(args.egse_dir / DB_EGSE, 'w', format='NETCDF4') as fid:
         fid.input_files = [Path(x).name for x in args.file_list]
         fid.creation_date = \
             datetime.now(timezone.utc).isoformat(timespec='seconds')
@@ -296,7 +296,7 @@ def add_egse_data(args):
               msmt_start.timestamp(), msmt_stop.timestamp())
 
     # open EGSE database
-    with Dataset(args.egse_dir / DB_EGSE, 'r') as fid:
+    with nc4.Dataset(args.egse_dir / DB_EGSE, 'r') as fid:
         egse_time = fid['time'][:].data
         if args.verbose:
             print('EGSE time-coverage:', egse_time.min(), egse_time.max())
@@ -309,7 +309,7 @@ def add_egse_data(args):
         egse_data = fid['egse'][mask]
 
     # update Level-1A product with EGSE information
-    with Dataset(args.l1a_file, 'r+') as fid:
+    with nc4.Dataset(args.l1a_file, 'r+') as fid:
         if fid.groups.get('/gse_data'):
             gid = fid['/gse_data']
         else:

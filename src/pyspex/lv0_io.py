@@ -10,23 +10,22 @@
 """
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
-   'dtype_cfe_hdr', `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`,
+   `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`,
    `read_lv0_data`, 'select_nomhk', `select_science`
 
 And handy routines to convert CCSDS parameters:
 
-   `ap_id`, `coverage_time`, `fix_sub_sec`, `grouping_flag`, `hk_sec_of_day`,
-   `img_sec_of_day`, `nomhk_timestamps`, `packet_length`,
-   `science_timestamps`, `sequence`
+   `ap_id`, `coverage_time`, `fix_sub_sec`, `grouping_flag`,
+   `hk_sec_of_day`, `img_sec_of_day`, `nomhk_timestamps`,
+   `packet_length`, `science_timestamps`, `sequence`
 """
 from __future__ import annotations
 
 __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
-           'dtype_cfe_hdr', 'dtype_packet_hdr', 'dtype_tmtc',
-           'dump_lv0_data', 'read_lv0_data', 'select_nomhk',
-           'select_science']
+           'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
+           'read_lv0_data', 'select_nomhk', 'select_science']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -318,7 +317,7 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                     print(f'[INFO]: content of cFE header "{cfe_hdr}"')
                 if cfe_hdr['FileHeaderLength'] != DTYPE_CFE.itemsize:
                     print('[WARNING]: size of cFE header is'
-                          f' {cfe_hdr['FileHeaderLength']} bytes, expected'
+                          f' {cfe_hdr["FileHeaderLength"]} bytes, expected'
                           f' {DTYPE_CFE.itemsize} bytes')
                 offs += cfe_hdr['FileHeaderLength']
 

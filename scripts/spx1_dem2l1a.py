@@ -43,7 +43,7 @@ def main():
     main program to illustate the creation of a L1A calibration product
     """
     parser = argparse.ArgumentParser(
-        description=('create SPEXone L1A product from DEM measurement(s)'))
+        description='create SPEXone L1A product from DEM measurement(s)')
     parser.add_argument('--verbose', default=False, action='store_true',
                         help='be verbose, default be silent')
     parser.add_argument('--reference', default=None,

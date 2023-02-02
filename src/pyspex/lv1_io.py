@@ -17,20 +17,19 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 
+import netCDF4 as nc4
 import numpy as np
 
-from netCDF4 import Dataset
-
-from .version import pyspex_version
 from .hkt_io import read_hkt_nav, write_hkt_nav
-from .lv0_io import (coverage_time, hk_sec_of_day, img_sec_of_day,
-                     nomhk_timestamps, science_timestamps,
-                     select_nomhk, select_science)
-from .tm_science import TMscience
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
+from .lv0_io import (coverage_time, hk_sec_of_day, img_sec_of_day,
+                     nomhk_timestamps, science_timestamps, select_nomhk,
+                     select_science)
+from .tm_science import TMscience
+from .version import pyspex_version
 
 # - global parameters -------------------
 ONE_DAY = 24 * 60 * 60
@@ -213,7 +212,7 @@ def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
 
     # add processor_configuration
     if config.yaml_fl:
-        with Dataset(config.outdir / prod_name, 'r+') as fid:
+        with nc4.Dataset(config.outdir / prod_name, 'r+') as fid:
             dset = fid.createVariable('processor_configuration', str)
             dset.comment = ('Configuration parameters used during'
                             ' the processor run that produced this file.')

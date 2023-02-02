@@ -89,7 +89,7 @@ class HKTio:
         """
         self.filename = Path(filename)
         if not self.filename.is_file():
-            FileNotFoundError('HKT product does not exists')
+            raise FileNotFoundError('HKT product does not exists')
 
         self._coverage = None
         self.set_instrument(instrument)

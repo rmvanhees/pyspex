@@ -237,7 +237,7 @@ class DEMio:
         """
         pll_div = self.hdr['PLL_RANGE'] & 0xF             # bit [0:4]
         pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7  # bit [4:7]
-        pll_range = (self.hdr['PLL_RANGE'] >> 7)          # bit [7]
+        pll_range = self.hdr['PLL_RANGE'] >> 7            # bit [7]
 
         return (pll_range, pll_out_fre, pll_div)
 

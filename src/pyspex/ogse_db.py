@@ -318,7 +318,7 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
     # ref_time is generated with the SRON clock
     xds = open_dataset(ref_db, group='/gse_data/WaveMonitor')
     ref_time = xds['time'].values - t_diff
-    mask = ((ref_time >= msmt_start) & (ref_time <= msmt_stop))
+    mask = (ref_time >= msmt_start) & (ref_time <= msmt_stop)
     if mask.sum() == 0:
         print('WaveMonitor',
               ref_time.min(), msmt_start, msmt_stop, ref_time.max())

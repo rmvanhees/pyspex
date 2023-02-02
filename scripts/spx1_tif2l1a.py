@@ -96,7 +96,7 @@ def main():
     CKD_DIR :  directory with SPEXone CKD, default is CWD
     """
     parser = argparse.ArgumentParser(
-        description=('create SPEXone L1A product from instrument simulations'))
+        description='create SPEXone L1A product from instrument simulations')
     parser.add_argument('--lineskip', default=False, action='store_true',
                         help='read line-skip data, when available')
     parser.add_argument('--output', default=None,

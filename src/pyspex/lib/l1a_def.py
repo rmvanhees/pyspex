@@ -13,9 +13,8 @@ Defines the format of a SPEXone Level-1A product.
 __all__ = ['init_l1a']
 
 import datetime
+import netCDF4 as nc4
 import numpy as np
-
-from netCDF4 import Dataset
 
 from .tmtc_def import tmtc_dtype
 
@@ -30,7 +29,7 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
 
     Parameters
     ----------
-    dset : h5py.Dataset
+    dset : nc4.Variable
        Variable containing a timestamp as seconds since referencce date
     ref_date : datetime.date
        Reference date
@@ -111,7 +110,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
 
     # create/overwrite netCDF4 product
     try:
-        rootgrp = Dataset(l1a_flname, 'w')
+        rootgrp = nc4.Dataset(l1a_flname, 'w')
     except Exception as exc:
         raise Exception(f'Failed to create netCDF4 file {l1a_flname}') from exc
 
