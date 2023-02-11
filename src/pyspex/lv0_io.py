@@ -716,7 +716,7 @@ def select_science(ccsds_sci: tuple[np.ndarray],
         return np.concatenate(science), np.vstack(images)
 
     # fill image data to the dimension of the largest read-out
-    img_data = np.empty((len(img_dims), img_dims.max()), dtype='u2')
+    img_data = np.empty((len(img_dims), np.max(img_dims)), dtype='u2')
     for ii, data in enumerate(images):
         img_data[ii, :data.size] = data
 
