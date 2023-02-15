@@ -141,10 +141,11 @@ def __commandline_settings():
     parser.add_argument('--outdir', type=Path, default=None,
                         help=("directory to store the generated"
                               " level-1A product(s)"))
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
-    group.add_argument('--spex_lv0', nargs='+', help=ARG_INPUT_HELP)
+    # group = parser.add_mutually_exclusive_group(required=True)
+    parser.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
+    parser.add_argument('lv0_list', nargs='*', help=ARG_INPUT_HELP)
     args = parser.parse_args()
+    print(args)
 
     config = Config()
     if args.debug:
@@ -155,10 +156,12 @@ def __commandline_settings():
         config.verbose = True
     if args.outdir is not None:
         config.outdir = args.outdir
-    if args.spex_lv0:
-        config.l0_list = [Path(x) for x in args.spex_lv0]
-    else:
+    if args.yaml:
         config.yaml_fl = args.yaml
+    elif args.lv0_list:
+        config.l0_list = [Path(x) for x in args.lv0_list]
+    else:
+        parser.error('You should provide a YAML file or names of L0 products')
 
     return config
 
