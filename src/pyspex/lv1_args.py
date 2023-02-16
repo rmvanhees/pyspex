@@ -48,20 +48,20 @@ file_version: 1
 # flag to indicate measurements taken in eclipse or day-side
 eclipse: True
 # provide list, directory, file-glob or empty
-hkt_list: HKT/PACE.20220617T011*.HKT.nc
+hkt_list: <PATH>/PACE.20220617T011*.HKT.nc
 # must be a list, directory or glob. Fails when empty
 l0_list:
-- L0/SPX022000010.spx
-- L0/SPX022000011.spx
-- L0/SPX022000012.spx
-- L0/SPX022000013.spx
+- <PATH>/SPX022000010.spx
+- <PATH>/SPX022000011.spx
+- <PATH>/SPX022000012.spx
+- <PATH>/SPX022000013.spx
 
 """
 
 EPILOG_HELP = """Usage:
   Generate L1A from OCAL level-0 data directly from the SPEXone instrument:
 
-    spx1_level01a --spex_lv0 <Path>/NomSciCal1_20220123T121801.676167.H
+    spx1_level01a <Path>/NomSciCal1_20220123T121801.676167.H
 
     Note that OCAL science & telemetry data is read from the files:
       <Path>/NomSciCal1_20220123T121801.676167.?
@@ -70,11 +70,11 @@ EPILOG_HELP = """Usage:
 
   Generate L1A from OCAL level-0 data via ITOS from the PACE platform:
 
-    spx1_level01a --spex_lv0 <Path>/DIAG_20220124_175458_073.ST3
+    spx1_level01a <Path>/DIAG_20220124_175458_073.ST3
 
   Generate L1A from inflight level-0 data, store product in directory L1A:
 
-    spx1_level01a --outdir L1A --spex_lv0 <Path>/SPX*.spx
+    spx1_level01a --outdir L1A <Path>/SPX*.spx
 
   Generate L1A from inflight level-0 data read settings from a YAML file:
 
@@ -84,17 +84,27 @@ EPILOG_HELP = """Usage:
        outdir: L1A
        outfile: ''
        file_version: 1
+       compresion: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
-       l0_list: L0/SPX0220000??.spx
+       l0_list: <PATH>/SPX0220000??.spx
 
   Dry-run, be extra verbose without generating data:
 
-    spx1_level01a --debug --spex_lv0 <Path>/NomSciCal1_20220123T121801.676167.H
+    spx1_level01a --debug <Path>/NomSciCal1_20220123T121801.676167.H
 
   Read level-0 data and dump CCSDS packet headers in ASCII:
 
-    spx1_level01a --dump --spex_lv0 <Path>/NomSciCal1_20220123T121801.676167.H
+    spx1_level01a --dump <Path>/NomSciCal1_20220123T121801.676167.H
+
+Return codes:
+  2      Failed to parse command-line parameters.
+  100    Input file does not exist or failed to read from input file.
+  101    Input file not recognized as a SPEXone level-0 product.
+  110    Corrupted SPEXone level-0 data.
+  120    SPEXone level-0 data does not contain Science data, no L1A generated.
+  130    Failed to generate output file due to permission error.
+  131    Failed to generate output file due to netCDF4 library issues.
 
 Environment:
    'OCVARROOT'

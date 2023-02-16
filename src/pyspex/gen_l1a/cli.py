@@ -48,7 +48,7 @@ def main() -> int:
             dump_lv0_data(config.l0_list, config.outdir, *res)
         except FileNotFoundError as exc:
             print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-            return 132
+            return 130
 
         if config.verbose:
             print(f'Wrote ASCII dump in directory: {config.outdir}')
