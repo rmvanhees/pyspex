@@ -5,6 +5,7 @@
 
 import os
 import sys
+from importlib.metadata import version
 sys.path.insert(0, os.path.abspath('../src'))
 
 # -- Project information -----------------------------------------------------
@@ -13,7 +14,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 project = 'pyspex'
 copyright = '2022, SRON'
 author = 'Richard van Hees'
-release = '1.2.6'
+release = version('pyspex')
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
