@@ -1,7 +1,7 @@
 Quick test procedures for ``pyspex``
 ===========================================
 
-The tests descibed in the document are performed using pyspex_ v1.3.7, but
+The tests described in the document are performed using pyspex_ v1.3.7, but
 should also be valid for any later release.
 
 The test data files are freely available from the OB-DAAC_.
@@ -38,7 +38,7 @@ products and HKT products. The latter contain the navigation data, necessary to
 calculate the geolocation information in the L1B products.
 
 #. This example uses as input multiple files, which contain a subset of the measurements
-   we will perform inflight during eclipse. The measurements are perfomed in *diagnostic
+   we will perform inflight during eclipse. The measurements are performed in *diagnostic
    mode* (full frame) which are stored in the file:
    
     `PACE_SPEXONE_CAL.20230105T143532.L1A.nc`
@@ -48,7 +48,7 @@ calculate the geolocation information in the L1B products.
    The CDL files of the generated L1A products can be found in the current directory.
    The L1A processor can be called as follows::
    
-   l1agen_spex.py --yaml run_429-432.yml
+   l1agen_spex.py --yaml run_429-432.yaml
    
    This is the content of the YAML file used to process the data::
 
@@ -65,7 +65,7 @@ calculate the geolocation information in the L1B products.
 #. This example uses as input multiple L0 products and HKT products. A typical example of operational
    processing but still with simulated data::
    
-   l1agen_spex.py --yaml run_393-398+hkt.yml
+   l1agen_spex.py --yaml run_393-398+hkt.yaml
    
    The name of the radiance product is:
    

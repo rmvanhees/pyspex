@@ -1,0 +1,10 @@
+outdir: ''
+outfile: ''
+file_version: 1
+compression: False
+eclipse: True
+l0_list:
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2023/01/05/SPX000000429.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2023/01/05/SPX000000430.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2023/01/05/SPX000000431.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2023/01/06/SPX000000432.spx

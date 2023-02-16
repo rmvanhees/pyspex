@@ -1,0 +1,15 @@
+outdir: ''
+outfile: ''
+file_version: 1
+compression: False
+eclipse: False
+hkt_list:
+- /data/richardh/SPEXone/MPC/pace_hkt/V1.0/2024/03/24/PACE.20240324T142500.HKT.nc
+- /data/richardh/SPEXone/MPC/pace_hkt/V1.0/2024/03/24/PACE.20240324T151300.HKT.nc
+l0_list:
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000393.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000394.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000395.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000396.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000397.spx
+- /data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000398.spx
