@@ -215,7 +215,7 @@ def read_egse(egse_file: str, verbose=False) -> tuple:
     for name in data.dtype.names:
         egse[name][:] = data[name][:]
 
-    return (egse, units)
+    return egse, units
 
 
 # ---------- CREATE EGSE DATABASE ----------
@@ -243,10 +243,8 @@ def create_egse_db(args):
         _ = fid.createEnumType('u1', 'shutter_t',
                                {k.upper(): v
                                 for k, v in SHUTTER_DICT.items()})
-        dset = fid.createDimension('time', egse.size)
-        dset = fid.createVariable('time', 'f8', ('time',),
-                                  chunksizes=(256,))
-
+        _ = fid.createDimension('time', egse.size)
+        dset = fid.createVariable('time', 'f8', ('time',), chunksizes=(256,))
         time_key = 'ITOS_time' if 'ITOS_time' in egse.dtype.names else 'time'
         indx = np.argsort(egse[time_key])
         dset[:] = egse[time_key][indx]
@@ -320,7 +318,7 @@ def add_egse_data(args):
         _ = gid.createEnumType('u1', 'shutter_t',
                                {k.upper(): v
                                 for k, v in SHUTTER_DICT.items()})
-        dset = gid.createDimension('time', egse_data.size)
+        _ = gid.createDimension('time', egse_data.size)
         dset = gid.createVariable('time', 'f8', ('time',))
         dset[:] = egse_time
 

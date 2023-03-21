@@ -78,20 +78,21 @@ class HKTio:
 
     Parameters
     ----------
-    filename : str
+    filename : Path
         name of the PACE HKT product
     instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
         name of PACE instrument 'spx': SPEXone, 'oci': OCI, 'harp': HARP2,
         'sc': Space Craft.
     """
-    def __init__(self, filename: str, instrument='spx') -> None:
+    def __init__(self, filename: Path, instrument='spx') -> None:
         """Initialize access to a PACE HKT product.
         """
-        self.filename = Path(filename)
+        self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError('HKT product does not exists')
 
         self._coverage = None
+        self._instrument = None
         self.set_instrument(instrument)
 
     # ---------- PUBLIC FUNCTIONS ----------
@@ -111,7 +112,7 @@ class HKTio:
 
         Parameters
         ----------
-        bgn_tai, end_tai: int
+        sec_bgn, sec_end: int
            Minimum and maximum value of data time-coverage (sec of day)
         """
         self._coverage = (sec_bgn, sec_end)
@@ -211,8 +212,8 @@ class HKTio:
 def __test():
     """small function to test this module
     """
-    hkt_name = '/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc'
-    hkt_name = '/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc'
+    # hkt_name = Path('/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc')
+    hkt_name = Path('/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc')
 
     hkt = HKTio(hkt_name)
     print(hkt.filename, hkt.instrument, hkt.coverage)

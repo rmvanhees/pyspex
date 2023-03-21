@@ -36,12 +36,12 @@ ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
-def frac_poly(xx_in, coefs=None):
+def frac_poly(xx_in: np.ndarray, coefs=None):
     """Temperature [K] calibration derived by Paul Tol (2020-10-21).
 
     Parameters
     ----------
-    xdata :  ndarray
+    xx_in :  ndarray
     coefs :  tuple, default=None
       Coefficients of fractional polynomial: r0, r1, r2, r3, r4
 
@@ -222,16 +222,16 @@ def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
 
 
 # - high-level write function -----------
-def write_l1a(config, science_in, nomhk_in) -> None:
+def write_l1a(config, science_in: np.ndarray, nomhk_in: np.ndarray) -> None:
     """Write Level-1A product.
 
     Parameters
     ----------
     config :  dataclass
        Settings for the L0->l1A processing.
-    science : np.ndarray
+    science_in : np.ndarray
        L0 detector data.
-    nomhk : np.ndarray
+    nomhk_in : np.ndarray
        L0 nominal housekeeping data.
     """
     def reject_tm(tm_sec, array):
@@ -259,10 +259,10 @@ def write_l1a(config, science_in, nomhk_in) -> None:
         return array
 
     if config.eclipse is None:
-        # this are "OCAL data" try to write all data to one L1A product.
+        # these are "OCAL data" try to write all data to one L1A product.
         mode_list = ['all']
     elif not config.eclipse:
-        # this are "Science data": always binned data
+        # these are "Science data": always binned data
         mode_list = ['binned']
     else:
         # this can be "Dark data": binned data using "Science mode" MPSes
@@ -335,6 +335,7 @@ class Lv1io:
     * Temperatures of a.o. detector, FEE, optica, obm, telescope
     * Instrument settings: exposure time, dead time, frame time, coadding, ...
     """
+    product: Path
     processing_level = 'unknown'
     dset_stored = {}
 
@@ -525,7 +526,7 @@ class Lv1io:
 
         Parameters
         ----------
-        orbit_number :  int, default=-1
+        orbit :  int, default=-1
            Orbit revolution counter
         bin_size :  str, default=None
            Size of the nadir footprint (cross-track), include unit: e.g. '5km'

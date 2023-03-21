@@ -39,7 +39,7 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
     --------
     Update the attributes of variable 'time':
 
-    >>> ref_date = datetime.date(2022, 03, 21)
+    >>> ref_date = datetime.date(2022, 3, 21)
     >>> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
     >>>                            fill_value=-32767)
     >>> dset.long_name = "image time"
@@ -73,7 +73,7 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
 # - main function ----------------------------------
 # pylint: disable=too-many-statements
 def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
-             compression=False) -> None:
+             compression=False) -> nc4.Dataset:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 

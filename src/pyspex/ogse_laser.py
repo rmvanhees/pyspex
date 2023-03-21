@@ -21,7 +21,7 @@ from openpyxl import load_workbook
 
 
 # - main functions ----------------------------
-def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset:
+def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset | None:
     """
     Return GSE info on central wavelength, line-width and laser radiance
 

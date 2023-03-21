@@ -8,8 +8,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Command-line implementation of spx1_level01a."""
-
+"""Command-line implementation of spx1_level01a.
+"""
 from ..lv0_io import dump_lv0_data, read_lv0_data
 from ..lv1_args import get_l1a_settings
 from ..lv1_io import write_l1a

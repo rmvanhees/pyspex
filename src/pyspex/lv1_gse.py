@@ -110,7 +110,7 @@ class LV1gse:
         self.fid.close()
         self.fid = None
 
-    def check_egse(self, egse_data) -> None:
+    def check_egse(self, egse_data: np.ndarray) -> None:
         """Check consistency of OGSE/EGSE information during measurement.
         """
         for key, fmt in egse_data.dtype.fields.items():
@@ -140,7 +140,7 @@ class LV1gse:
         self.fid['/gse_data'].setncattr(name, value)
 
     def write_attr_act(self, angle: float, illumination=None) -> None:
-        """Add act rotation angle as an group attribute.
+        """Add act rotation angle as a group attribute.
 
         Parameters
         ----------
@@ -152,7 +152,7 @@ class LV1gse:
             self.fid['/gse_data'].ACT_illumination = illumination
 
     def write_attr_alt(self, angle: float, illumination=None) -> None:
-        """Add altitude rotation angle as an group attribute.
+        """Add altitude rotation angle as a group attribute.
 
         Parameters
         ----------
@@ -168,9 +168,9 @@ class LV1gse:
 
         Parameters
         ----------
-        AoLP :  float
+        aolp :  float
            Angle of linear polarization
-        DoLP :  float
+        dolp :  float
            Degree of linear polarization
         """
         if aolp is not None:

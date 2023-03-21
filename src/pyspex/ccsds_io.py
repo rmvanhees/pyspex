@@ -10,6 +10,7 @@
 """
 Contains the class `CCSDSio` to read SPEXone telemetry packets.
 """
+from __future__ import annotations
 __all__ = ['CCSDSio']
 
 from pathlib import Path
@@ -70,7 +71,7 @@ class CCSDSio:
 
     Parameters
     ----------
-    file_list: list of strings
+    file_list: iterator to strings
         list of file-names, where each file contains parts of a measurement
 
     Notes
@@ -95,7 +96,7 @@ class CCSDSio:
     --------
 
     >>> packets = ()
-    >>> with CCSDSio(file_list) as ccsds:
+    >>> with CCSDSio(['file1', 'file2', 'file3']) as ccsds:
     >>>     while True:
     >>>         # read one telemetry packet at a time
     >>>         packet = ccsds.read_packet()
@@ -106,7 +107,7 @@ class CCSDSio:
     >>>         packets += (packet[0],)
     >>>
     >>>     # combine segmented Science packages
-    >>>     science_tm = ccsds.group_tm(packets)
+    >>>     science_tm = ccsds.science_tm(packets)
     >>>     # now you may want to collect the engineering packages
 
     """
@@ -154,7 +155,7 @@ class CCSDSio:
 
     # ---------- define some class properties ----------
     @property
-    def version_no(self) -> int:
+    def version_no(self) -> int | None:
         """Returns CCSDS version number.
         """
         if self.__hdr is None:
@@ -163,7 +164,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 13) & 0x7
 
     @property
-    def type_indicator(self) -> int:
+    def type_indicator(self) -> int | None:
         """Returns type of telemetry packet.
         """
         if self.__hdr is None:
@@ -172,7 +173,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 12) & 0x1
 
     @property
-    def secnd_hdr_flag(self) -> bool:
+    def secnd_hdr_flag(self) -> bool | None:
         """Returns flag indicating presence of a secondary header.
         """
         if self.__hdr is None:
@@ -181,7 +182,7 @@ class CCSDSio:
         return (self.__hdr['type'] >> 11) & 0x1
 
     @property
-    def ap_id(self) -> int:
+    def ap_id(self) -> int | None:
         """Returns SPEXone ApID.
         """
         if self.__hdr is None:
@@ -190,7 +191,7 @@ class CCSDSio:
         return self.__hdr['type'] & 0x7FF
 
     @property
-    def grouping_flag(self) -> int:
+    def grouping_flag(self) -> int | None:
         """Returns grouping flag
 
         The meaning of the grouping flag values are::
@@ -207,7 +208,7 @@ class CCSDSio:
         return (self.__hdr['sequence'] >> 14) & 0x3
 
     @property
-    def sequence_count(self) -> int:
+    def sequence_count(self) -> int | None:
         """Returns sequence counter, rollover to zero at 0x3FFF.
         """
         if self.__hdr is None:
@@ -216,7 +217,7 @@ class CCSDSio:
         return self.__hdr['sequence'] & 0x3FFF
 
     @property
-    def packet_length(self) -> int:
+    def packet_length(self) -> int | None:
         """Returns size of packet data in bytes.
 
         Value equals secondary header + user data (always odd)
@@ -433,7 +434,7 @@ class CCSDSio:
               packet['RejectParameter1'][0], packet['RejectParameter2'][0])
         return packet
 
-    def __rd_other(self, hdr) -> np.ndarray:
+    def __rd_other(self, hdr) -> np.ndarray | None:
         """Read other telemetry packet.
         """
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
@@ -449,7 +450,7 @@ class CCSDSio:
         packet['raw_data'] = np.fromfile(self.fp, count=num_bytes, dtype='u1')
         return packet
 
-    def read_packet(self) -> np.ndarray:
+    def read_packet(self) -> np.ndarray | None:
         """Read next telemetry packet.
 
         Returns
@@ -493,7 +494,7 @@ class CCSDSio:
 
         Parameters
         ----------
-        packets: tuple
+        packets_in: tuple
            Tuple with mix of SPEXone telemetry packages
         ap_id: int
            SPEXone ApID
@@ -518,7 +519,7 @@ class CCSDSio:
 
         Parameters
         ----------
-        packets: tuple
+        packets_in: tuple
            Tuple with science or house-keeping telemetry packages
 
         Returns

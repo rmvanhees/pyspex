@@ -32,13 +32,13 @@ class BinningTables:
 
     Parameters
     ----------
-    ckd_dir : str
+    ckd_dir : Path
         Specify the name of directory with SPEXone binning-table files.
 
     Raises
     ------
     FileNotFoundError
-        Directory with SPEXone SPEXone binning-table files does not exist.
+        Directory with SPEXone binning-table files does not exist.
 
     Notes
     -----

@@ -118,7 +118,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     Read wavelength monitor data into a xarray.Dataset.
     (input comma separated values)
     """
-    def byte_to_timestamp(str_date: str) -> datetime:
+    def byte_to_timestamp(str_date: str) -> float:
         """
         Helper function for numpy.loadtxt()
         convert byte-string to timestamp (UTC)
@@ -304,8 +304,7 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
 
     # update Level-1A product with OGSE/EGSE information
     xds = xds.isel(time=indx)
-    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/ReferenceDiode')
+    xds.to_netcdf(l1a_file, mode='a', group='/gse_data/ReferenceDiode')
 
 
 def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
@@ -327,8 +326,7 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
 
     # update Level-1A product with OGSE/EGSE information
     xds = xds.isel(time=mask.nonzero()[0])
-    xds.to_netcdf(l1a_file, mode='r+', format='NETCDF4',
-                  group='/gse_data/WaveMonitor')
+    xds.to_netcdf(l1a_file, mode='a', group='/gse_data/WaveMonitor')
 
 
 def __test():

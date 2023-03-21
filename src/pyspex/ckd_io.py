@@ -43,7 +43,7 @@ class CKDio:
     --------
     Read several CKD parameters:
 
-    >>> with CKDio('SPX1_CKD.nc') as ckd:
+    >>> with CKDio(Path('SPX1_CKD.nc')) as ckd:
     >>>    dark = ckd.dark()
     >>>    fov = ckd.fov()
 
@@ -105,7 +105,7 @@ class CKDio:
         # pylint: disable=no-member
         return self.fid.attrs['git_commit'].decode()
 
-    def dark(self) -> xr.Dataset:
+    def dark(self) -> xr.Dataset | None:
         """Read Dark CKD.
 
         Returns
@@ -126,7 +126,7 @@ class CKDio:
         res += (h5_to_xr(gid['dark_current']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def noise(self) -> xr.Dataset:
+    def noise(self) -> xr.Dataset | None:
         """Read Noise CKD.
 
         Returns
@@ -143,7 +143,7 @@ class CKDio:
         res += (h5_to_xr(gid['n']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def nlin(self) -> xr.Dataset:
+    def nlin(self) -> xr.Dataset | None:
         """Read non-linearity CKD.
 
         Returns
@@ -183,7 +183,7 @@ class CKDio:
             res += (h5_to_xr(gid['nonlin_fit']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def prnu(self) -> xr.DataArray:
+    def prnu(self) -> xr.DataArray | None:
         """Read PRNU CKD.
 
         Returns
@@ -197,7 +197,7 @@ class CKDio:
             return None
         return h5_to_xr(gid['prnu'])
 
-    def fov(self) -> xr.Dataset:
+    def fov(self) -> xr.Dataset | None:
         """Read field-of-view CKD.
 
         Returns
@@ -216,7 +216,7 @@ class CKDio:
         res += (h5_to_xr(gid['fov_ispat']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def wavelength(self) -> xr.Dataset:
+    def wavelength(self) -> xr.Dataset | None:
         """Read Wavelength CKD.
 
         Returns
@@ -236,7 +236,7 @@ class CKDio:
         res += (h5_to_xr(gid['wave_common']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def radiometric(self) -> xr.DataArray:
+    def radiometric(self) -> xr.DataArray | None:
         """Read Radiometric CKD.
 
         Returns
@@ -250,7 +250,7 @@ class CKDio:
             return None
         return h5_to_xr(gid['rad_spectra'])
 
-    def polarimetric(self) -> xr.Dataset:
+    def polarimetric(self) -> xr.Dataset | None:
         """Read Polarimetric CKD.
 
         Returns

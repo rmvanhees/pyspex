@@ -29,6 +29,8 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime | None) -> str:
     ----------
     msm_id : string, optional
        Provide identifier for measurement, OCAL only
+    utc_sensing_start: datetime or None
+       Provide sensing start of first measurement in L1A product
 
     Notes
     -----

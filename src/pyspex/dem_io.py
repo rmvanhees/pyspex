@@ -28,36 +28,36 @@ def det_dtype():
     """
     return np.dtype([
         ('UNUSED_000', 'u1'),
-        ('NUMBER_LINES', 'u1', (2)),
-        ('START1', 'u1', (2)),
-        ('START2', 'u1', (2)),
-        ('START3', 'u1', (2)),
-        ('START4', 'u1', (2)),
-        ('START5', 'u1', (2)),
-        ('START6', 'u1', (2)),
-        ('START7', 'u1', (2)),
-        ('START8', 'u1', (2)),
-        ('NUMBER_LINES1', 'u1', (2)),
-        ('NUMBER_LINES2', 'u1', (2)),
-        ('NUMBER_LINES3', 'u1', (2)),
-        ('NUMBER_LINES4', 'u1', (2)),
-        ('NUMBER_LINES5', 'u1', (2)),
-        ('NUMBER_LINES6', 'u1', (2)),
-        ('NUMBER_LINES7', 'u1', (2)),
-        ('NUMBER_LINES8', 'u1', (2)),
-        ('SUB_S', 'u1', (2)),
-        ('SUB_A', 'u1', (2)),
+        ('NUMBER_LINES', 'u1', (2,)),
+        ('START1', 'u1', (2,)),
+        ('START2', 'u1', (2,)),
+        ('START3', 'u1', (2,)),
+        ('START4', 'u1', (2,)),
+        ('START5', 'u1', (2,)),
+        ('START6', 'u1', (2,)),
+        ('START7', 'u1', (2,)),
+        ('START8', 'u1', (2,)),
+        ('NUMBER_LINES1', 'u1', (2,)),
+        ('NUMBER_LINES2', 'u1', (2,)),
+        ('NUMBER_LINES3', 'u1', (2,)),
+        ('NUMBER_LINES4', 'u1', (2,)),
+        ('NUMBER_LINES5', 'u1', (2,)),
+        ('NUMBER_LINES6', 'u1', (2,)),
+        ('NUMBER_LINES7', 'u1', (2,)),
+        ('NUMBER_LINES8', 'u1', (2,)),
+        ('SUB_S', 'u1', (2,)),
+        ('SUB_A', 'u1', (2,)),
         ('MONO', 'u1'),                   # 1 bits
         ('IMAGE_FLIPPING', 'u1'),         # 2 bits
         ('INTE_SYNC', 'u1'),              # 3 bits: Int_sync, Exp_dual, Exp_ext
-        ('EXP_TIME', 'u1', (3)),
-        ('EXP_STEP', 'u1', (3)),
-        ('EXP_KP1', 'u1', (3)),
-        ('EXP_KP2', 'u1', (3)),
+        ('EXP_TIME', 'u1', (3,)),
+        ('EXP_STEP', 'u1', (3,)),
+        ('EXP_KP1', 'u1', (3,)),
+        ('EXP_KP2', 'u1', (3,)),
         ('NR_SLOPES', 'u1'),              # 2 bits
         ('EXP_SEQ', 'u1'),
-        ('EXP_TIME2', 'u1', (3)),
-        ('EXP_STEP2', 'u1', (3)),
+        ('EXP_TIME2', 'u1', (3,)),
+        ('EXP_STEP2', 'u1', (3,)),
         ('UNUSED_062', 'u1'),
         ('UNUSED_063', 'u1'),
         ('UNUSED_064', 'u1'),
@@ -66,15 +66,15 @@ def det_dtype():
         ('UNUSED_067', 'u1'),
         ('UNUSED_068', 'u1'),
         ('EXP2_SEQ', 'u1'),
-        ('NUMBER_FRAMES', 'u1', (2)),
+        ('NUMBER_FRAMES', 'u1', (2,)),
         ('OUTPUT_MODE', 'u1'),            # 2 bits
         ('FOT_LENGTH', 'u1'),
         ('I_LVDS_REC', 'u1'),             # 4 bits
         ('UNUSED_075', 'u1'),
         ('UNUSED_076', 'u1'),
         ('COL_CALIB', 'u1'),              # 2 bits: Col_calib, ADC_calib
-        ('TRAINING_PATTERN', 'u1', (2)),  # 12 bits
-        ('CHANNEL_EN', 'u1', (3)),        # 19 bits
+        ('TRAINING_PATTERN', 'u1', (2,)),  # 12 bits
+        ('CHANNEL_EN', 'u1', (3,)),        # 19 bits
         ('I_LVDS', 'u1'),                 # 4 bits
         ('I_COL', 'u1'),                  # 4 bits
         ('I_COL_PRECH', 'u1'),            # 4 bits
@@ -92,7 +92,7 @@ def det_dtype():
         ('UNUSED_097', 'u1'),
         ('VRAMP1', 'u1'),                 # 7 bits
         ('VRAMP2', 'u1'),                 # 7 bits
-        ('OFFSET', 'u1', (2)),            # 14 bits
+        ('OFFSET', 'u1', (2,)),            # 14 bits
         ('PGA_GAIN', 'u1'),               # 2 bits
         ('ADC_GAIN', 'u1'),
         ('UNUSED_104', 'u1'),
@@ -117,7 +117,7 @@ def det_dtype():
         ('V_BLACKSUN', 'u1'),             # 6 bits
         ('UNUSED_124', 'u1'),
         ('UNUSED_125', 'u1'),
-        ('TEMP', 'u1', (2))
+        ('TEMP', 'u1', (2,))
     ])
 
 
@@ -193,7 +193,7 @@ class DEMio:
                     self.__hdr[0][key] = value
 
     @property
-    def hdr(self) -> np.ndarray:
+    def hdr(self) -> np.ndarray | None:
         """Returns DEM header as numpy compound array.
         """
         if self.__hdr is None:
@@ -239,7 +239,7 @@ class DEMio:
         pll_out_fre = (self.hdr['PLL_RANGE'] >> 4) & 0x7  # bit [4:7]
         pll_range = self.hdr['PLL_RANGE'] >> 7            # bit [7]
 
-        return (pll_range, pll_out_fre, pll_div)
+        return pll_range, pll_out_fre, pll_div
 
     @property
     def exp_control(self) -> tuple:
@@ -251,7 +251,7 @@ class DEMio:
         exp_dual = (self.hdr['INTE_SYNC'] >> 1) & 0x1
         exp_ext = self.hdr['INTE_SYNC'] & 0x1
 
-        return (inte_sync, exp_dual, exp_ext)
+        return inte_sync, exp_dual, exp_ext
 
     @property
     def offset(self) -> int:
@@ -326,12 +326,12 @@ class DEMio:
         -------
         numpy.ndarray
         """
-        def convert_val(key):
+        def convert_val(kk: str):
             """
             Convert byte array to integer
             """
             val = 0
-            for ii, bval in enumerate(self.__hdr[0][key]):
+            for ii, bval in enumerate(self.__hdr[0][kk]):
                 val += bval << (ii * 8)
 
             return val

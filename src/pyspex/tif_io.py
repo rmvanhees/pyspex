@@ -31,7 +31,7 @@ else:
 
 # - class TIFio -------------------------
 if FOUND_PYTIFF:
-    class TIFio():
+    class TIFio:
         """
         This class can be used to read SPEXone instrument simulator output
 
@@ -105,7 +105,7 @@ if FOUND_PYTIFF:
             return res
 
         # --------------------------------------------------
-        def tags(self) -> dict:
+        def tags(self) -> list:
             """return TIFF tags as dictionary.
             """
             if self.__header is None:

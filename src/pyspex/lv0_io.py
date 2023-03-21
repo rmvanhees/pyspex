@@ -150,7 +150,7 @@ def packet_length(hdr: np.ndarray) -> int:
     return hdr['length']
 
 
-def dtype_packet_hdr(file_format: str) -> np.dtype:
+def dtype_packet_hdr(file_format: str) -> np.dtype | None:
     """
     Return definition of the CCSDS packet headers (primary and secondary)
 
@@ -201,7 +201,7 @@ def dtype_packet_hdr(file_format: str) -> np.dtype:
     return None
 
 
-def dtype_tmtc(hdr: np.dtype) -> np.dtype:
+def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
     """
     Return definition of a CCSDS TmTc package (given APID)
 
@@ -464,7 +464,7 @@ def fix_sub_sec(tai_sec, sub_sec) -> tuple:
     return tai_sec, sub_sec
 
 
-def science_timestamps(science: np.ndarray) -> tuple:
+def science_timestamps(science: np.ndarray) -> tuple[int, int]:
     """
     Return timestamps of the Science packets
 
@@ -495,7 +495,7 @@ def science_timestamps(science: np.ndarray) -> tuple:
     return img_sec, img_subsec
 
 
-def nomhk_timestamps(nomhk: np.ndarray) -> tuple:
+def nomhk_timestamps(nomhk: np.ndarray) -> tuple[int, int]:
     """
     Return timestamps of the telemetry packets
 
@@ -555,7 +555,7 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
     offs_sec = (ref_day - epoch).total_seconds()
 
     # Determine offset wrt start-of-integration (IMRO + 1)
-    # Where by default is defined as IMRO:
+    # Where the default is defined as IMRO:
     #  [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
     #  [binned] 2 * COADD + 1   (always valid)
     offs_msec = 0
@@ -637,7 +637,7 @@ def select_nomhk(ccsds_hk: tuple[np.ndarray],
 
 
 def select_science(ccsds_sci: tuple[np.ndarray],
-                   mode='all') -> tuple[np.ndarray]:
+                   mode='all') -> tuple[np.ndarray, np.ndarray]:
     """
     Select Science telemetry packages and combine image data to contain one
     detector readout.
