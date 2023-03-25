@@ -222,16 +222,16 @@ def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
 
 
 # - high-level write function -----------
-def write_l1a(config, science_in: np.ndarray, nomhk_in: np.ndarray) -> None:
+def write_l1a(config, science_in: tuple[np.ndarray], nomhk_in: tuple[np.ndarray]) -> None:
     """Write Level-1A product.
 
     Parameters
     ----------
     config :  dataclass
        Settings for the L0->l1A processing.
-    science_in : np.ndarray
+    science_in : tuple of np.ndarray
        L0 detector data.
-    nomhk_in : np.ndarray
+    nomhk_in : tuple of np.ndarray
        L0 nominal housekeeping data.
     """
     def reject_tm(tm_sec, array):
@@ -278,7 +278,7 @@ def write_l1a(config, science_in: np.ndarray, nomhk_in: np.ndarray) -> None:
         if science.size == 0:
             continue
 
-        mps_list = np.unique(science['hk']['MPS_ID']).tolist()
+        mps_list = [int(i) for i in np.unique(science['hk']['MPS_ID'])]
         if config.verbose:
             print(f'[INFO]: list of unique MPS {mps_list}')
         nomhk = select_nomhk(nomhk_in, mps_list)
@@ -322,7 +322,7 @@ class Lv1io:
     ----------
     product :  str
        Name of the SPEXone Level-1 product
-    ref_date :  datetime.date
+    ref_date :  datetime.date()
        Date of the first detector image
     dims :  dict
        Dimensions of the datasets (differs for L1A, L1B, L1C)
@@ -553,7 +553,7 @@ class L1Aio(Lv1io):
     ----------
     product :  str
        Name of the SPEXone Level-1A product
-    ref_date :  datetime.date
+    ref_date :  datetime.date()
        Date of the first detector image
     dims :  dict
        Dimensions of the datasets, default values::

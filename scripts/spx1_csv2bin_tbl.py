@@ -43,7 +43,7 @@ def main():
                         help=('validity start of the binning tables'
                               ' (format: yyyymmddTHHMMSS)'))
     parser.add_argument('--table_id', type=str, default='1',
-                        help='start value table_id or comma seperated list')
+                        help='start value table_id or comma separated list')
     parser.add_argument('--lineskip', default=None,
                         help='provide lineskip arrays per binning table')
     parser.add_argument('file_list', nargs='+',

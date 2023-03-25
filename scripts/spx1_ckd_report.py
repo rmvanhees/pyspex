@@ -43,7 +43,7 @@ def init_plot_file(key: str, ckd, ckd_ref=None):
     plot = MONplot(f'spx1_ckd_report_{key}_{ckd_date}.pdf')
     plot.set_institute('SRON')
 
-    return (plot, fig_info_in)
+    return plot, fig_info_in
 
 
 def add_dark_figs(ckd, ckd_ref=None):

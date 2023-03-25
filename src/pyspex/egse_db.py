@@ -86,11 +86,11 @@ def init_gse_data(fid):
     return gid
 
 
-def byte_to_timestamp(str_date: str):
+def byte_to_timestamp(str_date: bytes) -> float:
     """
     Helper function for numpy.loadtxt() to convert byte-string to timestamp
     """
-    buff = str_date.strip().decode('ascii') + '+00:00'     # date is in UTC
+    buff = str_date.decode('ascii').strip() + '+00:00'     # date is in UTC
     return datetime.strptime(buff, '%Y%m%dT%H%M%S.%f%z').timestamp()
 
 

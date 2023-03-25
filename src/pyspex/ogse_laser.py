@@ -76,8 +76,7 @@ def __test(l1a_file: str) -> None:
     xds = read_gse_excel(gse_dir, '465.4nm')
     xds = read_gse_excel(gse_dir, '360nm', )
     xds = read_gse_excel(gse_dir, '840nm')
-    xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',
-                  group='/gse_data/OPO_laser')
+    xds.to_netcdf(l1a_file, mode='w', group='/gse_data/OPO_laser')
 
 
 # --------------------------------------------------

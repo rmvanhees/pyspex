@@ -13,12 +13,14 @@ wavelength monitor data. These data are supposed to be written to a HDF5
 database. From which collocated data can be added to a SPEXone Level-1A
 product.
 """
+from __future__ import annotations
 __all__ = ['read_ref_diode', 'read_wav_mon',
            'add_ogse_ref_diode', 'add_ogse_wav_mon']
 
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -44,9 +46,9 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     fields_to_skip = ('', 'averaging', 'lamp_on_counter', 'record_timestamp',
                       'scale', 'tempC')
 
+    names = []
+    units = []
     for flname in file_list:
-        names = []
-        units = []
         formats = []
         usecols = ()
         all_valid_lines = ''
@@ -95,10 +97,10 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
         print('data :', len(data))
 
     time_key = 'Unix_Time'
-    res = {}
-    res['time'] = DataArray(
-        data[time_key], coords={'time': data[time_key]},
-        attrs={'longname': 'time', 'units': 'seconds since 1970-1-1 0:0:0'})
+    res = {'time': DataArray(data[time_key],
+                             coords={'time': data[time_key]},
+                             attrs={'longname': 'time',
+                                    'units': 'seconds since 1970-1-1 0:0:0'})}
     for ii, key in enumerate(names):
         if key == time_key:
             continue
@@ -118,7 +120,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     Read wavelength monitor data into a xarray.Dataset.
     (input comma separated values)
     """
-    def byte_to_timestamp(str_date: str) -> float:
+    def byte_to_timestamp(str_date: bytes) -> float:
         """
         Helper function for numpy.loadtxt()
         convert byte-string to timestamp (UTC)
@@ -190,22 +192,26 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
             n_avg = np.concatenate((n_avg, np.full(res.size, scalar_n_avg)))
 
     time_key = 'timestamp'
-    res = {}
-    res['time'] = DataArray(
-        data[time_key], coords={'time': data[time_key]},
-        attrs={'longname': 'time', 'units': 'seconds since 1970-1-1 0:0:0'})
-    res['wavelength'] = DataArray(
-        wavelength, coords={'wavelength': wavelength},
-        attrs={'longname': 'wavelength grid', 'units': 'nm'})
-    res['t_intg'] = DataArray(
-        t_intg.astype('i2'), dims=['time'],
-        attrs={'longname': 'Integration time', 'units': 'nm'})
-    res['n_avg'] = DataArray(
-        n_avg.astype('i2'), dims=['time'],
-        attrs={'longname': 'Averaging number', 'units': '1'})
-    res['spectrum'] = DataArray(
-        data['spectrum'], dims=['time', 'wavelength'],
-        attrs={'longname': 'radiance spectrum', 'units': 'W/(m^2.sr.nm)'})
+    res = {'time': DataArray(data[time_key],
+                             coords={'time': data[time_key]},
+                             attrs={'longname': 'time',
+                                    'units': 'seconds since 1970-1-1 0:0:0'}),
+           'wavelength': DataArray(wavelength,
+                                   coords={'wavelength': wavelength},
+                                   attrs={'longname': 'wavelength grid',
+                                          'units': 'nm'}),
+           't_intg': DataArray(t_intg.astype('i2'),
+                               dims=['time'],
+                               attrs={'longname': 'Integration time',
+                                      'units': 'nm'}),
+           'n_avg': DataArray(n_avg.astype('i2'),
+                              dims=['time'],
+                              attrs={'longname': 'Averaging number',
+                                     'units': '1'}),
+           'spectrum': DataArray(data['spectrum'],
+                                 dims=['time', 'wavelength'],
+                                 attrs={'longname': 'radiance spectrum',
+                                        'units': 'W/(m^2.sr.nm)'})}
 
     xds = Dataset(res).sortby('time')
     xds.attrs = {'source': 'Avantes fibre spectrometer',
@@ -248,7 +254,7 @@ def read_date_stats() -> tuple:
     return t_itos.astype('datetime64[ms]'), t_sron.astype('datetime64[ms]')
 
 
-def clock_offset(l1a_file: Path) -> float:
+def clock_offset(l1a_file: Path) -> tuple[Any, int | Any, Any]:
     """
     Derive offset between msmt_start/msmt_stop and the SRON clock
     """

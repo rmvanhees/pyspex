@@ -102,7 +102,6 @@ def main():
     t_exp = np.empty(n_images, dtype=float)
     t_frm = np.empty(n_images, dtype=float)
     offset = np.empty(n_images, dtype=float)
-    temp = np.empty(n_images, dtype=float)
 
     for ii, flname in enumerate(args.file_list):
         dem_file = Path(flname)
@@ -155,10 +154,6 @@ def main():
         indx = sorted(range(n_images), key=tstamp.__getitem__)
         img_hk = img_hk[indx]
         tstamp = [tstamp[k] for k in indx]
-        t_exp = t_exp[indx]
-        t_frm = t_frm[indx]
-        offset = offset[indx]
-        temp = temp[indx]
         images = images[indx]
 
     # convert timestamps to seconds per day

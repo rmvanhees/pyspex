@@ -25,10 +25,11 @@ __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
            'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
-           'read_lv0_data', 'select_nomhk', 'select_science']
+           'read_lv0_data', 'select_nomhk', 'select_science', 'DTYPE_CFE']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -271,7 +272,7 @@ def _fix_hk24_(sci_hk):
 
 
 def read_lv0_data(file_list: list, file_format: str, debug=False,
-                  verbose=False) -> tuple:
+                  verbose=False) -> tuple[tuple, tuple]:
     """
     Read level 0 data and return Science and telemetry data
 
@@ -393,9 +394,9 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
     Parameters
     ----------
     file_list :  list of Path
-       list of CCSDS files
+       list of CCSDS files as concrete paths
     datapath :  Path
-       path to the directory to write the dump-file
+       concrete path to the directory to write the dump-file
     ccsds_sci :  tuple of np.ndarray
        tuple of Science packages
     ccsds_hk :  tuple of np.ndarray
@@ -464,7 +465,7 @@ def fix_sub_sec(tai_sec, sub_sec) -> tuple:
     return tai_sec, sub_sec
 
 
-def science_timestamps(science: np.ndarray) -> tuple[int, int]:
+def science_timestamps(science: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Return timestamps of the Science packets
 
@@ -474,7 +475,7 @@ def science_timestamps(science: np.ndarray) -> tuple[int, int]:
 
     Returns
     -------
-    tuple
+    tuple of ndarray
         Tuple with timestamps and sub-seconds
     """
     # The parameters ICU_TIME_SEC and ICU_TIME_SUBSEC contain zeros until
@@ -495,7 +496,7 @@ def science_timestamps(science: np.ndarray) -> tuple[int, int]:
     return img_sec, img_subsec
 
 
-def nomhk_timestamps(nomhk: np.ndarray) -> tuple[int, int]:
+def nomhk_timestamps(nomhk: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Return timestamps of the telemetry packets
 
@@ -505,7 +506,7 @@ def nomhk_timestamps(nomhk: np.ndarray) -> tuple[int, int]:
 
     Returns
     -------
-    tuple
+    tuple of ndarray
         Tuple with timestamps and sub-seconds
     """
     nomhk_sec = nomhk['hdr']['tai_sec']
@@ -528,7 +529,7 @@ def which_epoch(timestamp: int) -> datetime:
             - timedelta(seconds=get_leap_seconds(timestamp)))
 
 
-def img_sec_of_day(img_sec, img_subsec, img_hk) -> np.ndarray:
+def img_sec_of_day(img_sec, img_subsec, img_hk) -> tuple[datetime, float | Any]:
     """
     Convert Image CCSDS timestamp to seconds after midnight
 
@@ -612,7 +613,7 @@ def coverage_time(science) -> tuple:
 
 
 def select_nomhk(ccsds_hk: tuple[np.ndarray],
-                 mps_list: tuple[int]) -> np.ndarray:
+                 mps_list: list[int]) -> np.ndarray:
     """
     Select nominal housekeeping telemetry packages on MPS-IDs.
 

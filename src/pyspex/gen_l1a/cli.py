@@ -28,7 +28,7 @@ def main() -> int:
         print(f'[FATAL]: TypeError exception raised with "{exc}".')
         return 101
 
-    # show the user command-line steeings after calling `check_input_files`
+    # show the user command-line settings after calling `check_input_files`
     if config.verbose:
         print(config)
 

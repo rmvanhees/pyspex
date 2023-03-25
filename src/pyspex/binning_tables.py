@@ -60,25 +60,24 @@ class BinningTables:
 
     Examples
     --------
-    # create new file with binning-table definitions:
+    # create new file with binning-table definitions::
 
-    >>> bin_tbl = BinningTables()
-    >>> bin_tbl.create_if_needed(validity_start)
-    >>> bin_tbl.add_table(0, lineskip_arr, binning_table)
-    >>> bin_tbl.add_table(1, lineskip_arr, binning_table)
+    > bin_tbl = BinningTables()
+    > bin_tbl.create_if_needed(validity_start)
+    > bin_tbl.add_table(0, lineskip_arr, binning_table)
+    > bin_tbl.add_table(1, lineskip_arr, binning_table)
 
-    # add a new binning-table to an existing file:
+    # add a new binning-table to an existing file::
 
-    >>> bin_tbl BinningTables()
-    >>> bin_tbl.create_if_needed(validity_start)
-    >>> bin_tbl.add_table(2, lineskip_arr, binning_table)
+    > bin_tbl BinningTables()
+    > bin_tbl.create_if_needed(validity_start)
+    > bin_tbl.add_table(2, lineskip_arr, binning_table)
 
-    # use binning-table '130' to unbin SPEXone detector data
+    # use binning-table '130' to unbin SPEXone detector data::
 
-    >>> bin_tbl BinningTables()
-    >>> bin_tbl.search(coverage_start)
-    >>> img = bin_tbl.unbin(130, img_binned)
-
+    > bin_tbl BinningTables()
+    > bin_tbl.search(coverage_start)
+    > img = bin_tbl.unbin(130, img_binned)
     """
     def __init__(self, ckd_dir=None) -> None:
         """Initialize class attributes.

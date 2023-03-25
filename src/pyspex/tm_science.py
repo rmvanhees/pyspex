@@ -44,7 +44,7 @@ class TMscience:
         return self.__tm[key] if key in self.__tm.dtype.names else None
 
     @property
-    def binning_table(self) -> int:
+    def binning_table(self) -> np.ndarray:
         """Return the binning table identifier (zero for full-frame images).
 
         Notes
@@ -57,6 +57,9 @@ class TMscience:
               images. We try to fix this and warn the user.
         v129: REG_BINNING_TABLE_START is stored in BE instead of LE
 
+        Returns
+        -------
+        np.ndarray, dtype=int
         """
         full_frame = np.unique(self.__tm['REG_FULL_FRAME'])
         if len(full_frame) > 1:
@@ -89,19 +92,19 @@ class TMscience:
         raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
 
     @property
-    def nr_coadditions(self) -> int:
+    def nr_coadditions(self) -> np.ndarray:
         """Returns number of coadditions.
         """
         return self.__tm['REG_NCOADDFRAMES']
 
     @property
-    def number_channels(self) -> int:
+    def number_channels(self) -> np.ndarray:
         """Return number of LVDS channels used.
         """
         return 2 ** (4 - (self.__tm['DET_OUTMODE'] & 0x3))
 
     @property
-    def lvds_clock(self) -> bool:
+    def lvds_clock(self) -> np.ndarray:
         """Returns flag for LVDS clock: False: disabled & True: enabled.
         """
         return ((self.__tm['DET_PLLENA'] & 0x3) == 0
@@ -109,7 +112,7 @@ class TMscience:
                 and (self.__tm['DET_CHENA'] & 0x40000) != 0)
 
     @property
-    def digital_offset(self) -> int:
+    def digital_offset(self) -> np.ndarray:
         """Returns digital offset including ADC offset [count].
         """
         buff = self.__tm['DET_OFFSET'].astype('i4')
@@ -122,13 +125,13 @@ class TMscience:
         return buff + 70
 
     @property
-    def adc_gain(self) -> float:
+    def adc_gain(self) -> np.ndarray:
         """Returns ADC gain [Volt].
         """
         return self.__tm['DET_ADCGAIN']
 
     @property
-    def pga_gain(self) -> float:
+    def pga_gain(self) -> np.ndarray:
         """Returns PGA gain [Volt].
         """
         # need first bit of address 121
@@ -139,33 +142,33 @@ class TMscience:
         return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
 
     @property
-    def exp_time(self) -> float:
+    def exp_time(self) -> np.ndarray:
         """Returns pixel exposure time [master clock periods].
         """
         return 129 * (0.43 * self.__tm['DET_FOTLEN']
                       + self.__tm['DET_EXPTIME'])
 
     @property
-    def exposure_time(self) -> float:
-        """Returns exposure time in seconds.
+    def exposure_time(self) -> np.ndarray:
+        """Returns exposure time in seconds [float].
         """
         return MCP_TO_SEC * self.exp_time
 
     @property
-    def fot_time(self) -> int:
+    def fot_time(self) -> np.ndarray:
         """Returns frame overhead time [master clock periods].
         """
         return 129 * (self.__tm['DET_FOTLEN']
                       + 2 * (16 // self.number_channels))
 
     @property
-    def rot_time(self) -> int:
+    def rot_time(self) -> np.ndarray:
         """Returns image read-out time [master clock periods].
         """
         return 129 * (16 // self.number_channels) * self.__tm['DET_NUMLINES']
 
     @property
-    def frame_period(self) -> float:
+    def frame_period(self) -> np.ndarray:
         """Returns frame period [master clock periods].
         """
         return 2.38e-7 + (self.__tm['REG_NCOADDFRAMES']
@@ -179,6 +182,7 @@ class TMscience:
 
         Returns
         -------
+        tuple[np.ndarray, np.ndarray, np.ndarray]
         PLL_range:    bits [7], valid values: 0 or 1
         PLL_out_fre:  bits [4:7], valid values:  0, 1, 2 or 5
         PLL_div:      bits [0:3], valid values 9 (10-bit) or 11 (12-bit)

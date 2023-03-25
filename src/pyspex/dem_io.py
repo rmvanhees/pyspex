@@ -132,11 +132,11 @@ class DEMio:
 
     Examples
     --------
+    Read data from a SPEXone DEM binary file::
 
-    >>> dem = DEMio(dem_file)
-    >>> img_hk = dem.get_sci_hk()
-    >>> img_data = dem.get_data()
-
+    > dem = DEMio(dem_file)
+    > img_hk = dem.get_sci_hk()
+    > img_data = dem.get_data()
     """
     def __init__(self, flname: str) -> None:
         """Initialize DEMio object.
