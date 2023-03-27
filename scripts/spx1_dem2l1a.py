@@ -50,7 +50,7 @@ def main():
                         help='reference detector data (for non-linearity)')
     parser.add_argument('--output', default=None,
                         help='define output directory, default=CWD')
-    parser.add_argument('--dem_id', choices=('D35', 'D39'), default=None,
+    parser.add_argument('--dem_id', choices=('D35', 'D39', 'D84'),
                         help=('provide DEM ID'
                               ' or ID will be extracted from path'))
     parser.add_argument('file_list', nargs='+',
@@ -123,6 +123,10 @@ def main():
         elif len(parts) == 7:
             _id = '_'.join(parts[:3])
             tstamp.append(datetime.strptime(parts[4] + parts[5] + '+00:00',
+                                            '%Y%m%d%H%M%S.%f%z'))
+        elif len(parts) == 9:
+            _id = '_'.join(parts[:6])
+            tstamp.append(datetime.strptime(parts[6] + parts[7] + '+00:00',
                                             '%Y%m%d%H%M%S.%f%z'))
         else:
             raise ValueError("Invalid format of data-product name")
