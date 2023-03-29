@@ -73,7 +73,6 @@ def main():
 
     # Read Science packages
     data_dir = args.msmt_id.parent
-    sci_files = []
     if not args.pdump:
         sci_files = sorted(data_dir.glob(args.msmt_id.name + '.[0-9]')) \
             + sorted(data_dir.glob(args.msmt_id.name + '.?[0-9]'))
@@ -196,7 +195,7 @@ def main():
 
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)
 
-    # extract timestaps and telemetry of NomHK data
+    # extract timestamps and telemetry of NomHK data
     if nomhk_tm:
         nomhk_sec = np.empty(len(nomhk_tm), dtype='u4')
         nomhk_subsec = np.empty(len(nomhk_tm), dtype='u2')

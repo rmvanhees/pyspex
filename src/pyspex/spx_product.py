@@ -11,7 +11,6 @@
 Generate file-name of the SPEXone Level-1A products.
 """
 from __future__ import annotations
-
 __all__ = ['get_l1a_name']
 
 from datetime import datetime

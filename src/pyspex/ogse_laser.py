@@ -11,6 +11,7 @@
 Read characteristics of the OPO laser used at NASA GSFC for the ISRF and
 Straylight measurements.
 """
+from __future__ import annotations
 __all__ = ['read_gse_excel']
 
 from pathlib import Path

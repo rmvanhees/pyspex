@@ -475,8 +475,9 @@ def tmtc_dtype(apid):
 
     Examples
     --------
+    Usage of `tmtc_dtype`::
 
-    >>> from pyspex.lib.tmtc_def import tmtc_dtype
-    >>> mps_dtype = tmtc_dtype(0x350)
+    > from pyspex.lib.tmtc_def import tmtc_dtype
+    > mps_dtype = tmtc_dtype(0x350)
     """
     return np.dtype(__tmtc_def(apid))

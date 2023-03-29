@@ -10,6 +10,7 @@
 """
 Contains the class `DEMio` to read SPEXone CMV4000 detector data.
 """
+from __future__ import annotations
 __all__ = ['DEMio']
 
 from pathlib import Path

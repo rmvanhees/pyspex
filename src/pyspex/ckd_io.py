@@ -14,6 +14,7 @@ References
 ----------
 * https://spexone-cal-doc.readthedocs.io/en/latest/
 """
+from __future__ import annotations
 __all__ = ['CKDio']
 
 from datetime import datetime, timezone

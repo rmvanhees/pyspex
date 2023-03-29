@@ -48,7 +48,7 @@ def main():
     parser.add_argument('--verbose', default=False, action='store_true',
                         help='be verbose, default be silent')
     parser.add_argument('--show_images', type=str, default=None,
-                        help='comma seperated list, default use --max_images')
+                        help='comma separated list, default use --max_images')
     parser.add_argument('--max_images', type=int, default=20,
                         help='maximum number of images in quick-look (20)')
     parser.add_argument('file_list', nargs='*',
@@ -77,6 +77,7 @@ def main():
         try:
             coverage_start = coverage_start.decode()
         except (UnicodeDecodeError, AttributeError):
+            date_start = "1970-01-01T00:00:00"
             pass
         else:
             date_start = coverage_start.split('.')[0]

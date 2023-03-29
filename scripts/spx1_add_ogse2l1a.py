@@ -68,17 +68,17 @@ def write_ogse(args):
 
     if args.helios:
         xds = helios_spectrum()
-        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+        xds.to_netcdf(args.l1a_file, mode='a',
                       group='/gse_data/ReferenceSpectrum')
 
     if args.grande:
         xds = gsfc_polarizer()
-        xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+        xds.to_netcdf(args.l1a_file, mode='a',
                       group='/gse_data/SpectralDolP')
         for n_lamps in (1, 2, 3, 5, 9):
             if args.l1a_file.name.find(f'-L{n_lamps:1d}_') > 0:
                 xds = grande_spectrum(n_lamps)
-                xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+                xds.to_netcdf(args.l1a_file, mode='a',
                               group='/gse_data/ReferenceSpectrum')
                 break
 
@@ -86,7 +86,7 @@ def write_ogse(args):
         target_cwl = args.l1a_file.stem.split('_')[2].split('-')[-1]
         xds = read_gse_excel(args.ogse_dir, target_cwl)
         if xds is not None:
-            xds.to_netcdf(args.l1a_file, mode='r+', format='NETCDF4',
+            xds.to_netcdf(args.l1a_file, mode='a',
                           group='/gse_data/OPO_laser')
 
 
