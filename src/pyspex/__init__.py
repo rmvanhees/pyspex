@@ -13,6 +13,8 @@
 from importlib.metadata import PackageNotFoundError, version
 
 try:
+    print(__name__)
+    print(__name__, version(__name__))
     __version__ = version(__name__)
 except PackageNotFoundError:
     pass
