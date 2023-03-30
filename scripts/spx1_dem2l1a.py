@@ -17,7 +17,7 @@ References
 * SRON-SPEX-TN-2020-001_0_5_SPEXone_Detector_Characterization.pdf
 """
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import h5py
@@ -66,19 +66,13 @@ def main():
 
     # obtain DEM_ID (can be specified on command-line)
     # and list of measurements used to generate the L1A product
-    list_dem_id = []
-    for file in args.file_list:
-        parts = Path(file).parts
-        if len(parts) > 2:
-            list_dem_id.append(parts[-2].split('_')[1])
-
     if args.dem_id is None:
         dem_id_list = []
         for file in args.file_list:
             parts = Path(file).parts
             if len(parts) == 1:
                 continue
-            for dem_id in ('D35', 'D39'):
+            for dem_id in ('D35', 'D39', 'D84'):
                 if parts[-2].find(dem_id) != -1:
                     dem_id_list.append(dem_id)
 
@@ -204,6 +198,12 @@ def main():
 
         # Global attributes
         l1a.fill_global_attrs(inflight=False)
+        if len(tstamp) == 1:
+            tstamp.append(tstamp[0] + timedelta(seconds=t_frm[0]))
+        l1a.set_attr('time_coverage_start',
+                     tstamp[0].isoformat(timespec='milliseconds'))
+        l1a.set_attr('time_coverage_end',
+                     tstamp[-1].isoformat(timespec='milliseconds'))
         l1a.set_attr('input_files', [Path(x).name for x in args.file_list])
 
     # Add OGSE and EGSE parameters
