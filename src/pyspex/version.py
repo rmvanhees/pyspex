@@ -22,6 +22,10 @@ def pyspex_version(full=False, githash=False):
         return __version__
 
     if githash:
-        return __version__.split('+g')[1].split('.')[0]
+        res = __version__.split('+g')
+        if len(res) > 1:
+            return res[1].split('.')[0]
+        
+        return 'v' + ''.join([f"{int(x):02d}" for x in res[0].split('.')])
 
     return __version__.split('+')[0]
