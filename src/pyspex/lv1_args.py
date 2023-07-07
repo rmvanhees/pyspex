@@ -34,7 +34,7 @@ ARG_INPUT_HELP = """provide one or more input files:
        with extension '.spx'.
 """
 
-ARG_YAML_HELP = """provide settings file in YAML format (inflight example):
+ARG_YAML_HELP = """provide settings file in YAML format (in-flight example):
 
 # define output directory, default is current working directory
 outdir: .
@@ -71,11 +71,11 @@ EPILOG_HELP = """Usage:
 
     spx1_level01a <Path>/DIAG_20220124_175458_073.ST3
 
-  Generate L1A from inflight level-0 data, store product in directory L1A:
+  Generate L1A from in-flight level-0 data, store product in directory L1A:
 
     spx1_level01a --outdir L1A <Path>/SPX*.spx
 
-  Generate L1A from inflight level-0 data read settings from a YAML file:
+  Generate L1A from in-flight level-0 data read settings from a YAML file:
 
     spx1_level01a --yaml config_l1a_gen.yaml
 
@@ -83,7 +83,7 @@ EPILOG_HELP = """Usage:
        outdir: L1A
        outfile: ''
        file_version: 1
-       compresion: False
+       compression: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
        l0_list: <PATH>/SPX0220000??.spx
@@ -176,7 +176,7 @@ def __commandline_settings():
 
 
 # pylint: disable=too-many-branches
-def __yaml_settings(config):
+def __yaml_settings(config: dataclass) -> dataclass:
     """Read YAML configuration file."""
     with open(config.yaml_fl, encoding='ascii') as fid:
         config_yaml = yaml.safe_load(fid)
@@ -213,7 +213,7 @@ def __yaml_settings(config):
     return config
 
 
-def check_input_files(config):
+def check_input_files(config: dataclass) -> dataclass:
     """
     Check level-0 files on existence and format
 

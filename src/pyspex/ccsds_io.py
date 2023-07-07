@@ -24,7 +24,7 @@ from .lib.tmtc_def import tmtc_dtype
 #  - Packet type     (3 bits): Version No.
 #                              Indicates this is a CCSDS version 1 packet
 #                     (1 bit): Type indicator
-#                              Indicates this is a telemetery packet
+#                              Indicates this is a telemetry packet
 #                     (1 bit): Secondary flag
 #                              Indicate presence of Secondary header
 #                   (11 bits): ApID
@@ -61,8 +61,8 @@ SCIHK_DTYPE = tmtc_dtype(0x350)
 MSG_SKIP_FRAME = "[WARNING]: rejected a frame because it's incomplete"
 MSG_INVALID_APID = \
     '[WARNING]: found one or more telemetry packages with an invalid APID'
-MSG_CORRUPT_APID = 'corrupted segements - detected APID 1 after <> 2'
-MSG_CORRUPT_FRAME = 'corrupted segements - previous frame not closed'
+MSG_CORRUPT_APID = 'corrupted segments - detected APID 1 after <> 2'
+MSG_CORRUPT_FRAME = 'corrupted segments - previous frame not closed'
 
 
 # - class CCSDSio -------------------------
@@ -321,7 +321,7 @@ class CCSDSio:
             ('image_data', 'O')]))
         packet['packet_header'] = hdr
 
-        # first segement or unsegmented data packet provides Science_HK
+        # first segment or unsegmented data packet provides Science_HK
         if self.grouping_flag in (1, 3):
             packet['science_hk'] = self.fix_sci_hk24(
                 np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE))
@@ -532,7 +532,7 @@ class CCSDSio:
         if not packets:
             return ()
 
-        # check if grouping_flag of first segement equals 1
+        # check if grouping_flag of first segment equals 1
         #   else reject all segments with grouping_flag != 1
         self.__hdr = packets[0]['packet_header']
         if self.grouping_flag != 1:
@@ -548,7 +548,7 @@ class CCSDSio:
             if not packets:
                 return ()
 
-        # check if grouping_flag of last segement equals 2
+        # check if grouping_flag of last segment equals 2
         #   else reject all segments after the last segment
         #   with grouping_flag == 2
         self.__hdr = packets[-1]['packet_header']
