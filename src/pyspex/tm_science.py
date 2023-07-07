@@ -33,7 +33,7 @@ class TMscience:
     tm_science :  ndarray
         SPEXone telemetry Science data
     """
-    def __init__(self, tm_science):
+    def __init__(self, tm_science: np.ndarray):
         """Initialize class TMscience.
         """
         self.__tm = tm_science

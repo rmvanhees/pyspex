@@ -11,6 +11,7 @@
 Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
 PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 """
+from __future__ import annotations
 __all__ = ['L1Aio', 'L1Bio', 'L1Cio', 'write_l1a']
 
 from dataclasses import dataclass
@@ -36,7 +37,8 @@ ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
-def frac_poly(xx_in: np.ndarray, coefs=None):
+def frac_poly(xx_in: np.ndarray,
+              coefs: tuple[float, float, float, float, float] | None = None):
     """Temperature [K] calibration derived by Paul Tol (2020-10-21).
 
     Parameters
@@ -333,7 +335,7 @@ class Lv1io:
     -----
     The engineering data should be extended, suggestions:
     * Temperatures of a.o. detector, FEE, optica, obm, telescope
-    * Instrument settings: exposure time, dead time, frame time, coadding, ...
+    * Instrument settings: exposure time, dead time, frame time, co-adding, ...
     """
     product: Path
     processing_level = 'unknown'

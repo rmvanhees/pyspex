@@ -24,27 +24,27 @@ ORBIT_DURATION = 5904  # seconds
 
 
 # - local functions --------------------------------
-def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
+def attrs_sec_per_day(dset: nc4.Variable, ref_date: datetime.date) -> None:
     """
     Add CF attributes to a dataset holding 'seconds of day'
 
     Parameters
     ----------
     dset : nc4.Variable
-       Variable containing a timestamp as seconds since referencce date
+       Variable containing a timestamp as seconds since reference date
     ref_date : datetime.date
        Reference date
 
     Examples
     --------
-    Update the attributes of variable 'time':
+    Update the attributes of variable 'time'::
 
-    >>> ref_date = datetime.date(2022, 3, 21)
-    >>> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
-    >>>                            fill_value=-32767)
-    >>> dset.long_name = "image time"
-    >>> dset.description = "Integration start time in seconds of day."
-    >>> attrs_sec_per_day(dset, ref_date)
+    >> ref_date = datetime.date(2022, 3, 21)
+    >> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
+    >>                            fill_value=-32767)
+    >> dset.long_name = "image time"
+    >> dset.description = "Integration start time in seconds of day."
+    >> attrs_sec_per_day(dset, ref_date)
 
     In CDL the variable `time` will be defined as::
 
@@ -73,7 +73,7 @@ def attrs_sec_per_day(dset, ref_date: datetime.date) -> None:
 # - main function ----------------------------------
 # pylint: disable=too-many-statements
 def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
-             compression=False) -> nc4.Dataset:
+             compression: bool = False) -> nc4.Dataset:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
 

@@ -43,14 +43,15 @@ if FOUND_PYTIFF:
 
         Examples
         --------
+        Read a SPEXone TIFF file::
 
-        >>>  tif = TIFio(filename)
-        >>>  print(tif.header())
-        >>>  print(tif.tags()[0])
-        >>>  print(tif.images().shape)
-
+        >>  tif = TIFio(filename)
+        >>  print(tif.header())
+        >>  print(tif.tags()[0])
+        >>  print(tif.images().shape)
         """
-        def __init__(self, hdr_file: str, inp_tif=False, lineskip=False):
+        def __init__(self, hdr_file: str, inp_tif: bool = False,
+                     lineskip: bool = False):
             """Initialize TIFio object
             """
             if not Path(hdr_file).is_file():
@@ -121,13 +122,13 @@ if FOUND_PYTIFF:
             return res
 
         # --------------------------------------------------
-        def images(self, n_frame=None):
+        def images(self, n_frame: int | None = None):
             """Return TIFF data as numpy array.
 
             Parameters
             ----------
             n_frame :  int, optional
-            Distribute coadded signal (32-bit) over n_frame images (16-bit)
+               Distribute coadded signal (32-bit) over n_frame images (16-bit)
             """
             if self.__header is None:
                 self.header()

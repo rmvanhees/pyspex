@@ -11,6 +11,7 @@
 This module contains the class `BinningTables` to deal with SPEXone
 binning-tables or to generate a file with binning-table definitions.
 """
+from __future__ import annotations
 __all__ = ['BinningTables']
 
 from datetime import datetime, timezone
@@ -53,7 +54,7 @@ class BinningTables:
     during the whole mission at the same on-board memory location.
     Because these original binning tables are necessary for re-processing
     and may facilitate instrument performance monitoring.
-    Therefore, it is prefered that a new binning table is added to the
+    Therefore, it is preferred that a new binning table is added to the
     current set, without changing the validity start string.
     However, new binning-table file should be released in case any of the
     binning tables are overwritten.
@@ -79,7 +80,7 @@ class BinningTables:
     > bin_tbl.search(coverage_start)
     > img = bin_tbl.unbin(130, img_binned)
     """
-    def __init__(self, ckd_dir=None) -> None:
+    def __init__(self, ckd_dir: str | None = None) -> None:
         """Initialize class attributes.
         """
         if ckd_dir is None:
@@ -93,7 +94,7 @@ class BinningTables:
 
         self.ckd_file = None
 
-    def create_if_needed(self, validity_start: str, release=1) -> None:
+    def create_if_needed(self, validity_start: str, release: int = 1) -> None:
         """Initialize CKD file for binning tables if not exist.
 
         Parameters
@@ -111,7 +112,7 @@ class BinningTables:
         # initialize netCDF file with binning tables
         with nc4.Dataset(self.ckd_dir / self.ckd_file, 'w') as fid:
             fid.title = 'SPEXone Level-1 binning-tables'
-            fid.Convensions = 'CF-1.6'
+            fid.Conventions = 'CF-1.6'
             fid.project = 'PACE Project'
             fid.instrument = 'SPEXone'
             fid.institution = 'SRON Netherlands Institute for Space Research'
@@ -124,7 +125,7 @@ class BinningTables:
             fid.createDimension('row', 1024)
             fid.createDimension('column', 1024)
 
-    def search(self, coverage_start=None) -> None:
+    def search(self, coverage_start: str | None = None) -> None:
         """Search CKD file with binning tables.
 
         Parameters
@@ -158,7 +159,8 @@ class BinningTables:
         else:
             raise FileNotFoundError('No valid CKD with binning tables found')
 
-    def add_table(self, table_id: int, lineskip_arr, binning_table) -> None:
+    def add_table(self, table_id: int, lineskip_arr: np.ndarray,
+                  binning_table: np.ndarray) -> None:
         """Add a binning table definition to existing file.
 
         Parameters
@@ -207,7 +209,7 @@ class BinningTables:
             dset.valid_max = np.uint16(count.max())
             dset[:] = count.astype('u2')
 
-    def unbin(self, table_id: int, img_binned):
+    def unbin(self, table_id: int, img_binned: np.ndarray) -> np.ndarray:
         """Return unbinned detector data.
 
         Parameters
@@ -219,7 +221,7 @@ class BinningTables:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
            Unbinned image data (no interpolation).
         """
         with nc4.Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:

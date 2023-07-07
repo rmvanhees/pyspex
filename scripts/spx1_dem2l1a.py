@@ -40,7 +40,7 @@ EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 # - main function ----------------------------------
 def main():
     """
-    main program to illustate the creation of a L1A calibration product
+    main program to illustrate the creation of a L1A calibration product
     """
     parser = argparse.ArgumentParser(
         description='create SPEXone L1A product from DEM measurement(s)')

@@ -24,7 +24,8 @@ ORBIT_DURATION = 5904  # seconds
 
 # - main function ----------------------------------
 # pylint: disable=too-many-statements
-def init_l1b(l1b_flname: str, ref_date: datetime.date, dims: dict) -> nc4.Dataset:
+def init_l1b(l1b_flname: str, ref_date: datetime.date,
+             dims: dict) -> nc4.Dataset:
     """
     Create an empty PACE SPEX Level-1B product
 
