@@ -208,7 +208,7 @@ class HKTio:
                                       dtype='>u2')[0]
             if (packet_id & 0x7FF) != apid:
                 continue
-                    
+
             buff['hdr'][ii] = np.frombuffer(packet, count=1, offset=0,
                                             dtype=hdr_dtype)
             buff['hk'][ii] = np.frombuffer(packet, count=1, offset=12,

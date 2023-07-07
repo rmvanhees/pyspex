@@ -44,7 +44,7 @@ if FOUND_PYTIFF:
         Examples
         --------
         Read a SPEXone TIFF file::
-        
+
         >>  tif = TIFio(filename)
         >>  print(tif.header())
         >>  print(tif.tags()[0])
