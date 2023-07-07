@@ -10,6 +10,7 @@
 """
 Provides the common global-attributes for SPEXone Level-1 products.
 """
+from __future__ import annotations
 __all__ = ['attrs_def']
 
 from datetime import datetime, timezone
@@ -18,7 +19,8 @@ from ..version import pyspex_version
 
 
 # - main functions --------------------------------
-def attrs_def(level: str, inflight=True, origin=None) -> dict:
+def attrs_def(level: str, inflight: bool = True,
+              origin: str | None = None) -> dict:
     """
     Defines all global attributes for SPEXone Level-1 products.
 

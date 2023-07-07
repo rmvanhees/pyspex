@@ -19,7 +19,7 @@ __all__ = ['tmtc_dtype']
 import numpy as np
 
 
-def __tmtc_def(apid) -> list:
+def __tmtc_def(apid: int) -> list:
     """Returns SPEXone telemetry packet structure as a list of tuples.
 
     Parameters
@@ -459,7 +459,7 @@ def __tmtc_def(apid) -> list:
     raise ValueError('Telemetry APID not implemented')
 
 
-def tmtc_dtype(apid):
+def tmtc_dtype(apid: int) -> np.dtype:
     """Obtain SPEXone telemetry packet definition.
 
     Parameters
@@ -477,7 +477,7 @@ def tmtc_dtype(apid):
     --------
     Usage of `tmtc_dtype`::
 
-    > from pyspex.lib.tmtc_def import tmtc_dtype
-    > mps_dtype = tmtc_dtype(0x350)
+    >> from pyspex.lib.tmtc_def import tmtc_dtype
+    >> mps_dtype = tmtc_dtype(0x350)
     """
     return np.dtype(__tmtc_def(apid))
