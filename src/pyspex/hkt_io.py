@@ -13,6 +13,7 @@ Contains the class `HKTio` to read PACE HKT products.
 from __future__ import annotations
 __all__ = ['HKTio', 'read_hkt_nav', 'write_hkt_nav']
 
+from datetime import datetime
 from pathlib import Path
 
 import h5py
@@ -83,20 +84,20 @@ class HKTio:
         name of PACE instrument 'spx': SPEXone, 'oci': OCI, 'harp': HARP2,
         'sc': Space Craft.
     """
-    def __init__(self, filename: Path, instrument='spx') -> None:
+    def __init__(self, filename: Path, instrument: str = 'spx') -> None:
         """Initialize access to a PACE HKT product.
         """
+        self._coverage = None
+        self._instrument = None
         self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError('HKT product does not exists')
 
-        self._coverage = None
-        self._instrument = None
         self.set_instrument(instrument)
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def coverage(self) -> tuple:
+    def coverage(self) -> tuple[datetime, datetime]:
         """Return selection of navigation data.
 
         Returns
@@ -104,17 +105,14 @@ class HKTio:
         tuple of two ints
             start and end of data time-coverage (sec of day)
         """
+        if self._coverage is not None:
+            return self._coverage
+
+        with h5py.File(self.filename) as fid:
+            self._coverage = (
+                datetime.fromisoformat(fid.attrs['time_coverage_start'].decode()),
+                datetime.fromisoformat(fid.attrs['time_coverage_end'].decode()))
         return self._coverage
-
-    def set_coverage(self, sec_bgn: int, sec_end: int) -> None:
-        """Set start and end of data coverage in the navigation data.
-
-        Parameters
-        ----------
-        sec_bgn, sec_end: int
-           Minimum and maximum value of data time-coverage (sec of day)
-        """
-        self._coverage = (sec_bgn, sec_end)
 
     @property
     def instrument(self) -> str:
@@ -132,12 +130,10 @@ class HKTio:
 
         Parameters
         ----------
-        name :  {'spx', 'oci', 'harp', 'sc'}, default='spx'
+        name :  {'spx', 'oci', 'harp', 'sc'}
             name of PACE instrument
         """
-        if name is None:
-            self._instrument = 'spx'
-        elif name.lower() in ('spx', 'oci', 'harp', 'sc'):
+        if name.lower() in ('spx', 'oci', 'harp', 'sc'):
             self._instrument = name.lower()
         else:
             raise KeyError('invalid name of instrument')
@@ -170,7 +166,7 @@ class HKTio:
         xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
-    def housekeeping(self, apid=None) -> np.ndarray:
+    def housekeeping(self, apid: int | None = None) -> dict:
         """Get housekeeping data.
 
         Parameters
@@ -186,48 +182,38 @@ class HKTio:
                      'harp': None,
                      'sc': None}.get(self.instrument)
 
+        hdr_dtype = np.dtype([('type', '>u2'),
+                              ('sequence', '>u2'),
+                              ('length', '>u2'),
+                              ('tai_sec', '>u4'),
+                              ('sub_sec', '>u2')])
+
         ds_set = {'spx': 'SPEXone_HKT_packets',
                   'oci': 'OCI_HKT_packets',
                   'harp': 'HARP2_HKT_packets',
                   'sc': 'SC_HKT_packets'}.get(self.instrument)
+
         with h5py.File(self.filename) as fid:
-            # check size of dataset
             res = fid['housekeeping_data'][ds_set][:]
-            if res.size > 0 and dtype is not None:
-                ii = 0
-                buff = np.empty(res.shape[0], dtype=dtype(apid))
-                for packet in res:
-                    packet_id = np.frombuffer(packet, count=1, offset=0,
-                                              dtype='>u2')[0]
-                    if (packet_id & 0x7FF) == apid:
-                        buff[ii] = np.frombuffer(packet, count=1, offset=0,
-                                                 dtype=dtype(apid))
-                        ii += 1
-                res = buff[:ii]
 
-        return res
+        # check size of dataset
+        if res.size == 0 or dtype is None:
+            return {'hdr': None, 'hk': res}
 
+        ii = 0
+        buff = {'hdr': np.empty(res.shape[0], dtype=hdr_dtype),
+                'hk': np.empty(res.shape[0], dtype=dtype(apid))}
+        for packet in res:
+            packet_id = np.frombuffer(packet, count=1, offset=0,
+                                      dtype='>u2')[0]
+            if (packet_id & 0x7FF) != apid:
+                continue
+                    
+            buff['hdr'][ii] = np.frombuffer(packet, count=1, offset=0,
+                                            dtype=hdr_dtype)
+            buff['hk'][ii] = np.frombuffer(packet, count=1, offset=12,
+                                           dtype=dtype(apid))
+            ii += 1
 
-def __test():
-    """small function to test this module
-    """
-    # hkt_name = Path('/data/richardh/SPEXone/HKT/20220621/PACE.20220621T142822.HKT.nc')
-    hkt_name = Path('/data/richardh/SPEXone/HKT/20220617/PACE.20220617T025000.HKT.nc')
-
-    hkt = HKTio(hkt_name)
-    print(hkt.filename, hkt.instrument, hkt.coverage)
-    print('housekeeping data')
-    print('spx: ', hkt.housekeeping(apid=0x320))
-    hkt.set_instrument('sc')
-    print('sc: ', hkt.housekeeping(apid=0x6c))
-
-    print('navigation data')
-    res = hkt.navigation()
-    for key, xds in res.items():
-        print(key)
-        xds.to_netcdf('saved_dataset.nc', mode='w')
-
-
-# --------------------------------------------------
-if __name__ == '__main__':
-    __test()
+        return {'hdr': buff['hdr'][:ii],
+                'hk': buff['hk'][:ii]}
