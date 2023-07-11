@@ -97,7 +97,7 @@ class HKTio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def coverage(self) -> tuple[datetime, datetime]:
+    def coverage(self) -> tuple[datetime, datetime] | None:
         """Return selection of navigation data.
 
         Returns
@@ -115,7 +115,7 @@ class HKTio:
         return self._coverage
 
     @property
-    def instrument(self) -> str:
+    def instrument(self) -> str | None:
         """Returns name of the PACE instrument.
 
         Returns

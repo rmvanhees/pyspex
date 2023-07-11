@@ -69,7 +69,7 @@ def extract_l0_hk(ccsds_hk: tuple, verbose: bool):
         tlm[ii] = segment['data']['hk']
         tstamp.append(epoch + timedelta(
             seconds=int(segment['hdr']['tai_sec']),
-            microseconds=subsec2musec(int(segment['hdr']['sub_sec']))))
+            microseconds=subsec2musec(segment['hdr']['sub_sec'])))
 
     return {'hdr': hdr[:len(tstamp)],
             'tlm': tlm[:len(tstamp)],
@@ -98,12 +98,12 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
                 hk_dtype = segment['data']['hk'].dtype
                 continue
 
-            if not found_start_first:
-                continue
+        if not found_start_first:
+            continue
 
-            if grouping_flag(hdr) == 2:
-                found_start_first = False
-                n_frames += 1
+        if grouping_flag(hdr) == 2:
+            found_start_first = False
+            n_frames += 1
 
     # print(f'n_frames: {n_frames}')
     if n_frames == 0:
@@ -173,7 +173,7 @@ class SPXtlm:
     def hk_hdr(self):
         """Return CCSDS NomHK header data.
         """
-        return self._hk['hdr']
+        return self._hk['hdr'] if 'hdr' in self._hk else ()
 
     @property
     def tlm(self):
@@ -185,7 +185,7 @@ class SPXtlm:
     def hk_tlm(self):
         """Return housekeeping packages.
         """
-        return self._hk['tlm']
+        return self._hk['tlm'] if 'hdr' in self._hk else ()
 
     @property
     def tstamp(self):
@@ -198,13 +198,13 @@ class SPXtlm:
     def hk_tstamp(self):
         """Return timestamps of CCSDS NomHK packages.
         """
-        return self._hk['tstamp']
+        return self._hk['tstamp'] if 'hdr' in self._hk else ()
 
     @property
     def images(self):
         """Return image-frames of CCSDS packages.
         """
-        return self._sci['images']
+        return self._sci['images'] if 'images' in self._sci else ()
 
     def from_hkt(self, flnames: Path | list[Path],
                  instrument: str | None = None, apid: int | None = None):
@@ -226,17 +226,22 @@ class SPXtlm:
             apid = 0x320
 
         # self.filename = flname
-        self._hk = {}
+        hdr = ()
+        tlm = ()
         self._sci = {}
-        hkt = HKTio(flnames, instrument)
-        res = hkt.housekeeping(apid)
-        self._hk['hdr'] = res['hdr']
-        self._hk['tlm'] = res['hk']
-        epoch = get_epoch(int(res['hdr']['tai_sec'][0]))
+        for name in flnames:
+            hkt = HKTio(name, instrument)
+            res = hkt.housekeeping(apid)
+            hdr += (res['hdr'],)
+            tlm += (res['hk'],)
+
+        self._hk = {'hdr': np.concatenate(hdr),
+                    'tlm': np.concatenate(tlm)}
+        epoch = get_epoch(int(self._hk['hdr']['tai_sec'][0]))
         self._hk['tstamp'] = []
-        for sec, subsec in [(x['tai_sec'], x['sub_sec']) for x in res['hdr']]:
+        for sec, subsec in [(x['tai_sec'], x['sub_sec']) for x in self._hk['hdr']]:
             self._hk['tstamp'].append(epoch + timedelta(
-                seconds=int(sec), microseconds=subsec2musec(int(subsec))))
+                seconds=int(sec), microseconds=subsec2musec(subsec)))
 
     def from_lv0(self, flnames: Path | list[Path],
                  tlm_type: str | None = None):
@@ -306,7 +311,7 @@ class SPXtlm:
                     self._sci['tstamp'].append(epoch + timedelta(
                         seconds=int(sec),
                         milliseconds=-self.start_integration[ii],
-                        microseconds=subsec2musec(int(subsec[ii]))))
+                        microseconds=subsec2musec(subsec[ii])))
 
             if tlm_type != 'sci':
                 self._hk['tlm'] = fid['/engineering_data/NomHK_telemetry'][:]
@@ -408,29 +413,29 @@ class SPXtlm:
         np.ndarray
         """
         tlm = self._sci['tlm'] if 'tlm' in self._sci else self._hk['tlm']
-        if key not in tlm[0].dtype.names:
-            raise KeyError(f'Parameter: {key} not found'
+        if key.upper() not in tlm[0].dtype.names:
+            raise KeyError(f'Parameter: {key.upper()} not found'
                            f' in {tlm[0].dtype.names}')
 
-        raw_data = np.array([x[key] for x in tlm])
-        return convert_hk(key, raw_data)
+        raw_data = np.array([x[key.upper()] for x in tlm])
+        return convert_hk(key.upper(), raw_data)
 
 
 def __test():
     data_dir = Path('/data2/richardh/SPEXone/spx1_lv0/0x12d/2023/05/25')
     if not data_dir.is_dir():
         data_dir = Path('/nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/05/25')
-    flname = [data_dir / 'SPX000000871.spx', data_dir / 'SPX000000880.spx']
-    #flname = [data_dir / 'SPX000000896.spx', data_dir / 'SPX000000897.spx']
+    flnames = [data_dir / 'SPX000000879.spx', data_dir / 'SPX000000880.spx']
+    #flnames = [data_dir / 'SPX000000896.spx', data_dir / 'SPX000000897.spx']
 
     tlm = SPXtlm()
-    #tlm.from_lv0(flname, 'hk')
+    #tlm.from_lv0(flnames, 'hk')
     #print(tlm.hdr)
     #print('TS2_HOUSING_N_T', tlm.convert('TS2_HOUSING_N_T'),
     #      UNITS_DICT.get('TS2_HOUSING_N_T', '1'))
     #print('deltaT: ', np.unique(np.diff([tm.timestamp() for tm in tlm.tstamp])))
 
-    tlm.from_lv0(flname, 'all')
+    tlm.from_lv0(flnames, 'all')
     print('hk_hdr: ', len(tlm.hk_hdr))
     print('hk_tlm: ', len(tlm.hk_tlm))
     print('hk_tstamp: ', len(tlm.hk_tstamp))
@@ -454,9 +459,10 @@ def __test2():
     data_dir = Path('/data2/richardh/SPEXone/pace_hkt/V1.0/2023/05/25')
     if not data_dir.is_dir():
         data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/05/25')
-    flname = data_dir / 'PACE.20230525T043614.HKT.nc'
+    flnames = [data_dir / 'PACE.20230525T043614.HKT.nc',
+               data_dir / 'PACE.20230525T043911.HKT.nc']
     tlm = SPXtlm()
-    tlm.from_hkt(flname, instrument='spx', apid=0x320)
+    tlm.from_hkt(flnames, instrument='spx', apid=0x320)
     print('TS2_HOUSING_N_T', tlm.convert('TS2_HOUSING_N_T'),
           UNITS_DICT.get('TS2_HOUSING_N_T', '1'))
     print('deltaT: ', np.unique(np.diff([tm.timestamp() for tm in tlm.tstamp])))
@@ -464,7 +470,9 @@ def __test2():
 
 def __test3():
     data_dir = Path('/data2/richardh/SPEXone/spx1_l1a/0x12d/2023/05/25')
-    flname = data_dir / 'PACE_SPEXONE_OCAL.20230525T030148.L1A.nc'
+    if not data_dir.is_dir():
+        data_dir = Path('/data/richardh/SPEXone/spx1_l1a/0x12d/2023/05/25')
+    flname = data_dir / 'PACE_SPEXONE_OCAL.20230525T025431.L1A.nc'
     tlm = SPXtlm()
     tlm.from_l1a(flname, 'hk')
     print('TS2_HOUSING_N_T', tlm.convert('TS2_HOUSING_N_T'),
@@ -480,4 +488,4 @@ def __test3():
 
 
 if __name__ == '__main__':
-    __test()
+    __test3()

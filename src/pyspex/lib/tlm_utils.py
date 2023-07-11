@@ -242,7 +242,7 @@ class WriteProt(Enum):
 
 
 # - exported functions ----------------------
-def convert_hk(key: str, raw_data: np.ndarray) -> np.nd_array:
+def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
     """Convert a DemHK or NomHK parameter to physical units.
     """
     conv_dict = {'DEM_T': exp_spex_det_t,
