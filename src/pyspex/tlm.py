@@ -28,6 +28,9 @@ from .lv0_io import ap_id, grouping_flag, read_lv0_data
 # - global parameters -----------------------
 MCP_TO_SEC = 1e-7
 
+TSTAMP_TYPE = np.dtype(
+    [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
+
 
 # - helper functions ------------------------
 def get_epoch(tstamp: int) -> datetime:
@@ -112,7 +115,7 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
     # allocate memory
     hdr_arr = np.empty(n_frames, dtype=hdr_dtype)
     tlm_arr = np.empty(n_frames, dtype=hk_dtype)
-    tstamp = []
+    tstamp = np.empty(n_frames, dtype=TSTAMP_TYPE)
     images = ()
 
     # extract data from ccsds_sci
@@ -125,9 +128,12 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
             data = segment['data'][0]
             hdr_arr[ii] = hdr
             tlm_arr[ii] = data['hk']
-            tstamp.append(epoch + timedelta(
-                seconds=int(data['icu_tm']['tai_sec']),
-                microseconds=subsec2musec(data['icu_tm']['sub_sec'])))
+            tstamp[ii] = (data['icu_tm']['tai_sec'],
+                          data['icu_tm']['sub_sec'],
+                          epoch + timedelta(
+                              seconds=int(data['icu_tm']['tai_sec']),
+                              microseconds=subsec2musec(
+                                  data['icu_tm']['sub_sec'])))
             img = (data['frame'],)
             continue
 
@@ -239,7 +245,8 @@ class SPXtlm:
                     'tlm': np.concatenate(tlm)}
         epoch = get_epoch(int(self._hk['hdr']['tai_sec'][0]))
         self._hk['tstamp'] = []
-        for sec, subsec in [(x['tai_sec'], x['sub_sec']) for x in self._hk['hdr']]:
+        for sec, subsec in [(x['tai_sec'], x['sub_sec'])
+                            for x in self._hk['hdr']]:
             self._hk['tstamp'].append(epoch + timedelta(
                 seconds=int(sec), microseconds=subsec2musec(subsec)))
 
@@ -306,12 +313,16 @@ class SPXtlm:
                 seconds = fid['/image_attributes/icu_time_sec'][:]
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
                 epoch = get_epoch(int(seconds[0]))
-                self._sci['tstamp'] = []
+                self._sci['tstamp'] = np.empty(len(seconds), dtype=TSTAMP_TYPE)
+                self._sci['tstamp']['tai_sec'] = seconds
+                self._sci['tstamp']['sub_sec'] = subsec
+                _dt = []
                 for ii, sec in enumerate(seconds):
-                    self._sci['tstamp'].append(epoch + timedelta(
+                    _dt.append(epoch + timedelta(
                         seconds=int(sec),
                         milliseconds=-self.start_integration[ii],
                         microseconds=subsec2musec(subsec[ii])))
+                self._sci['tstamp']['dt'] = _dt
 
             if tlm_type != 'sci':
                 self._hk['tlm'] = fid['/engineering_data/NomHK_telemetry'][:]
@@ -421,7 +432,7 @@ class SPXtlm:
         return convert_hk(key.upper(), raw_data)
 
 
-def __test():
+def __test1():
     data_dir = Path('/data2/richardh/SPEXone/spx1_lv0/0x12d/2023/05/25')
     if not data_dir.is_dir():
         data_dir = Path('/nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/05/25')
@@ -452,7 +463,8 @@ def __test():
           UNITS_DICT.get('REG_CMV_OUTPUTMODE', '1'))
     print('binning_table: ', tlm.binning_table)
     print('offs_msec: ', tlm.start_integration)
-    print('deltaT: ', np.unique(np.diff([tm.timestamp() for tm in tlm.tstamp])))
+    print('deltaT: ', np.unique(np.diff(
+        [tm['dt'].timestamp() for tm in tlm.tstamp])))
 
 
 def __test2():
@@ -484,8 +496,9 @@ def __test3():
           UNITS_DICT.get('TS2_HOUSING_N_T', '1'))
     print('binning_table: ', tlm.binning_table)
     print('offs_msec: ', tlm.start_integration)
-    print('deltaT: ', np.unique(np.diff([tm.timestamp() for tm in tlm.tstamp])))
+    print('deltaT: ', np.unique(np.diff(
+        [tm['dt'].timestamp() for tm in tlm.tstamp])))
 
 
 if __name__ == '__main__':
-    __test3()
+    __test1()
