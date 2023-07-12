@@ -22,6 +22,7 @@ import xarray as xr
 from moniplot.image_to_xarray import h5_to_xr
 
 from .lib.tmtc_def import tmtc_dtype
+from .lv0_io import ap_id, dtype_tmtc
 
 
 # - high-level r/w functions ------------
@@ -166,22 +167,13 @@ class HKTio:
         xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
-    def housekeeping(self, apid: int | None = None) -> dict:
-        """Get housekeeping data.
+    def housekeeping(self) -> tuple[dict]:
+        """Get housekeeping telemetry data.
 
-        Parameters
-        ----------
-        apid :  int, default=None
-            select housekeeping data of APID, and convert byte-blobs to
-            structured arrays (currently only implemented for SPEX)
+        Notes
+        -----
+        Current implementation only works for SPEXone.
         """
-        dtype = None
-        if apid is not None:
-            dtype = {'spx': tmtc_dtype,
-                     'oci': None,
-                     'harp': None,
-                     'sc': None}.get(self.instrument)
-
         hdr_dtype = np.dtype([('type', '>u2'),
                               ('sequence', '>u2'),
                               ('length', '>u2'),
@@ -194,26 +186,22 @@ class HKTio:
                   'sc': 'SC_HKT_packets'}.get(self.instrument)
 
         with h5py.File(self.filename) as fid:
+            if ds_set not in fid['housekeeping_data']:
+                return {}
             res = fid['housekeeping_data'][ds_set][:]
 
-        # check size of dataset
-        if res.size == 0 or dtype is None:
-            return {'hdr': None, 'hk': res}
-
-        ii = 0
-        buff = {'hdr': np.empty(res.shape[0], dtype=hdr_dtype),
-                'hk': np.empty(res.shape[0], dtype=dtype(apid))}
+        ccsds_hk = ()
         for packet in res:
-            packet_id = np.frombuffer(packet, count=1, offset=0,
-                                      dtype='>u2')[0]
-            if (packet_id & 0x7FF) != apid:
-                continue
+            try:
+                hdr = np.frombuffer(packet, count=1, offset=0,
+                                    dtype=hdr_dtype)[0]
+            except ValueError as exc:
+                print(f'[WARNING]: header reading error with "{exc}"')
+                break
+            
+            if 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
+                buff = np.frombuffer(packet, count=1, offset=0,
+                                     dtype=dtype_tmtc(hdr))[0]
+                ccsds_hk += (buff,)
 
-            buff['hdr'][ii] = np.frombuffer(packet, count=1, offset=0,
-                                            dtype=hdr_dtype)
-            buff['hk'][ii] = np.frombuffer(packet, count=1, offset=12,
-                                           dtype=dtype(apid))
-            ii += 1
-
-        return {'hdr': buff['hdr'][:ii],
-                'hk': buff['hk'][:ii]}
+        return ccsds_hk

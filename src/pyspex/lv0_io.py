@@ -365,12 +365,12 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                     buff['frame'][0] = np.frombuffer(ccsds_data,
                                                      count=nbytes // 2,
                                                      offset=offs, dtype='>u2')
-                    buff_sci += ({'hdr': hdr, 'data': buff.copy()},)
+                    buff_sci += (buff.copy(),)
                     offs += nbytes
                 elif 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
                     buff = np.frombuffer(ccsds_data, count=1, offset=offs,
                                          dtype=dtype_tmtc(hdr))[0]
-                    buff_hk += ({'hdr': hdr, 'data': buff},)
+                    buff_hk += (buff,)
                     offs += dtype_tmtc(hdr).itemsize
                 else:
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
@@ -406,46 +406,46 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
     with flname.open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'
                  ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
-        for segment in ccsds_sci:
-            hdr = segment['hdr']
-            data = segment['data'][0]
-            if grouping_flag(hdr) == 1:
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                         f" {data['hk']['ICUSWVER']:8x}"
-                         f" {data['hk']['MPS_ID']:6d}"
-                         f" {data['hk']['IMRLEN']:7d}"
-                         f" {data['icu_tm']['tai_sec']:11d}"
-                         f" {data['icu_tm']['sub_sec']:10d}\n")
+        for buf in ccsds_sci:
+            if grouping_flag(buf['hdr']) == 1:
+                fp.write(f"{ap_id(buf['hdr']):4x}"
+                         f" {grouping_flag(buf['hdr']):8d}"
+                         f" {sequence(buf['hdr']):7d}"
+                         f" {packet_length(buf['hdr']):6d}"
+                         f" {buf['hk']['ICUSWVER']:8x}"
+                         f" {buf['hk']['MPS_ID']:6d}"
+                         f" {buf['hk']['IMRLEN']:7d}"
+                         f" {buf['icu_tm']['tai_sec']:11d}"
+                         f" {buf['icu_tm']['sub_sec']:10d}\n")
             else:
-                fp.write(f'{ap_id(hdr):4x} {grouping_flag(hdr):8d}'
-                         f' {sequence(hdr):7d} {packet_length(hdr):6d}\n')
+                fp.write(f"{ap_id(buf['hdr']):4x}"
+                         f" {grouping_flag(buf['hdr']):8d}"
+                         f" {sequence(buf['hdr']):7d}"
+                         f" {packet_length(buf['hdr']):6d}\n")
 
     # dump header information of the nominal house-keeping packages
     flname = datapath / (file_list[0].stem + '_hk.dump')
     with flname.open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
-        for segment in ccsds_hk:
-            hdr = segment['hdr']
-            data = segment['data']
-            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
+        for buf in ccsds_hk:
+            msg = (f"{ap_id(buf['hdr']):4x} {grouping_flag(buf['hdr']):8d}"
+                   f" {sequence(buf['hdr']):7d} {packet_length(buf['hdr']):6d}"
+                   f" {buf['hdr']['tai_sec']:11d} {buf['hdr']['sub_sec']:10d}")
 
-            if ap_id(hdr) == 0x320:
-                msg += (f" {data['hk']['ICUSWVER']:8x}"
-                        f" {data['hk']['MPS_ID']:6d}")
-            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {data['TcSeqControl']:12d}"
-                if ap_id(hdr) == 0x332:
-                    msg += (f" {bin(data['TcErrorCode'])}"
-                            f" {data['RejectParameter1']}"
-                            f" {data['RejectParameter2']}")
-                if ap_id(hdr) == 0x334:
-                    msg += (f" {bin(data['TcErrorCode'])}"
-                            f" {data['FailParameter1']}"
-                            f" {data['FailParameter2']}")
+            if ap_id(buf['hdr']) == 0x320:
+                msg += (f" {buf['hk']['ICUSWVER']:8x}"
+                        f" {buf['hk']['MPS_ID']:6d}")
+            elif ap_id(buf['hdr']) in (0x331, 0x332, 0x333, 0x334):
+                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl']:12d}"
+                if ap_id(buf['hdr']) == 0x332:
+                    msg += (f" {bin(buf['TcErrorCode'])}"
+                            f" {buf['RejectParameter1']}"
+                            f" {buf['RejectParameter2']}")
+                if ap_id(buf['hdr']) == 0x334:
+                    msg += (f" {bin(buf['TcErrorCode'])}"
+                            f" {buf['FailParameter1']}"
+                            f" {buf['FailParameter2']}")
             fp.write(msg + "\n")
 
 
@@ -632,8 +632,8 @@ def select_nomhk(ccsds_hk: tuple[np.ndarray],
         return np.array(())
 
     return np.concatenate(
-        [(x['data'],) for x in ccsds_hk if ap_id(x['hdr']) == 0x320
-         and x['data']['hk']['MPS_ID'] in mps_list])
+        [(x,) for x in ccsds_hk
+         if ap_id(x['hdr']) == 0x320 and x['hk']['MPS_ID'] in mps_list])
 
 
 def select_science(ccsds_sci: tuple[np.ndarray],
@@ -675,7 +675,7 @@ def select_science(ccsds_sci: tuple[np.ndarray],
             break
 
         # found start of detector read-out
-        buff = segment['data'].copy()
+        buff = segment.copy()
         buff['frame'][0] = np.array(())
 
         read_frame = False
@@ -686,7 +686,7 @@ def select_science(ccsds_sci: tuple[np.ndarray],
             or (mode == 'binned'
                 and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES)):
             read_frame = True
-            frame = (segment['data']['frame'][0],)
+            frame = (segment['frame'][0],)
 
         # perform loop over all detector segments of this frame
         while True:
@@ -700,7 +700,7 @@ def select_science(ccsds_sci: tuple[np.ndarray],
                 break
 
             if read_frame:
-                frame += (segment['data']['frame'][0],)
+                frame += (segment['frame'][0],)
             if grouping_flag(segment['hdr']) == 2:
                 if read_frame:
                     science += (buff,)

@@ -7,6 +7,7 @@ __all__ = ['UNITS_DICT', 'convert_hk']
 from enum import Enum
 
 import numpy as np
+import numpy.ma as ma
 
 
 # This dictionary is only valid when raw counts are converted to physical units
@@ -23,25 +24,25 @@ UNITS_DICT = {'ADC1_GAIN': 'Volt',
               'DEM_I': 'mA',
               'DEM_T': 'degree_Celsius',
               'DEM_V': 'Volt',
-              'HTR1_DutyCycl': '%',
+              'HTR1_DUTYCYCL': '%',
               'HTR1_I': 'mA',
-              'HTR2_DutyCycl': '%',
+              'HTR2_DUTYCYCL': '%',
               'HTR2_I': 'mA',
-              'HTR3_DutyCycl': '%',
+              'HTR3_DUTYCYCL': '%',
               'HTR3_I': 'mA',
-              'HTR4_DutyCycl': '%',
+              'HTR4_DUTYCYCL': '%',
               'HTR4_I': 'mA',
               'HTRGRP1_V': 'Volt',
               'HTRGRP2_V': 'Volt',
-              'ICU_1p2V_I': 'mA',
-              'ICU_1p2V_V': 'Volt',
-              'ICU_3p3V_I': 'mA',
-              'ICU_3p3V_V': 'Volt',
-              'ICU_4p0V_I': 'mA',
-              'ICU_4p0V_V': 'Volt',
+              'ICU_1P2V_I': 'mA',
+              'ICU_1P2V_V': 'Volt',
+              'ICU_3P3V_I': 'mA',
+              'ICU_3P3V_V': 'Volt',
+              'ICU_4P0V_I': 'mA',
+              'ICU_4P0V_V': 'Volt',
               'ICU_4V_T': 'degree_Celsius',
-              'ICU_5p0V_I': 'mA',
-              'ICU_5p0V_V': 'Volt',
+              'ICU_5P0V_I': 'mA',
+              'ICU_5P0V_V': 'Volt',
               'ICU_5V_T': 'degree_Celsius',
               'ICU_DIGV_T': 'degree_Celsius',
               'ICU_HG1_T': 'degree_Celsius',
@@ -84,11 +85,13 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
        - TS6 Radiator Redundant Temperature*
     """
     coefficients = (21.19, 272589.0, -1.5173e-15, 5.73666e-19, -5.11328e-20)
-    return (coefficients[0]
-            + coefficients[1] / raw_data
-            + coefficients[2] * raw_data ** 4
-            + (coefficients[3] + coefficients[4] * np.log(raw_data))
-            * raw_data ** 5)
+    buff = ma.masked_array(raw_data, mask=(raw_data == 0))
+    buff = (coefficients[0]
+            + coefficients[1] / buff
+            + coefficients[2] * buff ** 4
+            + (coefficients[3] + coefficients[4] * ma.log(buff)) * buff ** 5)
+    buff[raw_data == 0] = np.nan
+    return buff.data
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
@@ -263,10 +266,10 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
                  'ADC2_REF': poly_spex_adc_vcc,
                  'ADC2_VCC': poly_spex_adc_vcc,
                  'DEM_I': poly_spex_dem_i,
-                 'HTR1_DutyCycl': poly_spex_dutycycle,
-                 'HTR2_DutyCycl': poly_spex_dutycycle,
-                 'HTR3_DutyCycl': poly_spex_dutycycle,
-                 'HTR4_DutyCycl': poly_spex_dutycycle,
+                 'HTR1_DUTYCYCL': poly_spex_dutycycle,
+                 'HTR2_DUTYCYCL': poly_spex_dutycycle,
+                 'HTR3_DUTYCYCL': poly_spex_dutycycle,
+                 'HTR4_DUTYCYCL': poly_spex_dutycycle,
                  'HTRGRP1_V': poly_spex_htr_v,
                  'HTRGRP2_V': poly_spex_htr_v,
                  'ICU_4V_T': poly_spex_icuhk_internaltemp,
@@ -277,10 +280,10 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
                  'ICU_MCU_T': poly_spex_icuhk_internaltemp,
                  'ICU_MID_T': poly_spex_icuhk_internaltemp,
                  'DEM_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_1p2V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_3p3V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_4p0V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_5p0V_V': poly_spex_icuhk_internaltemp2,
+                 'ICU_1P2V_V': poly_spex_icuhk_internaltemp2,
+                 'ICU_3P3V_V': poly_spex_icuhk_internaltemp2,
+                 'ICU_4P0V_V': poly_spex_icuhk_internaltemp2,
+                 'ICU_5P0V_V': poly_spex_icuhk_internaltemp2,
                  'LED1_ANODE_V': poly_spex_led_anode_v,
                  'LED2_ANODE_V': poly_spex_led_anode_v,
                  'LED1_CATH_V': poly_spex_led_cath_v,
