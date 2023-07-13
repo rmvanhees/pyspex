@@ -16,13 +16,13 @@ __all__ = ['SPXtlm']
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 import datetime
 
 import h5py
+import netCDF4 as nc4
 import numpy as np
 
-from .hkt_io import HKTio
+from .hkt_io import HKTio, read_hkt_nav, write_hkt_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import convert_hk
 from .lib.tmtc_def import tmtc_dtype
@@ -185,6 +185,42 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
             'tlm': tlm_arr,
             'tstamp': tstamp,
             'images': images}
+
+
+def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
+    """add PACE navigation information from PACE_HKT products.
+
+    Parameters
+    ----------
+    l1a_file :  Path
+       name of an existing L1A product.
+    hkt_list :  list[Path]
+       listing of files from which the navigation data has to be read
+    """
+    hkt_nav = read_hkt_nav(hkt_list)
+    # select HKT data collocated with Science data
+    # - issue a warning if selection is empty
+    write_hkt_nav(l1a_file, hkt_nav)
+
+
+def add_proc_conf(l1a_file: Path, yaml_conf: Path):
+    """Add dataset 'processor_configuration' to an existing L1A product.
+
+    Parameters
+    ----------
+    l1a_file :  Path
+       name of an existing L1A product.
+    yaml_conf :  Path
+       name of the YAML file with the processor settings
+    """
+    # pylint: disable=no-member
+    with nc4.Dataset(l1a_file, 'r+') as fid:
+        dset = fid.createVariable('processor_configuration', str)
+        dset.comment = ('Configuration parameters used during'
+                        ' the processor run that produced this file.')
+        dset[0] = ''.join(
+            [s for s in yaml_conf.open(encoding='ascii').readlines()
+             if not (s == '\n' or s.startswith('#'))])
 
 
 # - class SPXtlm ----------------------------
@@ -510,6 +546,7 @@ class SPXtlm:
             if tlm_type != 'sci':
                 self._hk['tlm'] = fid['/engineering_data/NomHK_telemetry'][:]
                 dset = fid['/engineering_data/HK_tlm_time']
+                # pylint: disable=no-member
                 ref_date = dset.attrs['units'].decode()[14:] + 'Z'
                 epoch = datetime.datetime.fromisoformat(ref_date)
                 self._hk['tstamp'] = []
@@ -599,6 +636,14 @@ class SPXtlm:
             self._fill_engineering(l1a)
             self._fill_science(l1a)
             self._fill_image_attrs(l1a, config.l0_format)
+
+        # add PACE navigation information from HKT products
+        if config.hkt_list:
+            add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
+
+        # add processor_configuration
+        if config.yaml_fl:
+            add_proc_conf(config.outdir / prod_name, config.yaml_fl)
 
     def _fill_engineering(self, l1a):
         """Fill datasets in group '/engineering_data'."""
