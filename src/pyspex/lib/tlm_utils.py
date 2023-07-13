@@ -7,22 +7,22 @@ __all__ = ['UNITS_DICT', 'convert_hk']
 from enum import Enum
 
 import numpy as np
-import numpy.ma as ma
+from numpy import ma
 
 
 # This dictionary is only valid when raw counts are converted to physical units
 UNITS_DICT = {'ADC1_GAIN': 'Volt',
               'ADC1_OFFSET': 'Volt',
               'ADC1_REF': 'Volt',
-              'ADC1_T': 'degree_Celsius',
+              'ADC1_T': 'K',
               'ADC1_VCC': 'Volt',
               'ADC2_GAIN': 'Volt',
               'ADC2_OFFSET': 'Volt',
               'ADC2_REF': 'Volt',
-              'ADC2_T': 'degree_Celsius',
+              'ADC2_T': 'K',
               'ADC2_VCC': 'Volt',
               'DEM_I': 'mA',
-              'DEM_T': 'degree_Celsius',
+              'DEM_T': 'K',
               'DEM_V': 'Volt',
               'HTR1_DUTYCYCL': '%',
               'HTR1_I': 'mA',
@@ -40,42 +40,42 @@ UNITS_DICT = {'ADC1_GAIN': 'Volt',
               'ICU_3P3V_V': 'Volt',
               'ICU_4P0V_I': 'mA',
               'ICU_4P0V_V': 'Volt',
-              'ICU_4V_T': 'degree_Celsius',
+              'ICU_4V_T': 'K',
               'ICU_5P0V_I': 'mA',
               'ICU_5P0V_V': 'Volt',
-              'ICU_5V_T': 'degree_Celsius',
-              'ICU_DIGV_T': 'degree_Celsius',
-              'ICU_HG1_T': 'degree_Celsius',
-              'ICU_HG2_T': 'degree_Celsius',
-              'ICU_MCU_T': 'degree_Celsius',
-              'ICU_MID_T': 'degree_Celsius',
+              'ICU_5V_T': 'K',
+              'ICU_DIGV_T': 'K',
+              'ICU_HG1_T': 'K',
+              'ICU_HG2_T': 'K',
+              'ICU_MCU_T': 'K',
+              'ICU_MID_T': 'K',
               'LED1_ANODE_V': 'Volt',
               'LED1_CATH_V': 'Volt',
               'LED1_I': 'mA',
               'LED2_ANODE_V': 'Volt',
               'LED2_CATH_V': 'Volt',
               'LED2_I': 'mA',
-              'TS1_DEM_N_T': 'degree_Celsius',
-              'TS2_HOUSING_N_T': 'degree_Celsius',
-              'TS3_RADIATOR_N_T': 'degree_Celsius',
-              'TS4_DEM_R_T': 'degree_Celsius',
-              'TS5_HOUSING_R_T': 'degree_Celsius',
-              'TS6_RADIATOR_R_T': 'degree_Celsius'}
+              'TS1_DEM_N_T': 'K',
+              'TS2_HOUSING_N_T': 'K',
+              'TS3_RADIATOR_N_T': 'K',
+              'TS4_DEM_R_T': 'K',
+              'TS5_HOUSING_R_T': 'K',
+              'TS6_RADIATOR_R_T': 'K'}
 
 
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Detector Temperature Sensor (at DEM) to degrees Celsius.
+    """Convert Detector Temperature Sensor (at DEM) to [K].
     """
     res = np.empty(raw_data.size, dtype=float)
     mask = raw_data < 400
-    res[mask] = 1.224 * raw_data[mask] - 290.2
-    res[~mask] = 0.6426 * raw_data[~mask] - 418.72
+    res[mask] = 1.224 * raw_data[mask] - 17.05
+    res[~mask] = 0.6426 * raw_data[~mask] - 145.57
     return res
 
 
 def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
-    """Convert listed Temperature Sensor (at DEM) to degrees Celsius::
+    """Convert listed Temperature Sensor (at DEM) to [K]::
 
        - TS1 DEM Nominal temperature
        - TS2 Housing Nominal Temperature
@@ -84,8 +84,8 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
        - TS5 Housing Redundant Temperature
        - TS6 Radiator Redundant Temperature*
     """
-    coefficients = (21.19, 272589.0, -1.5173e-15, 5.73666e-19, -5.11328e-20)
-    buff = ma.masked_array(raw_data, mask=(raw_data == 0))
+    coefficients = (294.34, 272589.0, -1.5173e-15, 5.73666e-19, -5.11328e-20)
+    buff = ma.masked_array(raw_data, mask=raw_data == 0)
     buff = (coefficients[0]
             + coefficients[1] / buff
             + coefficients[2] * buff ** 4
@@ -95,7 +95,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
-    """Convert temperature sensors on ICU power supplies to degrees Celsius::
+    """Convert temperature sensors on ICU power supplies to [K]::
 
        - ICU V5 supply temperature
        - ICU V4 supply temperature
@@ -105,7 +105,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
        - ICU MCU-RAM temperature
        - ICU 1V2, 3V3 supply temperature
     """
-    coefficients = (0, 0.0625)
+    coefficients = (273.15, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
 
 
@@ -171,9 +171,9 @@ def poly_spex_adc_gain(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_adc_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC1 Temperature reading to degrees Celsius.
+    """Convert ADC1 Temperature reading to [K].
     """
-    coefficients = (-273.4, 0.0007385466842651367)
+    coefficients = (-0.25, 0.0007385466842651367)
     return coefficients[0] + coefficients[1] * raw_data
 
 

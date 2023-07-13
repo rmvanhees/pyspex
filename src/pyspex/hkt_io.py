@@ -21,7 +21,6 @@ import numpy as np
 import xarray as xr
 from moniplot.image_to_xarray import h5_to_xr
 
-from .lib.tmtc_def import tmtc_dtype
 from .lv0_io import ap_id, dtype_tmtc
 
 
@@ -109,6 +108,7 @@ class HKTio:
         if self._coverage is not None:
             return self._coverage
 
+        # pylint: disable=no-member
         with h5py.File(self.filename) as fid:
             self._coverage = (
                 datetime.fromisoformat(fid.attrs['time_coverage_start'].decode()),
@@ -198,7 +198,7 @@ class HKTio:
             except ValueError as exc:
                 print(f'[WARNING]: header reading error with "{exc}"')
                 break
-            
+
             if 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
                 buff = np.frombuffer(packet, count=1, offset=0,
                                      dtype=dtype_tmtc(hdr))[0]
