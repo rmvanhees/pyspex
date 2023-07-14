@@ -224,7 +224,8 @@ def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
 
 
 # - high-level write function -----------
-def write_l1a(config, science_in: tuple[np.ndarray], nomhk_in: tuple[np.ndarray]) -> None:
+def write_l1a(config, science_in: tuple[np.ndarray],
+              nomhk_in: tuple[np.ndarray]) -> None:
     """Write Level-1A product.
 
     Parameters
@@ -245,7 +246,7 @@ def write_l1a(config, science_in: tuple[np.ndarray], nomhk_in: tuple[np.ndarray]
         Date: Jan, 2023
         """
         indx = (np.abs(tm_sec[1:] - tm_sec[:-1]) > ONE_DAY).nonzero()[0]
-        print(f'[WARNING] found large jumps between timestamps at {indx}')
+        print(f'[WARNING]: found large jumps between timestamps at {indx}')
         if len(indx) == 1:
             array = array[:indx[0]+1] \
                 if indx[0] > array.size // 2 else array[indx[0]+1:]
@@ -257,7 +258,7 @@ def write_l1a(config, science_in: tuple[np.ndarray], nomhk_in: tuple[np.ndarray]
                 mask[indx[0]+1:indx[1]+1] = False
                 array = array[mask]
         else:
-            print('[WARNING] cound not reject corrupted timestamps')
+            print('[WARNING]: cound not reject corrupted timestamps')
         return array
 
     if config.eclipse is None:
@@ -312,7 +313,7 @@ def write_l1a(config, science_in: tuple[np.ndarray], nomhk_in: tuple[np.ndarray]
             write_hkt_nav(config.outdir / prod_name, hkt_nav)
 
         if config.verbose:
-            print(f'[INFO]: Successfully generated: {prod_name}')
+            print(f'[INFO]: successfully generated: {prod_name}')
 
 
 # - class LV1io -------------------------

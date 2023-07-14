@@ -51,7 +51,7 @@ def main() -> int:
             return 130
 
         if config.verbose:
-            print(f'Wrote ASCII dump in directory: {config.outdir}')
+            print(f'[INFO]: wrote ASCII dump in directory: {config.outdir}')
         return 0
 
     # we will not create a Level-1A product without Science data.

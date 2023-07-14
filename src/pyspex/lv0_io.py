@@ -271,7 +271,7 @@ def _fix_hk24_(sci_hk):
 
 
 def read_lv0_data(file_list: list, file_format: str, debug=False,
-                  verbose=False) -> tuple[tuple, tuple]:
+                  verbose=False) -> tuple[np.ndarray, np.ndarray]:
     """
     Read level 0 data and return Science and telemetry data
 
@@ -369,7 +369,7 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
                     offs += nbytes
                 elif 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
                     buff = np.frombuffer(ccsds_data, count=1, offset=offs,
-                                         dtype=dtype_tmtc(hdr))[0]
+                                         dtype=dtype_tmtc(hdr))
                     buff_hk += (buff,)
                     offs += dtype_tmtc(hdr).itemsize
                 else:
@@ -385,8 +385,9 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
     return ccsds_sci, ccsds_hk
 
 
-def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
-                  ccsds_hk: tuple) -> None:
+def dump_lv0_data(file_list: list[Path], datapath: Path,
+                  ccsds_sci: tuple[np.ndarray],
+                  ccsds_hk: tuple[np.ndarray]) -> None:
     """
     Perform an ASCII dump of level 0 data
 
@@ -402,26 +403,23 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
        tuple of nomHK packages
     """
     # dump header information of the Science packages
-    flname = datapath / (file_list[0].stem + '.dump')
+    flname = datapath / (file_list[0].stem + '_sci.dump')
     with flname.open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'
                  ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
         for buf in ccsds_sci:
-            if grouping_flag(buf['hdr']) == 1:
-                fp.write(f"{ap_id(buf['hdr']):4x}"
-                         f" {grouping_flag(buf['hdr']):8d}"
-                         f" {sequence(buf['hdr']):7d}"
-                         f" {packet_length(buf['hdr']):6d}"
-                         f" {buf['hk']['ICUSWVER']:8x}"
-                         f" {buf['hk']['MPS_ID']:6d}"
-                         f" {buf['hk']['IMRLEN']:7d}"
-                         f" {buf['icu_tm']['tai_sec']:11d}"
-                         f" {buf['icu_tm']['sub_sec']:10d}\n")
+            hdr = buf['hdr'][0]
+            if grouping_flag(hdr) == 1:
+                _hk = buf['hk'][0]
+                icu_tm = buf['icu_tm'][0]
+                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                         f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
+                         f" {_hk['IMRLEN']:7d} {icu_tm['tai_sec']:11d}"
+                         f" {icu_tm['sub_sec']:10d}\n")
             else:
-                fp.write(f"{ap_id(buf['hdr']):4x}"
-                         f" {grouping_flag(buf['hdr']):8d}"
-                         f" {sequence(buf['hdr']):7d}"
-                         f" {packet_length(buf['hdr']):6d}\n")
+                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                         f" {sequence(hdr):7d} {packet_length(hdr):6d}\n")
 
     # dump header information of the nominal house-keeping packages
     flname = datapath / (file_list[0].stem + '_hk.dump')
@@ -429,23 +427,24 @@ def dump_lv0_data(file_list: list, datapath: Path, ccsds_sci: tuple,
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
         for buf in ccsds_hk:
-            msg = (f"{ap_id(buf['hdr']):4x} {grouping_flag(buf['hdr']):8d}"
-                   f" {sequence(buf['hdr']):7d} {packet_length(buf['hdr']):6d}"
-                   f" {buf['hdr']['tai_sec']:11d} {buf['hdr']['sub_sec']:10d}")
+            hdr = buf['hdr'][0]
+            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
 
-            if ap_id(buf['hdr']) == 0x320:
-                msg += (f" {buf['hk']['ICUSWVER']:8x}"
-                        f" {buf['hk']['MPS_ID']:6d}")
-            elif ap_id(buf['hdr']) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl']:12d}"
-                if ap_id(buf['hdr']) == 0x332:
-                    msg += (f" {bin(buf['TcErrorCode'])}"
-                            f" {buf['RejectParameter1']}"
-                            f" {buf['RejectParameter2']}")
-                if ap_id(buf['hdr']) == 0x334:
-                    msg += (f" {bin(buf['TcErrorCode'])}"
-                            f" {buf['FailParameter1']}"
-                            f" {buf['FailParameter2']}")
+            if ap_id(hdr) == 0x320:
+                _hk = buf['hk'][0]
+                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
+            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
+                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
+                if ap_id(hdr) == 0x332:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['RejectParameter1'][0]}"
+                            f" {buf['RejectParameter2'][0]}")
+                if ap_id(hdr) == 0x334:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['FailParameter1'][0]}"
+                            f" {buf['FailParameter2'][0]}")
             fp.write(msg + "\n")
 
 
@@ -632,7 +631,7 @@ def select_nomhk(ccsds_hk: tuple[np.ndarray],
         return np.array(())
 
     return np.concatenate(
-        [(x,) for x in ccsds_hk
+        [(x[0],) for x in ccsds_hk
          if ap_id(x['hdr']) == 0x320 and x['hk']['MPS_ID'] in mps_list])
 
 
@@ -721,3 +720,42 @@ def select_science(ccsds_sci: tuple[np.ndarray],
         img_data[ii, :data.size] = data
 
     return np.concatenate(science), img_data
+
+
+def _test():
+    flname='/data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000573.spx'
+    ccsds_sci, ccsds_hk = read_lv0_data([Path(flname)],
+                                        file_format='dsb',
+                                        debug=False,
+                                        verbose=False)
+    print('# ---------- ccsds_sci ----------')
+    for buf in ccsds_sci:
+        print(buf.shape)
+        print(type(buf), buf.dtype.names)
+        hdr = buf['hdr'][0]
+        print(hdr)
+        print(ap_id(hdr))
+        _hk = buf['hk'][0]
+        print(_hk['MPS_ID'])
+        icu_tm = buf['icu_tm'][0]
+        print(icu_tm['tai_sec'], icu_tm['sub_sec'])
+        img = buf['frame'][0]
+        print(img.shape)
+        break
+
+    print('# ---------- ccsds_hk ----------')
+    for buf in ccsds_hk:
+        print(buf.shape)
+        print(type(buf), buf.dtype.names)
+        hdr = buf['hdr'][0]
+        print(hdr)
+        print(ap_id(hdr))
+        _hk = buf['hk'][0]
+        print(_hk['MPS_ID'])
+        break
+
+    dump_lv0_data([Path(flname)], Path('.'), ccsds_sci, ccsds_hk)
+
+
+if __name__ == '__main__':
+    _test()

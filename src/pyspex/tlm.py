@@ -40,29 +40,30 @@ TSTAMP_TYPE = np.dtype(
 
 
 # - helper functions ------------------------
-def dump_hk(flname: Path, ccsds_hk: tuple):
+def dump_hk(flname: str, ccsds_hk: tuple[np.ndarray]):
     """Dump telemetry header info."""
-    with flname.open('w', encoding='ascii') as fp:
+    with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
         for buf in ccsds_hk:
-            msg = (f"{ap_id(buf['hdr']):4x} {grouping_flag(buf['hdr']):8d}"
-                   f" {sequence(buf['hdr']):7d} {packet_length(buf['hdr']):6d}"
-                   f" {buf['hdr']['tai_sec']:11d} {buf['hdr']['sub_sec']:10d}")
+            hdr = buf['hdr'][0]
+            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
 
-            if ap_id(buf['hdr']) == 0x320:
-                msg += (f" {buf['hk']['ICUSWVER']:8x}"
-                        f" {buf['hk']['MPS_ID']:6d}")
-            elif ap_id(buf['hdr']) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl']:12d}"
-                if ap_id(buf['hdr']) == 0x332:
-                    msg += (f" {bin(buf['TcErrorCode'])}"
-                            f" {buf['RejectParameter1']}"
-                            f" {buf['RejectParameter2']}")
-                if ap_id(buf['hdr']) == 0x334:
-                    msg += (f" {bin(buf['TcErrorCode'])}"
-                            f" {buf['FailParameter1']}"
-                            f" {buf['FailParameter2']}")
+            if ap_id(hdr) == 0x320:
+                _hk = buf['hk'][0]
+                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
+            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
+                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
+                if ap_id(hdr) == 0x332:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['RejectParameter1'][0]}"
+                            f" {buf['RejectParameter2'][0]}")
+                if ap_id(hdr) == 0x334:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['FailParameter1'][0]}"
+                            f" {buf['FailParameter2'][0]}")
             fp.write(msg + "\n")
 
 
@@ -82,15 +83,15 @@ def subsec2musec(sub_sec: int) -> int:
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, verbose: bool):
+def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
     """Return dictionary with NomHK telemetry data
     """
     if not ccsds_hk:
-        return {}
+        return None
 
     if verbose:
         print('[INFO]: processing housekeeping data')
-    epoch = get_epoch(int(ccsds_hk[0]['hdr']['tai_sec']))
+    epoch = get_epoch(int(ccsds_hk[0]['hdr']['tai_sec'][0]))
 
     hdr = np.empty(len(ccsds_hk),
                    dtype=ccsds_hk[0]['hdr'].dtype)
@@ -104,20 +105,20 @@ def extract_l0_hk(ccsds_hk: tuple, verbose: bool):
 
         tlm[ii] = buf['hk']
         tstamp.append(epoch + datetime.timedelta(
-            seconds=int(buf['hdr']['tai_sec']),
-            microseconds=subsec2musec(buf['hdr']['sub_sec'])))
+            seconds=int(hdr['tai_sec'][ii]),
+            microseconds=subsec2musec(hdr['sub_sec'][ii])))
         ii += 1
 
-    return {'hdr': hdr[:len(tstamp)],
-            'tlm': tlm[:len(tstamp)],
+    return {'hdr': hdr[:ii],
+            'tlm': tlm[:ii],
             'tstamp': np.array(tstamp)}
 
 
-def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
+def extract_l0_sci(ccsds_sci: tuple, verbose: bool) -> dict | None:
     """Return dictionary with Science telemetry data.
     """
     if not ccsds_sci:
-        return {}
+        return None
 
     # define epoch and allocate memory
     if verbose:
@@ -127,7 +128,8 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
     n_frames = 0
     found_start_first = False
     for buf in ccsds_sci:
-        if grouping_flag(buf['hdr']) == 1:
+        hdr = buf['hdr'][0]
+        if grouping_flag(hdr) == 1:
             found_start_first = True
             if n_frames == 0:
                 hdr_dtype = buf['hdr'].dtype
@@ -137,7 +139,7 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
         if not found_start_first:
             continue
 
-        if grouping_flag(buf['hdr']) == 2:
+        if grouping_flag(hdr) == 2:
             found_start_first = False
             n_frames += 1
 
@@ -155,7 +157,8 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
     ii = 0
     found_start_first = False
     for buf in ccsds_sci:
-        if grouping_flag(buf['hdr']) == 1:
+        hdr = buf['hdr'][0]
+        if grouping_flag(hdr) == 1:
             found_start_first = True
             hdr_arr[ii] = buf['hdr']
             tlm_arr[ii] = buf['hk']
@@ -171,9 +174,9 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool):
         if not found_start_first:
             continue
 
-        if grouping_flag(buf['hdr']) == 0:
+        if grouping_flag(hdr) == 0:
             img += (buf['frame'][0],)
-        elif grouping_flag(buf['hdr']) == 2:
+        elif grouping_flag(hdr) == 2:
             found_start_first = False
             img += (buf['frame'][0],)
             images += (np.concatenate(img),)
@@ -240,10 +243,10 @@ class SPXtlm:
     def hk_hdr(self) -> np.ndarray | None:
         """Return CCSDS header data of telemetry packages @1Hz.
         """
-        if self._sci is None:
+        if self._hk is None:
             return None
 
-        if self._selection is None:
+        if self._selection is None or self._selection:
             return self._hk['hdr']
         return self._hk['hdr'][self._selection['hk_mask']]
 
@@ -321,23 +324,23 @@ class SPXtlm:
     @property
     def reference_date(self) -> datetime.date:
         """Return date of reference day (tzone aware)."""
-        tstamp = self._sci['tstamp']['dt'][0] \
-            if 'tstamp' in self._sci else self._hk['tstamp'][0]
+        tstamp = self.hk_tstamp[0] \
+            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
         return datetime.datetime.combine(
                 tstamp.date(), datetime.time(0), tstamp.tzinfo)
 
     @property
     def time_coverage_start(self) -> str:
         """Return a string for the time_coverage_start."""
-        tstamp = self._sci['tstamp']['dt'][0] \
-            if 'tstamp' in self._sci else self._hk['tstamp'][0]
+        tstamp = self.hk_tstamp[0] \
+            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
         return tstamp.isoformat(timespec='milliseconds')
 
     @property
     def time_coverage_end(self) -> str:
         """Return a string for the time_coverage_end."""
-        tstamp = self._sci['tstamp']['dt'][-1] \
-            if 'tstamp' in self._sci else self._hk['tstamp'][-1]
+        tstamp = self.hk_tstamp[0] \
+            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
         return tstamp.isoformat(timespec='milliseconds')
 
     @property
@@ -426,8 +429,7 @@ class SPXtlm:
         return buff + 70
 
     def from_hkt(self, flnames: Path | list[Path], *,
-                 instrument: str | None = None,
-                 dump_dir: Path | None = None):
+                 instrument: str | None = None, dump: bool = False):
         """Read telemetry data from a PACE HKT product.
 
         Parameters
@@ -435,7 +437,9 @@ class SPXtlm:
         flnames :  Path | list[Path]
            list of PACE_HKT filenames (netCDF-4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, optional
-        apid :  int, optional
+        dump :  bool, default=False
+           dump header information of the telemetry packages @1Hz for
+           debugging purposes
         """
         if isinstance(flnames, Path):
             flnames = [flnames]
@@ -445,20 +449,21 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
+        ccsds_hk = ()
         for name in flnames:
             hkt = HKTio(name, instrument)
-            ccsds_hk = hkt.housekeeping()
-            if not ccsds_hk:
-                return
+            ccsds_hk += hkt.housekeeping()
 
-        if dump_dir is not None:
-            dump_hk(dump_dir / (self.file_list[0].stem + '_hk.dump'), ccsds_hk)
+        if not ccsds_hk:
+            return
+
+        if dump:
+            dump_hk(flnames[0].stem + '_hk.dump', ccsds_hk)
 
         self._hk = extract_l0_hk(ccsds_hk, self._verbose)
 
     def from_lv0(self, flnames: Path | list[Path], *,
-                 file_format: str,
-                 dump_dir: Path | None = None,
+                 file_format: str, dump: bool = False,
                  tlm_type: str | None = None):
         """Read telemetry data from SPEXone Level-0 product.
 
@@ -468,16 +473,12 @@ class SPXtlm:
            list of CCSDS filenames
         file_format : {'raw', 'st3', 'dsb'}
            type of CCSDS data
-        dump_dir :  Path, default=False
-           if dump_dir is not None then all data is read, but the header
-           information of the telemetry packages @1Hz are dumped in the
-           directory 'dump_dir' for debugging purposes.
+        dump :  bool, default=False
+           dump header information of the telemetry packages @1Hz for
+           debugging purposes
         tlm_type :  {'hk', 'sci', 'all'}, optional
-           select type of telemetry packages
-
-        Returns
-        -------
-        np.ndarray
+           select type of telemetry packages.
+           Note that we allways read the complete Level-0 producs.
         """
         if isinstance(flnames, Path):
             flnames = [flnames]
@@ -487,13 +488,13 @@ class SPXtlm:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
         self.file_list = flnames
-        self._hk = {}
-        self._sci = {}
+        self._hk = None
+        self._sci = None
         ccsds_sci, ccsds_hk = \
             read_lv0_data(flnames, file_format, verbose=self._verbose)
 
-        if dump_dir is not None:
-            dump_hk(dump_dir / (self.file_list[0].stem + '_hk.dump'), ccsds_hk)
+        if dump:
+            dump_hk(flnames[0].stem + '_hk.dump', ccsds_hk)
 
         # collect Science telemetry data
         if tlm_type != 'hk':
@@ -510,13 +511,9 @@ class SPXtlm:
         Parameters
         ----------
         flname :  Path
-           name of SPEXone Level-1A product
+           name of one SPEXone Level-1A product
         tlm_type :  {'hk', 'sci', 'all'}, optional
            select type of telemetry packages
-
-        Returns
-        -------
-        np.ndarray
         """
         if tlm_type is None:
             tlm_type = 'all'
@@ -601,26 +598,28 @@ class SPXtlm:
             return
 
         if mode == 'all':
+            nr_hk = 0 if self.hk_hdr is None else len(self.hk_hdr)
+            nr_sci = 0 if self.sci_hdr is None else len(self.sci_hdr)
             self._selection = {
-                'sci_mask': np.full(True, len(self.sci_hdr)),
-                'hk_mask': np.full(True, len(self.hk_hdr)),
+                'hk_mask': np.full(nr_hk, True),
+                'sci_mask': np.full(nr_sci, True),
                 'dims': {
-                    'number_of_images': len(self.hk_hdr),
-                    'samples_per_image': np.max(
-                        [len(x) for x in self.images]),
-                    'hk_packets': len(self.hk_hdr)}
+                    'number_of_images': nr_sci,
+                    'samples_per_image': 2048 \
+                    if nr_sci == 0 else np.max([len(x) for x in self.images]),
+                    'hk_packets': nr_hk}
             }
 
     def gen_l1a(self, config: dataclass.Dataclass, mode: str):
         """Generate a SPEXone Level-1A product"""
         self.set_selection(mode)
-        if (self._selection is None
-            or self._selection['dims']['number_of_images'] == 0):
+        if self._selection is None:
             return
 
         prod_mode = 'all' if config.eclipse is None else mode
-        prod_name = get_l1a_name(config, prod_mode, self.sci_tstamp['dt'][0])
-
+        ref_date = self.hk_tstamp[0] \
+            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
+        prod_name = get_l1a_name(config, prod_mode, ref_date)
         with L1Aio(config.outdir / prod_name,
                    self.reference_date,
                    self._selection['dims'],
@@ -632,18 +631,31 @@ class SPXtlm:
             l1a.set_attr('time_coverage_start', self.time_coverage_start)
             l1a.set_attr('time_coverage_end', self.time_coverage_end)
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
+            if self._verbose:
+                print(f'[INFO]: 1) initialized Level-1A product')
 
             self._fill_engineering(l1a)
+            if self._verbose:
+                print(f'[INFO]: 2) added engineering data')
             self._fill_science(l1a)
+            if self._verbose:
+                print(f'[INFO]: 3) added science data')
             self._fill_image_attrs(l1a, config.l0_format)
+            if self._verbose:
+                print(f'[INFO]: 4) added image attributes')
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
             add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
+            if self._verbose:
+                print(f'[INFO]: 5) added PACE navigation data')
 
         # add processor_configuration
         if config.yaml_fl:
             add_proc_conf(config.outdir / prod_name, config.yaml_fl)
+
+        if self._verbose:
+            print(f'[INFO]: successfully generated: {prod_name}')
 
     def _fill_engineering(self, l1a):
         """Fill datasets in group '/engineering_data'."""
@@ -665,7 +677,14 @@ class SPXtlm:
         if self.sci_tlm is None:
             return
 
-        l1a.set_dset('/science_data/detector_images', self.images)
+        img_sz = [img.size for img in self.images]
+        if len(np.unique(img_sz)) != 1:
+            images = np.zeros((len(img_sz), np.max(img_sz)), dtype='u2')
+            for ii, img in enumerate(self.images):
+                images[ii, :len(img)] = img
+        else:
+            images = np.vstack(self.images)
+        l1a.set_dset('/science_data/detector_images', images)
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
     def _fill_image_attrs(self, l1a, lv0_format: str):
@@ -725,3 +744,28 @@ class SPXtlm:
 
         raw_data = np.array([x[key.upper()] for x in tlm])
         return convert_hk(key.upper(), raw_data)
+
+
+from pyspex.lv1_args import get_l1a_settings
+def _test():
+    """test module."""
+    flname='/data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000436.spx'
+    config = get_l1a_settings()
+    tlm = SPXtlm(config.verbose)
+    tlm.from_lv0(config.l0_list,
+                 file_format=config.l0_format,
+                 tlm_type=None, dump=config.dump)
+
+    if not config.outdir.is_dir():
+        config.outdir.mkdir(mode=0o755, parents=True)
+    if config.eclipse is None:
+        tlm.gen_l1a(config, 'all')
+    elif config.eclipse:
+        tlm.gen_l1a(config, 'binned')
+        tlm.gen_l1a(config, 'full')
+    else:
+        tlm.gen_l1a(config, 'binned')
+
+
+if __name__ == '__main__':
+    _test()

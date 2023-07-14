@@ -15,6 +15,7 @@ from __future__ import annotations
 __all__ = ['get_l1a_settings']
 
 import argparse
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -57,10 +58,11 @@ l0_list:
 
 """
 
-EPILOG_HELP = """Usage:
+_prog_name_ = Path(sys.argv[0]).name
+EPILOG_HELP = f"""Usage:
   Generate L1A from OCAL level-0 data directly from the SPEXone instrument:
 
-    spx1_level01a <Path>/NomSciCal1_20220123T121801.676167.H
+    {_prog_name_} <Path>/NomSciCal1_20220123T121801.676167.H
 
     Note that OCAL science & telemetry data is read from the files:
       <Path>/NomSciCal1_20220123T121801.676167.?
@@ -69,15 +71,15 @@ EPILOG_HELP = """Usage:
 
   Generate L1A from OCAL level-0 data via ITOS from the PACE platform:
 
-    spx1_level01a <Path>/DIAG_20220124_175458_073.ST3
+    {_prog_name_} <Path>/DIAG_20220124_175458_073.ST3
 
   Generate L1A from in-flight level-0 data, store product in directory L1A:
 
-    spx1_level01a --outdir L1A <Path>/SPX*.spx
+    {_prog_name_} --outdir L1A <Path>/SPX*.spx
 
   Generate L1A from in-flight level-0 data read settings from a YAML file:
 
-    spx1_level01a --yaml config_l1a_gen.yaml
+    {_prog_name_} --yaml config_l1a_gen.yaml
 
     An example YAML file:
        outdir: L1A
@@ -90,11 +92,11 @@ EPILOG_HELP = """Usage:
 
   Dry-run, be extra verbose without generating data:
 
-    spx1_level01a --debug <Path>/NomSciCal1_20220123T121801.676167.H
+    {_prog_name_} --debug <Path>/NomSciCal1_20220123T121801.676167.H
 
   Read level-0 data and dump CCSDS packet headers in ASCII:
 
-    spx1_level01a --dump <Path>/NomSciCal1_20220123T121801.676167.H
+    {_prog_name_} --dump <Path>/NomSciCal1_20220123T121801.676167.H
 
 Return codes:
   2      Failed to parse command-line parameters.
