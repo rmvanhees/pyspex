@@ -11,7 +11,7 @@
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
    `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`,
-   `read_lv0_data`, 'select_nomhk', `select_science`
+   `read_cfe_header`, `read_lv0_data`, 'select_nomhk', `select_science`
 
 And handy routines to convert CCSDS parameters:
 
@@ -24,7 +24,8 @@ __all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
            'packet_length', 'science_timestamps', 'sequence',
            'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
-           'read_lv0_data', 'select_nomhk', 'select_science', 'DTYPE_CFE']
+           'read_cfe_header', 'read_lv0_data',
+           'select_nomhk', 'select_science']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -38,18 +39,6 @@ from .tm_science import TMscience
 
 # - global parameters ------------------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
-
-# define numpy data-type to read the cFE file-header
-DTYPE_CFE = np.dtype([
-    ('ContentType', 'S4'),
-    ('SubType', 'S4'),
-    ('FileHeaderLength', '>u4'),
-    ('SpacecraftID', 'S4'),
-    ('ProcessorID', '>u4'),
-    ('InstrumentID', 'S4'),
-    ('TimeSec', '>u4'),
-    ('TimeSubSec', '>u4'),
-    ('Filename', 'S32')])
 
 
 # - local functions --------------------------------
@@ -270,10 +259,32 @@ def _fix_hk24_(sci_hk):
     return res
 
 
-def read_lv0_data(file_list: list, file_format: str, debug=False,
-                  verbose=False) -> tuple[np.ndarray, np.ndarray]:
+def read_cfe_header(flname: Path, verbose: bool = False) -> np.ndarray:
+    """Read cFE file header (only for file_format='dsb').
     """
-    Read level 0 data and return Science and telemetry data
+    # define numpy data-type to read the cFE file-header
+    dtype_cfe = np.dtype([
+        ('ContentType', 'S4'),
+        ('SubType', 'S4'),
+        ('FileHeaderLength', '>u4'),
+        ('SpacecraftID', 'S4'),
+        ('ProcessorID', '>u4'),
+        ('InstrumentID', 'S4'),
+        ('TimeSec', '>u4'),
+        ('TimeSubSec', '>u4'),
+        ('Filename', 'S32')])
+
+    cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
+    if verbose:
+        print(f'[INFO]: content of cFE header "{cfe_hdr}"')
+    return cfe_hdr
+
+
+def read_lv0_data(file_list: list[Path, ...],
+                  file_format: str,
+                  debug: bool = False,
+                  verbose: bool = False) -> tuple[tuple, tuple]:
+    """Read level 0 data and return Science and telemetry data.
 
     Parameters
     ----------
@@ -301,27 +312,19 @@ def read_lv0_data(file_list: list, file_format: str, debug=False,
     ccsds_sci = ()
     ccsds_hk = ()
     for flname in file_list:
+        offs = 0
+        if file_format == 'dsb':
+            cfe_hdr = read_cfe_header(flname, verbose)
+            offs += cfe_hdr['FileHeaderLength']
+
         buff_sci = ()          # Use chunking to speed-up memory allocation
         buff_hk = ()
         with open(flname, 'rb') as fp:
             if verbose:
                 print(f'[INFO]: processing file "{flname}"')
-            ccsds_data = fp.read()
-
-            offs = 0
-            if file_format == 'dsb':
-                # read cFE file-header from buffer
-                cfe_hdr = np.frombuffer(ccsds_data, count=1, offset=0,
-                                        dtype=DTYPE_CFE)[0]
-                if verbose:
-                    print(f'[INFO]: content of cFE header "{cfe_hdr}"')
-                if cfe_hdr['FileHeaderLength'] != DTYPE_CFE.itemsize:
-                    print('[WARNING]: size of cFE header is'
-                          f' {cfe_hdr["FileHeaderLength"]} bytes, expected'
-                          f' {DTYPE_CFE.itemsize} bytes')
-                offs += cfe_hdr['FileHeaderLength']
 
             # read CCSDS header and user data
+            ccsds_data = fp.read()
             while offs < len(ccsds_data):
                 try:
                     hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
@@ -434,7 +437,7 @@ def dump_lv0_data(file_list: list[Path], datapath: Path,
 
             if ap_id(hdr) == 0x320:
                 _hk = buf['hk'][0]
-                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
+                msg += f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
             elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
                 msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
                 if ap_id(hdr) == 0x332:
@@ -618,9 +621,9 @@ def select_nomhk(ccsds_hk: tuple[np.ndarray],
     Parameters
     ----------
     ccsds_hk :  tuple of np.ndarray
-        All non-Science telementry packages
+        All non-Science telemetry packages
     mps_list :  list of integers
-        Select telementry packages on MPS-IDs
+        Select telemetry packages on MPS-IDs
 
     Returns
     -------
@@ -652,10 +655,11 @@ def select_science(ccsds_sci: tuple[np.ndarray],
     -------
     tuple of np.ndarray
          Contains Science telemetry per full detector readout. The detector
-         readouts are stored in a seperate 2-D array
+         readouts are stored in a separate 2-D array
     """
     sci = iter(ccsds_sci)
 
+    segment = None
     images = ()
     science = ()
     stop_iter = False
@@ -720,42 +724,3 @@ def select_science(ccsds_sci: tuple[np.ndarray],
         img_data[ii, :data.size] = data
 
     return np.concatenate(science), img_data
-
-
-def _test():
-    flname='/data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000573.spx'
-    ccsds_sci, ccsds_hk = read_lv0_data([Path(flname)],
-                                        file_format='dsb',
-                                        debug=False,
-                                        verbose=False)
-    print('# ---------- ccsds_sci ----------')
-    for buf in ccsds_sci:
-        print(buf.shape)
-        print(type(buf), buf.dtype.names)
-        hdr = buf['hdr'][0]
-        print(hdr)
-        print(ap_id(hdr))
-        _hk = buf['hk'][0]
-        print(_hk['MPS_ID'])
-        icu_tm = buf['icu_tm'][0]
-        print(icu_tm['tai_sec'], icu_tm['sub_sec'])
-        img = buf['frame'][0]
-        print(img.shape)
-        break
-
-    print('# ---------- ccsds_hk ----------')
-    for buf in ccsds_hk:
-        print(buf.shape)
-        print(type(buf), buf.dtype.names)
-        hdr = buf['hdr'][0]
-        print(hdr)
-        print(ap_id(hdr))
-        _hk = buf['hk'][0]
-        print(_hk['MPS_ID'])
-        break
-
-    dump_lv0_data([Path(flname)], Path('.'), ccsds_sci, ccsds_hk)
-
-
-if __name__ == '__main__':
-    _test()

@@ -552,7 +552,12 @@ class SPXtlm:
                         epoch + datetime.timedelta(seconds=sec))
 
     def set_selection(self, mode: str):
-        """Obtain image and housekeeping dimensions"""
+        """Obtain image and housekeeping dimensions.
+
+        Parameters
+        ----------
+        mode :  {'full', 'binned', 'all'}
+        """
         self._selection = None
         if mode == 'full':
             sci_mask = [] if self.sci_tlm is None else \
