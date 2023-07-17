@@ -637,23 +637,23 @@ class SPXtlm:
             l1a.set_attr('time_coverage_end', self.time_coverage_end)
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
             if self._verbose:
-                print(f'[INFO]: 1) initialized Level-1A product')
+                print('[INFO]: 1) initialized Level-1A product')
 
             self._fill_engineering(l1a)
             if self._verbose:
-                print(f'[INFO]: 2) added engineering data')
+                print('[INFO]: 2) added engineering data')
             self._fill_science(l1a)
             if self._verbose:
-                print(f'[INFO]: 3) added science data')
+                print('[INFO]: 3) added science data')
             self._fill_image_attrs(l1a, config.l0_format)
             if self._verbose:
-                print(f'[INFO]: 4) added image attributes')
+                print('[INFO]: 4) added image attributes')
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
             add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
             if self._verbose:
-                print(f'[INFO]: 5) added PACE navigation data')
+                print('[INFO]: 5) added PACE navigation data')
 
         # add processor_configuration
         if config.yaml_fl:
@@ -749,28 +749,3 @@ class SPXtlm:
 
         raw_data = np.array([x[key.upper()] for x in tlm])
         return convert_hk(key.upper(), raw_data)
-
-
-from pyspex.lv1_args import get_l1a_settings
-def _test():
-    """test module."""
-    flname='/data/richardh/SPEXone/MPC/spx1_l0/1.0/2024/03/24/SPX000000436.spx'
-    config = get_l1a_settings()
-    tlm = SPXtlm(config.verbose)
-    tlm.from_lv0(config.l0_list,
-                 file_format=config.l0_format,
-                 tlm_type=None, dump=config.dump)
-
-    if not config.outdir.is_dir():
-        config.outdir.mkdir(mode=0o755, parents=True)
-    if config.eclipse is None:
-        tlm.gen_l1a(config, 'all')
-    elif config.eclipse:
-        tlm.gen_l1a(config, 'binned')
-        tlm.gen_l1a(config, 'full')
-    else:
-        tlm.gen_l1a(config, 'binned')
-
-
-if __name__ == '__main__':
-    _test()
