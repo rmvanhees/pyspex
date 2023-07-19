@@ -167,7 +167,7 @@ class HKTio:
         xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
-    def housekeeping(self) -> tuple[dict]:
+    def housekeeping(self) -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.
 
         Notes
@@ -187,7 +187,7 @@ class HKTio:
 
         with h5py.File(self.filename) as fid:
             if ds_set not in fid['housekeeping_data']:
-                return {}
+                return ()
             res = fid['housekeeping_data'][ds_set][:]
 
         ccsds_hk = ()
@@ -201,7 +201,7 @@ class HKTio:
 
             if 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
                 buff = np.frombuffer(packet, count=1, offset=0,
-                                     dtype=dtype_tmtc(hdr))[0]
+                                     dtype=dtype_tmtc(hdr))
                 ccsds_hk += (buff,)
 
         return ccsds_hk
