@@ -24,7 +24,7 @@ import numpy as np
 
 from .hkt_io import HKTio, read_hkt_nav, write_hkt_nav
 from .lib.leap_sec import get_leap_seconds
-from .lib.tlm_utils import convert_hk
+from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
 from .lv0_io import (ap_id, grouping_flag, packet_length,
                      read_lv0_data, sequence)
@@ -145,7 +145,8 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool) -> dict | None:
 
     # print(f'n_frames: {n_frames}')
     if n_frames == 0:
-        raise RuntimeError('no valid Science package found')
+        print('[WARNING]: no valid Science package found')
+        return None
 
     # allocate memory
     hdr_arr = np.empty(n_frames, dtype=hdr_dtype)
@@ -339,8 +340,8 @@ class SPXtlm:
     @property
     def time_coverage_end(self) -> str:
         """Return a string for the time_coverage_end."""
-        tstamp = self.hk_tstamp[0] \
-            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
+        tstamp = self.hk_tstamp[-1] \
+            if self.sci_tstamp is None else self.sci_tstamp['dt'][-1]
         return tstamp.isoformat(timespec='milliseconds')
 
     @property
@@ -521,10 +522,11 @@ class SPXtlm:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
         self.file_list = [flname]
-        self._hk = {}
-        self._sci = {}
+        self._hk = None
+        self._sci = None
         with h5py.File(flname) as fid:
             if tlm_type != 'hk':
+                self._sci = {}
                 self._sci['tlm'] = fid['/science_data/detector_telemetry'][:]
                 seconds = fid['/image_attributes/icu_time_sec'][:]
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
@@ -541,6 +543,7 @@ class SPXtlm:
                 self._sci['tstamp']['dt'] = _dt
 
             if tlm_type != 'sci':
+                self._hk = {}
                 self._hk['tlm'] = fid['/engineering_data/NomHK_telemetry'][:]
                 dset = fid['/engineering_data/HK_tlm_time']
                 # pylint: disable=no-member
@@ -741,11 +744,24 @@ class SPXtlm:
         elif tm_type == 'sci':
             tlm = self.sci_tlm
         else:
-            tlm = self.sci_tlm \
-                if key.upper() in self.sci_tlm.dtype.names else self.hk_tlm
+            tlm = self.sci_tlm if self.sci_tlm is not None else self.hk_tlm
         if key.upper() not in tlm.dtype.names:
             raise KeyError(f'Parameter: {key.upper()} not found'
                            f' in {tlm.dtype.names}')
 
         raw_data = np.array([x[key.upper()] for x in tlm])
         return convert_hk(key.upper(), raw_data)
+
+    def units(self, key: str) -> str:
+        """Obtain units of converted telemetry parameter.
+
+        Parameters
+        ----------
+        key :  str
+           Name of telemetry parameter
+
+        Returns
+        -------
+        str
+        """
+        return UNITS_DICT.get(key, '1')
