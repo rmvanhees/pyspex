@@ -14,7 +14,8 @@ __all__ = ['init_l1a']
 
 import datetime
 
-import netCDF4 as nc4
+# pylint: disable=no-name-in-module
+from netCDF4 import Dataset, Variable
 import numpy as np
 
 from .tmtc_def import tmtc_dtype
@@ -24,13 +25,13 @@ ORBIT_DURATION = 5904  # seconds
 
 
 # - local functions --------------------------------
-def attrs_sec_per_day(dset: nc4.Variable, ref_date: datetime.date) -> None:
+def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
     """
     Add CF attributes to a dataset holding 'seconds of day'
 
     Parameters
     ----------
-    dset : nc4.Variable
+    dset : Variable
        Variable containing a timestamp as seconds since reference date
     ref_date : datetime.date
        Reference date
@@ -70,57 +71,9 @@ def attrs_sec_per_day(dset: nc4.Variable, ref_date: datetime.date) -> None:
     dset.valid_max = 86400 + ORBIT_DURATION
 
 
-# - main function ----------------------------------
-# pylint: disable=too-many-statements
-def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
-             compression: bool = False) -> nc4.Dataset:
+def image_attributes(rootgrp: Dataset, ref_date: datetime.date):
+    """Define group /image_attributs and its datasets.
     """
-    Create an empty SPEXone Level-1A product (on-ground or in-flight)
-
-    Parameters
-    ----------
-    l1a_flname : str
-       Name of L1A product
-    ref_date :  datetime.date
-       Date of the first detector image
-    dims :  dict
-       Provide length of the Level-1A dimensions. Default values::
-
-          number_of_images : None     # number of image frames
-          samples_per_image : None    # depends on binning table
-          hk_packets : None           # number of HK tlm-packets (1 Hz)
-
-    compression : bool, default=False
-       Use compression on dataset /science_data/detector_images.
-
-    Notes
-    -----
-    The optional groups '/gse_data' and '/navigation_data' are not created
-    by this script.
-
-    Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
-    """
-    # check function parameters
-    if not isinstance(dims, dict):
-        raise TypeError("dims should be a dictionary")
-
-    # initialize dimensions
-    number_img = dims.get('number_of_images', None)
-    img_samples = dims.get('samples_per_image', None)
-    hk_packets = dims.get('hk_packets', None)
-
-    # create/overwrite netCDF4 product
-    try:
-        rootgrp = nc4.Dataset(l1a_flname, 'w')
-    except Exception as exc:
-        raise Exception(f'Failed to create netCDF4 file {l1a_flname}') from exc
-
-    # - define global dimensions
-    _ = rootgrp.createDimension('number_of_images', number_img)
-    _ = rootgrp.createDimension('samples_per_image', img_samples)
-    _ = rootgrp.createDimension('hk_packets', hk_packets)
-
-    # - define group /image_attributs and its datasets
     sgrp = rootgrp.createGroup('/image_attributes')
     dset = sgrp.createVariable('icu_time_sec', 'u4', ('number_of_images',))
     dset.long_name = "ICU time stamp (seconds)"
@@ -161,12 +114,31 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
     dset.long_name = "exposure time"
     dset.units = "s"
 
-    # - define group /science_data and its datasets
+
+def get_chunksize(ydim: int, compression: bool) -> tuple[int, int]:
+    """Obtain chunksize for dataset: /science_data/science_data.
+    """
+    # I did some extensive testing.
+    # - Without compression (chunked vs contiguous):
+    #   * Writing to a contiguous dataset is faster (10-20%)
+    #   * Reading one image is about as fast for chunked and contiguous storage
+    #   * Reading a pixel image is much faster for chunked storage (2-8x)
+    # - With compression (always chunked):
+    #   * Writing takes 3x as long compared to without compression,
+    #     but saves about > 40% on disk storage
+    #   * Reading of compressed data is much slower than uncompressed data
+    #   * The performance when reading one detector image is acceptable,
+    #     however reading one pixel image is really slow (specially full-frame).
+    # And this are the best chunksizes.
+    return (20, ydim) if ydim < 1048576 \
+        else (1, min(512 * 1024, ydim)) if compression else (1, ydim)
+
+
+def science_data(rootgrp: Dataset, compression: bool,
+                 chunksizes: tuple[int, int]):
+    """Define group /science_data and its datasets.
+    """
     sgrp = rootgrp.createGroup('/science_data')
-    chunksizes = (64, img_samples) if img_samples < 1048576 \
-        else (4, img_samples)
-    if not compression and number_img is not None:
-        chunksizes = None
     dset = sgrp.createVariable('detector_images', 'u2',
                                ('number_of_images', 'samples_per_image'),
                                compression='zlib' if compression else None,
@@ -182,7 +154,10 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
     dset.long_name = "SPEX science telemetry"
     dset.comment = "A subset of MPS and housekeeping parameters."
 
-    # - define group /engineering_data and its datasets
+
+def engineering_data(rootgrp: Dataset, ref_date: datetime.date):
+    """ Define group /engineering_data and its datasets.
+    """
     sgrp = rootgrp.createGroup('/engineering_data')
     dset = sgrp.createVariable('HK_tlm_time', 'f8', ('hk_packets',),
                                fill_value=-32767)
@@ -215,5 +190,61 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
     # dset.comment = "DEM housekeeping parameters."
+
+
+# - main function ----------------------------------
+def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
+             compression: bool = False) -> Dataset:
+    """
+    Create an empty SPEXone Level-1A product (on-ground or in-flight)
+
+    Parameters
+    ----------
+    l1a_flname : str
+       Name of L1A product
+    ref_date :  datetime.date
+       Date of the first detector image
+    dims :  dict
+       Provide length of the Level-1A dimensions. Default values::
+
+          number_of_images : None     # number of image frames
+          samples_per_image : None    # depends on binning table
+          hk_packets : None           # number of HK tlm-packets (1 Hz)
+
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images.
+
+    Notes
+    -----
+    The optional groups '/gse_data' and '/navigation_data' are not created
+    by this script.
+
+    Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
+    """
+    # check function parameters
+    if not isinstance(dims, dict):
+        raise TypeError("dims should be a dictionary")
+
+    # initialize dimensions
+    number_img = dims.get('number_of_images', None)
+    img_samples = dims.get('samples_per_image', None)
+    hk_packets = dims.get('hk_packets', None)
+
+    # create/overwrite netCDF4 product
+    try:
+        rootgrp = Dataset(l1a_flname, 'w')
+    except Exception as exc:
+        raise Exception(f'Failed to create netCDF4 file {l1a_flname}') from exc
+
+    # - define global dimensions
+    _ = rootgrp.createDimension('number_of_images', number_img)
+    _ = rootgrp.createDimension('samples_per_image', img_samples)
+    _ = rootgrp.createDimension('hk_packets', hk_packets)
+
+    # - define the various HDF54/netCDF4 groups and their datasets
+    image_attributes(rootgrp, ref_date)
+    chunksizes = get_chunksize(img_samples, compression)
+    science_data(rootgrp, compression, chunksizes)
+    engineering_data(rootgrp, ref_date)
 
     return rootgrp
