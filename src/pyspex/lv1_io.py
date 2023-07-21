@@ -12,23 +12,19 @@ Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
 PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 """
 from __future__ import annotations
-__all__ = ['L1Aio', 'L1Bio', 'L1Cio', 'write_l1a']
+__all__ = ['L1Aio', 'L1Bio', 'L1Cio']
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 
-import netCDF4 as nc4
 import numpy as np
 
-from .hkt_io import read_hkt_nav, write_hkt_nav
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
-from .lv0_io import (coverage_time, hk_sec_of_day, img_sec_of_day,
-                     nomhk_timestamps, science_timestamps, select_nomhk,
-                     select_science)
+from .lib.tlm_utils import convert_hk
 from .tm_science import TMscience
 from .version import pyspex_version
 
@@ -37,32 +33,6 @@ ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
-def frac_poly(xx_in: np.ndarray,
-              coefs: tuple[float, float, float, float, float] | None = None):
-    """Temperature [K] calibration derived by Paul Tol (2020-10-21).
-
-    Parameters
-    ----------
-    xx_in :  ndarray
-    coefs :  tuple, default=None
-      Coefficients of fractional polynomial: r0, r1, r2, r3, r4
-
-    Returns
-    -------
-    ndarray, dtype float
-    """
-    xdata = xx_in.astype(float)
-
-    if coefs is None:
-        coefs = (273.15 + 21.19, 6.97828e+7,
-                 -3.53275e-25, 7.79625e-31, -4.6505E-32)
-
-    return (coefs[0]
-            + coefs[1] / xdata
-            + coefs[2] * xdata ** 4
-            + (coefs[3] + coefs[4] * np.log(xdata)) * xdata ** 5)
-
-
 def get_l1a_name(config: dataclass, mode: str,
                  sensing_start: datetime) -> str:
     """
@@ -136,184 +106,6 @@ def get_l1a_name(config: dataclass, mode: str,
         msm_id = msm_id[:-22] + new_date
 
     return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
-
-
-def write_lv0_data(prod_name: str, config: dataclass, nomhk: np.ndarray,
-                   science: np.ndarray, images: np.ndarray) -> None:
-    """
-    Write level 0 packages to a level-1A product
-
-    Parameters
-    ----------
-    prod_name :  str
-       Name of the Level-1A product.
-    config :  dataclass
-       Settings for the L0->l1A processing.
-    nomhk : np.ndarray
-       L0 nominal housekeeping data.
-    science : np.ndarray
-       L0 telementry without detector data.
-    images :  np.ndarray
-       L0 detector read-outs
-    """
-    # Define data dimensions
-    dims = {'number_of_images': images.shape[0],
-            'samples_per_image': images.shape[1],
-            'hk_packets': nomhk.size}
-
-    # Preprocess the timestamps to be stored in the L1A product
-    # [Science TM]
-    #  - the ICU time stamps are not altered!
-    #  - the variable 'image_time' holds sec_of_day and needs a reference day
-    #    in addition, the data is corrected for the start of integration time.
-    # [nomHK TM]
-    #  - the CCSDS time stamps are not altered!
-    #  - the variable 'nomhk_time' holds sec_of_day and needs a reference day
-    # Only the DSB files use EPOCH 1958 (TAI) all other use EPOCH 1970 (UTC)
-    img_sec, img_subsec = science_timestamps(science)
-    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
-
-    # Generate and fill L1A product
-    with L1Aio(config.outdir / prod_name, ref_date.date(), dims,
-               compression=config.compression) as l1a:
-        # write image data, detector telemetry and image attributes
-        l1a.fill_science(images, science['hk'],
-                         np.bitwise_and(science['hdr']['sequence'], 0x3fff))
-        l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
-        # modify attribute units for non-DSB products
-        if config.l0_format != 'dsb':
-            l1a.set_attr('valid_min', np.uint32(1577800000),
-                         ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('valid_max', np.uint32(1735700000),
-                         ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
-                         ds_name='/image_attributes/icu_time_sec')
-        l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
-        l1a.set_dset('/image_attributes/image_time', img_time)
-
-        # write engineering data
-        if nomhk.size > 0:
-            l1a.fill_nomhk(nomhk['hk'])
-            nomhk_sec, nomhk_subsec = nomhk_timestamps(nomhk)
-            hk_time = hk_sec_of_day(nomhk_sec, nomhk_subsec, ref_date)
-            l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
-
-        # write global attributes
-        if nomhk.size > 0:
-            l1a.set_attr('icu_sw_version', f'0x{nomhk["hk"]["ICUSWVER"][0]:x}')
-        if config.l0_format == 'raw':
-            l1a.fill_global_attrs(inflight=False)
-        else:
-            l1a.fill_global_attrs(inflight=True)
-        tstamp = coverage_time(science)
-        l1a.set_attr('time_coverage_start',
-                     tstamp[0].isoformat(timespec='milliseconds'))
-        l1a.set_attr('time_coverage_end',
-                     tstamp[1].isoformat(timespec='milliseconds'))
-        l1a.set_attr('input_files', [x.name for x in config.l0_list])
-
-    # add processor_configuration
-    if config.yaml_fl:
-        with nc4.Dataset(config.outdir / prod_name, 'r+') as fid:
-            dset = fid.createVariable('processor_configuration', str)
-            dset.comment = ('Configuration parameters used during'
-                            ' the processor run that produced this file.')
-            dset[0] = ''.join(
-                [s for s in config.yaml_fl.open(encoding='ascii').readlines()
-                 if not (s == '\n' or s.startswith('#'))])
-
-
-# - high-level write function -----------
-def write_l1a(config, science_in: tuple[np.ndarray],
-              nomhk_in: tuple[np.ndarray]) -> None:
-    """Write Level-1A product.
-
-    Parameters
-    ----------
-    config :  dataclass
-       Settings for the L0->l1A processing.
-    science_in : tuple of np.ndarray
-       L0 detector data.
-    nomhk_in : tuple of np.ndarray
-       L0 nominal housekeeping data.
-    """
-    def reject_tm(tm_sec, array):
-        """reject corrupted timestamps.
-
-        Notes
-        -----
-        This function is implemented for the day-in-a-life test at Godard.
-        Date: Jan, 2023
-        """
-        indx = (np.abs(tm_sec[1:] - tm_sec[:-1]) > ONE_DAY).nonzero()[0]
-        print(f'[WARNING]: found large jumps between timestamps at {indx}')
-        if len(indx) == 1:
-            array = array[:indx[0]+1] \
-                if indx[0] > array.size // 2 else array[indx[0]+1:]
-        elif len(indx) == 2:
-            if indx[1] - indx[0] > array.size // 2:
-                array = array[indx[0]+1:indx[1]+1]
-            else:
-                mask = np.ones(array.size, dtype=bool)
-                mask[indx[0]+1:indx[1]+1] = False
-                array = array[mask]
-        else:
-            print('[WARNING]: cound not reject corrupted timestamps')
-        return array
-
-    if config.eclipse is None:
-        # these are "OCAL data" try to write all data to one L1A product.
-        mode_list = ['all']
-    elif not config.eclipse:
-        # these are "Science data": always binned data
-        mode_list = ['binned']
-    else:
-        # this can be "Dark data": binned data using "Science mode" MPSes
-        # and/or "Calibration data”: full frame data in "Diagonstic mode".
-        mode_list = ['binned', 'full']
-
-    # print(mode_list, len(science_in), type(science_in),
-    #       len(nomhk_in), type(nomhk_in))
-    for mode in mode_list:
-        # selected L0 data-packages
-        # and group Science packages to detector-frames
-        science, images = select_science(science_in, mode)
-        if science.size == 0:
-            continue
-
-        mps_list = [int(i) for i in np.unique(science['hk']['MPS_ID'])]
-        if config.verbose:
-            print(f'[INFO]: list of unique MPS {mps_list}')
-        nomhk = select_nomhk(nomhk_in, mps_list)
-
-        # reject corrupted timestamps in science data
-        img_sec, _ = science_timestamps(science)
-        img_sec = img_sec.astype(int)
-        if np.any(np.abs(img_sec[1:] - img_sec[:-1]) > ONE_DAY):
-            science = reject_tm(img_sec, science)
-
-        # reject corrupted timestamps in house-keeping data
-        hk_sec, _ = nomhk_timestamps(nomhk)
-        hk_sec = hk_sec.astype(int)
-        if np.any(np.abs(hk_sec[1:] - hk_sec[:-1]) > ONE_DAY):
-            nomhk = reject_tm(hk_sec, nomhk)
-
-        # write L1A product
-        prod_name = get_l1a_name(config, mode, coverage_time(science)[0])
-        try:
-            write_lv0_data(prod_name, config, nomhk, science, images)
-        except (PermissionError, RuntimeError) as exc:
-            raise RuntimeError from exc
-
-        # add PACE navigation information from HKT products
-        if config.hkt_list:
-            hkt_nav = read_hkt_nav(config.hkt_list)
-            # select HKT data collocated with Science data
-            # - issue a warning if selection is empty
-            write_hkt_nav(config.outdir / prod_name, hkt_nav)
-
-        if config.verbose:
-            print(f'[INFO]: successfully generated: {prod_name}')
 
 
 # - class LV1io -------------------------
@@ -707,41 +499,24 @@ class L1Aio(Lv1io):
                           np.full(nomhk_data.size, 273))
         else:
             self.set_dset('/engineering_data/temp_detector',
-                          frac_poly(nomhk_data['TS1_DEM_N_T']))
+                          convert_hk('TS1_DEM_N_T',
+                                     nomhk_data['TS1_DEM_N_T']))
 
         if np.all(nomhk_data['TS2_HOUSING_N_T'] == 0):
             self.set_dset('/engineering_data/temp_housing',
                           np.full(nomhk_data.size, 293))
         else:
             self.set_dset('/engineering_data/temp_housing',
-                          frac_poly(nomhk_data['TS2_HOUSING_N_T']))
+                          convert_hk('TS2_HOUSING_N_T',
+                                     nomhk_data['TS2_HOUSING_N_T']))
 
         if np.all(nomhk_data['TS3_RADIATOR_N_T'] == 0):
             self.set_dset('/engineering_data/temp_radiator',
                           np.full(nomhk_data.size, 294))
         else:
             self.set_dset('/engineering_data/temp_radiator',
-                          frac_poly(nomhk_data['TS3_RADIATOR_N_T']))
-
-    def fill_demhk(self, demhk_data):
-        """Write detector housekeeping telemetry packets (DemHK).
-
-        Parameters
-        ----------
-        demhk_data : numpy array
-           Structured array with all DemHK telemetry parameters
-
-        Notes
-        -----
-        Writes demhk_data as DetTM_telemetry in group /engineering_data
-
-        Parameters: temp_detector and temp_housing are extracted and converted
-        to Kelvin and writen to the group /engineering_data
-        """
-        if len(demhk_data) == 0:
-            return
-
-        self.set_dset('/engineering_data/DemHK_telemetry', demhk_data)
+                          convert_hk('TS3_RADIATOR_N_T',
+                                     nomhk_data['TS3_RADIATOR_N_T']))
 
 
 # - class L1Bio -------------------------

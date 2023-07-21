@@ -10,22 +10,19 @@
 """
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
-   `dtype_packet_hdr`, `dtype_tmtc`, `dump_lv0_data`,
-   `read_cfe_header`, `read_lv0_data`, 'select_nomhk', `select_science`
+   `dtype_packet_hdr`, `dtype_tmtc`, `read_cfe_header`, `read_lv0_data`
 
 And handy routines to convert CCSDS parameters:
 
-   `ap_id`, `coverage_time`, `fix_sub_sec`, `grouping_flag`,
-   `hk_sec_of_day`, `img_sec_of_day`, `nomhk_timestamps`,
-   `packet_length`, `science_timestamps`, `sequence`
+   `ap_id`, `fix_sub_sec`, `grouping_flag`,
+   `hk_sec_of_day`, `img_sec_of_day`, `packet_length`, `sequence`
 """
 from __future__ import annotations
-__all__ = ['ap_id', 'coverage_time', 'fix_sub_sec', 'grouping_flag',
-           'hk_sec_of_day', 'img_sec_of_day', 'nomhk_timestamps',
-           'packet_length', 'science_timestamps', 'sequence',
-           'dtype_packet_hdr', 'dtype_tmtc', 'dump_lv0_data',
-           'read_cfe_header', 'read_lv0_data',
-           'select_nomhk', 'select_science']
+__all__ = ['ap_id', 'fix_sub_sec', 'grouping_flag',
+           'hk_sec_of_day', 'img_sec_of_day',
+           'packet_length', 'sequence',
+           'dtype_packet_hdr', 'dtype_tmtc',
+           'read_cfe_header', 'read_lv0_data']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -388,69 +385,6 @@ def read_lv0_data(file_list: list[Path, ...],
     return ccsds_sci, ccsds_hk
 
 
-def dump_lv0_data(file_list: list[Path], datapath: Path,
-                  ccsds_sci: tuple[np.ndarray],
-                  ccsds_hk: tuple[np.ndarray]) -> None:
-    """
-    Perform an ASCII dump of level 0 data
-
-    Parameters
-    ----------
-    file_list :  list of Path
-       list of CCSDS files as concrete paths
-    datapath :  Path
-       concrete path to the directory to write the dump-file
-    ccsds_sci :  tuple of np.ndarray
-       tuple of Science packages
-    ccsds_hk :  tuple of np.ndarray
-       tuple of nomHK packages
-    """
-    # dump header information of the Science packages
-    flname = datapath / (file_list[0].stem + '_sci.dump')
-    with flname.open('w', encoding='ascii') as fp:
-        fp.write('APID Grouping Counter Length'
-                 ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
-        for buf in ccsds_sci:
-            hdr = buf['hdr'][0]
-            if grouping_flag(hdr) == 1:
-                _hk = buf['hk'][0]
-                icu_tm = buf['icu_tm'][0]
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                         f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
-                         f" {_hk['IMRLEN']:7d} {icu_tm['tai_sec']:11d}"
-                         f" {icu_tm['sub_sec']:10d}\n")
-            else:
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}\n")
-
-    # dump header information of the nominal house-keeping packages
-    flname = datapath / (file_list[0].stem + '_hk.dump')
-    with flname.open('w', encoding='ascii') as fp:
-        fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
-                 ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
-        for buf in ccsds_hk:
-            hdr = buf['hdr'][0]
-            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
-
-            if ap_id(hdr) == 0x320:
-                _hk = buf['hk'][0]
-                msg += f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
-            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
-                if ap_id(hdr) == 0x332:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
-                            f" {buf['RejectParameter1'][0]}"
-                            f" {buf['RejectParameter2'][0]}")
-                if ap_id(hdr) == 0x334:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
-                            f" {buf['FailParameter1'][0]}"
-                            f" {buf['FailParameter2'][0]}")
-            fp.write(msg + "\n")
-
-
 def fix_sub_sec(tai_sec, sub_sec) -> tuple:
     """
     In ICU S/W version 0x123 a bug was introduced which corrupted the
@@ -464,59 +398,6 @@ def fix_sub_sec(tai_sec, sub_sec) -> tuple:
     sub_sec = ((us100 << 16) // 10000).astype('u2')
 
     return tai_sec, sub_sec
-
-
-def science_timestamps(science: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Return timestamps of the Science packets
-
-    Parameters
-    ----------
-    science :  np.ndarray
-
-    Returns
-    -------
-    tuple of ndarray
-        Tuple with timestamps and sub-seconds
-    """
-    # The parameters ICU_TIME_SEC and ICU_TIME_SUBSEC contain zeros until
-    # ICU S/W version 0x125, which was first used at 2021-01-04T16:23.
-    # Note version 0x124 was not used for any OCAL measurement.
-    if science['hk']['ICUSWVER'][0] > 0x123:
-        img_sec = science['icu_tm']['tai_sec']
-        img_subsec = science['icu_tm']['sub_sec']
-        return img_sec, img_subsec
-
-    # Use the inaccurate packaging timing stored in the secondary header
-    img_sec = science['hdr']['tai_sec']
-    img_subsec = science['hdr']['sub_sec']
-    if science['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug parameter sub-sec
-        return fix_sub_sec(img_sec, img_subsec)
-
-    return img_sec, img_subsec
-
-
-def nomhk_timestamps(nomhk: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Return timestamps of the telemetry packets
-
-    Parameters
-    ----------
-    nomhk:  np.ndarray
-
-    Returns
-    -------
-    tuple of ndarray
-        Tuple with timestamps and sub-seconds
-    """
-    nomhk_sec = nomhk['hdr']['tai_sec']
-    nomhk_subsec = nomhk['hdr']['sub_sec']
-    if nomhk['hk']['ICUSWVER'][0] == 0x123:
-        # fix bug parameter sub-sec
-        return fix_sub_sec(nomhk_sec, nomhk_subsec)
-
-    return nomhk_sec, nomhk_subsec
 
 
 def which_epoch(timestamp: int) -> datetime:
@@ -600,127 +481,3 @@ def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
 
     # return seconds since midnight
     return ccsds_sec - offs_sec + ccsds_subsec / 65536
-
-
-def coverage_time(science) -> tuple:
-    """
-    Return coverage time start and end of the Science data
-    """
-    img_sec, img_subsec = science_timestamps(science)
-    ref_date, img_time = img_sec_of_day(img_sec, img_subsec, science['hk'])
-    frame_period = 1e-7 * TMscience(science['hk'][-1]).frame_period
-    return (ref_date + timedelta(seconds=img_time[0]),
-            ref_date + timedelta(seconds=img_time[-1] + frame_period))
-
-
-def select_nomhk(ccsds_hk: tuple[np.ndarray],
-                 mps_list: list[int]) -> np.ndarray:
-    """
-    Select nominal housekeeping telemetry packages on MPS-IDs.
-
-    Parameters
-    ----------
-    ccsds_hk :  tuple of np.ndarray
-        All non-Science telemetry packages
-    mps_list :  list of integers
-        Select telemetry packages on MPS-IDs
-
-    Returns
-    -------
-    np.ndarray
-         Selected nominal housekeeping telemetry packages as numpy array
-    """
-    if not ccsds_hk:
-        return np.array(())
-
-    return np.concatenate(
-        [(x[0],) for x in ccsds_hk
-         if ap_id(x['hdr']) == 0x320 and x['hk']['MPS_ID'] in mps_list])
-
-
-def select_science(ccsds_sci: tuple[np.ndarray],
-                   mode='all') -> tuple[np.ndarray, np.ndarray]:
-    """
-    Select Science telemetry packages and combine image data to contain one
-    detector readout.
-
-    Parameters
-    ----------
-    ccsds_sci :  tuple of np.ndarray
-        Science TM packages (ApID: 0x350)
-    mode :  {'all', 'full', 'binned'}, default='all'
-        Select Science packages with full-frame image or binned images
-
-    Returns
-    -------
-    tuple of np.ndarray
-         Contains Science telemetry per full detector readout. The detector
-         readouts are stored in a separate 2-D array
-    """
-    sci = iter(ccsds_sci)
-
-    segment = None
-    images = ()
-    science = ()
-    stop_iter = False
-    while True:
-        while True:
-            try:
-                segment = next(sci)
-            except StopIteration:
-                stop_iter = True
-                break
-
-            if grouping_flag(segment['hdr']) == 1:
-                break
-
-        if stop_iter:
-            break
-
-        # found start of detector read-out
-        buff = segment.copy()
-        buff['frame'][0] = np.array(())
-
-        read_frame = False
-        frame = ()
-        if (mode == 'all'
-            or (mode == 'full'
-                and buff['hk']['IMRLEN'][0] == FULLFRAME_BYTES)
-            or (mode == 'binned'
-                and buff['hk']['IMRLEN'][0] < FULLFRAME_BYTES)):
-            read_frame = True
-            frame = (segment['frame'][0],)
-
-        # perform loop over all detector segments of this frame
-        while True:
-            try:
-                segment = next(sci)
-            except StopIteration:
-                stop_iter = True
-                break
-
-            if stop_iter:
-                break
-
-            if read_frame:
-                frame += (segment['frame'][0],)
-            if grouping_flag(segment['hdr']) == 2:
-                if read_frame:
-                    science += (buff,)
-                    images += (np.concatenate(frame),)
-                break
-
-    # return empty arrays when no measurement data found
-    if not science:
-        return np.array(()), np.array(())
-
-    img_dims = [frame.size for frame in images]
-    if len(np.unique(img_dims)) == 1:
-        return np.concatenate(science), np.vstack(images)
-
-    # fill image data to the dimension of the largest read-out
-    img_data = np.empty((len(img_dims), np.max(img_dims)), dtype='u2')
-    for ii, data in enumerate(images):
-        img_data[ii, :data.size] = data
-
-    return np.concatenate(science), img_data

@@ -100,12 +100,12 @@ EPILOG_HELP = f"""Usage:
 
 Return codes:
   2      Failed to parse command-line parameters.
-  100    Input file does not exist or failed to read from input file.
-  101    Input file not recognized as a SPEXone level-0 product.
-  110    Corrupted SPEXone level-0 data.
-  120    SPEXone level-0 data does not contain Science data, no L1A generated.
-  130    Failed to generate output file due to permission error.
+  110    One (or more) of the input files could not be found.
+  115    Failed to generate output directry due to permission error.
+  121    Input file not recognized as a SPEXone level-0 product.
+  122    Corrupted SPEXone level-0 data.
   131    Failed to generate output file due to netCDF4 library issues.
+  135    Failed to generate output file due to permission error.
 
 Environment:
    'OCVARROOT'

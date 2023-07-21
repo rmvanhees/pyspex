@@ -22,10 +22,33 @@ from pyspex.ccsds_io import CCSDSio
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv0_io import hk_sec_of_day, img_sec_of_day
 from pyspex.lv1_io import L1Aio
-from pyspex.spx_product import get_l1a_name
+from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+# - local functions --------------------------------
+def get_l1a_name(msm_id: str) -> str:
+    """
+    Return name of SPEXone product for OCAL measurements (@SRON).
+
+    Parameters
+    ----------
+    msm_id : string, optional
+       Provide identifier for measurement, OCAL only
+
+    Notes
+    -----
+    L1A file name format:
+       SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       vvvvvvv is the git-hash string of the pyspex repository
+    """
+    # define string of sensing start as yyyymmddThhmmss
+    return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
 
 
 # - main function ----------------------------------
@@ -230,7 +253,7 @@ def main():
         pass
     else:
         msm_id = msm_id[:-22] + new_date
-    prod_name = get_l1a_name(msm_id, None)
+    prod_name = get_l1a_name(msm_id)
 
     # pylint: disable=unsubscriptable-object
     n_frame = 1 if img_data.ndim == 1 else img_data.shape[0]
@@ -247,7 +270,14 @@ def main():
                ref_date=ref_date.date()) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
+
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_attr('valid_min', np.uint32(1577800000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('valid_max', np.uint32(1735700000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+                     ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
 
@@ -258,7 +288,7 @@ def main():
             l1a.set_dset('/engineering_data/HK_tlm_time', hk_time)
 
         if demhk_tm:
-            l1a.fill_demhk(demhk_data)
+            l1a.set_dset('/engineering_data/DemHK_telemetry', demhk_data)
 
         # write global attributes
         l1a.fill_global_attrs(inflight=False)

@@ -28,13 +28,38 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv0_io import img_sec_of_day
 from pyspex.lv1_gse import LV1gse
 from pyspex.lv1_io import L1Aio
-from pyspex.spx_product import get_l1a_name
+from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
+def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
+    """
+    Return name of SPEXone product for DEM measurements.
+
+    Parameters
+    ----------
+    msm_id : string, optional
+       Provide identifier for measurement, OCAL only
+    utc_sensing_start: datetime
+       Provide sensing start of first measurement in L1A product
+
+    Notes
+    -----
+    L1A file name format:
+       SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       vvvvvvv is the git-hash string of the pyspex repository
+    """
+    # define string of sensing start as yyyymmddThhmmss
+    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
+
+    return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
+            f'_L1A_{pyspex_version(githash=True)}.nc')
 
 
 # - main function ----------------------------------
@@ -184,8 +209,9 @@ def main():
     # generate L1A product
     with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
         # write image data, detector telemetry and image attributes
-        l1a.fill_science(images.reshape(n_images, n_samples), img_hk,
-                         np.arange(n_images))
+        l1a.fill_science(images.reshape(n_images, n_samples),
+                         img_hk, np.arange(n_images))
+
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
         l1a.set_attr('valid_min', np.uint32(1577800000),
                      ds_name='/image_attributes/icu_time_sec')

@@ -27,8 +27,8 @@ import xarray as xr
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv1_gse import LV1gse
 from pyspex.lv1_io import L1Aio
-from pyspex.spx_product import get_l1a_name
 from pyspex.tif_io import TIFio
+from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -83,6 +83,33 @@ def get_stimulus(hdr):
                                   'units': 'W.m-2.sr-1.um-1'})
 
     return xr.Dataset({'wavelength': xr_wv, 'signal': xr_sign})
+
+
+def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
+    """
+    Return name of SPEXone product for DEM measurements.
+
+    Parameters
+    ----------
+    msm_id : string, optional
+       Provide identifier for measurement, OCAL only
+    utc_sensing_start: datetime
+       Provide sensing start of first measurement in L1A product
+
+    Notes
+    -----
+    L1A file name format:
+       SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
+    where
+       msm_id is the measurement identifier
+       YYYYMMDDTHHMMSS is time stamp of the first image in the file
+       vvvvvvv is the git-hash string of the pyspex repository
+    """
+    # define string of sensing start as yyyymmddThhmmss
+    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
+
+    return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
+            f'_L1A_{pyspex_version(githash=True)}.nc')
 
 
 # - main function ----------------------------------
@@ -212,9 +239,16 @@ def main():
     # Generate L1A product
     with L1Aio(prod_name, dims=dims, ref_date=utc_start.date()) as l1a:
         # write image data, detector telemetry and image attributes
-        l1a.fill_science(images.reshape(n_images, -1), sci_hk,
-                         np.arange(n_images))
+        l1a.fill_science(images.reshape(n_images, -1),
+                         sci_hk, np.arange(n_images))
+
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)
+        l1a.set_attr('valid_min', np.uint32(1577800000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('valid_max', np.uint32(1735700000),
+                     ds_name='/image_attributes/icu_time_sec')
+        l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+                     ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
 

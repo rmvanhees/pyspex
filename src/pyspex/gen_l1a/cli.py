@@ -10,66 +10,58 @@
 # License:  BSD-3-Clause
 """Command-line implementation of spx1_level01a.
 """
-from ..lv0_io import dump_lv0_data, read_lv0_data
 from ..lv1_args import get_l1a_settings
-from ..lv1_io import write_l1a
+from ..tlm import SPXtlm
 
 
 def main() -> int:
     """Execute the main bit of the application."""
+    err_code = 0
 
     # parse command-line parameters and YAML file for settings
     try:
         config = get_l1a_settings()
+        if config.verbose:
+            print(config)
+        if not config.outdir.is_dir():
+            config.outdir.mkdir(mode=0o755, parents=True)
+
+        # read level 0 data
+        tlm = SPXtlm(config.verbose)
+        tlm.from_lv0(config.l0_list,
+                     file_format=config.l0_format,
+                     tlm_type=None, dump=config.dump)
+
     except FileNotFoundError as exc:
         print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-        return 100
+        err_code = 110
+    except OSError as exc:
+        print(f'[FATAL]: PermissionError with "{exc}"')
+        return 115
     except TypeError as exc:
         print(f'[FATAL]: TypeError exception raised with "{exc}".')
-        return 101
-
-    # show the user command-line settings after calling `check_input_files`
-    if config.verbose:
-        print(config)
-
-    # read level 0 data as Science and TMTC packages
-    try:
-        res = read_lv0_data(config.l0_list, config.l0_format,
-                            config.debug, config.verbose)
+        err_code = 121
     except ValueError as exc:
         print(f'[FATAL]: ValueError exception raised with "{exc}".')
-        return 110
-    if config.debug:
-        return 0
+        err_code = 122
 
-    # perform an ASCII dump of level 0 headers parameters
-    if config.dump:
-        try:
-            dump_lv0_data(config.l0_list, config.outdir, *res)
-        except FileNotFoundError as exc:
-            print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
-            return 130
-
-        if config.verbose:
-            print(f'[INFO]: wrote ASCII dump in directory: {config.outdir}')
-        return 0
-
-    # we will not create a Level-1A product without Science data.
-    if not res[0]:
-        # inform the caller with a warning message and exit status
-        print('[WARNING]: no science data found in L0 data, exit')
-        return 110
+    if err_code != 0 or config.dump:
+        return err_code
 
     # Write Level-1A product.
     try:
-        if not config.outdir.is_dir():
-            config.outdir.mkdir(mode=0o755, parents=True)
-        write_l1a(config, res[0], res[1])
+        if config.eclipse is None:
+            tlm.gen_l1a(config, 'all')
+        elif config.eclipse:
+            tlm.gen_l1a(config, 'binned')
+            tlm.gen_l1a(config, 'full')
+        else:
+            tlm.gen_l1a(config, 'binned')
     except (KeyError, RuntimeError) as exc:
         print(f'[FATAL]: RuntimeError with "{exc}"')
-        return 131
+        err_code = 131
     except Exception as exc:
-        print(f'[FATAL]: PermissionError with "{exc}"')
-        return 130
+        print(f'[FATAL]: Error with "{exc}"')
+        err_code = 135
 
-    return 0
+    return err_code
