@@ -8,28 +8,24 @@
 #
 # License:  BSD-3-Clause
 """
-Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
-PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
+Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format.
 """
 from __future__ import annotations
 
-__all__ = ['L1Aio', 'L1Bio', 'L1Cio']
+__all__ = ['L1Aio']
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 
 import numpy as np
 
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
-from .lib.l1b_def import init_l1b
-from .lib.l1c_def import init_l1c
 from .lib.tlm_utils import convert_hk
 from .version import pyspex_version
 
 # - global parameters -------------------
-FULLFRAME_BYTES = 2 * 2048 * 2048
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 
@@ -188,7 +184,7 @@ class Lv1io:
     ref_date :  datetime.date()
        Date of the first detector image
     dims :  dict
-       Dimensions of the datasets (differs for L1A, L1B, L1C)
+       Dimensions of the datasets
     compression : bool, default=False
        Use compression on dataset /science_data/detector_images [L1A, only]
 
@@ -215,12 +211,8 @@ class Lv1io:
         # initialize Level-1 product
         if self.processing_level == 'L1A':
             self.fid = init_l1a(product, ref_date, dims, compression)
-        elif self.processing_level == 'L1B':
-            self.fid = init_l1b(product, ref_date, dims)
-        elif self.processing_level == 'L1C':
-            self.fid = init_l1c(product, ref_date, dims)
         else:
-            raise KeyError('valid processing levels are: L1A, L1B or L1C')
+            raise KeyError('valid processing levels are: L1A')
         for key in self.dset_stored:
             self.dset_stored[key] = 0
 
@@ -587,257 +579,3 @@ class L1Aio(Lv1io):
             self.set_dset('/engineering_data/temp_radiator',
                           convert_hk('TS3_RADIATOR_N_T',
                                      nomhk_data['TS3_RADIATOR_N_T']))
-
-
-# - class L1Bio -------------------------
-class L1Bio(Lv1io):
-    """This class can be used to create a SPEXone Level-1B product
-
-    Parameters
-    ----------
-    product :  str
-       Name of the SPEXone Level-1B product
-    ref_date :  datetime.date
-       Date of the first detector image
-    dims :  dict
-       Dimensions of the datasets, default values::
-
-          bins_along_track: 400
-          spatial_samples_per_image: 200
-          intensity_bands_per_view: 50
-          polarization_bands_per_view: 50
-
-    Notes
-    -----
-    ToDo: make sure we store the reference date for image_time
-    """
-    processing_level = 'L1B'
-    dset_stored = {
-        '/BIN_ATTRIBUTES/image_time': 0,
-        '/GEOLOCATION_DATA/altitude': 0,
-        '/GEOLOCATION_DATA/latitude': 0,
-        '/GEOLOCATION_DATA/longitude': 0,
-        '/GEOLOCATION_DATA/sensor_azimuth': 0,
-        '/GEOLOCATION_DATA/sensor_zenith': 0,
-        '/GEOLOCATION_DATA/solar_azimuth': 0,
-        '/GEOLOCATION_DATA/solar_zenith': 0,
-        '/OBSERVATION_DATA/I': 0,
-        '/OBSERVATION_DATA/I_noise': 0,
-        '/OBSERVATION_DATA/AoLP': 0,
-        '/OBSERVATION_DATA/AoLP_noise': 0,
-        '/OBSERVATION_DATA/DoLP': 0,
-        '/OBSERVATION_DATA/DoLP_noise': 0,
-        '/OBSERVATION_DATA/Q_over_I': 0,
-        '/OBSERVATION_DATA/Q_over_I_noise': 0,
-        '/OBSERVATION_DATA/U_over_I': 0,
-        '/OBSERVATION_DATA/U_over_I_noise': 0,
-        '/SENSOR_VIEWS_BANDS/viewport_index': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_F0': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_F0': 0,
-        '/SENSOR_VIEWS_BANDS/view_angles': 0
-    }
-
-    def close(self):
-        """Close product and check if required datasets are filled with data.
-        """
-        if self.fid is None:
-            return
-
-        # check if atleast one dataset is updated
-        if self.fid.dimensions['bins_along_track'].size == 0:
-            self.fid.close()
-            self.fid = None
-            return
-
-        # check of all required dataset their sizes
-        self.check_stored()
-
-        # update coverage time
-        secnd = self.fid['/BIN_ATTRIBUTES/image_time'][0].data
-        time0 = (self.epoch
-                 + timedelta(seconds=int(secnd))
-                 + timedelta(microseconds=int(secnd % 1)))
-
-        secnd = self.fid['/BIN_ATTRIBUTES/image_time'][-1].data
-        time1 = (self.epoch
-                 + timedelta(seconds=int(secnd))
-                 + timedelta(microseconds=int(secnd % 1)))
-
-        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
-        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
-
-        self.fid.close()
-        self.fid = None
-
-    # -------------------------
-    def check_stored(self):
-        """Check variables with the same first dimension have equal sizes.
-        """
-        warn_str = ('SPEX Level-1B format check [WARNING]:'
-                    ' size of variable "{:s}" is wrong, only {:d} elements')
-
-        # check datasets in group /SENSOR_VIEWS_BANDS
-        dim_sz = self.get_dim('number_of_views')
-        res = []
-        key_list = [x for x in self.dset_stored
-                    if x.startswith('/SENSOR_VIEWS_BANDS')]
-        for key in key_list:
-            if key == '/SENSOR_VIEWS_BANDS/viewport_index':
-                continue
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        indx = (res != dim_sz).nonzero()[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        # check datasets in all other groups
-        dim_sz = self.get_dim('bins_along_track')
-        res = []
-        key_list = [x for x in self.dset_stored
-                    if not x.startswith('/SENSOR_VIEWS_BANDS')]
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        indx = (res != dim_sz).nonzero()[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        for ii, key in enumerate(self.dset_stored):
-            print(ii, key, self.dset_stored[key])
-
-    # ---------- PUBLIC FUNCTIONS ----------
-
-
-# - class L1Cio -------------------------
-class L1Cio(Lv1io):
-    """This class can be used to create a SPEXone Level-1C product.
-
-    Parameters
-    ----------
-    product :  str
-       Name of the SPEXone Level-1B product
-    ref_date :  datetime.date
-       Date of the first detector image
-    dims :  dict
-       Dimensions of the datasets, default values::
-
-          bins_along_track: 400
-          spatial_samples_per_image: 200
-          intensity_bands_per_view: 50
-          polarization_bands_per_view: 50
-
-    Notes
-    -----
-    ToDo: make sure we store the reference date for image_time
-    """
-    processing_level = 'L1C'
-    dset_stored = {
-        '/BIN_ATTRIBUTES/nadir_view_time': 0,
-        '/BIN_ATTRIBUTES/view_time_offsets': 0,
-        '/GEOLOCATION_DATA/latitude': 0,
-        '/GEOLOCATION_DATA/longitude': 0,
-        '/GEOLOCATION_DATA/altitude': 0,
-        '/GEOLOCATION_DATA/altitude_variability': 0,
-        '/GEOLOCATION_DATA/sensor_azimuth': 0,
-        '/GEOLOCATION_DATA/sensor_zenith': 0,
-        '/GEOLOCATION_DATA/solar_azimuth': 0,
-        '/GEOLOCATION_DATA/solar_zenith': 0,
-        '/OBSERVATION_DATA/obs_per_view': 0,
-        '/OBSERVATION_DATA/AoLP': 0,
-        '/OBSERVATION_DATA/AoLP_noise': 0,
-        '/OBSERVATION_DATA/DoLP': 0,
-        '/OBSERVATION_DATA/DoLP_noise': 0,
-        '/OBSERVATION_DATA/I': 0,
-        '/OBSERVATION_DATA/I_noise': 0,
-        '/OBSERVATION_DATA/I_polsample': 0,
-        '/OBSERVATION_DATA/I_polsample_noise': 0,
-        '/OBSERVATION_DATA/QC': 0,
-        '/OBSERVATION_DATA/QC_bitwise': 0,
-        '/OBSERVATION_DATA/QC_polsample': 0,
-        '/OBSERVATION_DATA/QC_polsample_bitwise': 0,
-        '/OBSERVATION_DATA/Q_over_I': 0,
-        '/OBSERVATION_DATA/Q_over_I_noise': 0,
-        '/OBSERVATION_DATA/U_over_I': 0,
-        '/OBSERVATION_DATA/U_over_I_noise': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/intensity_F0': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_bandpasses': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_wavelengths': 0,
-        '/SENSOR_VIEWS_BANDS/polarization_F0': 0,
-        '/SENSOR_VIEWS_BANDS/view_angles': 0
-    }
-
-    def close(self):
-        """Close product and check if required datasets are filled with data.
-        """
-        if self.fid is None:
-            return
-
-        # check if atleast one dataset is updated
-        if self.fid.dimensions['bins_along_track'].size == 0:
-            self.fid.close()
-            self.fid = None
-            return
-
-        # check of all required dataset their sizes
-        self.check_stored()
-
-        # update coverage time
-        secnd = self.fid['/BIN_ATTRIBUTES/nadir_view_time'][0].data
-        time0 = (self.epoch
-                 + timedelta(seconds=int(secnd))
-                 + timedelta(microseconds=int(secnd % 1)))
-
-        secnd = self.fid['/BIN_ATTRIBUTES/nadir_view_time'][-1].data
-        time1 = (self.epoch
-                 + timedelta(seconds=int(secnd))
-                 + timedelta(microseconds=int(secnd % 1)))
-
-        self.fid.time_coverage_start = time0.isoformat(timespec='milliseconds')
-        self.fid.time_coverage_end = time1.isoformat(timespec='milliseconds')
-
-        self.fid.close()
-        self.fid = None
-
-    # -------------------------
-    def check_stored(self):
-        """Check variables with the same first dimension have equal sizes.
-        """
-        warn_str = ('SPEX Level-1C format check [WARNING]:'
-                    ' size of variable "{:s}" is wrong, only {:d} elements')
-
-        # check datasets in group /SENSOR_VIEWS_BANDS
-        dim_sz = self.get_dim('number_of_views')
-        res = []
-        key_list = [x for x in self.dset_stored
-                    if x.startswith('/SENSOR_VIEWS_BANDS')]
-        for key in key_list:
-            if key == '/SENSOR_VIEWS_BANDS/viewport_index':
-                continue
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        indx = (res != dim_sz).nonzero()[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        # check datasets in all other groups
-        dim_sz = self.get_dim('bins_along_track')
-        res = []
-        key_list = [x for x in self.dset_stored
-                    if not x.startswith('/SENSOR_VIEWS_BANDS')]
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        indx = (res != dim_sz).nonzero()[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        for ii, key in enumerate(self.dset_stored):
-            print(ii, key, self.dset_stored[key])
-
-    # ---------- PUBLIC FUNCTIONS ----------

@@ -7,8 +7,8 @@
 #
 # License:  BSD-3-Clause
 
-"""Python package pyspex contains software to access
-   and create SPEXone L1A and L1B products.
+"""Python package pyspex contains software to read PACE HKT products,
+read SPEXone Level-0 products and read/write SPEXone Level-1A products.
 """
 from importlib.metadata import PackageNotFoundError, version
 

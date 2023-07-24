@@ -27,7 +27,7 @@ def attrs_def(level: str, inflight: bool = True,
     Parameters
     ----------
     level : str
-       Product processing level 'L1A', 'L1B' or 'L1C'
+       Product processing level 'L1A'
     inflight : bool
        Flag for in-flight or on-ground products
     origin : str
