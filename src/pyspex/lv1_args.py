@@ -129,7 +129,7 @@ class Config:
     outdir: Path = Path('.').resolve()
     outfile: str = ''
     file_version: int = 1
-    eclipse: bool = None
+    eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
     l0_format: str = ''
@@ -149,6 +149,9 @@ def __commandline_settings():
     parser.add_argument('--dump', action='store_true',
                         help="dump CCSDS packet headers in ASCII")
     parser.add_argument('--verbose', action='store_true', help="be verbose")
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('--eclipse', action='store_true', default=None)
+    group.add_argument('--no_eclipse', dest='eclipse', action='store_false')
     parser.add_argument('--outdir', type=Path, default=None,
                         help=("directory to store the generated"
                               " level-1A product(s)"))
@@ -165,6 +168,8 @@ def __commandline_settings():
         config.dump = True
     if args.verbose:
         config.verbose = True
+    if args.eclipse is not None:
+        config.eclipse = args.eclipse
     if args.outdir is not None:
         config.outdir = args.outdir
     if args.yaml:
