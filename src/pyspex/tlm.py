@@ -12,11 +12,12 @@ Contains the class `SPXtlm` to read/access/convert telemetry house-keeping
 parameters of SPEXone.
 """
 from __future__ import annotations
+
 __all__ = ['SPXtlm']
 
+import datetime
 from dataclasses import dataclass
 from pathlib import Path
-import datetime
 
 import h5py
 import netCDF4 as nc4
@@ -26,14 +27,14 @@ from .hkt_io import HKTio, read_hkt_nav, write_hkt_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_io import (ap_id, grouping_flag, packet_length,
-                     read_lv0_data, sequence)
-from .lv1_io import get_l1a_name, L1Aio
-
+from .lv0_io import (ap_id, grouping_flag, packet_length, read_lv0_data,
+                     sequence)
+from .lv1_io import L1Aio, get_l1a_name
 
 # - global parameters -----------------------
-MCP_TO_SEC = 1e-7
 FULLFRAME_BYTES = 2 * 2048 * 2048
+MCP_TO_SEC = 1e-7
+TSTAMP_MIN = 1577833200
 
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
@@ -41,7 +42,7 @@ TSTAMP_TYPE = np.dtype(
 
 # - helper functions ------------------------
 def dump_hk(flname: str, ccsds_hk: tuple[np.ndarray]):
-    """Dump telemetry header info."""
+    """Dump telemetry header info (nom_hk)."""
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
@@ -322,27 +323,44 @@ class SPXtlm:
                 images += (img,)
         return images
 
+    def __get_valid_tstamps(self):
+        """Return valid timestamps from Science or nomHK packages."""
+        if (self.sci_tstamp is None
+            or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN)):
+            indx = self.hk_tstamp > datetime.datetime(
+                2020, 1, 1, 1, tzinfo=datetime.timezone.utc)
+            return self.hk_tstamp[indx] if indx.size > 0 else None
+
+        indx = np.where(self.sci_tstamp['tai_sec'] > TSTAMP_MIN)[0]
+        return self.sci_tstamp['dt'][indx] if indx.size > 0 else None
+
     @property
     def reference_date(self) -> datetime.date:
         """Return date of reference day (tzone aware)."""
-        tstamp = self.hk_tstamp[0] \
-            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
+        tstamp = self.__get_valid_tstamps()
+        if tstamp is None:
+            raise ValueError('no valid timestamps found')
+
         return datetime.datetime.combine(
-                tstamp.date(), datetime.time(0), tstamp.tzinfo)
+                tstamp[0].date(), datetime.time(0), tstamp[0].tzinfo)
 
     @property
     def time_coverage_start(self) -> str:
         """Return a string for the time_coverage_start."""
-        tstamp = self.hk_tstamp[0] \
-            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
-        return tstamp.isoformat(timespec='milliseconds')
+        tstamp = self.__get_valid_tstamps()
+        if tstamp is None:
+            raise ValueError('no valid timestamps found')
+
+        return tstamp[0]
 
     @property
     def time_coverage_end(self) -> str:
         """Return a string for the time_coverage_end."""
-        tstamp = self.hk_tstamp[-1] \
-            if self.sci_tstamp is None else self.sci_tstamp['dt'][-1]
-        return tstamp.isoformat(timespec='milliseconds')
+        tstamp = self.__get_valid_tstamps()
+        if tstamp is None:
+            raise ValueError('no valid timestamps found')
+
+        return tstamp[-1]
 
     @property
     def binning_table(self):
@@ -363,37 +381,14 @@ class SPXtlm:
         if self.sci_tlm is None:
             return None
 
-        if 'REG_FULL_FRAME' not in self.sci_tlm.dtype.names:
-            print('[WARNING]: can not determine binning table identifier')
-            return np.full(len(self.sci_tlm), -1, dtype='i1')
+        bin_tbl = np.zeros(len(self.sci_tlm), dtype='i1')
+        _mm = self.sci_tlm['IMRLEN'] == FULLFRAME_BYTES
+        if np.sum(_mm) == len(self.sci_tlm):
+            return bin_tbl
 
-        full_frame = np.unique(self.sci_tlm['REG_FULL_FRAME'])
-        if len(full_frame) > 1:
-            print('[WARNING]: value of REG_FULL_FRAME not unique')
-        full_frame = self.sci_tlm['REG_FULL_FRAME'][-1]
-
-        cmv_outputmode = np.unique(self.sci_tlm['REG_CMV_OUTPUTMODE'])
-        if len(cmv_outputmode) > 1:
-            print('[WARNING]: value of REG_CMV_OUTPUTMODE not unique')
-        cmv_outputmode = self.sci_tlm['REG_CMV_OUTPUTMODE'][-1]
-
-        if full_frame == 1:
-            if cmv_outputmode != 3:
-                raise KeyError('Diagnostic mode with REG_CMV_OUTPMODE != 3')
-            return np.zeros(len(self.sci_tlm), dtype='i1')
-
-        if full_frame == 2:
-            if cmv_outputmode != 1:
-                raise KeyError('Science mode with REG_CMV_OUTPUTMODE != 1')
-            bin_tbl_start = self.sci_tlm['REG_BINNING_TABLE_START']
-            indx0 = (self.sci_tlm['REG_FULL_FRAME'] != 2).nonzero()[0]
-            if indx0.size > 0:
-                indx2 = (self.sci_tlm['REG_FULL_FRAME'] == 2).nonzero()[0]
-                bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
-            res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
-            return res & 0xFF
-
-        raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
+        bin_tbl_start = self.sci_tlm['REG_BINNING_TABLE_START']
+        bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
+        return bin_tbl
 
     @property
     def start_integration(self):
@@ -625,19 +620,19 @@ class SPXtlm:
             return
 
         prod_mode = 'all' if config.eclipse is None else mode
-        ref_date = self.hk_tstamp[0] \
-            if self.sci_tstamp is None else self.sci_tstamp['dt'][0]
-        prod_name = get_l1a_name(config, prod_mode, ref_date)
+        ref_date = self.reference_date
+        prod_name = get_l1a_name(config, prod_mode, self.time_coverage_start)
         with L1Aio(config.outdir / prod_name,
-                   self.reference_date,
-                   self._selection['dims'],
+                   ref_date, self._selection['dims'],
                    compression=config.compression) as l1a:
             if self.hk_tlm is None:
                 l1a.set_attr('icu_sw_version',
                              f'0x{self.hk_tlm["ICUSWVER"][0]:x}')
             l1a.fill_global_attrs(inflight=config.l0_format != 'raw')
-            l1a.set_attr('time_coverage_start', self.time_coverage_start)
-            l1a.set_attr('time_coverage_end', self.time_coverage_end)
+            l1a.set_attr('time_coverage_start',
+                         self.time_coverage_start.isoformat(timespec='milliseconds'))
+            l1a.set_attr('time_coverage_end',
+                         self.time_coverage_end.isoformat(timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
             if self._verbose:
                 print('[INFO]: 1) initialized Level-1A product')
@@ -670,9 +665,9 @@ class SPXtlm:
         if self.hk_tlm is None:
             return
         l1a.set_dset('/engineering_data/NomHK_telemetry', self.hk_tlm)
+        ref_date = self.reference_date
         l1a.set_dset('/engineering_data/HK_tlm_time',
-                     [(x - self.reference_date).total_seconds()
-                      for x in self.hk_tstamp])
+                     [(x - ref_date).total_seconds() for x in self.hk_tstamp])
         l1a.set_dset('/engineering_data/temp_detector',
                       self.convert('TS1_DEM_N_T', tm_type='hk'))
         l1a.set_dset('/engineering_data/temp_housing',
@@ -712,8 +707,9 @@ class SPXtlm:
                          ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec',
                      self.sci_tstamp['sub_sec'])
+        ref_date = self.reference_date
         l1a.set_dset('/image_attributes/image_time',
-                     [(x - self.reference_date).total_seconds()
+                     [(x - ref_date).total_seconds()
                       for x in self.sci_tstamp['dt']])
         l1a.set_dset('/image_attributes/image_ID',
                      np.bitwise_and(self.sci_hdr['sequence'], 0x3fff))

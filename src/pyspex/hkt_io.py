@@ -153,7 +153,7 @@ class HKTio:
                 elif key.startswith('tilt'):
                     res['tilt'] += (h5_to_xr(gid[key]),)
                 else:
-                    print(f'Fail to find dataset {key}')
+                    print(f'[WARNING]: fail to find dataset {key}')
 
         # repair the dimensions
         xds1 = xr.merge(res['att_'], combine_attrs='drop_conflicts')

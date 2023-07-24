@@ -12,6 +12,7 @@ Contains the classes `L1Aio`, L1Bio and `L1Cio` to write
 PACE/SPEXone data in resp. Level-1A, Level-1B or Level-1C format.
 """
 from __future__ import annotations
+
 __all__ = ['L1Aio', 'L1Bio', 'L1Cio']
 
 from dataclasses import dataclass
@@ -25,14 +26,81 @@ from .lib.l1a_def import init_l1a
 from .lib.l1b_def import init_l1b
 from .lib.l1c_def import init_l1c
 from .lib.tlm_utils import convert_hk
-from .tm_science import TMscience
 from .version import pyspex_version
 
 # - global parameters -------------------
+FULLFRAME_BYTES = 2 * 2048 * 2048
+MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
+def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
+    """Return binning table identifier (zero for full-frame images).
+    """
+    if 'REG_FULL_FRAME' not in img_hk.dtype.names:
+        print('[WARNING]: can not determine binning table identifier')
+        return np.full(len(img_hk), -1, dtype='i1')
+
+    full_frame = np.unique(img_hk['REG_FULL_FRAME'])
+    if len(full_frame) > 1:
+        print('[WARNING]: value of REG_FULL_FRAME not unique')
+    full_frame = img_hk['REG_FULL_FRAME'][-1]
+
+    cmv_outputmode = np.unique(img_hk['REG_CMV_OUTPUTMODE'])
+    if len(cmv_outputmode) > 1:
+        print('[WARNING]: value of REG_CMV_OUTPUTMODE not unique')
+    cmv_outputmode = img_hk['REG_CMV_OUTPUTMODE'][-1]
+
+    if full_frame == 1:
+        if cmv_outputmode != 3:
+            raise KeyError('Diagnostic mode with REG_CMV_OUTPMODE != 3')
+        return np.zeros(len(img_hk), dtype='i1')
+
+    if full_frame == 2:
+        if cmv_outputmode != 1:
+            raise KeyError('Science mode with REG_CMV_OUTPUTMODE != 1')
+        bin_tbl_start = img_hk['REG_BINNING_TABLE_START']
+        indx0 = (img_hk['REG_FULL_FRAME'] != 2).nonzero()[0]
+        if indx0.size > 0:
+            indx2 = (img_hk['REG_FULL_FRAME'] == 2).nonzero()[0]
+            bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
+        res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
+        return res & 0xFF
+
+    raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
+
+
+def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
+    """Returns digital offset including ADC offset [count].
+    """
+    buff = img_hk['DET_OFFSET'].astype('i4')
+    if np.isscalar(buff):
+        if buff >= 8192:
+            buff -= 16384
+    else:
+        buff[buff >= 8192] -= 16384
+
+    return buff + 70
+
+
+def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
+    """Returns exposure time in seconds [float].
+    """
+    # need first bit of address 121
+    reg_pgagainfactor = img_hk['DET_BLACKCOL'] & 0x1
+    reg_pgagain = img_hk['DET_PGAGAIN']
+    exp_time = (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
+
+    return MCP_TO_SEC * exp_time
+
+
+def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
+    """Returns number of coadditions.
+    """
+    return img_hk['REG_NCOADDFRAMES']
+
+
 def get_l1a_name(config: dataclass, mode: str,
                  sensing_start: datetime) -> str:
     """
@@ -467,12 +535,14 @@ class L1Aio(Lv1io):
         self.set_dset('/science_data/detector_images', img_data)
         self.set_dset('/science_data/detector_telemetry', img_hk)
         self.set_dset('/image_attributes/image_ID', img_id)
-
-        tm_sc = TMscience(img_hk)
-        self.set_dset('/image_attributes/binning_table', tm_sc.binning_table)
-        self.set_dset('/image_attributes/digital_offset', tm_sc.digital_offset)
-        self.set_dset('/image_attributes/exposure_time', tm_sc.exposure_time)
-        self.set_dset('/image_attributes/nr_coadditions', tm_sc.nr_coadditions)
+        self.set_dset('/image_attributes/binning_table',
+                      _binning_table_(img_hk))
+        self.set_dset('/image_attributes/digital_offset',
+                      _digital_offset_(img_hk))
+        self.set_dset('/image_attributes/exposure_time',
+                      _exposure_time_(img_hk))
+        self.set_dset('/image_attributes/nr_coadditions',
+                      _nr_coadditions_(img_hk))
 
     def fill_nomhk(self, nomhk_data):
         """Write nominal house-keeping telemetry packets (NomHK).

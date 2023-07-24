@@ -10,19 +10,18 @@
 """
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
-   `dtype_packet_hdr`, `dtype_tmtc`, `read_cfe_header`, `read_lv0_data`
+   `dtype_tmtc`, `read_lv0_data`
 
 And handy routines to convert CCSDS parameters:
 
-   `ap_id`, `fix_sub_sec`, `grouping_flag`,
-   `hk_sec_of_day`, `img_sec_of_day`, `packet_length`, `sequence`
+   `ap_id`, `grouping_flag`, `packet_length`, `sequence`,
+   `hk_sec_of_day`, `img_sec_of_day`
 """
 from __future__ import annotations
-__all__ = ['ap_id', 'fix_sub_sec', 'grouping_flag',
+
+__all__ = ['ap_id', 'dtype_tmtc', 'grouping_flag',
            'hk_sec_of_day', 'img_sec_of_day',
-           'packet_length', 'sequence',
-           'dtype_packet_hdr', 'dtype_tmtc',
-           'read_cfe_header', 'read_lv0_data']
+           'packet_length', 'read_lv0_data', 'sequence']
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -32,13 +31,127 @@ import numpy as np
 
 from .lib.leap_sec import get_leap_seconds
 from .lib.tmtc_def import tmtc_dtype
-from .tm_science import TMscience
 
 # - global parameters ------------------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
 
 
 # - local functions --------------------------------
+def _cfe_header_(flname: Path, verbose: bool = False) -> np.ndarray:
+    """Read cFE file header (only for file_format='dsb').
+    """
+    # define numpy data-type to read the cFE file-header
+    dtype_cfe = np.dtype([
+        ('ContentType', 'S4'),
+        ('SubType', 'S4'),
+        ('FileHeaderLength', '>u4'),
+        ('SpacecraftID', 'S4'),
+        ('ProcessorID', '>u4'),
+        ('InstrumentID', 'S4'),
+        ('TimeSec', '>u4'),
+        ('TimeSubSec', '>u4'),
+        ('Filename', 'S32')])
+
+    cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
+    if verbose:
+        print(f'[INFO]: content of cFE header "{cfe_hdr}"')
+    return cfe_hdr
+
+
+def _dtype_packet_(file_format: str) -> np.dtype | None:
+    """
+    Return definition of the CCSDS packet headers (primary and secondary)
+
+    Parameters
+    ----------
+    file_format : {'raw', 'dsb' or 'st3'}
+        File format of level 0 products
+
+    Returns
+    -------
+    np.dtype
+        numpy dtype of the packet headers or None if file format is unknown
+
+    Notes
+    -----
+
+    'raw': data has no file header and standard CCSDS packet headers
+
+    'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
+
+    'dsb': data has a cFE file-header and spacewire + CCSDS packet headers
+
+    """
+    if file_format == 'raw':
+        return np.dtype([('type', '>u2'),
+                         ('sequence', '>u2'),
+                         ('length', '>u2'),
+                         ('tai_sec', '>u4'),
+                         ('sub_sec', '>u2')])
+
+    if file_format == 'dsb':
+        return np.dtype([('spacewire', 'u1', (2,)),
+                         ('type', '>u2'),
+                         ('sequence', '>u2'),
+                         ('length', '>u2'),
+                         ('tai_sec', '>u4'),
+                         ('sub_sec', '>u2')])
+
+    if file_format == 'st3':
+        return np.dtype([('itos_hdr', '>u2', (8,)),
+                         ('spacewire', 'u1', (2,)),
+                         ('type', '>u2'),
+                         ('sequence', '>u2'),
+                         ('length', '>u2'),
+                         ('tai_sec', '>u4'),
+                         ('sub_sec', '>u2')])
+
+    return None
+
+
+def _fix_hk24_(sci_hk: np.ndarray):
+    """
+    Correct 32-bit integers in the Science HK which originate from
+    24-bit integers in the detector register values
+
+    In addition:
+
+    - copy the first 4 bytes of 'DET_CHENA' to 'DET_ILVDS'
+    - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
+
+    """
+    res = sci_hk.copy()
+    if sci_hk['ICUSWVER'] < 0x129:
+        res['REG_BINNING_TABLE_START'] = \
+            sci_hk['REG_BINNING_TABLE_START'].byteswap()
+
+    res['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
+    for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
+                'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
+                'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
+                'LED2_ANODE_V', 'LED2_CATH_V', 'LED2_I',
+                'ADC1_VCC', 'ADC1_REF', 'ADC1_T',
+                'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
+                'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
+                'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
+                'DET_CHENA']:
+        res[key] = sci_hk[key] >> 8
+
+    return res
+
+
+def _get_epoch_(timestamp: int) -> datetime:
+    """
+    Determine year of epoch, 1970 (UTC) or 1958 (TAI).
+    """
+    if timestamp < 1956528000:
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    return (datetime(1958, 1, 1, tzinfo=timezone.utc)
+            - timedelta(seconds=get_leap_seconds(timestamp)))
+
+
+# - helper functions to read Level-0 data ----------
 def ap_id(hdr: np.ndarray) -> int:
     """
     Returns Telemetry APID, the range 0x320 to 0x351 is available to SPEXone
@@ -136,57 +249,6 @@ def packet_length(hdr: np.ndarray) -> int:
     return hdr['length']
 
 
-def dtype_packet_hdr(file_format: str) -> np.dtype | None:
-    """
-    Return definition of the CCSDS packet headers (primary and secondary)
-
-    Parameters
-    ----------
-    file_format : {'raw', 'dsb' or 'st3'}
-        File format of level 0 products
-
-    Returns
-    -------
-    np.dtype
-        numpy dtype of the packet headers or None if file format is unknown
-
-    Notes
-    -----
-
-    'raw': data has no file header and standard CCSDS packet headers
-
-    'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
-
-    'dsb': data has a cFE file-header and spacewire + CCSDS packet headers
-
-    """
-    if file_format == 'raw':
-        return np.dtype([('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    if file_format == 'dsb':
-        return np.dtype([('spacewire', 'u1', (2,)),
-                         ('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    if file_format == 'st3':
-        return np.dtype([('itos_hdr', '>u2', (8,)),
-                         ('spacewire', 'u1', (2,)),
-                         ('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    return None
-
-
 def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
     """
     Return definition of a CCSDS TmTc package (given APID)
@@ -225,58 +287,6 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
                              ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
 
 
-def _fix_hk24_(sci_hk):
-    """
-    Correct 32-bit integers in the Science HK which originate from
-    24-bit integers in the detector register values
-
-    In addition:
-
-    - copy the first 4 bytes of 'DET_CHENA' to 'DET_ILVDS'
-    - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
-
-    """
-    res = sci_hk.copy()
-    if sci_hk['ICUSWVER'] < 0x129:
-        res['REG_BINNING_TABLE_START'] = \
-            sci_hk['REG_BINNING_TABLE_START'].byteswap()
-
-    res['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
-    for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
-                'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
-                'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
-                'LED2_ANODE_V', 'LED2_CATH_V', 'LED2_I',
-                'ADC1_VCC', 'ADC1_REF', 'ADC1_T',
-                'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
-                'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
-                'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
-                'DET_CHENA']:
-        res[key] = sci_hk[key] >> 8
-
-    return res
-
-
-def read_cfe_header(flname: Path, verbose: bool = False) -> np.ndarray:
-    """Read cFE file header (only for file_format='dsb').
-    """
-    # define numpy data-type to read the cFE file-header
-    dtype_cfe = np.dtype([
-        ('ContentType', 'S4'),
-        ('SubType', 'S4'),
-        ('FileHeaderLength', '>u4'),
-        ('SpacecraftID', 'S4'),
-        ('ProcessorID', '>u4'),
-        ('InstrumentID', 'S4'),
-        ('TimeSec', '>u4'),
-        ('TimeSubSec', '>u4'),
-        ('Filename', 'S32')])
-
-    cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
-    if verbose:
-        print(f'[INFO]: content of cFE header "{cfe_hdr}"')
-    return cfe_hdr
-
-
 def read_lv0_data(file_list: list[Path, ...],
                   file_format: str,
                   debug: bool = False,
@@ -300,7 +310,7 @@ def read_lv0_data(file_list: list[Path, ...],
          Contains all Science and TmTc CCSDS packages as numpy arrays,
          or None if called with debug is True
     """
-    hdr_dtype = dtype_packet_hdr(file_format)
+    hdr_dtype = _dtype_packet_(file_format)
     scihk_dtype = tmtc_dtype(0x350)
     icutm_dtype = np.dtype([('tai_sec', '>u4'),
                             ('sub_sec', '>u2')])
@@ -311,7 +321,7 @@ def read_lv0_data(file_list: list[Path, ...],
     for flname in file_list:
         offs = 0
         if file_format == 'dsb':
-            cfe_hdr = read_cfe_header(flname, verbose)
+            cfe_hdr = _cfe_header_(flname, verbose)
             offs += cfe_hdr['FileHeaderLength']
 
         buff_sci = ()          # Use chunking to speed-up memory allocation
@@ -385,33 +395,8 @@ def read_lv0_data(file_list: list[Path, ...],
     return ccsds_sci, ccsds_hk
 
 
-def fix_sub_sec(tai_sec, sub_sec) -> tuple:
-    """
-    In ICU S/W version 0x123 a bug was introduced which corrupted the
-    read of the sub-sec parameter. Therefore, all ambient measurements
-    performed between 2020-12-02T09:34 and 2021-01-04T16:23 have to be
-    adjusted.
-    """
-    us100 = np.round(10000 * sub_sec.astype(float) / 65536)
-    buff = us100 + tai_sec - 10000
-    us100 = buff.astype('u8') % 10000
-    sub_sec = ((us100 << 16) // 10000).astype('u2')
-
-    return tai_sec, sub_sec
-
-
-def which_epoch(timestamp: int) -> datetime:
-    """
-    Determine year of epoch, 1970 (UTC) or 1958 (TAI).
-    """
-    if timestamp < 1956528000:
-        return datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-    return (datetime(1958, 1, 1, tzinfo=timezone.utc)
-            - timedelta(seconds=get_leap_seconds(timestamp)))
-
-
-def img_sec_of_day(img_sec, img_subsec, img_hk) -> tuple[datetime, float | Any]:
+def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
+                   img_hk: np.ndarray) -> tuple[datetime, float | Any]:
     """
     Convert Image CCSDS timestamp to seconds after midnight
 
@@ -422,6 +407,7 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> tuple[datetime, float | Any]:
     img_subsec : numpy array (dtype='u2')
         Sub-seconds as (1 / 2**16) seconds
     img_hk :  numpy array
+        DemHK telemetry packages
 
     Returns
     -------
@@ -429,7 +415,7 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> tuple[datetime, float | Any]:
         reference day: float, sec_of_day: numpy.ndarray
     """
     # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = which_epoch(img_sec[0])
+    epoch = _get_epoch_(img_sec[0])
     tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
     ref_day = datetime(year=tstamp0.year,
                        month=tstamp0.month,
@@ -443,18 +429,18 @@ def img_sec_of_day(img_sec, img_subsec, img_hk) -> tuple[datetime, float | Any]:
     #  [binned] 2 * COADD + 1   (always valid)
     offs_msec = 0
     if img_hk['ICUSWVER'][0] > 0x123:
-        mps = TMscience(img_hk)
-        if np.bincount(mps.binning_table).argmax() == 0:
-            imro = mps.get('REG_NCOADDFRAMES') + 2
-        else:
-            imro = 2 * mps.get('REG_NCOADDFRAMES') + 1
-        offs_msec = mps.get('FTI') * (imro + 1) / 10
+        imro = np.empty(img_hk.size, dtype=float)
+        _mm = img_hk['IMRLEN'] == FULLFRAME_BYTES
+        imro[_mm] = img_hk['REG_NCOADDFRAMES'][_mm] + 2
+        imro[~_mm] = 2 * img_hk['REG_NCOADDFRAMES'][~_mm] + 1
+        offs_msec = img_hk['FTI'] * (imro + 1) / 10
 
     # return seconds since midnight
     return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
 
 
-def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
+def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
+                  ref_day: datetime | None = None) -> np.ndarray:
     """
     Convert CCSDS timestamp to seconds after midnight
 
@@ -464,14 +450,14 @@ def hk_sec_of_day(ccsds_sec, ccsds_subsec, ref_day=None) -> np.ndarray:
         Seconds since 1970-01-01 (or 1958-01-01)
     ccsds_subsec : numpy array (dtype='u2')
         Sub-seconds as (1 / 2**16) seconds
-    ref_day : datetime.datetime
+    ref_day : datetime.datetime, optional
 
     Returns
     -------
     numpy.ndarray with sec_of_day
     """
     # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = which_epoch(ccsds_sec[0])
+    epoch = _get_epoch_(ccsds_sec[0])
     if ref_day is None:
         tstamp0 = epoch + timedelta(seconds=int(ccsds_sec[0]))
         ref_day = datetime(year=tstamp0.year,
