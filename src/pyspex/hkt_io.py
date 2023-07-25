@@ -13,7 +13,7 @@ Contains the class `HKTio` to read PACE HKT products.
 from __future__ import annotations
 __all__ = ['HKTio', 'read_hkt_nav', 'write_hkt_nav']
 
-from datetime import datetime
+import datetime
 from pathlib import Path
 
 import h5py
@@ -25,7 +25,7 @@ from .lv0_io import ap_id, dtype_tmtc
 
 
 # - high-level r/w functions ------------
-def read_hkt_nav(hkt_list: list[Path]) -> xr.Dataset:
+def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     """
     Read multiple HKT products and collect data in a Python dictionary
 
@@ -69,6 +69,33 @@ def write_hkt_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
     xds_nav :  xr.Dataset
        xarray dataset with PACE navigation data
     """
+    # obtain time_coverage_range from the Level-1A product
+    converage_start = None
+    converage_end = None
+    if l1a_file.is_file():
+        # pylint: disable=no-member
+        with h5py.File(l1a_file, 'r') as fid:
+            if 'time_coverage_start' in fid.attrs:
+                converage_start = fid.attrs['time_coverage_start'].decode()
+            if 'time_coverage_end' in fid.attrs:
+                converage_end = fid.attrs['time_coverage_end'].decode()
+    print(converage_start, converage_end)
+
+    ref_date = datetime.datetime.fromisoformat(
+        xds_nav['att_time'].attrs['units'].split(' ')[2] + 'T00:00:00+00:00')
+    print(ref_date)
+    sec_of_day = xds_nav['att_time'].values[0]
+    att_coverage_start = ref_date + datetime.timedelta(seconds=sec_of_day)
+    print(att_coverage_start)
+    xds_nav.attrs['time_coverage_start'] = \
+        att_coverage_start.isoformat(timespec='milliseconds')
+    sec_of_day = xds_nav['att_time'].values[-1]
+    att_coverage_end = ref_date + datetime.timedelta(seconds=sec_of_day)
+    print(att_coverage_end)
+    xds_nav.attrs['time_coverage_end'] = \
+        att_coverage_end.isoformat(timespec='milliseconds')
+
+    # write navigation data to the Level-1A product
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
 
 
@@ -97,7 +124,7 @@ class HKTio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def coverage(self) -> tuple[datetime, datetime] | None:
+    def coverage(self) -> tuple[datetime.datetime, datetime.datetime] | None:
         """Return selection of navigation data.
 
         Returns
@@ -111,8 +138,10 @@ class HKTio:
         # pylint: disable=no-member
         with h5py.File(self.filename) as fid:
             self._coverage = (
-                datetime.fromisoformat(fid.attrs['time_coverage_start'].decode()),
-                datetime.fromisoformat(fid.attrs['time_coverage_end'].decode()))
+                datetime.datetime.fromisoformat(
+                    fid.attrs['time_coverage_start'].decode()),
+                datetime.datetime.fromisoformat(
+                    fid.attrs['time_coverage_end'].decode()))
         return self._coverage
 
     @property
