@@ -159,7 +159,6 @@ def __commandline_settings():
     parser.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
     parser.add_argument('lv0_list', nargs='*', help=ARG_INPUT_HELP)
     args = parser.parse_args()
-    print(args)
 
     config = Config()
     if args.debug:

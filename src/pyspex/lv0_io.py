@@ -10,7 +10,7 @@
 """
 Contains a collection of routines to read and write SPEXone CCSDS data:
 
-   `dtype_tmtc`, `read_lv0_data`
+   `dtype_tmtc`, `read_lv0_data`, `dump_numhk`, `dump_science`
 
 And handy routines to convert CCSDS parameters:
 
@@ -19,8 +19,8 @@ And handy routines to convert CCSDS parameters:
 """
 from __future__ import annotations
 
-__all__ = ['ap_id', 'dtype_tmtc', 'grouping_flag',
-           'hk_sec_of_day', 'img_sec_of_day',
+__all__ = ['ap_id', 'dtype_tmtc', 'dump_numhk', 'dump_science',
+           'grouping_flag', 'hk_sec_of_day', 'img_sec_of_day',
            'packet_length', 'read_lv0_data', 'sequence']
 
 from datetime import datetime, timedelta, timezone
@@ -288,7 +288,7 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
 
 
 def read_lv0_data(file_list: list[Path, ...],
-                  file_format: str,
+                  file_format: str, *,
                   debug: bool = False,
                   verbose: bool = False) -> tuple[tuple, tuple]:
     """Read level 0 data and return Science and telemetry data.
@@ -340,12 +340,16 @@ def read_lv0_data(file_list: list[Path, ...],
                     print(f'[WARNING]: header reading error with "{exc}"')
                     break
 
-                # copy the full CCSDS package
                 if debug:
                     print(ap_id(hdr), grouping_flag(hdr),
                           hdr_dtype.itemsize, hdr['length'], offs)
+                    if hdr['length'] == 0 or not 0x320 <= ap_id(hdr) < 0x351:
+                        raise ValueError('corrupted CCSDS header detected')
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
-                elif ap_id(hdr) == 0x350:                   # Science APID
+                    continue
+
+                # copy the full CCSDS package
+                if ap_id(hdr) == 0x350:                   # Science APID
                     nbytes = hdr['length'] - 5
                     if grouping_flag(hdr) == 1:
                         buff = np.empty(1, dtype=np.dtype([
@@ -383,6 +387,8 @@ def read_lv0_data(file_list: list[Path, ...],
                     buff_hk += (buff,)
                     offs += dtype_tmtc(hdr).itemsize
                 else:
+                    if hdr['length'] == 0:
+                        raise ValueError('corrupted CCSDS header detected')
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
         ccsds_sci += buff_sci
         ccsds_hk += buff_hk
@@ -467,3 +473,52 @@ def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
 
     # return seconds since midnight
     return ccsds_sec - offs_sec + ccsds_subsec / 65536
+
+
+def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
+    """Dump telemetry header info (NomHk)."""
+    with Path(flname).open('w', encoding='ascii') as fp:
+        fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
+                 ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
+        for buf in ccsds_hk:
+            hdr = buf['hdr'][0]
+            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
+
+            if ap_id(hdr) == 0x320:
+                _hk = buf['hk'][0]
+                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
+            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
+                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
+                if ap_id(hdr) == 0x332:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['RejectParameter1'][0]}"
+                            f" {buf['RejectParameter2'][0]}")
+                if ap_id(hdr) == 0x334:
+                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['FailParameter1'][0]}"
+                            f" {buf['FailParameter2'][0]}")
+            fp.write(msg + "\n")
+
+
+def dump_science(flname: str, ccsds_sci: tuple[np.ndarray]):
+    """Dump telemetry header info (Science)."""
+    with Path(flname).open('w', encoding='ascii') as fp:
+        fp.write('APID Grouping Counter Length'
+                 ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
+        for segment in ccsds_sci:
+            hdr = segment['hdr'][0]
+            if grouping_flag(hdr) == 1:
+                nom_hk = segment['hk']
+                icu_tm = segment['icu_tm']
+                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
+                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                         f" {nom_hk['ICUSWVER'][0]:8x}"
+                         f" {nom_hk['MPS_ID'][0]:6d}"
+                         f" {nom_hk['IMRLEN'][0]:7d}"
+                         f" {icu_tm['tai_sec'][0]:11d}"
+                         f" {icu_tm['sub_sec'][0]:10d}\n")
+            else:
+                fp.write(f'{ap_id(hdr):4x} {grouping_flag(hdr):8d}'
+                         f' {sequence(hdr):7d} {packet_length(hdr):6d}\n')

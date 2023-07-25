@@ -30,7 +30,8 @@ def main() -> int:
         tlm = SPXtlm(config.verbose)
         tlm.from_lv0(config.l0_list,
                      file_format=config.l0_format,
-                     tlm_type=None, dump=config.dump)
+                     debug=config.debug,
+                     dump=config.dump)
 
     except FileNotFoundError as exc:
         print(f'[FATAL]: FileNotFoundError exception raised with "{exc}".')
@@ -45,7 +46,7 @@ def main() -> int:
         print(f'[FATAL]: ValueError exception raised with "{exc}".')
         err_code = 122
 
-    if err_code != 0 or config.dump:
+    if err_code != 0 or config.debug or config.dump:
         return err_code
 
     # Write Level-1A product.

@@ -27,7 +27,8 @@ from .hkt_io import HKTio, read_hkt_nav, write_hkt_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_io import (ap_id, grouping_flag, packet_length, read_lv0_data,
+from .lv0_io import (ap_id, dump_numhk, dump_science,
+                     grouping_flag, packet_length, read_lv0_data,
                      sequence)
 from .lv1_io import L1Aio, get_l1a_name
 
@@ -41,33 +42,6 @@ TSTAMP_TYPE = np.dtype(
 
 
 # - helper functions ------------------------
-def dump_hk(flname: str, ccsds_hk: tuple[np.ndarray]):
-    """Dump telemetry header info (nom_hk)."""
-    with Path(flname).open('w', encoding='ascii') as fp:
-        fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
-                 ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
-        for buf in ccsds_hk:
-            hdr = buf['hdr'][0]
-            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
-
-            if ap_id(hdr) == 0x320:
-                _hk = buf['hk'][0]
-                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
-            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
-                if ap_id(hdr) == 0x332:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
-                            f" {buf['RejectParameter1'][0]}"
-                            f" {buf['RejectParameter2'][0]}")
-                if ap_id(hdr) == 0x334:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
-                            f" {buf['FailParameter1'][0]}"
-                            f" {buf['FailParameter2'][0]}")
-            fp.write(msg + "\n")
-
-
 def get_epoch(tstamp: int) -> datetime.datetime:
     """Return epoch of timestamp.
     """
@@ -454,13 +428,13 @@ class SPXtlm:
             return
 
         if dump:
-            dump_hk(flnames[0].stem + '_hk.dump', ccsds_hk)
+            dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
 
         self._hk = extract_l0_hk(ccsds_hk, self._verbose)
 
     def from_lv0(self, flnames: Path | list[Path], *,
-                 file_format: str, dump: bool = False,
-                 tlm_type: str | None = None):
+                 file_format: str, tlm_type: str | None = None,
+                 debug: bool = False, dump: bool = False):
         """Read telemetry data from SPEXone Level-0 product.
 
         Parameters
@@ -469,12 +443,14 @@ class SPXtlm:
            list of CCSDS filenames
         file_format : {'raw', 'st3', 'dsb'}
            type of CCSDS data
-        dump :  bool, default=False
-           dump header information of the telemetry packages @1Hz for
-           debugging purposes
         tlm_type :  {'hk', 'sci', 'all'}, optional
            select type of telemetry packages.
            Note that we allways read the complete Level-0 producs.
+        debug : bool, default=False
+           run in debug mode, read only packages heades
+        dump :  bool, default=False
+           dump header information of the telemetry packages @1Hz for
+           debugging purposes
         """
         if isinstance(flnames, Path):
             flnames = [flnames]
@@ -486,11 +462,13 @@ class SPXtlm:
         self.file_list = flnames
         self._hk = None
         self._sci = None
-        ccsds_sci, ccsds_hk = \
-            read_lv0_data(flnames, file_format, verbose=self._verbose)
-
+        ccsds_sci, ccsds_hk = read_lv0_data(
+            flnames, file_format, debug=debug, verbose=self._verbose)
         if dump:
-            dump_hk(flnames[0].stem + '_hk.dump', ccsds_hk)
+            dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
+            dump_science(flnames[0].stem + '_sci.dump', ccsds_sci)
+        if debug or dump:
+            return
 
         # collect Science telemetry data
         if tlm_type != 'hk':
