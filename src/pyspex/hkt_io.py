@@ -46,6 +46,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     res = {}
     for name in hkt_list:
         hkt = HKTio(name)
+        rdate = hkt.reference_date
         nav = hkt.navigation()
         if not res:
             res = nav.copy()
@@ -116,13 +117,39 @@ class HKTio:
         """
         self._coverage = None
         self._instrument = None
+        self._reference_date = None
         self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError('HKT product does not exists')
 
         self.set_instrument(instrument)
+        self.set_reference_date()
 
     # ---------- PUBLIC FUNCTIONS ----------
+    @property
+    def reference_date(self) -> datetime.datetime:
+        """Return reference date of all time_of_day variables.
+        """
+        return self._reference_date
+
+    def set_reference_date(self):
+        """Set reference date of current PACE HKT product.
+        """
+        ref_date = None
+        with h5py.File(self.filename, 'r') as fid:
+            if 'att_time' in fid and 'units' in fid['att_time']:
+                words = fid['att_time'].attrs['units'].split(' ')
+                if len(words) > 2:
+                    ref_date = datetime.datetime.fromisoformat(
+                        words[2] + 'T00Z')
+
+        if ref_date is None:
+            words = self.filename.split('.')[1].split('T')
+            self._reference_date = datetime.datetime.strptime(
+                words[0] + 'T00Z', '%Y%m%dT%H%z')
+        else:
+            self._refernce_date = ref_date
+    
     @property
     def coverage(self) -> tuple[datetime.datetime, datetime.datetime] | None:
         """Return selection of navigation data.
