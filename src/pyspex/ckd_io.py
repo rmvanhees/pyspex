@@ -78,7 +78,7 @@ class CKDio:
 
     @property
     def processor_version(self) -> str:
-        """Return the version of the spexone_cal program.
+        """Return the version of the `spexone_cal` program.
         """
         # pylint: disable=no-member
         return self.fid.attrs['processor_version'].decode()
@@ -101,7 +101,7 @@ class CKDio:
 
     @property
     def git_commit(self) -> str:
-        """Return git hash of repository spexone_cal, used to generate the CKD.
+        """Return git hash of repository `spexone_cal`, used to generate the CKD.
         """
         # pylint: disable=no-member
         return self.fid.attrs['git_commit'].decode()

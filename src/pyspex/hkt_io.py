@@ -29,6 +29,7 @@ from .lv0_io import ap_id, dtype_tmtc
 # - global parameters -----------------------
 DTIME_MIN = 2 * 60
 
+
 class CoverageFlag(IntFlag):
     """Define flags for coverage_quality."""
     GOOD = 0
@@ -58,6 +59,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
 
     # concatenate DataArrays with navigation data
     res = {}
+    rdate = None
     for name in hkt_list:
         hkt = HKTio(name)
         nav = hkt.navigation()
@@ -343,6 +345,7 @@ class HKTio:
                 ccsds_hk += (buff,)
 
         return ccsds_hk
+
 
 def _test():
     data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')

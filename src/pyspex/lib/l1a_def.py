@@ -72,7 +72,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
 
 
 def image_attributes(rootgrp: Dataset, ref_date: datetime.date):
-    """Define group /image_attributs and its datasets.
+    """Define group /image_attributes and its datasets.
     """
     sgrp = rootgrp.createGroup('/image_attributes')
     dset = sgrp.createVariable('icu_time_sec', 'u4', ('number_of_images',))
@@ -115,8 +115,8 @@ def image_attributes(rootgrp: Dataset, ref_date: datetime.date):
     dset.units = "s"
 
 
-def get_chunksize(ydim: int, compression: bool) -> tuple[int, int]:
-    """Obtain chunksize for dataset: /science_data/science_data.
+def get_chunksizes(ydim: int, compression: bool) -> tuple[int, int]:
+    """Obtain chunksizes for dataset: /science_data/science_data.
     """
     # I did some extensive testing.
     # - Without compression (chunked vs contiguous):
@@ -129,7 +129,7 @@ def get_chunksize(ydim: int, compression: bool) -> tuple[int, int]:
     #   * Reading of compressed data is much slower than uncompressed data
     #   * The performance when reading one detector image is acceptable,
     #     however reading one pixel image is really slow (specially full-frame).
-    # And this are the best chunksizes.
+    # Therefore, these are the best choices for the variable `chunksizes`.
     return (20, ydim) if ydim < 1048576 \
         else (1, min(512 * 1024, ydim)) if compression else (1, ydim)
 
@@ -243,7 +243,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
 
     # - define the various HDF54/netCDF4 groups and their datasets
     image_attributes(rootgrp, ref_date)
-    chunksizes = get_chunksize(img_samples, compression)
+    chunksizes = get_chunksizes(img_samples, compression)
     science_data(rootgrp, compression, chunksizes)
     engineering_data(rootgrp, ref_date)
 

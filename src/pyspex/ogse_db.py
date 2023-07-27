@@ -128,7 +128,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
         Parameters
         ----------
         str_date : byte
-            isoformated date-time string with timezone CET
+            date-time string in ISO format with timezone CET
 
         Returns
         -------

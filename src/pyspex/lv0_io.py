@@ -488,7 +488,7 @@ def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
 
             if ap_id(hdr) == 0x320:
                 _hk = buf['hk'][0]
-                msg += (f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}")
+                msg += f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
             elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
                 msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
                 if ap_id(hdr) == 0x332:
