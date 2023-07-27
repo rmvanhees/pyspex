@@ -18,8 +18,9 @@ from datetime import datetime, timezone
 from os import environ
 from pathlib import Path
 
-import netCDF4 as nc4
 import numpy as np
+# pylint: disable=no-name-in-module
+from netCDF4 import Dataset
 
 from .version import pyspex_version
 
@@ -110,7 +111,7 @@ class BinningTables:
             return
 
         # initialize netCDF file with binning tables
-        with nc4.Dataset(self.ckd_dir / self.ckd_file, 'w') as fid:
+        with Dataset(self.ckd_dir / self.ckd_file, 'w') as fid:
             fid.title = 'SPEXone Level-1 binning-tables'
             fid.Conventions = 'CF-1.6'
             fid.project = 'PACE Project'
@@ -175,7 +176,7 @@ class BinningTables:
         index, count = np.unique(binning_table[lineskip_arr == 1, :],
                                  return_counts=True)
 
-        with nc4.Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
+        with Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
             gid = fid.createGroup(f'/Table_{table_id:03d}')
             gid.tabel_id = table_id
             gid.REG_BINNING_TABLE_START = hex(0x80000000
@@ -224,7 +225,7 @@ class BinningTables:
         np.ndarray
            Unbinned image data (no interpolation).
         """
-        with nc4.Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
+        with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
             if f'Table_{table_id:03d}' not in fid.groups:
                 raise KeyError(f'Table_{table_id:03d} not defined')
             gid = fid[f'Table_{table_id:03d}']

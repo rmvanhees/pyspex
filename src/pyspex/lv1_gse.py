@@ -13,8 +13,9 @@ a SPEXone Level-1A product.
 """
 __all__ = ['LV1gse']
 
-import netCDF4 as nc4
 import numpy as np
+# pylint: disable=no-name-in-module
+from netCDF4 import Dataset
 
 
 # --------------------------------------------------
@@ -29,7 +30,7 @@ class LV1gse:
     def __init__(self, l1a_file: str) -> None:
         """Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product.
         """
-        self.fid = nc4.Dataset(l1a_file, 'r+')
+        self.fid = Dataset(l1a_file, 'r+')
 
         if self.fid.groups.get("gse_data"):
             return

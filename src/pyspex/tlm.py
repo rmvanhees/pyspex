@@ -20,16 +20,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import h5py
-import netCDF4 as nc4
 import numpy as np
+# pylint: disable=no-name-in-module
+from netCDF4 import Dataset
 
-from .hkt_io import HKTio, read_hkt_nav, write_hkt_nav
+from .hkt_io import HKTio, read_hkt_nav, check_coverage_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_io import (ap_id, dump_numhk, dump_science,
-                     grouping_flag, packet_length, read_lv0_data,
-                     sequence)
+from .lv0_io import (ap_id, dump_numhk, dump_science, grouping_flag,
+                     read_lv0_data)
 from .lv1_io import L1Aio, get_l1a_name
 
 # - global parameters -----------------------
@@ -166,7 +166,8 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool) -> dict | None:
             'images': images}
 
 
-def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
+def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path],
+                       verbose: bool = False):
     """add PACE navigation information from PACE_HKT products.
 
     Parameters
@@ -175,11 +176,15 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
        name of an existing L1A product.
     hkt_list :  list[Path]
        listing of files from which the navigation data has to be read
+    verbose :  bool, default=False
+       be verbose
     """
-    hkt_nav = read_hkt_nav(hkt_list)
-    # select HKT data collocated with Science data
-    # - issue a warning if selection is empty
-    write_hkt_nav(l1a_file, hkt_nav)
+    # read PACE navigation data from HKT files.
+    xds_nav = read_hkt_nav(hkt_list)
+    # add PACE navigation data to existing Level-1A product.
+    xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
+    # check time coverage of navigation data.
+    check_coverage_nav(l1a_file, xds_nav, verbose)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path):
@@ -192,8 +197,7 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path):
     yaml_conf :  Path
        name of the YAML file with the processor settings
     """
-    # pylint: disable=no-member
-    with nc4.Dataset(l1a_file, 'r+') as fid:
+    with Dataset(l1a_file, 'r+') as fid:
         dset = fid.createVariable('processor_configuration', str)
         dset.comment = ('Configuration parameters used during'
                         ' the processor run that produced this file.')
@@ -608,9 +612,11 @@ class SPXtlm:
                              f'0x{self.hk_tlm["ICUSWVER"][0]:x}')
             l1a.fill_global_attrs(inflight=config.l0_format != 'raw')
             l1a.set_attr('time_coverage_start',
-                         self.time_coverage_start.isoformat(timespec='milliseconds'))
+                         self.time_coverage_start.isoformat(
+                             timespec='milliseconds'))
             l1a.set_attr('time_coverage_end',
-                         self.time_coverage_end.isoformat(timespec='milliseconds'))
+                         self.time_coverage_end.isoformat(
+                             timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
             if self._verbose:
                 print('[INFO]: 1) initialized Level-1A product')
@@ -627,7 +633,8 @@ class SPXtlm:
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
-            add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
+            add_hkt_navigation(config.outdir / prod_name,
+                               config.hkt_list, self._verbose)
             if self._verbose:
                 print('[INFO]: 5) added PACE navigation data')
 

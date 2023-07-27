@@ -100,11 +100,12 @@ EPILOG_HELP = f"""Usage:
 
 Return codes:
   2      Failed to parse command-line parameters.
-  110    One (or more) of the input files could not be found.
+  110    One (or more) SPEXone level-0 files not found.
   115    Failed to generate output directry due to permission error.
   121    Input file not recognized as a SPEXone level-0 product.
   122    Corrupted SPEXone level-0 data.
   131    Failed to generate output file due to netCDF4 library issues.
+  132    Incomplete set of navigation data detected
   135    Failed to generate output file due to permission error.
 
 Environment:

@@ -61,6 +61,10 @@ def main() -> int:
     except (KeyError, RuntimeError) as exc:
         print(f'[FATAL]: RuntimeError with "{exc}"')
         err_code = 131
+    except UserWarning as exc:
+        print('[WARNING]: navigation data is incomplete,'
+              f' original message: "{exc}"')
+        err_code = 132
     except Exception as exc:
         print(f'[FATAL]: Error with "{exc}"')
         err_code = 135
