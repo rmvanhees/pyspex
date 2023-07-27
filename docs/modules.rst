@@ -1,5 +1,5 @@
-src
-===
+pyspex
+======
 
 .. toctree::
    :maxdepth: 4

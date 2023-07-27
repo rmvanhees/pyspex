@@ -20,26 +20,18 @@ pyspex.lib.l1a\_def module
    :undoc-members:
    :show-inheritance:
 
-pyspex.lib.l1b\_def module
---------------------------
-
-.. automodule:: pyspex.lib.l1b_def
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pyspex.lib.l1c\_def module
---------------------------
-
-.. automodule:: pyspex.lib.l1c_def
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyspex.lib.leap\_sec module
 ---------------------------
 
 .. automodule:: pyspex.lib.leap_sec
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyspex.lib.tlm\_utils module
+----------------------------
+
+.. automodule:: pyspex.lib.tlm_utils
    :members:
    :undoc-members:
    :show-inheritance:

@@ -84,17 +84,23 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
                 res[key1] = xr.concat((res[key1], val_new), dim=hdim)
 
     # make sure that the data is sorted and unique
+    dsets = ()
     for key, coord in dim_dict.items():
+        if not res[key]:
+            continue
+
         res[key] = res[key].sortby(coord)
         res[key] = res[key].drop_duplicates(dim=coord)
+        dsets += (res[key],)
 
     # create Dataset from DataArrays
-    xds_nav = xr.merge((res['att_'], res['orb_'], res['tilt']),
-                       combine_attrs='drop_conflicts')
+    xds_nav = xr.merge(dsets, combine_attrs='drop_conflicts')
+
     # remove confusing attributes from Dataset
     key_list = list(xds_nav.attrs)
     for key in key_list:
         del xds_nav.attrs[key]
+
     # add attribute 'reference_date'
     return xds_nav.assign_attrs({'reference_date': rdate.isoformat()})
 

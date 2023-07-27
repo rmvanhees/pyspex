@@ -133,14 +133,6 @@ pyspex.ogse\_laser module
    :undoc-members:
    :show-inheritance:
 
-pyspex.spx\_product module
---------------------------
-
-.. automodule:: pyspex.spx_product
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyspex.tif\_io module
 ---------------------
 
@@ -149,10 +141,10 @@ pyspex.tif\_io module
    :undoc-members:
    :show-inheritance:
 
-pyspex.tm\_science module
--------------------------
+pyspex.tlm module
+-----------------
 
-.. automodule:: pyspex.tm_science
+.. automodule:: pyspex.tlm
    :members:
    :undoc-members:
    :show-inheritance:
