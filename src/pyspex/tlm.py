@@ -301,10 +301,10 @@ class SPXtlm:
                 images += (img,)
         return images
 
-    def __get_valid_tstamps(self):
+    def __get_valid_tstamps(self) -> np.ndarray | None:
         """Return valid timestamps from Science or nomHK packages."""
-        if (self.sci_tstamp is None
-            or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN)):
+        if self.sci_tstamp is None \
+                or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
             indx = self.hk_tstamp > datetime.datetime(
                 2020, 1, 1, 1, tzinfo=datetime.timezone.utc)
             return self.hk_tstamp[indx] if indx.size > 0 else None
@@ -323,7 +323,7 @@ class SPXtlm:
                 tstamp[0].date(), datetime.time(0), tstamp[0].tzinfo)
 
     @property
-    def time_coverage_start(self) -> str:
+    def time_coverage_start(self) -> datetime:
         """Return a string for the time_coverage_start."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
@@ -332,7 +332,7 @@ class SPXtlm:
         return tstamp[0]
 
     @property
-    def time_coverage_end(self) -> str:
+    def time_coverage_end(self) -> datetime:
         """Return a string for the time_coverage_end."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
@@ -423,7 +423,7 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
-        ccsds_hk = ()
+        ccsds_hk: tuple[np.ndarray] | tuple = ()
         for name in flnames:
             hkt = HKTio(name, instrument)
             ccsds_hk += hkt.housekeeping()
@@ -503,12 +503,13 @@ class SPXtlm:
         self._sci = None
         with h5py.File(flname) as fid:
             if tlm_type != 'hk':
-                self._sci = {}
-                self._sci['tlm'] = fid['/science_data/detector_telemetry'][:]
                 seconds = fid['/image_attributes/icu_time_sec'][:]
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
                 epoch = get_epoch(int(seconds[0]))
-                self._sci['tstamp'] = np.empty(len(seconds), dtype=TSTAMP_TYPE)
+                self._sci = {
+                    'tlm': fid['/science_data/detector_telemetry'][:],
+                    'tstamp': np.empty(len(seconds), dtype=TSTAMP_TYPE)
+                }
                 self._sci['tstamp']['tai_sec'] = seconds
                 self._sci['tstamp']['sub_sec'] = subsec
                 _dt = []
@@ -520,13 +521,14 @@ class SPXtlm:
                 self._sci['tstamp']['dt'] = _dt
 
             if tlm_type != 'sci':
-                self._hk = {}
-                self._hk['tlm'] = fid['/engineering_data/NomHK_telemetry'][:]
+                self._hk = {
+                    'tlm': fid['/engineering_data/NomHK_telemetry'][:],
+                    'tstamp': []
+                }
                 dset = fid['/engineering_data/HK_tlm_time']
                 # pylint: disable=no-member
                 ref_date = dset.attrs['units'].decode()[14:] + 'Z'
                 epoch = datetime.datetime.fromisoformat(ref_date)
-                self._hk['tstamp'] = []
                 for sec in dset[:]:
                     self._hk['tstamp'].append(
                         epoch + datetime.timedelta(seconds=sec))
@@ -590,12 +592,12 @@ class SPXtlm:
                 'sci_mask': np.full(nr_sci, True),
                 'dims': {
                     'number_of_images': nr_sci,
-                    'samples_per_image': 2048 \
+                    'samples_per_image': 2048
                     if nr_sci == 0 else np.max([len(x) for x in self.images]),
                     'hk_packets': nr_hk}
             }
 
-    def gen_l1a(self, config: dataclass.Dataclass, mode: str):
+    def gen_l1a(self, config: dataclass, mode: str):
         """Generate a SPEXone Level-1A product"""
         self.set_selection(mode)
         if self._selection is None:
@@ -654,11 +656,11 @@ class SPXtlm:
         l1a.set_dset('/engineering_data/HK_tlm_time',
                      [(x - ref_date).total_seconds() for x in self.hk_tstamp])
         l1a.set_dset('/engineering_data/temp_detector',
-                      self.convert('TS1_DEM_N_T', tm_type='hk'))
+                     self.convert('TS1_DEM_N_T', tm_type='hk'))
         l1a.set_dset('/engineering_data/temp_housing',
-                      self.convert('TS2_HOUSING_N_T', tm_type='hk'))
+                     self.convert('TS2_HOUSING_N_T', tm_type='hk'))
         l1a.set_dset('/engineering_data/temp_radiator',
-                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
+                     self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
     def _fill_science(self, l1a):
         """Fill datasets in group '/science_data'."""
@@ -733,7 +735,8 @@ class SPXtlm:
         raw_data = np.array([x[key.upper()] for x in tlm])
         return convert_hk(key.upper(), raw_data)
 
-    def units(self, key: str) -> str:
+    @staticmethod
+    def units(key: str) -> str:
         """Obtain units of converted telemetry parameter.
 
         Parameters

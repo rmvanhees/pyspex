@@ -9,7 +9,7 @@
 # License:  BSD-3-Clause
 """
 Read characteristics of the OPO laser used at NASA GSFC for the ISRF and
-Straylight measurements.
+Stray-light measurements.
 """
 from __future__ import annotations
 __all__ = ['read_gse_excel']

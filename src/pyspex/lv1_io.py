@@ -12,7 +12,7 @@ Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format.
 """
 from __future__ import annotations
 
-__all__ = ['L1Aio']
+__all__ = ['L1Aio', 'get_l1a_name']
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -126,7 +126,7 @@ def get_l1a_name(config: dataclass, mode: str,
     where
        TTT is an optional data type (e.g., for the calibration data files)
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       Vnn file-version number (ommited when nn=1)
+       Vnn file-version number (omitted when nn=1)
     for example (file-version=1):
        [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
        [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
@@ -447,7 +447,7 @@ class L1Aio(Lv1io):
         if self.fid is None:
             return
 
-        # check if atleast one dataset is updated
+        # check if at least one dataset is updated
         if self.fid.dimensions['number_of_images'].size == 0:
             self.fid.close()
             self.fid = None

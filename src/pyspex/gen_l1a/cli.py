@@ -19,6 +19,8 @@ def main() -> int:
     err_code = 0
 
     # parse command-line parameters and YAML file for settings
+    config = None
+    tlm = None
     try:
         config = get_l1a_settings()
         if config.verbose:
