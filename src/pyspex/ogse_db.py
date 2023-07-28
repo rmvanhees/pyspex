@@ -97,10 +97,11 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
         print('data :', len(data))
 
     time_key = 'Unix_Time'
-    res = {'time': DataArray(data[time_key],
-                             coords={'time': data[time_key]},
-                             attrs={'longname': 'time',
-                                    'units': 'seconds since 1970-1-1 0:0:0'})}
+    res = {'time': DataArray(
+        data[time_key],
+        coords={'time': data[time_key]},
+        attrs={'longname': 'time',
+               'units': 'seconds since 1970-01-01 00:00:00'})}
     for ii, key in enumerate(names):
         if key == time_key:
             continue
@@ -192,10 +193,11 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
             n_avg = np.concatenate((n_avg, np.full(res.size, scalar_n_avg)))
 
     time_key = 'timestamp'
-    res = {'time': DataArray(data[time_key],
-                             coords={'time': data[time_key]},
-                             attrs={'longname': 'time',
-                                    'units': 'seconds since 1970-1-1 0:0:0'}),
+    res = {'time': DataArray(
+        data[time_key],
+        coords={'time': data[time_key]},
+        attrs={'longname': 'time',
+               'units': 'seconds since 1970-01-01 00:00:00'}),
            'wavelength': DataArray(wavelength,
                                    coords={'wavelength': wavelength},
                                    attrs={'longname': 'wavelength grid',

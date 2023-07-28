@@ -25,7 +25,7 @@ ORBIT_DURATION = 5904  # seconds
 
 
 # - local functions --------------------------------
-def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
+def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     """
     Add CF attributes to a dataset holding 'seconds of day'
 
@@ -33,14 +33,14 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
     ----------
     dset : Variable
        Variable containing a timestamp as seconds since reference date
-    ref_date : datetime.date
+    ref_date : datetime.datetime
        Reference date
 
     Examples
     --------
     Update the attributes of variable 'time'::
 
-    >> ref_date = datetime.date(2022, 3, 21)
+    >> ref_date = datetime.datetime(2022, 3, 21)
     >> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
     >>                            fill_value=-32767)
     >> dset.long_name = "image time"
@@ -63,7 +63,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
     Note that '_FillValue', 'long_name' and 'description' are not set by
     this function.
     """
-    dset.units = f"seconds since {ref_date.isoformat()} 00:00:00"
+    dset.units = f"seconds since {ref_date.strftime('%Y-%m-%d %H:%M:%S')}"
     dset.year = f"{ref_date.year}"
     dset.month = f"{ref_date.month}"
     dset.day = f"{ref_date.day}"
@@ -71,7 +71,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.date) -> None:
     dset.valid_max = 86400 + ORBIT_DURATION
 
 
-def image_attributes(rootgrp: Dataset, ref_date: datetime.date):
+def image_attributes(rootgrp: Dataset, ref_date: datetime.datetime):
     """Define group /image_attributes and its datasets.
     """
     sgrp = rootgrp.createGroup('/image_attributes')
@@ -155,7 +155,7 @@ def science_data(rootgrp: Dataset, compression: bool,
     dset.comment = "A subset of MPS and housekeeping parameters."
 
 
-def engineering_data(rootgrp: Dataset, ref_date: datetime.date):
+def engineering_data(rootgrp: Dataset, ref_date: datetime.datetime):
     """ Define group /engineering_data and its datasets.
     """
     sgrp = rootgrp.createGroup('/engineering_data')
@@ -193,7 +193,7 @@ def engineering_data(rootgrp: Dataset, ref_date: datetime.date):
 
 
 # - main function ----------------------------------
-def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
+def init_l1a(l1a_flname: str, ref_date: datetime.datetime, dims: dict,
              compression: bool = False) -> Dataset:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight)
@@ -202,7 +202,7 @@ def init_l1a(l1a_flname: str, ref_date: datetime.date, dims: dict,
     ----------
     l1a_flname : str
        Name of L1A product
-    ref_date :  datetime.date
+    ref_date :  datetime.datetime
        Date of the first detector image
     dims :  dict
        Provide length of the Level-1A dimensions. Default values::

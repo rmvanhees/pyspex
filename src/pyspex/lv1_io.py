@@ -172,34 +172,49 @@ def get_l1a_name(config: dataclass, mode: str,
     return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
 
 
-# - class LV1io -------------------------
-class Lv1io:
-    """
-    Generic class to create SPEXone Level-1 products
+# - class L1Aio -------------------------
+class L1Aio:
+    """Class to create SPEXone Level-1A products.
 
     Parameters
     ----------
     product :  str
        Name of the SPEXone Level-1 product
-    ref_date :  datetime.date()
+    ref_date :  datetime.datetime
        Date of the first detector image
     dims :  dict
-       Dimensions of the datasets
-    compression : bool, default=False
-       Use compression on dataset /science_data/detector_images [L1A, only]
+       Dimensions of the datasets, default values::
 
-    Notes
-    -----
-    The engineering data should be extended, suggestions:
-    * Temperatures of a.o. detector, FEE, optica, obm, telescope
-    * Instrument settings: exposure time, dead time, frame time, co-adding, ...
+          number_of_images : None     # number of image frames
+          samples_per_image : 184000  # depends on binning table
+          hk_packets : None           # number of HK tlm-packets
+
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images
     """
     product: Path
-    processing_level = 'unknown'
-    dset_stored = {}
+    processing_level = 'L1A'
+    dset_stored = {
+        '/science_data/detector_images': 0,
+        '/science_data/detector_telemetry': 0,
+        '/image_attributes/binning_table': 0,
+        '/image_attributes/digital_offset': 0,
+        '/image_attributes/nr_coadditions': 0,
+        '/image_attributes/exposure_time': 0,
+        '/image_attributes/icu_time_sec': 0,
+        '/image_attributes/icu_time_subsec': 0,
+        '/image_attributes/image_time': 0,
+        '/image_attributes/image_ID': 0,
+        '/engineering_data/NomHK_telemetry': 0,
+        # '/engineering_data/DemHK_telemetry': 0,
+        '/engineering_data/temp_detector': 0,
+        '/engineering_data/temp_housing': 0,
+        '/engineering_data/temp_radiator': 0,
+        '/engineering_data/HK_tlm_time': 0
+    }
 
-    def __init__(self, product: str, ref_date: datetime.date,
-                 dims: dict, compression=False):
+    def __init__(self, product: str, ref_date: datetime.datetime,
+                 dims: dict, compression: bool = False):
         """Initialize access to a SPEXone Level-1 product.
         """
         self.product = Path(product)
@@ -236,12 +251,20 @@ class Lv1io:
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self) -> None:
-        """Close all resources (currently a placeholder function).
+    def close(self):
+        """Close product and check if required datasets are filled with data.
         """
         if self.fid is None:
             return
 
+        # check if at least one dataset is updated
+        if self.fid.dimensions['number_of_images'].size == 0:
+            self.fid.close()
+            self.fid = None
+            return
+
+        # check of all required dataset their sizes
+        self.check_stored(allow_empty=True)
         self.fid.close()
         self.fid = None
 
@@ -398,67 +421,7 @@ class Lv1io:
             if value is not None:
                 self.fid.setncattr(key, value)
 
-
-# - class L1Aio -------------------------
-class L1Aio(Lv1io):
-    """
-    This class can be used to create a SPEXone Level-1A product
-
-    Parameters
-    ----------
-    product :  str
-       Name of the SPEXone Level-1A product
-    ref_date :  datetime.date()
-       Date of the first detector image
-    dims :  dict
-       Dimensions of the datasets, default values::
-
-          number_of_images : None     # number of image frames
-          samples_per_image : 184000  # depends on binning table
-          hk_packets : None           # number of HK tlm-packets
-          wavelength : None
-
-    compression : bool, default=False
-       Use compression on dataset /science_data/detector_images
-    """
-    processing_level = 'L1A'
-    dset_stored = {
-        '/science_data/detector_images': 0,
-        '/science_data/detector_telemetry': 0,
-        '/image_attributes/binning_table': 0,
-        '/image_attributes/digital_offset': 0,
-        '/image_attributes/nr_coadditions': 0,
-        '/image_attributes/exposure_time': 0,
-        '/image_attributes/icu_time_sec': 0,
-        '/image_attributes/icu_time_subsec': 0,
-        '/image_attributes/image_time': 0,
-        '/image_attributes/image_ID': 0,
-        '/engineering_data/NomHK_telemetry': 0,
-        # '/engineering_data/DemHK_telemetry': 0,
-        '/engineering_data/temp_detector': 0,
-        '/engineering_data/temp_housing': 0,
-        '/engineering_data/temp_radiator': 0,
-        '/engineering_data/HK_tlm_time': 0
-    }
-
-    def close(self):
-        """Close product and check if required datasets are filled with data.
-        """
-        if self.fid is None:
-            return
-
-        # check if at least one dataset is updated
-        if self.fid.dimensions['number_of_images'].size == 0:
-            self.fid.close()
-            self.fid = None
-            return
-
-        # check of all required dataset their sizes
-        self.check_stored(allow_empty=True)
-        self.fid.close()
-        self.fid = None
-
-    # -------------------------
+    # - L1A specific functions ------------------------
     def check_stored(self, allow_empty=False):
         """Check variables with the same first dimension have equal sizes.
 

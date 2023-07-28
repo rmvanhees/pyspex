@@ -418,7 +418,7 @@ def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
     Returns
     -------
     tuple
-        reference day: float, sec_of_day: numpy.ndarray
+        reference day: datetime, sec_of_day: numpy.ndarray
     """
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = _get_epoch_(img_sec[0])

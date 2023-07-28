@@ -254,7 +254,7 @@ class LV1gse:
         gid = self.fid.createGroup('/gse_data/ReferenceDiode')
         _ = gid.createDimension('time', len(ref_data))
         dset = gid.createVariable('time', 'f8', ('time',))
-        dset.units = 'seconds since 1970-01-01T00:00:00+00:00'
+        dset.units = 'seconds since 1970-01-01 00:00:00'
         dset.comment = 'Generated on SRON clean-room tablet'
         dset[:] = ref_time
 
@@ -277,7 +277,7 @@ class LV1gse:
         # gid = self.fid.createGroup('/gse_data/WaveMonitor')
         # _ = gid.createDimension('time', len(wav_time))
         # dset = gid.createVariable('time', 'f8', ('time',))
-        # dset.units = 'seconds since 1970-01-01T00:00:00+00:00'
+        # dset.units = 'seconds since 1970-01-01 00:00:00'
         # dset.comment = 'Generated on SRON clean-room tablet'
         # dset[:] = wav_time
         # _ = gid.createDimension('wavelength', len(wav_wv))

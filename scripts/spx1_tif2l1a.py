@@ -237,7 +237,9 @@ def main():
     sci_hk['REG_NCOADDFRAMES'] = int(hdr['Co-additions'])
 
     # Generate L1A product
-    with L1Aio(prod_name, dims=dims, ref_date=utc_start.date()) as l1a:
+    ref_date = datetime.datetime.combine(
+        utc_start.date(), datetime.time(0), timezone.utc)
+    with L1Aio(prod_name, dims=dims, ref_date=ref_date) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, -1),
                          sci_hk, np.arange(n_images))

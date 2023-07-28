@@ -59,7 +59,7 @@ def subsec2musec(sub_sec: int) -> int:
 
 
 def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
-    """Return dictionary with NomHK telemetry data
+    """Return dictionary with NomHk telemetry data
     """
     if not ccsds_hk:
         return None
@@ -302,7 +302,7 @@ class SPXtlm:
         return images
 
     def __get_valid_tstamps(self) -> np.ndarray | None:
-        """Return valid timestamps from Science or nomHK packages."""
+        """Return valid timestamps from Science or NomHk packages."""
         if self.sci_tstamp is None \
                 or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
             indx = self.hk_tstamp > datetime.datetime(
@@ -313,7 +313,7 @@ class SPXtlm:
         return self.sci_tstamp['dt'][indx] if indx.size > 0 else None
 
     @property
-    def reference_date(self) -> datetime.date:
+    def reference_date(self) -> datetime.datetime:
         """Return date of reference day (tzone aware)."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
@@ -346,7 +346,7 @@ class SPXtlm:
 
         Notes
         -----
-        Requires SPEXone DemHK, will not work with NomHK
+        Requires SPEXone DemHK, will not work with NomHk
 
         v126: Sometimes the MPS information is not updated for the first \
               images. We try to fix this and warn the user.
@@ -374,7 +374,7 @@ class SPXtlm:
 
         Notes
         -----
-        Requires SPEXone DemHK, will not work with NomHK
+        Requires SPEXone DemHK, will not work with NomHk
 
         Determine offset wrt start-of-integration (IMRO + 1)
         Where the default is defined as IMRO::
@@ -479,7 +479,7 @@ class SPXtlm:
             self._sci = extract_l0_sci(ccsds_sci, self._verbose)
         del ccsds_sci
 
-        # collected NomHK telemetry data
+        # collected NomHk telemetry data
         if tlm_type != 'sci':
             self._hk = extract_l0_hk(ccsds_hk, self._verbose)
 
@@ -717,7 +717,7 @@ class SPXtlm:
            Name of telemetry parameter
         tm_type :  {'hk', 'sci', 'both'}, default 'both'
            Default is to check if key is present in sci_tlm else hk_tlm
-        
+
         Returns
         -------
         np.ndarray

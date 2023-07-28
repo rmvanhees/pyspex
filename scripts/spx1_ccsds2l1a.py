@@ -266,8 +266,7 @@ def main():
             'SC_records': None}
 
     # Generate L1A product
-    with L1Aio(args.datapath / prod_name, dims=dims,
-               ref_date=ref_date.date()) as l1a:
+    with L1Aio(args.datapath / prod_name, dims=dims, ref_date=ref_date) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
 

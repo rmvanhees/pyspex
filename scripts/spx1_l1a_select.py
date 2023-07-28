@@ -140,7 +140,7 @@ def main():
         raise OSError('Output will overwrite original product')
 
     # ----- write new output product with selected data -----
-    with L1Aio(str(l1a_filename), reference_day.date(), dims=dims) as l1a:
+    with L1Aio(str(l1a_filename), reference_day, dims=dims) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(img_data, img_hk, img_id)
         l1a.set_dset('/image_attributes/icu_time_sec', img_sec)

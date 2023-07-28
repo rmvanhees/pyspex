@@ -207,7 +207,7 @@ def main():
             'hk_packets': 0}
 
     # generate L1A product
-    with L1Aio(prod_name, dims=dims, ref_date=ref_date.date()) as l1a:
+    with L1Aio(prod_name, dims=dims, ref_date=ref_date) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, n_samples),
                          img_hk, np.arange(n_images))
