@@ -1,0 +1,3 @@
+prune docs/_build
+prune .DS_Store
+prune .idea
