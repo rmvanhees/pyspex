@@ -64,9 +64,13 @@ def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
     if not ccsds_hk:
         return None
 
+    # Determine EPOCH of timestamps
+    # NOTE that the first and last packages can be corrupted,
+    #      this is a safe choice:
+    ii = len(ccsds_hk) // 2
+    epoch = get_epoch(int(ccsds_hk[ii]['hdr']['tai_sec'][0]))
     if verbose:
-        print('[INFO]: processing housekeeping data')
-    epoch = get_epoch(int(ccsds_hk[0]['hdr']['tai_sec'][0]))
+        print(f'[INFO]: processing housekeeping data [epoch: {epoch}]')
 
     hdr = np.empty(len(ccsds_hk),
                    dtype=ccsds_hk[0]['hdr'].dtype)
@@ -75,7 +79,7 @@ def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
     ii = 0
     for buf in ccsds_hk:
         hdr[ii] = buf['hdr']
-        if ap_id(hdr[ii]) != 0x320:
+        if ap_id(hdr[ii]) != 0x320 or hdr['tai_sec'][ii] < len(ccsds_hk):
             continue
 
         tlm[ii] = buf['hk']
@@ -95,10 +99,13 @@ def extract_l0_sci(ccsds_sci: tuple, verbose: bool) -> dict | None:
     if not ccsds_sci:
         return None
 
-    # define epoch and allocate memory
+    # Determine EPOCH of timestamps
+    # NOTE that the first and last packages can be corrupted,
+    #      this is a safe choice:
+    ii = len(ccsds_sci) // 2
+    epoch = get_epoch(int(ccsds_sci[ii]['hdr']['tai_sec'][0]))
     if verbose:
-        print('[INFO]: processing DemHK data')
-    epoch = get_epoch(int(ccsds_sci[0]['hdr']['tai_sec'][0]))
+        print(f'[INFO]: processing DemHK data [epoch: {epoch}]')
 
     n_frames = 0
     found_start_first = False
@@ -749,3 +756,16 @@ class SPXtlm:
         str
         """
         return UNITS_DICT.get(key, '1')
+
+
+def __test__():
+    hkt_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/04/04')
+    hkt_file = [hkt_dir / 'PACE.20230404T012212.HKT.nc']
+
+    hkt = SPXtlm(verbose=True)
+    hkt.from_hkt(hkt_file)
+    print(hkt.hk_tstamp)
+
+
+if __name__ == '__main__':
+    __test__()
