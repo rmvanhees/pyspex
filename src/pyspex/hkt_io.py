@@ -24,7 +24,7 @@ import xarray as xr
 from netCDF4 import Dataset
 from moniplot.image_to_xarray import h5_to_xr
 
-from .lv0_io import ap_id, dtype_tmtc
+from .lv0_lib import ap_id, dtype_tmtc
 
 # - global parameters -----------------------
 DTIME_MIN = 2 * 60

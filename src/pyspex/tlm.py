@@ -28,47 +28,33 @@ from .hkt_io import HKTio, read_hkt_nav, check_coverage_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_io import (ap_id, dump_numhk, dump_science, grouping_flag,
-                     read_lv0_data)
+from .lv0_lib import (ap_id, dump_numhk, dump_science, grouping_flag,
+                      read_lv0_data)
 from .lv1_io import L1Aio, get_l1a_name
 
 # - global parameters -----------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
 MCP_TO_SEC = 1e-7
-TSTAMP_MIN = 1577833200
+TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
 
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
 
 
 # - helper functions ------------------------
-def get_epoch(tstamp: int) -> datetime.datetime:
-    """Return epoch of timestamp.
-    """
-    if tstamp < 1956528000:
-        return datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
-
-    return (datetime.datetime(1958, 1, 1, tzinfo=datetime.timezone.utc)
-            - datetime.timedelta(seconds=get_leap_seconds(tstamp)))
-
-
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds.
     """
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
+def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
+                  verbose: bool) -> dict | None:
     """Return dictionary with NomHk telemetry data
     """
     if not ccsds_hk:
         return None
 
-    # Determine EPOCH of timestamps
-    # NOTE that the first and last packages can be corrupted,
-    #      this is a safe choice:
-    ii = len(ccsds_hk) // 2
-    epoch = get_epoch(int(ccsds_hk[ii]['hdr']['tai_sec'][0]))
     if verbose:
         print(f'[INFO]: processing housekeeping data [epoch: {epoch}]')
 
@@ -93,17 +79,13 @@ def extract_l0_hk(ccsds_hk: tuple, verbose: bool) -> dict | None:
             'tstamp': np.array(tstamp)}
 
 
-def extract_l0_sci(ccsds_sci: tuple, verbose: bool) -> dict | None:
+def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime,
+                   verbose: bool) -> dict | None:
     """Return dictionary with Science telemetry data.
     """
     if not ccsds_sci:
         return None
 
-    # Determine EPOCH of timestamps
-    # NOTE that the first and last packages can be corrupted,
-    #      this is a safe choice:
-    ii = len(ccsds_sci) // 2
-    epoch = get_epoch(int(ccsds_sci[ii]['hdr']['tai_sec'][0]))
     if verbose:
         print(f'[INFO]: processing DemHK data [epoch: {epoch}]')
 
@@ -309,7 +291,8 @@ class SPXtlm:
         return images
 
     def __get_valid_tstamps(self) -> np.ndarray | None:
-        """Return valid timestamps from Science or NomHk packages."""
+        """Return valid timestamps from Science or NomHk packages.
+        """
         if self.sci_tstamp is None \
                 or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
             indx = self.hk_tstamp > datetime.datetime(
@@ -321,7 +304,8 @@ class SPXtlm:
 
     @property
     def reference_date(self) -> datetime.datetime:
-        """Return date of reference day (tzone aware)."""
+        """Return date of reference day (tzone aware).
+        """
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -330,8 +314,9 @@ class SPXtlm:
                 tstamp[0].date(), datetime.time(0), tstamp[0].tzinfo)
 
     @property
-    def time_coverage_start(self) -> datetime:
-        """Return a string for the time_coverage_start."""
+    def time_coverage_start(self) -> datetime.datetime:
+        """Return a string for the time_coverage_start.
+        """
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -339,8 +324,9 @@ class SPXtlm:
         return tstamp[0]
 
     @property
-    def time_coverage_end(self) -> datetime:
-        """Return a string for the time_coverage_end."""
+    def time_coverage_end(self) -> datetime.datetime:
+        """Return a string for the time_coverage_end.
+        """
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -416,7 +402,7 @@ class SPXtlm:
         Parameters
         ----------
         flnames :  Path | list[Path]
-           list of PACE_HKT filenames (netCDF-4 format)
+           list of PACE_HKT filenames (netCDF4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, optional
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
@@ -441,7 +427,12 @@ class SPXtlm:
         if dump:
             dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
 
-        self._hk = extract_l0_hk(ccsds_hk, self._verbose)
+        epoch = datetime.datetime(1958, 1, 1,
+                                  tzinfo=datetime.timezone.utc)
+        ii = len(ccsds_hk) // 2
+        leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
+        epoch -= datetime.timedelta(seconds=leap_sec)
+        self._hk = extract_l0_hk(ccsds_hk, epoch, self._verbose)
 
     def from_lv0(self, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
@@ -469,6 +460,8 @@ class SPXtlm:
             tlm_type = 'all'
         elif tlm_type not in ['hk', 'sci', 'all']:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
+        if file_format not in ['raw', 'st3', 'dsb']:
+            raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
 
         self.file_list = flnames
         self._hk = None
@@ -481,14 +474,26 @@ class SPXtlm:
         if debug or dump:
             return
 
+        # set epoch
+        leap_sec = 0
+        if file_format == 'dsb':
+            epoch = datetime.datetime(1958, 1, 1,
+                                      tzinfo=datetime.timezone.utc)
+            ii = len(ccsds_hk) // 2
+            leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
+            epoch -= datetime.timedelta(seconds=leap_sec)
+        else:
+            epoch = datetime.datetime(1970, 1, 1,
+                                      tzinfo=datetime.timezone.utc)
+
         # collect Science telemetry data
         if tlm_type != 'hk':
-            self._sci = extract_l0_sci(ccsds_sci, self._verbose)
+            self._sci = extract_l0_sci(ccsds_sci, epoch, self._verbose)
         del ccsds_sci
 
         # collected NomHk telemetry data
         if tlm_type != 'sci':
-            self._hk = extract_l0_hk(ccsds_hk, self._verbose)
+            self._hk = extract_l0_hk(ccsds_hk, epoch, self._verbose)
 
     def from_l1a(self, flname: Path, *, tlm_type: str | None = None):
         """Read telemetry data from SPEXone Level-1A product.
@@ -510,9 +515,21 @@ class SPXtlm:
         self._sci = None
         with h5py.File(flname) as fid:
             if tlm_type != 'hk':
-                seconds = fid['/image_attributes/icu_time_sec'][:]
+                dset = fid['/image_attributes/icu_time_sec']
+                seconds = dset[:]
+                try:
+                    # pylint: disable=no-member
+                    _ = dset.attrs['units'].index(b'1958')
+                except ValueError:
+                    epoch = datetime.datetime(1970, 1, 1,
+                                              tzinfo=datetime.timezone.utc)
+                else:
+                    epoch = datetime.datetime(1958, 1, 1,
+                                              tzinfo=datetime.timezone.utc)
+                    epoch -= datetime.timedelta(
+                        seconds=get_leap_seconds(seconds[0]))
+
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
-                epoch = get_epoch(int(seconds[0]))
                 self._sci = {
                     'tlm': fid['/science_data/detector_telemetry'][:],
                     'tstamp': np.empty(len(seconds), dtype=TSTAMP_TYPE)
@@ -605,7 +622,8 @@ class SPXtlm:
             }
 
     def gen_l1a(self, config: dataclass, mode: str):
-        """Generate a SPEXone Level-1A product"""
+        """Generate a SPEXone Level-1A product.
+        """
         self.set_selection(mode)
         if self._selection is None:
             return
@@ -655,7 +673,8 @@ class SPXtlm:
             print(f'[INFO]: successfully generated: {prod_name}')
 
     def _fill_engineering(self, l1a):
-        """Fill datasets in group '/engineering_data'."""
+        """Fill datasets in group '/engineering_data'.
+        """
         if self.hk_tlm is None:
             return
         l1a.set_dset('/engineering_data/NomHK_telemetry', self.hk_tlm)
@@ -670,7 +689,8 @@ class SPXtlm:
                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
     def _fill_science(self, l1a):
-        """Fill datasets in group '/science_data'."""
+        """Fill datasets in group '/science_data'.
+        """
         if self.sci_tlm is None:
             return
 
@@ -685,7 +705,8 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
     def _fill_image_attrs(self, l1a, lv0_format: str):
-        """Fill datasets in group '/image_attributes'."""
+        """Fill datasets in group '/image_attributes'.
+        """
         if self.sci_tlm is None:
             return
 
@@ -693,9 +714,11 @@ class SPXtlm:
                      self.sci_tstamp['tai_sec'])
         # modify attribute units for non-DSB products
         if lv0_format != 'dsb':
-            l1a.set_attr('valid_min', np.uint32(1577800000),
+            # timestamp of 2020-01-01T00:00:00Z
+            l1a.set_attr('valid_min', np.uint32(1577836800),
                          ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('valid_max', np.uint32(1735700000),
+            # timestamp of 2024-01-01T00:00:00Z
+            l1a.set_attr('valid_max', np.uint32(1704067200),
                          ds_name='/image_attributes/icu_time_sec')
             l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
                          ds_name='/image_attributes/icu_time_sec')
@@ -756,16 +779,3 @@ class SPXtlm:
         str
         """
         return UNITS_DICT.get(key, '1')
-
-
-def __test__():
-    hkt_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/04/04')
-    hkt_file = [hkt_dir / 'PACE.20230404T012212.HKT.nc']
-
-    hkt = SPXtlm(verbose=True)
-    hkt.from_hkt(hkt_file)
-    print(hkt.hk_tstamp)
-
-
-if __name__ == '__main__':
-    __test__()

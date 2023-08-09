@@ -11,15 +11,19 @@
 Contains the class `DEMio` to read SPEXone CMV4000 detector data.
 """
 from __future__ import annotations
-__all__ = ['DEMio']
 
+__all__ = ['DEMio', 'img_sec_of_day']
+
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from .lib.tmtc_def import tmtc_dtype
 
 # - global parameters ------------------------------
+FULLFRAME_BYTES = 2 * 2048 * 2048
 
 
 # - local functions --------------------------------
@@ -120,6 +124,50 @@ def det_dtype():
         ('UNUSED_125', 'u1'),
         ('TEMP', 'u1', (2,))
     ])
+
+
+def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
+                   img_hk: np.ndarray) -> tuple[datetime, float | Any]:
+    """
+    Convert Image CCSDS timestamp to seconds after midnight
+
+    Parameters
+    ----------
+    img_sec : numpy array (dtype='u4')
+        Seconds since 1970-01-01 (or 1958-01-01)
+    img_subsec : numpy array (dtype='u2')
+        Sub-seconds as (1 / 2**16) seconds
+    img_hk :  numpy array
+        DemHK telemetry packages
+
+    Returns
+    -------
+    tuple
+        reference day: datetime, sec_of_day: numpy.ndarray
+    """
+    # determine for the first timestamp the offset with last midnight [seconds]
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
+    ref_day = datetime(year=tstamp0.year,
+                       month=tstamp0.month,
+                       day=tstamp0.day, tzinfo=timezone.utc)
+    # seconds since midnight
+    offs_sec = (ref_day - epoch).total_seconds()
+
+    # Determine offset wrt start-of-integration (IMRO + 1)
+    # Where the default is defined as IMRO:
+    #  [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
+    #  [binned] 2 * COADD + 1   (always valid)
+    offs_msec = 0
+    if img_hk['ICUSWVER'][0] > 0x123:
+        imro = np.empty(img_hk.size, dtype=float)
+        _mm = img_hk['IMRLEN'] == FULLFRAME_BYTES
+        imro[_mm] = img_hk['REG_NCOADDFRAMES'][_mm] + 2
+        imro[~_mm] = 2 * img_hk['REG_NCOADDFRAMES'][~_mm] + 1
+        offs_msec = img_hk['FTI'] * (imro + 1) / 10
+
+    # return seconds since midnight
+    return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
 
 
 # - class DEMio -------------------------

@@ -23,9 +23,8 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyspex.dem_io import DEMio
+from pyspex.dem_io import DEMio, img_sec_of_day
 from pyspex.lib.tmtc_def import tmtc_dtype
-from pyspex.lv0_io import img_sec_of_day
 from pyspex.lv1_gse import LV1gse
 from pyspex.lv1_io import L1Aio
 from pyspex.version import pyspex_version

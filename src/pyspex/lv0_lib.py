@@ -20,20 +20,13 @@ And handy routines to convert CCSDS parameters:
 from __future__ import annotations
 
 __all__ = ['ap_id', 'dtype_tmtc', 'dump_numhk', 'dump_science',
-           'grouping_flag', 'hk_sec_of_day', 'img_sec_of_day',
-           'packet_length', 'read_lv0_data', 'sequence']
+           'grouping_flag', 'packet_length', 'read_lv0_data', 'sequence']
 
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
-from .lib.leap_sec import get_leap_seconds
-from .lib.tmtc_def import tmtc_dtype
-
-# - global parameters ------------------------------
-FULLFRAME_BYTES = 2 * 2048 * 2048
+from pyspex.lib.tmtc_def import tmtc_dtype
 
 
 # - local functions --------------------------------
@@ -138,17 +131,6 @@ def _fix_hk24_(sci_hk: np.ndarray):
         res[key] = sci_hk[key] >> 8
 
     return res
-
-
-def _get_epoch_(timestamp: int) -> datetime:
-    """
-    Determine year of epoch, 1970 (UTC) or 1958 (TAI).
-    """
-    if timestamp < 1956528000:
-        return datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-    return (datetime(1958, 1, 1, tzinfo=timezone.utc)
-            - timedelta(seconds=get_leap_seconds(timestamp)))
 
 
 # - helper functions to read Level-0 data ----------
@@ -287,6 +269,7 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
                              ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
 
 
+# - main function ----------------------------------
 def read_lv0_data(file_list: list[Path, ...],
                   file_format: str, *,
                   debug: bool = False,
@@ -399,80 +382,6 @@ def read_lv0_data(file_list: list[Path, ...],
         print(f'[INFO]: number of Engineering packages {len(ccsds_hk)}')
 
     return ccsds_sci, ccsds_hk
-
-
-def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
-                   img_hk: np.ndarray) -> tuple[datetime, float | Any]:
-    """
-    Convert Image CCSDS timestamp to seconds after midnight
-
-    Parameters
-    ----------
-    img_sec : numpy array (dtype='u4')
-        Seconds since 1970-01-01 (or 1958-01-01)
-    img_subsec : numpy array (dtype='u2')
-        Sub-seconds as (1 / 2**16) seconds
-    img_hk :  numpy array
-        DemHK telemetry packages
-
-    Returns
-    -------
-    tuple
-        reference day: datetime, sec_of_day: numpy.ndarray
-    """
-    # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = _get_epoch_(img_sec[0])
-    tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
-    ref_day = datetime(year=tstamp0.year,
-                       month=tstamp0.month,
-                       day=tstamp0.day, tzinfo=timezone.utc)
-    # seconds since midnight
-    offs_sec = (ref_day - epoch).total_seconds()
-
-    # Determine offset wrt start-of-integration (IMRO + 1)
-    # Where the default is defined as IMRO:
-    #  [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
-    #  [binned] 2 * COADD + 1   (always valid)
-    offs_msec = 0
-    if img_hk['ICUSWVER'][0] > 0x123:
-        imro = np.empty(img_hk.size, dtype=float)
-        _mm = img_hk['IMRLEN'] == FULLFRAME_BYTES
-        imro[_mm] = img_hk['REG_NCOADDFRAMES'][_mm] + 2
-        imro[~_mm] = 2 * img_hk['REG_NCOADDFRAMES'][~_mm] + 1
-        offs_msec = img_hk['FTI'] * (imro + 1) / 10
-
-    # return seconds since midnight
-    return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
-
-
-def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
-                  ref_day: datetime | None = None) -> np.ndarray:
-    """
-    Convert CCSDS timestamp to seconds after midnight
-
-    Parameters
-    ----------
-    ccsds_sec : numpy array (dtype='u4')
-        Seconds since 1970-01-01 (or 1958-01-01)
-    ccsds_subsec : numpy array (dtype='u2')
-        Sub-seconds as (1 / 2**16) seconds
-    ref_day : datetime.datetime, optional
-
-    Returns
-    -------
-    numpy.ndarray with sec_of_day
-    """
-    # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = _get_epoch_(ccsds_sec[0])
-    if ref_day is None:
-        tstamp0 = epoch + timedelta(seconds=int(ccsds_sec[0]))
-        ref_day = datetime(year=tstamp0.year,
-                           month=tstamp0.month,
-                           day=tstamp0.day, tzinfo=timezone.utc)
-    offs_sec = (ref_day - epoch).total_seconds()
-
-    # return seconds since midnight
-    return ccsds_sec - offs_sec + ccsds_subsec / 65536
 
 
 def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
