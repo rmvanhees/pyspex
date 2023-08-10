@@ -11,6 +11,7 @@
 Contains the class `HKTio` to read PACE HKT products.
 """
 from __future__ import annotations
+
 __all__ = ['HKTio', 'read_hkt_nav', 'check_coverage_nav']
 
 import datetime
@@ -339,7 +340,7 @@ class HKTio:
                 print(f'[WARNING]: header reading error with "{exc}"')
                 break
 
-            if 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
+            if 0x320 <= ap_id(hdr) < 0x335:           # all valid APIDs
                 buff = np.frombuffer(packet, count=1, offset=0,
                                      dtype=dtype_tmtc(hdr))
                 ccsds_hk += (buff,)

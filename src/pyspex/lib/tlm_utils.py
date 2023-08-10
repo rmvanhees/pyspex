@@ -65,7 +65,7 @@ UNITS_DICT = {'ADC1_GAIN': 'Volt',
 
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Detector Temperature Sensor (at DEM) to [K].
+    """Convert Detector Temperature Sensor to [K].
     """
     res = np.empty(raw_data.size, dtype=float)
     mask = raw_data < 400
@@ -84,12 +84,12 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
        - TS5 Housing Redundant Temperature
        - TS6 Radiator Redundant Temperature*
     """
-    coefficients = (294.34, 272589.0, -1.5173e-15, 5.73666e-19, -5.11328e-20)
+    coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data, mask=raw_data == 0)
     buff = (coefficients[0]
             + coefficients[1] / buff
-            + coefficients[2] * buff ** 4
-            + (coefficients[3] + coefficients[4] * ma.log(buff)) * buff ** 5)
+            - coefficients[2] * buff ** 4
+            + (coefficients[3] - coefficients[4] * ma.log(buff)) * buff ** 5)
     buff[raw_data == 0] = np.nan
     return buff.data
 

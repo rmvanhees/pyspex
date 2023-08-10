@@ -51,3 +51,14 @@ documentation = "https://pyspex.readthedocs.io/en/latest/"
 "Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"
 
 [tool.setuptools_scm]
+
+[tool.ruff]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "UP",  # pyupgrade
+#  "D",   # pydocstyle
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"

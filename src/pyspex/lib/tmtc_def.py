@@ -230,18 +230,18 @@ def __tmtc_def(apid: int) -> list:
             ('SCITM_BUFFREE', '>u4'),           # 76    0x0058
             ('SWEXECTIMEWC', '>u8'),            # 80    0x005c
             ('ERRCNT_PLACEHOLDER_03', '>u2'),   # 88    0x0064
-            # ('FillerByte', 'u1')
-            ('TS1_DEM_N_T', '>u4'),             # 90    0x0066
-            # ('FillerByte', 'u1')
-            ('TS2_HOUSING_N_T', '>u4'),         # 94    0x006a
-            # ('FillerByte', 'u1')
-            ('TS3_RADIATOR_N_T', '>u4'),        # 98    0x006e
-            # ('FillerByte', 'u1')
-            ('TS4_DEM_R_T', '>u4'),             # 102   0x0072
-            # ('FillerByte', 'u1')
-            ('TS5_HOUSING_R_T', '>u4'),         # 106   0x0076
-            # ('FillerByte', 'u1')
-            ('TS6_RADIATOR_R_T', '>u4'),        # 110   0x007a
+            # ('FillerByte', 'u1')              # 90    0x0066
+            ('TS1_DEM_N_T', '>u4'),
+            # ('FillerByte', 'u1')              # 94    0x006a
+            ('TS2_HOUSING_N_T', '>u4'),
+            # ('FillerByte', 'u1')              # 98    0x006e
+            ('TS3_RADIATOR_N_T', '>u4'),
+            # ('FillerByte', 'u1')              # 102   0x0072
+            ('TS4_DEM_R_T', '>u4'),
+            # ('FillerByte', 'u1')              # 106   0x0076
+            ('TS5_HOUSING_R_T', '>u4'),
+            # ('FillerByte', 'u1')              # 110   0x007a
+            ('TS6_RADIATOR_R_T', '>u4'),
             ('ICU_5V_T', '>u2'),                # 114   0x007e
             ('ICU_4V_T', '>u2'),                # 116   0x0080
             ('ICU_HG1_T', '>u2'),               # 118   0x0082
@@ -281,38 +281,38 @@ def __tmtc_def(apid: int) -> list:
             ('HTR4_DUTYCYCL', '>u2'),           # 198   0x00d2
             ('LED1_ENADIS', 'u1'),              # 200   0x00d4
             ('LED2_ENADIS', 'u1'),              # 201   0x00d5
-            # ('FillerByte', 'u1')
-            ('LED1_ANODE_V', '>u4'),            # 202   0x00d6
-            # ('FillerByte', 'u1')
-            ('LED1_CATH_V', '>u4'),             # 206   0x00da
-            # ('FillerByte', 'u1')
-            ('LED1_I', '>u4'),                  # 210   0x00de
-            # ('FillerByte', 'u1')
-            ('LED2_ANODE_V', '>u4'),            # 214   0x00e2
-            # ('FillerByte', 'u1')
-            ('LED2_CATH_V', '>u4'),             # 218   0x00e6
-            # ('FillerByte', 'u1')
-            ('LED2_I', '>u4'),                  # 222   0x00ea
-            # ('FillerByte', 'u1')
-            ('ADC1_VCC', '>u4'),                # 226   0x00ee
-            # ('FillerByte', 'u1')
-            ('ADC1_GAIN', '>u4'),               # 230   0x00f2
-            # ('FillerByte', 'u1')
-            ('ADC1_REF', '>u4'),                # 234   0x00f6
-            # ('FillerByte', 'u1')
-            ('ADC1_T', '>u4'),                  # 238   0x00fa
-            # ('FillerByte', 'u1')
-            ('ADC1_OFFSET', '>u4'),             # 242   0x00fe
-            # ('FillerByte', 'u1')
-            ('ADC2_VCC', '>u4'),                # 246   0x0102
-            # ('FillerByte', 'u1')
-            ('ADC2_GAIN', '>u4'),               # 250   0x0106
-            # ('FillerByte', 'u1')
-            ('ADC2_REF', '>u4'),                # 254   0x010a
-            # ('FillerByte', 'u1')
-            ('ADC2_T', '>u4'),                  # 258   0x010e
-            # ('FillerByte', 'u1')
-            ('ADC2_OFFSET', '>u4'),             # 262   0x0112
+            # ('FillerByte', 'u1')              # 202   0x00d6
+            ('LED1_ANODE_V', '>u4'),
+            # ('FillerByte', 'u1')              # 206   0x00da
+            ('LED1_CATH_V', '>u4'),
+            # ('FillerByte', 'u1')              # 210   0x00de
+            ('LED1_I', '>u4'),
+            # ('FillerByte', 'u1')              # 214   0x00e2
+            ('LED2_ANODE_V', '>u4'),
+            # ('FillerByte', 'u1')              # 218   0x00e6
+            ('LED2_CATH_V', '>u4'),
+            # ('FillerByte', 'u1')              # 222   0x00ea
+            ('LED2_I', '>u4'),
+            # ('FillerByte', 'u1')              # 226   0x00ee
+            ('ADC1_VCC', '>u4'),
+            # ('FillerByte', 'u1')              # 230   0x00f2
+            ('ADC1_GAIN', '>u4'),
+            # ('FillerByte', 'u1')              # 234   0x00f6
+            ('ADC1_REF', '>u4'),
+            # ('FillerByte', 'u1')              # 238   0x00fa
+            ('ADC1_T', '>u4'),
+            # ('FillerByte', 'u1')              # 242   0x00fe
+            ('ADC1_OFFSET', '>u4'),
+            # ('FillerByte', 'u1')              # 246   0x0102
+            ('ADC2_VCC', '>u4'),
+            # ('FillerByte', 'u1')              # 250   0x0106
+            ('ADC2_GAIN', '>u4'),
+            # ('FillerByte', 'u1')              # 254   0x010a
+            ('ADC2_REF', '>u4'),
+            # ('FillerByte', 'u1')              # 258   0x010e
+            ('ADC2_T', '>u4'),
+            # ('FillerByte', 'u1')              # 262   0x0112
+            ('ADC2_OFFSET', '>u4'),
             ('DEM_V', '>u2'),                   # 266   0x0116
             ('DEM_I', '>u2'),                   # 268   0x0118
             ('REG_FW_VERSION', 'u1'),           # 270   0x011a

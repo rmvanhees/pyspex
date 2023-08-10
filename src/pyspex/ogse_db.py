@@ -52,7 +52,7 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
         formats = []
         usecols = ()
         all_valid_lines = ''
-        with open(ogse_dir / flname, 'r', encoding='ascii') as fid:
+        with open(ogse_dir / flname, encoding='ascii') as fid:
             while True:
                 line = fid.readline().strip()
                 if not line.startswith('Unix'):
@@ -147,7 +147,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     n_avg = None
 
     for flname in file_list:
-        with open(ogse_dir / flname, 'r', encoding='ascii') as fid:
+        with open(ogse_dir / flname, encoding='ascii') as fid:
             while True:
                 line = fid.readline().strip()
 
@@ -233,7 +233,7 @@ def read_date_stats() -> tuple:
     flname = data_dir / 'cmp_date_egse_itos2.txt'
 
     all_valid_lines = ''
-    with open(flname, 'r', encoding='ascii') as fid:
+    with open(flname, encoding='ascii') as fid:
         names = fid.readline().strip().lstrip(' #').split('\t\t\t')
         formats = len(names) * ('f8',)
 

@@ -207,7 +207,7 @@ class DEMio:
         """Read DEM header data.
         """
         self.__hdr = np.zeros((1,), dtype=det_dtype())
-        with open(self.hdr_file, 'r', encoding='ascii', errors='ignore') as fp:
+        with open(self.hdr_file, encoding='ascii', errors='ignore') as fp:
             for line in fp:
                 columns = line[:-1].split(',')
                 if columns[0] == 'Reg':

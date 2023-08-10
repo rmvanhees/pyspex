@@ -158,7 +158,7 @@ def read_egse(egse_file: str, verbose=False) -> tuple:
     """
     Read EGSE data (tab separated values) to numpy compound array
     """
-    with open(egse_file, 'r', encoding='ascii') as fid:
+    with open(egse_file, encoding='ascii') as fid:
         line = None
         names = []
         units = []
