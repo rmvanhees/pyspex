@@ -75,7 +75,7 @@ def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
 
 
 def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
-    """Convert listed Temperature Sensor (at DEM) to [K]::
+    """Convert readouts of the listed Temperature Sensors to [K]::
 
        - TS1 DEM Nominal temperature
        - TS2 Housing Nominal Temperature
@@ -85,7 +85,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
        - TS6 Radiator Redundant Temperature*
     """
     coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
-    buff = ma.masked_array(raw_data, mask=raw_data == 0)
+    buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
     buff = (coefficients[0]
             + coefficients[1] / buff
             - coefficients[2] * buff ** 4
@@ -95,7 +95,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
-    """Convert temperature sensors on ICU power supplies to [K]::
+    """Convert readouts of temperature sensors on ICU power supplies to [K]::
 
        - ICU V5 supply temperature
        - ICU V4 supply temperature
