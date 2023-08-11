@@ -7,9 +7,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `DEMio` to read SPEXone CMV4000 detector data.
-"""
+"""Contains the class `DEMio` to read SPEXone CMV4000 detector data."""
+
 from __future__ import annotations
 
 __all__ = ['DEMio', 'img_sec_of_day']
@@ -28,9 +27,7 @@ FULLFRAME_BYTES = 2 * 2048 * 2048
 
 # - local functions --------------------------------
 def det_dtype():
-    """
-    Returns numpy dtype with the registers of the SPEXone CMV4000 detector
-    """
+    """Return the registers of the SPEXone CMV4000 detector as a numpy dtype."""
     return np.dtype([
         ('UNUSED_000', 'u1'),
         ('NUMBER_LINES', 'u1', (2,)),
@@ -128,8 +125,7 @@ def det_dtype():
 
 def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
                    img_hk: np.ndarray) -> tuple[datetime, float | Any]:
-    """
-    Convert Image CCSDS timestamp to seconds after midnight
+    """Convert Image CCSDS timestamp to seconds after midnight.
 
     Parameters
     ----------
@@ -187,9 +183,9 @@ class DEMio:
     > img_hk = dem.get_sci_hk()
     > img_data = dem.get_data()
     """
+
     def __init__(self, flname: str) -> None:
-        """Initialize DEMio object.
-        """
+        """Initialize DEMio object."""
         self.__hdr = None
         if flname.endswith('a.txt'):
             self.bin_file = flname.replace('a.txt', 'b.bin')
@@ -204,8 +200,7 @@ class DEMio:
             self.__get_hdr()
 
     def __get_hdr(self) -> None:
-        """Read DEM header data.
-        """
+        """Read DEM header data."""
         self.__hdr = np.zeros((1,), dtype=det_dtype())
         with open(self.hdr_file, encoding='ascii', errors='ignore') as fp:
             for line in fp:
@@ -243,8 +238,7 @@ class DEMio:
 
     @property
     def hdr(self) -> np.ndarray | None:
-        """Returns DEM header as numpy compound array.
-        """
+        """Return DEM header as numpy compound array."""
         if self.__hdr is None:
             return None
 
@@ -252,7 +246,7 @@ class DEMio:
 
     @property
     def number_lines(self) -> int:
-        """Returns number of lines (rows).
+        """Return number of lines (rows).
 
         Register address: [1, 2]
         """
@@ -261,13 +255,12 @@ class DEMio:
 
     @property
     def number_channels(self) -> int:
-        """Returns number of LVDS channels used
-        """
+        """Return number of LVDS channels used."""
         return 2 ** (4 - (self.hdr['OUTPUT_MODE'] & 0x3))
 
     @property
     def lvds_clock(self) -> bool:
-        """Returns flag for LVDS clock (0: disable, 1: enable).
+        """Return flag for LVDS clock (0: disable, 1: enable).
 
         Register address: 82
         """
@@ -276,7 +269,7 @@ class DEMio:
                 and (self.hdr['CHANNEL_EN'][2] & 0x4) != 0)
 
     def pll_control(self) -> tuple:
-        """Returns PLL control parameters: pll_range, pll_out_fre, pll_div.
+        """Return PLL control parameters: pll_range, pll_out_fre, pll_div.
 
         PLL_range:    range (0 or 1)
         PLL_out_fre:  output frequency (0, 1, 2 or 5)
@@ -304,7 +297,7 @@ class DEMio:
 
     @property
     def offset(self) -> int:
-        """Returns digital offset including ADC offset.
+        """Return digital offset including ADC offset.
 
         Register address: [100, 101]
         """
@@ -315,7 +308,7 @@ class DEMio:
 
     @property
     def pga_gain(self) -> float:
-        """Returns PGA gain (Volt).
+        """Return PGA gain (Volt).
 
         Register address: 102
         """
@@ -327,7 +320,7 @@ class DEMio:
 
     @property
     def temp_detector(self) -> int:
-        """Returns detector temperature as raw counts.
+        """Return detector temperature as raw counts.
 
         Notes
         -----
@@ -336,8 +329,7 @@ class DEMio:
         return (self.hdr['TEMP'][1] << 8) + self.hdr['TEMP'][0]
 
     def exp_time(self, t_mcp=1e-7):
-        """Returns pixel exposure time [s].
-        """
+        """Return pixel exposure time [s]."""
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
 
@@ -348,26 +340,23 @@ class DEMio:
         return 129 * t_mcp * (0.43 * reg_fot + reg_exptime)
 
     def fot_time(self, t_mcp=1e-7):
-        """Returns frame overhead time [s].
-        """
+        """Return frame overhead time [s]."""
         # Nominal fot_length = 20, except for very short exposure_time
         reg_fot = self.hdr['FOT_LENGTH']
 
         return 129 * t_mcp * (reg_fot + 2 * (16 // self.number_channels))
 
     def rot_time(self, t_mcp=1e-7):
-        """Returns image read-out time [s].
-        """
+        """Return image read-out time [s]."""
         return 129 * t_mcp * (16 // self.number_channels) * self.number_lines
 
     def frame_period(self, n_coad=1):
-        """Returns frame period [s].
-        """
+        """Return frame period [s]."""
         return 2.38 + (n_coad
                        * (self.exp_time() + self.fot_time() + self.rot_time()))
 
     def get_sci_hk(self):
-        """Returns Science telemetry.
+        """Return Science telemetry.
 
         A subset of MPS and housekeeping parameters.
 
@@ -376,9 +365,7 @@ class DEMio:
         numpy.ndarray
         """
         def convert_val(kk: str):
-            """
-            Convert byte array to integer
-            """
+            """Convert byte array to integer."""
             val = 0
             for ii, bval in enumerate(self.__hdr[0][kk]):
                 val += bval << (ii * 8)
@@ -465,7 +452,7 @@ class DEMio:
         return sci_hk
 
     def get_data(self, numlines=None):
-        """Returns data of a detector frame (numpy uint16 array).
+        """Return data of a detector frame (numpy uint16 array).
 
         Parameters
         ----------

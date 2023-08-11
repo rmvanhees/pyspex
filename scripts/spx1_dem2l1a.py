@@ -55,7 +55,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
        vvvvvvv is the git-hash string of the pyspex repository
     """
     # define string of sensing start as yyyymmddThhmmss
-    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
+    sensing_start = utc_sensing_start.strftime('%Y%m%dT%H%M%S')
 
     return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
             f'_L1A_{pyspex_version(githash=True)}.nc')
@@ -63,9 +63,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
 
 # - main function ----------------------------------
 def main():
-    """
-    main program to illustrate the creation of a L1A calibration product
-    """
+    """Create a SPEXone L1A product from data of a DEM measurement."""
     parser = argparse.ArgumentParser(
         description='create SPEXone L1A product from DEM measurement(s)')
     parser.add_argument('--verbose', default=False, action='store_true',
@@ -78,8 +76,8 @@ def main():
                         help=('provide DEM ID'
                               ' or ID will be extracted from path'))
     parser.add_argument('file_list', nargs='+',
-                        help=("provide path to _b.bin file of one or more"
-                              " SPEXone DEM characterization measurements"))
+                        help=('provide path to _b.bin file of one or more'
+                              ' SPEXone DEM characterization measurements'))
     args = parser.parse_args()
     if args.verbose:
         print(args)
@@ -147,12 +145,12 @@ def main():
             tstamp.append(datetime.strptime(parts[6] + parts[7] + '+00:00',
                                             '%Y%m%d%H%M%S.%f%z'))
         else:
-            raise ValueError("Invalid format of data-product name")
+            raise ValueError('Invalid format of data-product name')
 
         if msm_id is None:
             msm_id = _id
         elif msm_id != _id:
-            raise ValueError("Do not combine different kind of measurements")
+            raise ValueError('Do not combine different kind of measurements')
 
         dem = DEMio(flname)
         # obtain Science_HK information from header file (ASCII)
@@ -216,7 +214,7 @@ def main():
                      ds_name='/image_attributes/icu_time_sec')
         l1a.set_attr('valid_max', np.uint32(1735700000),
                      ds_name='/image_attributes/icu_time_sec')
-        l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+        l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
                      ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)

@@ -1,7 +1,15 @@
+#
+# This file is part of pyspex
+#
+# https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
+#    All Rights Reserved
+#
 # License:  BSD-3-Clause
-"""Contains helper functions for the class `SPXtlm`.
-"""
+"""Contains helper functions for the class `SPXtlm`."""
 from __future__ import annotations
+
 __all__ = ['UNITS_DICT', 'convert_hk']
 
 from enum import Enum
@@ -65,8 +73,7 @@ UNITS_DICT = {'ADC1_GAIN': 'Volt',
 
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Detector Temperature Sensor to [K].
-    """
+    """Convert Detector Temperature Sensor to [K]."""
     res = np.empty(raw_data.size, dtype=float)
     mask = raw_data < 400
     res[mask] = 1.224 * raw_data[mask] - 17.05
@@ -75,14 +82,16 @@ def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
 
 
 def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of the listed Temperature Sensors to [K]::
+    """Convert readouts of the Temperature Sensors to [K].
 
-       - TS1 DEM Nominal temperature
-       - TS2 Housing Nominal Temperature
-       - TS3 Radiator Nominal Temperature
-       - TS4 DEM Redundant Temperature
-       - TS5 Housing Redundant Temperature
-       - TS6 Radiator Redundant Temperature*
+    Notes
+    -----
+    - TS1 DEM Nominal temperature
+    - TS2 Housing Nominal Temperature
+    - TS3 Radiator Nominal Temperature
+    - TS4 DEM Redundant Temperature
+    - TS5 Housing Redundant Temperature
+    - TS6 Radiator Redundant Temperature*
     """
     coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
@@ -95,133 +104,127 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of temperature sensors on ICU power supplies to [K]::
+    """Convert readouts of temperature sensors on ICU power supplies to [K].
 
-       - ICU V5 supply temperature
-       - ICU V4 supply temperature
-       - ICU HtrG1 supply temperature
-       - ICU HtrG2 supply temperature
-       - ICU MidBoard temperature
-       - ICU MCU-RAM temperature
-       - ICU 1V2, 3V3 supply temperature
+    Notes
+    -----
+    - ICU V5 supply temperature
+    - ICU V4 supply temperature
+    - ICU HtrG1 supply temperature
+    - ICU HtrG2 supply temperature
+    - ICU MidBoard temperature
+    - ICU MCU-RAM temperature
+    - ICU 1V2, 3V3 supply temperature
     """
     coefficients = (273.15, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readings of ICU bus voltages to Volt::
+    """Convert readings of ICU bus voltages to Voltages.
 
-       - ICU 4.0 Volt bus voltage
-       - ICU 3.3 Volt bus voltage
-       - ICU 1.2 Volt bus voltage
-       - DEM power supply
+    Notes
+    -----
+    - ICU 4.0 Volt bus voltage
+    - ICU 3.3 Volt bus voltage
+    - ICU 1.2 Volt bus voltage
+    - DEM power supply
     """
     coefficients = (0, 0.001)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_htr_v(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Heater Bus voltages to Volt.
-    """
+    """Convert Heater Bus voltages to Volt."""
     coefficients = (0, 0.003)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_dutycycle(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Heater Controller Duty Cycle output to percent.
-    """
+    """Convert Heater Controller Duty Cycle output to percent."""
     coefficients = (0, 0.1)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_led_anode_v(raw_data: np.ndarray) -> np.ndarray:
-    """Convert LED Anode voltage to Volt.
-    """
+    """Convert LED Anode voltage to Volt."""
     coefficients = (0, 0.000000623703003)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_led_cath_v(raw_data: np.ndarray) -> np.ndarray:
-    """Convert LED Cathode voltage to Volt.
-    """
+    """Convert LED Cathode voltage to Volt."""
     coefficients = (0, 0.000000415802001953)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_led_i(raw_data: np.ndarray) -> np.ndarray:
-    """Convert LED current to milli-Ampere.
-    """
+    """Convert LED current to milli-Ampere."""
     coefficients = (0, 0.0000030307446495961334745762711864407)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_adc_vcc(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC Analog VCC reading to Volt.
-    """
+    """Convert ADC Analog VCC reading to Volt."""
     coefficients = (0, 0.00000127156575520833333)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_adc_gain(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC Analog VCC reading to Volt.
-    """
+    """Convert ADC Analog VCC reading to Volt."""
     coefficients = (0, 0.000000127156575520833333)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_adc_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC1 Temperature reading to [K].
-    """
+    """Convert ADC1 Temperature reading to [K]."""
     coefficients = (-0.25, 0.0007385466842651367)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_adc_offset(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC offset (?) to Voltage.
-    """
+    """Convert ADC offset (?) to Voltage."""
     coefficients = (0, 0.000415802001953)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 def poly_spex_dem_i(raw_data: np.ndarray) -> np.ndarray:
-    """Convert DEM Supply current to milli-Ampere.
-    """
+    """Convert DEM Supply current to milli-Ampere."""
     coefficients = (0, 0.2417)
     return coefficients[0] + coefficients[1] * raw_data
 
 
 class Enable(Enum):
-    """Possible values of the DEM SpaceWire link status.
-    """
+    """Possible values of the DEM SpaceWire link status."""
+
     INACTIVE = 0
     ACTIVE = 1
 
 
 class EnaDis(Enum):
-    """Possible values of the LED commanded enable state.
-    """
+    """Possible values of the LED commanded enable state."""
+
     OFF = 0
     ON = 1
 
 
 class IcuMode(Enum):
-    """Possible values of the ICU mode.
-    """
+    """Possible values of the ICU mode."""
+
     IDLE = 0
     OPER = 1
 
 
 class IsEna(Enum):
-    """Possible values of the Power Sense.
-    """
+    """Possible values of the Power Sense."""
+
     DISABLED = 0
     ENABLED = 1
 
 
 class OcdReg(Enum):
-    """Possible values of the OCD state.
-    """
+    """Possible values of the OCD state."""
+
     PWR_OK = 0
     OC2V1 = 1
     OC3V3 = 2
@@ -229,15 +232,15 @@ class OcdReg(Enum):
 
 
 class TimeMsg(Enum):
-    """Received status of external PPS or Time message.
-    """
+    """Received status of external PPS or Time message."""
+
     MISSING = 0
     RECEIVED = 1
 
 
 class WriteProt(Enum):
-    """Status of Flash Write protection (both banks).
-    """
+    """Status of Flash Write protection (both banks)."""
+
     BANK0_DISABLED = 0
     BANK0_ENABLED = 1
     BANK1_DISABLED = 16
@@ -246,8 +249,7 @@ class WriteProt(Enum):
 
 # - exported functions ----------------------
 def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
-    """Convert a DemHK or NomHK parameter to physical units.
-    """
+    """Convert a DemHK or NomHK parameter to physical units."""
     conv_dict = {'DEM_T': exp_spex_det_t,
                  'TS1_DEM_N_T': exp_spex_thermistor,
                  'TS2_HOUSING_N_T': exp_spex_thermistor,

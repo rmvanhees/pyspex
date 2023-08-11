@@ -20,7 +20,7 @@ import numpy as np
 
 
 def __tmtc_def(apid: int) -> list:
-    """Returns SPEXone telemetry packet structure as a list of tuples.
+    """Returna list of tuples with the definition os SPEXone telemetry packets.
 
     Parameters
     ----------

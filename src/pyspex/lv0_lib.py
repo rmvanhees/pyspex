@@ -7,12 +7,13 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains a collection of routines to read and write SPEXone CCSDS data:
+"""Contains a collection of routines to access SPEXone Level-0 data.
+
+Routines to read and write SPEXone CCSDS data:
 
    `dtype_tmtc`, `read_lv0_data`, `dump_numhk`, `dump_science`
 
-And handy routines to convert CCSDS parameters:
+Handy routines to convert CCSDS parameters:
 
    `ap_id`, `grouping_flag`, `packet_length`, `sequence`,
    `hk_sec_of_day`, `img_sec_of_day`
@@ -31,8 +32,7 @@ from pyspex.lib.tmtc_def import tmtc_dtype
 
 # - local functions --------------------------------
 def _cfe_header_(flname: Path, verbose: bool = False) -> np.ndarray:
-    """Read cFE file header (only for file_format='dsb').
-    """
+    """Read cFE file header (only for file_format='dsb')."""
     # define numpy data-type to read the cFE file-header
     dtype_cfe = np.dtype([
         ('ContentType', 'S4'),
@@ -52,8 +52,7 @@ def _cfe_header_(flname: Path, verbose: bool = False) -> np.ndarray:
 
 
 def _dtype_packet_(file_format: str) -> np.dtype | None:
-    """
-    Return definition of the CCSDS packet headers (primary and secondary)
+    """Return definition of the CCSDS packet headers (primary and secondary).
 
     Parameters
     ----------
@@ -67,7 +66,6 @@ def _dtype_packet_(file_format: str) -> np.dtype | None:
 
     Notes
     -----
-
     'raw': data has no file header and standard CCSDS packet headers
 
     'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
@@ -105,7 +103,7 @@ def _dtype_packet_(file_format: str) -> np.dtype | None:
 def _fix_hk24_(sci_hk: np.ndarray):
     """
     Correct 32-bit integers in the Science HK which originate from
-    24-bit integers in the detector register values
+    24-bit integers in the detector register values.
 
     In addition:
 
@@ -135,8 +133,7 @@ def _fix_hk24_(sci_hk: np.ndarray):
 
 # - helper functions to read Level-0 data ----------
 def ap_id(hdr: np.ndarray) -> int:
-    """
-    Returns Telemetry APID, the range 0x320 to 0x351 is available to SPEXone
+    """Return Telemetry APID, the range 0x320 to 0x351 is available to SPEXone.
 
     Parameters
     ----------
@@ -166,8 +163,7 @@ def ap_id(hdr: np.ndarray) -> int:
 
 
 def grouping_flag(hdr: np.ndarray) -> int:
-    """
-    Returns grouping flag
+    """Return grouping flag.
 
     Parameters
     ----------
@@ -193,8 +189,7 @@ def grouping_flag(hdr: np.ndarray) -> int:
 
 
 def sequence(hdr: np.ndarray) -> int:
-    """
-    Returns sequence counter, rollover to zero at 0x3FFF
+    """Return sequence counter, rollover to zero at 0x3FFF.
 
     Parameters
     ----------
@@ -210,8 +205,7 @@ def sequence(hdr: np.ndarray) -> int:
 
 
 def packet_length(hdr: np.ndarray) -> int:
-    """
-    Returns size of secondary header + user data - 1 in bytes
+    """Return size of secondary header + user data - 1 in bytes.
 
     Parameters
     ----------
@@ -232,8 +226,7 @@ def packet_length(hdr: np.ndarray) -> int:
 
 
 def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
-    """
-    Return definition of a CCSDS TmTc package (given APID)
+    """Return definition of a CCSDS TmTc package (given APID).
 
     Parameters
     ----------
@@ -408,7 +401,7 @@ def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
                     msg += (f" {bin(buf['TcErrorCode'][0])}"
                             f" {buf['FailParameter1'][0]}"
                             f" {buf['FailParameter2'][0]}")
-            fp.write(msg + "\n")
+            fp.write(msg + '\n')
 
 
 def dump_science(flname: str, ccsds_sci: tuple[np.ndarray]):

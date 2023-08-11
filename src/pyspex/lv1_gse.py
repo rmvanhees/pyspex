@@ -27,12 +27,12 @@ class LV1gse:
     l1a_file: str
         Name of the Level-1A product
     """
+
     def __init__(self, l1a_file: str) -> None:
-        """Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product.
-        """
+        """Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product."""
         self.fid = Dataset(l1a_file, 'r+')
 
-        if self.fid.groups.get("gse_data"):
+        if self.fid.groups.get('gse_data'):
             return
 
         # investigate filename
@@ -65,11 +65,11 @@ class LV1gse:
 
         gid = self.fid.createGroup('/gse_data')
         dset = gid.createVariable('viewport', 'u1')
-        dset.long_name = "viewport status"
-        dset.standard_name = "status_flag"
+        dset.long_name = 'viewport status'
+        dset.standard_name = 'status_flag'
         dset.valid_range = np.array([0, 16], dtype='u1')
         dset.flag_values = np.array([0, 1, 2, 4, 8, 16], dtype='u1')
-        dset.flag_meanings = "ALL -50deg -20deg 0deg +20deg +50deg"
+        dset.flag_meanings = 'ALL -50deg -20deg 0deg +20deg +50deg'
         dset[:] = viewport
 
         # gid.FOV_begin = np.nan
@@ -87,24 +87,22 @@ class LV1gse:
             gid.DoLP = 0.
 
     def __iter__(self) -> None:
+        """Allow iteration."""
         for attr in sorted(self.__dict__):
-            if not attr.startswith("__"):
+            if not attr.startswith('__'):
                 yield attr
 
     def __enter__(self):
-        """Method called to initiate the context manager.
-        """
+        """Initiate the context manager."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """Method called when exiting the context manager.
-        """
+        """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """Close all resources (currently a placeholder function).
-        """
+        """Close all resources (currently a placeholder function)."""
         if self.fid is None:
             return
 
@@ -112,8 +110,7 @@ class LV1gse:
         self.fid = None
 
     def check_egse(self, egse_data: np.ndarray) -> None:
-        """Check consistency of OGSE/EGSE information during measurement.
-        """
+        """Check consistency of OGSE/EGSE information during measurement."""
         for key, fmt in egse_data.dtype.fields.items():
             if fmt[0] == np.uint8:
                 res_sanity = (egse_data[key] == egse_data[key][0]).all()
@@ -231,13 +228,13 @@ class LV1gse:
         gid.Illumination_level = 5e9 / 1.602176634 * signal
 
         dset = gid.createVariable('reference_signal', 'f8', ())
-        dset.long_name = "mean of reference-diode signal"
-        dset.comment = "t_sat = min(2.28e-9 / S_reference, 30)"
+        dset.long_name = 'mean of reference-diode signal'
+        dset.comment = 't_sat = min(2.28e-9 / S_reference, 30)'
         dset.units = 'A'
         dset[:] = signal
 
         dset = gid.createVariable('reference_signal_std', 'f8', ())
-        dset.long_name = "standard deviation of reference-diode signal"
+        dset.long_name = 'standard deviation of reference-diode signal'
         dset.units = 'A'
         dset[:] = stdev
 

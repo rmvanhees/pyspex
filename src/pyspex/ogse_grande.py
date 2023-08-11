@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Defines the Grande spectrum for a given number of lamps, used at NASA GSFC.
-"""
+"""Defines the Grande spectrum for a given number of lamps, used at NASA GSFC."""
 __all__ = ['grande_spectrum']
 
 import numpy as np
@@ -101,9 +99,7 @@ GRANDE_SPECTRUM = [
 
 # - local functions ----------------------------
 def grande_spectrum(n_lamps: int) -> xr.Dataset:
-    """
-    Define Grande spectrum for a given number of lamps
-    """
+    """Define Grande spectrum for a given number of lamps."""
     lamps_used = (9, 5, 3, 2, 1)
     try:
         indx = lamps_used.index(n_lamps)
@@ -128,8 +124,7 @@ def grande_spectrum(n_lamps: int) -> xr.Dataset:
 
 
 def __test(l1a_file: str) -> None:
-    """Small function to test this module.
-    """
+    """Small function to test this module."""
     # Create a netCDF4 file containing a Grande reference spectrum
     xds = grande_spectrum(3)
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',

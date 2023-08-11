@@ -33,15 +33,15 @@ from xarray import DataArray, Dataset, open_dataset
 def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     """
     Read reference diode data into a xarray.Dataset.
-    (input: comma separated values)
+    (input: comma separated values).
     """
     data = None
-    unit_dict = {"Unix Time (s)": ("seconds", 'f8'),
-                 "Excel Time (d)": ("days", 'f4'),
-                 "Normalized Time (s)": ("seconds", 'f8'),
-                 "amps": ("A", 'f4'), "scaled": ("1", 'f4'),
-                 "last_zero": ("seconds", 'f8'), "lamp_on": ("flag", 'b'),
-                 "voltage": ("V", 'f4'), "current": ("A", 'f4')}
+    unit_dict = {'Unix Time (s)': ('seconds', 'f8'),
+                 'Excel Time (d)': ('days', 'f4'),
+                 'Normalized Time (s)': ('seconds', 'f8'),
+                 'amps': ('A', 'f4'), 'scaled': ('1', 'f4'),
+                 'last_zero': ('seconds', 'f8'), 'lamp_on': ('flag', 'b'),
+                 'voltage': ('V', 'f4'), 'current': ('A', 'f4')}
 
     fields_to_skip = ('', 'averaging', 'lamp_on_counter', 'record_timestamp',
                       'scale', 'tempC')
@@ -119,12 +119,10 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
 def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     """
     Read wavelength monitor data into a xarray.Dataset.
-    (input comma separated values)
+    (input comma separated values).
     """
     def byte_to_timestamp(str_date: bytes) -> float:
-        """
-        Helper function for numpy.loadtxt()
-        convert byte-string to timestamp (UTC)
+        """Return a timestamp (UTC) from a byte-string.
 
         Parameters
         ----------
@@ -223,9 +221,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
 
 # ----- SELECT OGSE DATA FROM DATABASE AND ADD TO L1A PRODUCT -----
 def read_date_stats() -> tuple:
-    """
-    Read output of program 'date' executed at freckle (ITOS) and shogun (SRON)
-    """
+    """Read output of program 'date' executed at freckle (ITOS) and shogun (SRON)."""
     if Path('/array/slot1F/spex_one/OCAL/date_stats').is_dir():
         data_dir = Path('/array/slot2B/spex_ocal/ambient/date_stats')
     else:
@@ -257,9 +253,7 @@ def read_date_stats() -> tuple:
 
 
 def clock_offset(l1a_file: Path) -> tuple[Any, int | Any, Any]:
-    """
-    Derive offset between msmt_start/msmt_stop and the SRON clock
-    """
+    """Derive offset between msmt_start/msmt_stop and the SRON clock."""
     # determine duration of the measurement (ITOS clock)
     with h5py.File(l1a_file, 'r') as fid:
         # pylint: disable=unsubscriptable-object
@@ -279,7 +273,7 @@ def clock_offset(l1a_file: Path) -> tuple[Any, int | Any, Any]:
 
     # use the timestamp in the filename to correct ICU time
     date_start = datetime.strptime(input_file.split('_')[-1],
-                                   "%Y%m%dT%H%M%S.%f")
+                                   '%Y%m%dT%H%M%S.%f')
     msmt_start = np.datetime64(date_start.isoformat()).astype('datetime64[s]')
     msmt_stop = msmt_start + duration
     # print('msmt: ', msmt_start, msmt_stop)
@@ -294,9 +288,7 @@ def clock_offset(l1a_file: Path) -> tuple[Any, int | Any, Any]:
 
 
 def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
-    """
-    Select reference data taken during a measurement and add to a L1A product
-    """
+    """Select reference data taken during a measurement and add to a L1A product."""
     # msmt_start and msmt_stop are generated with the ITOS clock
     msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
 
@@ -316,9 +308,7 @@ def add_ogse_ref_diode(ref_db: Path, l1a_file: Path) -> None:
 
 
 def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
-    """
-    Select reference data taken during a measurement and add to a L1A product
-    """
+    """Select reference data taken during a measurement and add to a L1A product."""
     # msmt_start and msmt_stop are generated with the ITOS clock
     msmt_start, msmt_stop, t_diff = clock_offset(l1a_file)
 
@@ -338,8 +328,7 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
 
 
 def __test():
-    """Small function to test this module.
-    """
+    """Small function to test this module."""
     ogse_dir = Path('/data/richardh/SPEXone/ambient/polarimetric/calibration/'
                     'light_level/Logs/')
 

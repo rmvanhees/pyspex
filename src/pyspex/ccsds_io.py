@@ -7,9 +7,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `CCSDSio` to read SPEXone telemetry packets.
-"""
+"""Contains the class `CCSDSio` to read SPEXone telemetry packets."""
+
 from __future__ import annotations
 
 __all__ = ['CCSDSio', 'img_sec_of_day', 'hk_sec_of_day']
@@ -74,7 +73,7 @@ MSG_CORRUPT_FRAME = 'corrupted segments - previous frame not closed'
 def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
                    img_hk: np.ndarray) -> tuple[datetime, float | Any]:
     """
-    Convert Image CCSDS timestamp to seconds after midnight
+    Convert Image CCSDS timestamp to seconds after midnight.
 
     Parameters
     ----------
@@ -118,7 +117,7 @@ def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
 def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
                   ref_day: datetime | None = None) -> np.ndarray:
     """
-    Convert CCSDS timestamp to seconds after midnight
+    Convert CCSDS timestamp to seconds after midnight.
 
     Parameters
     ----------
@@ -174,7 +173,6 @@ class CCSDSio:
 
     Examples
     --------
-
     >>> packets = ()
     >>> with CCSDSio(['file1', 'file2', 'file3']) as ccsds:
     >>>     while True:
@@ -191,9 +189,9 @@ class CCSDSio:
     >>>     # now you may want to collect the engineering packages
 
     """
+
     def __init__(self, file_list: list) -> None:
-        """Initialize access to a SPEXone Level-0 product (CCSDS format).
-        """
+        """Initialize access to a SPEXone Level-0 product (CCSDS format)."""
         # initialize class attributes
         self.file_list = iter(file_list)
         self.found_invalid_apid = False
@@ -203,30 +201,23 @@ class CCSDSio:
         if file_list:
             self.open_next_file()
 
-    def __repr__(self) -> str:
-        return (f'{self.version_no:03d} 0x{self.ap_id:x}'
-                f' {self.grouping_flag} {self.sequence_count:5d}'
-                f' {self.packet_length:5d} {self.fp.tell():9d}')
-
     def __iter__(self):
+        """Allow iteration."""
         for attr in sorted(self.__dict__):
-            if not attr.startswith("__"):
+            if not attr.startswith('__'):
                 yield attr
 
     def __enter__(self):
-        """Method called to initiate the context manager.
-        """
+        """Initiate the context manager."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """Method called when exiting the context manager.
-        """
+        """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """Close resources.
-        """
+        """Close resources."""
         if self.fp is not None:
             if self.found_invalid_apid:
                 print(MSG_INVALID_APID)
@@ -236,8 +227,7 @@ class CCSDSio:
     # ---------- define some class properties ----------
     @property
     def version_no(self) -> int | None:
-        """Returns CCSDS version number.
-        """
+        """Returns CCSDS version number."""
         if self.__hdr is None:
             return None
 
@@ -245,8 +235,7 @@ class CCSDSio:
 
     @property
     def type_indicator(self) -> int | None:
-        """Returns type of telemetry packet.
-        """
+        """Returns type of telemetry packet."""
         if self.__hdr is None:
             return None
 
@@ -254,8 +243,7 @@ class CCSDSio:
 
     @property
     def secnd_hdr_flag(self) -> bool | None:
-        """Returns flag indicating presence of a secondary header.
-        """
+        """Returns flag indicating presence of a secondary header."""
         if self.__hdr is None:
             return None
 
@@ -263,8 +251,7 @@ class CCSDSio:
 
     @property
     def ap_id(self) -> int | None:
-        """Returns SPEXone ApID.
-        """
+        """Returns SPEXone ApID."""
         if self.__hdr is None:
             return None
 
@@ -272,7 +259,7 @@ class CCSDSio:
 
     @property
     def grouping_flag(self) -> int | None:
-        """Returns grouping flag
+        """Returns grouping flag.
 
         The meaning of the grouping flag values are::
 
@@ -289,8 +276,7 @@ class CCSDSio:
 
     @property
     def sequence_count(self) -> int | None:
-        """Returns sequence counter, rollover to zero at 0x3FFF.
-        """
+        """Returns sequence counter, rollover to zero at 0x3FFF."""
         if self.__hdr is None:
             return None
 
@@ -309,8 +295,7 @@ class CCSDSio:
 
     # ---------- define empty telemetry packet ----------
     def open_next_file(self) -> None:
-        """Open next file from file_list.
-        """
+        """Open next file from file_list."""
         flname = next(self.file_list)
         if not Path(flname).is_file():
             raise FileNotFoundError(f'{flname} does not exist')
@@ -458,8 +443,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_accept(self, _) -> np.ndarray:
-        """Read/dump TcAccept packet.
-        """
+        """Read/dump TcAccept packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -470,8 +454,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_execute(self, _) -> np.ndarray:
-        """Read/dump TcExecute packet.
-        """
+        """Read/dump TcExecute packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -482,8 +465,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_fail(self, _) -> np.ndarray:
-        """Read/dump TcFail packet.
-        """
+        """Read/dump TcFail packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -499,8 +481,7 @@ class CCSDSio:
         return packet
 
     def __rd_tc_reject(self, _) -> np.ndarray:
-        """Read/dump TcReject packet.
-        """
+        """Read/dump TcReject packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
         packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
             ('packet_header', HDR_DTYPE),
@@ -515,8 +496,7 @@ class CCSDSio:
         return packet
 
     def __rd_other(self, hdr) -> np.ndarray | None:
-        """Read other telemetry packet.
-        """
+        """Read other telemetry packet."""
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
         if not 0x320 <= self.ap_id <= 0x350:
             self.found_invalid_apid = True

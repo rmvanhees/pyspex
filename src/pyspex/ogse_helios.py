@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Defines the Helios spectrum, used at SRON.
-"""
+"""Defines the Helios spectrum, used at SRON."""
 __all__ = ['helios_spectrum']
 
 import numpy as np
@@ -386,9 +384,7 @@ HELIOS_SPECTRUM = [
 
 # - local functions ----------------------------
 def helios_spectrum() -> xr.Dataset:
-    """
-    Define Helios spectrum
-    """
+    """Define Helios spectrum."""
     # Maybe we should also check the light-level value as specified
     # in the name of the L0 file. The light level is coded as:
     # L1: 100%, L2: 50%, L3: 30%, L4: 15%, L5: 7%, L6: 3%
@@ -409,8 +405,7 @@ def helios_spectrum() -> xr.Dataset:
 
 
 def __test(l1a_file: str) -> None:
-    """Small function to test this module.
-    """
+    """Small function to test this module."""
     # Create a netCDF4 file containing the Helios reference spectrum
     xds = helios_spectrum()
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',

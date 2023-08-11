@@ -7,17 +7,16 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Provide access to the software version as obtained from git.
-"""
+
+"""Provide access to the software version as obtained from git."""
+
 __all__ = ['pyspex_version']
 
 from pyspex import __version__
 
 
 def pyspex_version(full=False, githash=False):
-    """Returns software version as obtained from git.
-    """
+    """Return the software version as obtained from git."""
     if full:
         return __version__
 
@@ -26,6 +25,6 @@ def pyspex_version(full=False, githash=False):
         if len(res) > 1:
             return res[1].split('.')[0]
 
-        return 'v' + ''.join([f"{int(x):02d}" for x in res[0].split('.')])
+        return 'v' + ''.join([f'{int(x):02d}' for x in res[0].split('.')])
 
     return __version__.split('+')[0]

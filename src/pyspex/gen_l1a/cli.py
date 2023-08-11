@@ -8,8 +8,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Command-line implementation of spx1_level01a.
-"""
+"""Command-line implementation of spx1_level01a."""
 from ..lv1_args import get_l1a_settings
 from ..tlm import SPXtlm
 

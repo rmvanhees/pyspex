@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format.
-"""
+"""Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format."""
 from __future__ import annotations
 
 __all__ = ['L1Aio', 'get_l1a_name']
@@ -32,8 +30,7 @@ ONE_DAY = 24 * 60 * 60
 
 # - local functions ---------------------
 def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
-    """Return binning table identifier (zero for full-frame images).
-    """
+    """Return binning table identifier (zero for full-frame images)."""
     if 'REG_FULL_FRAME' not in img_hk.dtype.names:
         print('[WARNING]: can not determine binning table identifier')
         return np.full(len(img_hk), -1, dtype='i1')
@@ -68,8 +65,7 @@ def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
 
 
 def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
-    """Returns digital offset including ADC offset [count].
-    """
+    """Return digital offset including ADC offset [count]."""
     buff = img_hk['DET_OFFSET'].astype('i4')
     if np.isscalar(buff):
         if buff >= 8192:
@@ -81,8 +77,7 @@ def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
 
 
 def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
-    """Returns exposure time in seconds [float].
-    """
+    """Return exposure time in seconds [float]."""
     # need first bit of address 121
     reg_pgagainfactor = img_hk['DET_BLACKCOL'] & 0x1
     reg_pgagain = img_hk['DET_PGAGAIN']
@@ -92,8 +87,7 @@ def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
 
 
 def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
-    """Returns number of coadditions.
-    """
+    """Return number of coadditions."""
     return img_hk['REG_NCOADDFRAMES']
 
 
@@ -101,7 +95,7 @@ def get_l1a_name(config: dataclass, mode: str,
                  sensing_start: datetime) -> str:
     """
     Generate name of Level-1A product based on filename conventions described
-    below
+    below.
 
     Parameters
     ----------
@@ -119,7 +113,6 @@ def get_l1a_name(config: dataclass, mode: str,
 
     Notes
     -----
-
     === Inflight ===
     L1A file name format, following the NASA ... naming convention:
        PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
@@ -192,6 +185,7 @@ class L1Aio:
     compression : bool, default=False
        Use compression on dataset /science_data/detector_images
     """
+
     product: Path
     processing_level = 'L1A'
     dset_stored = {
@@ -215,8 +209,7 @@ class L1Aio:
 
     def __init__(self, product: str, ref_date: datetime.datetime,
                  dims: dict, compression: bool = False):
-        """Initialize access to a SPEXone Level-1 product.
-        """
+        """Initialize access to a SPEXone Level-1 product."""
         self.product = Path(product)
         self.fid = None
 
@@ -231,29 +224,23 @@ class L1Aio:
         for key in self.dset_stored:
             self.dset_stored[key] = 0
 
-    def __repr__(self) -> str:
-        class_name = type(self).__name__
-        return f'{class_name}({self.product!r})'
-
     def __iter__(self):
+        """Allow iteration."""
         for attr in sorted(self.__dict__):
-            if not attr.startswith("__"):
+            if not attr.startswith('__'):
                 yield attr
 
     def __enter__(self):
-        """Method called to initiate the context manager.
-        """
+        """Initiate the context manager."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """Method called when exiting the context manager.
-        """
+        """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self):
-        """Close product and check if required datasets are filled with data.
-        """
+        """Close product and check if required datasets are filled with data."""
         if self.fid is None:
             return
 
@@ -271,13 +258,11 @@ class L1Aio:
     # ---------- PUBLIC FUNCTIONS ----------
     @property
     def epoch(self) -> datetime:
-        """Provide epoch for SPEXone.
-        """
+        """Provide epoch for SPEXone."""
         return self.__epoch
 
     def get_dim(self, name: str):
-        """Get size of a netCDF4 dimension.
-        """
+        """Get size of a netCDF4 dimension."""
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------

@@ -8,9 +8,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Quick and dirty script to generate simple Quick-Look figures.
-"""
+"""Quick and dirty script to generate simple Quick-Look figures."""
+
 import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -26,9 +25,7 @@ from pyspex.binning_tables import BinningTables
 
 # --------------------------------------------------
 def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
-    """
-    Convert binned detector data to image (1024, 1024)
-    """
+    """Convert binned detector data to image (1024, 1024)."""
     try:
         bin_ckd = BinningTables()
         bin_ckd.search(coverage_start)
@@ -40,9 +37,7 @@ def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
 
 # --------------------------------------------------
 def main():
-    """
-    Main function of this module
-    """
+    """Create a PDF from a SPEXone Level-1A product."""
     parser = argparse.ArgumentParser(
         description='create Quick-Look from SPEXone L1A product')
     parser.add_argument('--verbose', default=False, action='store_true',
@@ -77,7 +72,7 @@ def main():
         try:
             coverage_start = coverage_start.decode()
         except (UnicodeDecodeError, AttributeError):
-            date_start = "1970-01-01T00:00:00"
+            date_start = '1970-01-01T00:00:00'
             pass
         else:
             date_start = coverage_start.split('.')[0]

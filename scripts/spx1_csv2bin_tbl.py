@@ -28,8 +28,7 @@ from pyspex.binning_tables import BinningTables
 
 # - main function ----------------------------------
 def main():
-    """
-    main program to build a database with SPEXone binning tables
+    """Generate SPEXone binning tables.
 
     Create or update SPEXone binning-table CKD.
     Input is binning table information in CSV format.

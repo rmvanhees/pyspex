@@ -33,7 +33,7 @@ import julian
 def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     """
     Return the number of elapsed leap seconds given a TAI time in seconds
-    Requires tai-utc.dat
+    Requires tai-utc.dat.
     """
     # determine location of the file 'tai-utc.dat'
     ocvarroot = environ['OCVARROOT'] if 'OCVARROOT' in environ else None
@@ -46,7 +46,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
                  - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
     taidt = datetime.utcfromtimestamp(taitime + epochsecs)
     leapsec: float = 0
-    with taiutc.open("r", encoding='ascii') as fp:
+    with taiutc.open('r', encoding='ascii') as fp:
         for line in fp:
             rec = line.rstrip().split(None, 7)
             if julian.from_jd(float(rec[4])) < taidt:

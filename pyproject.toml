@@ -57,8 +57,14 @@ select = [
   "E",   # pycodestyle
   "F",   # pyflakes
   "UP",  # pyupgrade
-#  "D",   # pydocstyle
+  "B",   # flake8-bugbear
+  "Q",   # flake8-quotes
+  "D",   # pydocstyle
 ]
+ignore = ["D205"]
 
 [tool.ruff.pydocstyle]
-convention = "google"
+convention = "pep257"
+
+[tool.ruff.flake8-quotes]
+inline-quotes = "single"

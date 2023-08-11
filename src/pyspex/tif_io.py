@@ -7,9 +7,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `TIFio` to read simulated SPEXone measurements.
-"""
+"""Contains the class `TIFio` to read simulated SPEXone measurements."""
+
 from __future__ import annotations
 
 __all__ = ['TIFio']
@@ -35,7 +34,7 @@ else:
 if FOUND_PYTIFF:
     class TIFio:
         """
-        This class can be used to read SPEXone instrument simulator output
+        This class can be used to read SPEXone instrument simulator output.
 
         Parameters
         ----------
@@ -52,10 +51,10 @@ if FOUND_PYTIFF:
         >>  print(tif.tags()[0])
         >>  print(tif.images().shape)
         """
+
         def __init__(self, hdr_file: str, inp_tif: bool = False,
                      lineskip: bool = False):
-            """Initialize TIFio object
-            """
+            """Initialize TIFio object."""
             if not Path(hdr_file).is_file():
                 raise FileNotFoundError(f'file {hdr_file} not found')
 
@@ -67,14 +66,9 @@ if FOUND_PYTIFF:
             self.inp_tif = inp_tif
             self.lineskip = lineskip
 
-        def __repr__(self):
-            class_name = type(self).__name__
-            return f'{class_name}({self.filename.name!r})'
-
         # --------------------------------------------------
         def header(self) -> dict:
-            """Read header as dictionary.
-            """
+            """Read header as dictionary."""
             res = {}
             with self.filename.open(encoding='ascii', errors='ignore') as fp:
                 res['history'] = fp.readline()[:-1]
@@ -109,8 +103,7 @@ if FOUND_PYTIFF:
 
         # --------------------------------------------------
         def tags(self) -> list:
-            """return TIFF tags as dictionary.
-            """
+            """Return TIFF tags as dictionary."""
             if self.__header is None:
                 self.header()
             n_frame = int(self.__header['Number of measurements'])

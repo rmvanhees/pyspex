@@ -81,9 +81,9 @@ class BinningTables:
     > bin_tbl.search(coverage_start)
     > img = bin_tbl.unbin(130, img_binned)
     """
+
     def __init__(self, ckd_dir: str | None = None) -> None:
-        """Initialize class attributes.
-        """
+        """Initialize class attributes."""
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
             if not self.ckd_dir.is_dir():

@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `HKTio` to read PACE HKT products.
-"""
+"""Contains the class `HKTio` to read PACE HKT products."""
 from __future__ import annotations
 
 __all__ = ['HKTio', 'read_hkt_nav', 'check_coverage_nav']
@@ -33,6 +31,7 @@ DTIME_MIN = 2 * 60
 
 class CoverageFlag(IntFlag):
     """Define flags for coverage_quality."""
+
     GOOD = 0
     MISSING_SAMPLES = auto()
     SHORT_EXTEND_START = auto()
@@ -190,12 +189,12 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
         gid.time_coverage_end = att_coverage_end.isoformat(
             timespec='milliseconds')
         dset = gid.createVariable('coverage_quality', 'u1', fill_value=255)
-        dset.long_name = "coverage quality of navigation data"
-        dset.standard_name = "status_flag"
+        dset.long_name = 'coverage quality of navigation data'
+        dset.standard_name = 'status_flag'
         dset.valid_range = np.array([0, 15], dtype='u2')
         dset.flag_values = np.array([0, 1, 2, 4, 8], dtype='u2')
-        dset.flag_meanings = ("good missing-samples short_extend_start"
-                              " short_extend_start too_short_coverage")
+        dset.flag_meanings = ('good missing-samples short_extend_start'
+                              ' short_extend_start too_short_coverage')
 
     # generate warning if time-coverage of navigation data is too short
     if coverage_quality & CoverageFlag.TOO_SHORT_COVERAGE:
@@ -214,9 +213,9 @@ class HKTio:
         name of PACE instrument 'spx': SPEXone, 'oci': OCI, 'harp': HARP2,
         'sc': Space Craft.
     """
+
     def __init__(self, filename: Path, instrument: str = 'spx') -> None:
-        """Initialize access to a PACE HKT product.
-        """
+        """Initialize access to a PACE HKT product."""
         self._coverage = None
         self._instrument = None
         self._reference_date = None
@@ -230,13 +229,11 @@ class HKTio:
     # ---------- PUBLIC FUNCTIONS ----------
     @property
     def reference_date(self) -> datetime.datetime:
-        """Return reference date of all time_of_day variables.
-        """
+        """Return reference date of all time_of_day variables."""
         return self._reference_date
 
     def set_reference_date(self):
-        """Set reference date of current PACE HKT product.
-        """
+        """Set reference date of current PACE HKT product."""
         ref_date = None
         with h5py.File(self.filename, 'r') as fid:
             grp = fid['navigation_data']
@@ -279,8 +276,7 @@ class HKTio:
             raise KeyError('invalid name of instrument')
 
     def navigation(self) -> dict:
-        """Get navigation data.
-        """
+        """Get navigation data."""
         res = {'att_': (), 'orb_': (), 'tilt': ()}
         with h5py.File(self.filename) as fid:
             gid = fid['navigation_data']

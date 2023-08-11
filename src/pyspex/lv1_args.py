@@ -123,6 +123,7 @@ Environment:
 @dataclass()
 class Config:
     """Initiate class to hold settings for L0->L1a processing."""
+
     debug: bool = False
     dump: bool = False
     verbose: bool = False
@@ -146,16 +147,16 @@ def __commandline_settings():
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s v' + pyspex_version())
     parser.add_argument('--debug', action='store_true',
-                        help="be extra verbose, no output files generated")
+                        help='be extra verbose, no output files generated')
     parser.add_argument('--dump', action='store_true',
-                        help="dump CCSDS packet headers in ASCII")
-    parser.add_argument('--verbose', action='store_true', help="be verbose")
+                        help='dump CCSDS packet headers in ASCII')
+    parser.add_argument('--verbose', action='store_true', help='be verbose')
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--eclipse', action='store_true', default=None)
     group.add_argument('--no_eclipse', dest='eclipse', action='store_false')
     parser.add_argument('--outdir', type=Path, default=None,
-                        help=("directory to store the generated"
-                              " level-1A product(s)"))
+                        help=('directory to store the generated'
+                              ' level-1A product(s)'))
     # group = parser.add_mutually_exclusive_group(required=True)
     parser.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
     parser.add_argument('lv0_list', nargs='*', help=ARG_INPUT_HELP)
@@ -222,7 +223,7 @@ def __yaml_settings(config: dataclass) -> dataclass:
 
 def check_input_files(config: dataclass) -> dataclass:
     """
-    Check level-0 files on existence and format
+    Check level-0 files on existence and format.
 
     Parameters
     ----------

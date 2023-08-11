@@ -8,8 +8,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Script to copy an SPEXone level-1A product to a new level-1A product.
-"""
+"""Script to copy an SPEXone level-1A product to a new level-1A product."""
+
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,8 +23,7 @@ from pyspex.lv1_io import L1Aio
 # --------------------------------------------------
 def inv_sec_of_day(reference_day, sec_of_day,
                    epoch=datetime(1970, 1, 1, tzinfo=timezone.utc)):
-    """
-    Convert seconds after midnight to CCSDS timestamps
+    """Convert seconds after midnight to CCSDS timestamps.
 
     Parameters
     ----------
@@ -45,9 +44,7 @@ def inv_sec_of_day(reference_day, sec_of_day,
 
 # --------------------------------------------------
 def main():
-    """
-    Main function of this module
-    """
+    """Copy data from one SPEXone L1A product to a new L1A product."""
     parser = argparse.ArgumentParser(
         description=('Copy selected data from one SPEXone L1A product'
                      ' into a new SPEXone L1A product'))

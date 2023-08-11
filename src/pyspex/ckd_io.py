@@ -7,14 +7,14 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class CKDio to read SPEXone CKD.
+"""Contains the class CKDio to read SPEXone CKD.
 
 References
 ----------
 * https://spexone-cal-doc.readthedocs.io/en/latest/
 """
 from __future__ import annotations
+
 __all__ = ['CKDio']
 
 from datetime import datetime, timezone
@@ -49,37 +49,33 @@ class CKDio:
     >>>    fov = ckd.fov()
 
     """
+
     def __init__(self, ckd_file: Path, verbose=False) -> None:
-        """Initialize class attributes.
-        """
+        """Initialize class attributes."""
         self.verbose = verbose
 
         # open access to CKD product
-        self.fid = h5py.File(ckd_file, "r")
+        self.fid = h5py.File(ckd_file, 'r')
         if 'processor_configuration' not in self.fid:
             raise RuntimeError('SPEXone CKD product corrupted?')
 
     def __enter__(self):
-        """Method called to initiate the context manager.
-        """
+        """Initiate the context manager."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """Method called when exiting the context manager.
-        """
+        """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
     def close(self) -> None:
-        """Make sure that we close all resources.
-        """
+        """Make sure that we close all resources."""
         if self.fid is not None:
             self.fid.close()
 
     @property
     def processor_version(self) -> str:
-        """Return the version of the `spexone_cal` program.
-        """
+        """Return the version of the `spexone_cal` program."""
         # pylint: disable=no-member
         return self.fid.attrs['processor_version'].decode()
 
@@ -93,16 +89,15 @@ class CKDio:
         """
         # pylint: disable=no-member
         date_str = self.fid.attrs['date_created'].decode()
-        date_t = datetime.strptime(date_str, "%Y %B %d %a %Z%z %H:%M:%S")
+        date_t = datetime.strptime(date_str, '%Y %B %d %a %Z%z %H:%M:%S')
         if compact:
-            return date_t.astimezone(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
+            return date_t.astimezone(tz=timezone.utc).strftime('%Y%m%d%H%M%S')
 
         return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
 
     @property
     def git_commit(self) -> str:
-        """Return git hash of repository `spexone_cal`, used to generate the CKD.
-        """
+        """Return git hash of repository `spexone_cal`, used to generate the CKD."""
         # pylint: disable=no-member
         return self.fid.attrs['git_commit'].decode()
 

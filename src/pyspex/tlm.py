@@ -7,8 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Contains the class `SPXtlm` to read/access/convert telemetry house-keeping
+"""Contains the class `SPXtlm` to read/access/convert telemetry house-keeping
 parameters of SPEXone.
 """
 from __future__ import annotations
@@ -43,15 +42,13 @@ TSTAMP_TYPE = np.dtype(
 
 # - helper functions ------------------------
 def subsec2musec(sub_sec: int) -> int:
-    """Return subsec as microseconds.
-    """
+    """Return subsec as microseconds."""
     return 100 * int(sub_sec / 65536 * 10000)
 
 
 def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
                   verbose: bool) -> dict | None:
-    """Return dictionary with NomHk telemetry data
-    """
+    """Return dictionary with NomHk telemetry data."""
     if not ccsds_hk:
         return None
 
@@ -81,8 +78,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
 
 def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime,
                    verbose: bool) -> dict | None:
-    """Return dictionary with Science telemetry data.
-    """
+    """Return dictionary with Science telemetry data."""
     if not ccsds_sci:
         return None
 
@@ -157,7 +153,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime,
 
 def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path],
                        verbose: bool = False):
-    """add PACE navigation information from PACE_HKT products.
+    """Add PACE navigation information from PACE_HKT products.
 
     Parameters
     ----------
@@ -197,11 +193,10 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path):
 
 # - class SPXtlm ----------------------------
 class SPXtlm:
-    """Access/convert parameters of SPEXone Science telemetry data.
-    """
+    """Access/convert parameters of SPEXone Science telemetry data."""
+
     def __init__(self, verbose: bool = False):
-        """Initialize class SPXtlm.
-        """
+        """Initialize class SPXtlm."""
         self.file_list: list | None = None
         self._verbose: bool = verbose
         self._hk = None
@@ -210,8 +205,7 @@ class SPXtlm:
 
     @property
     def hk_hdr(self) -> np.ndarray | None:
-        """Return CCSDS header data of telemetry packages @1Hz.
-        """
+        """Return CCSDS header data of telemetry packages @1Hz."""
         if self._hk is None:
             return None
 
@@ -221,8 +215,7 @@ class SPXtlm:
 
     @property
     def hk_tlm(self) -> np.ndarray | None:
-        """Return telemetry packages @1Hz.
-        """
+        """Return telemetry packages @1Hz."""
         if self._hk is None:
             return None
 
@@ -232,8 +225,7 @@ class SPXtlm:
 
     @property
     def hk_tstamp(self) -> np.ndarray | None:
-        """Return timestamps of telemetry packages @1Hz.
-        """
+        """Return timestamps of telemetry packages @1Hz."""
         if self._hk is None:
             return None
 
@@ -243,8 +235,7 @@ class SPXtlm:
 
     @property
     def sci_hdr(self) -> np.ndarray | None:
-        """Return CCSDS header data of Science telemetry packages.
-        """
+        """Return CCSDS header data of Science telemetry packages."""
         if self._sci is None:
             return None
 
@@ -254,8 +245,7 @@ class SPXtlm:
 
     @property
     def sci_tlm(self) -> np.ndarray | None:
-        """Return Science telemetry packages.
-        """
+        """Return Science telemetry packages."""
         if self._sci is None:
             return None
 
@@ -265,8 +255,7 @@ class SPXtlm:
 
     @property
     def sci_tstamp(self) -> np.ndarray | None:
-        """Return timestamps of Science telemetry packages.
-        """
+        """Return timestamps of Science telemetry packages."""
         if self._sci is None:
             return None
 
@@ -276,8 +265,7 @@ class SPXtlm:
 
     @property
     def images(self) -> tuple | None:
-        """Return image-frames of Science telemetry packages.
-        """
+        """Return image-frames of Science telemetry packages."""
         if self._sci is None:
             return None
 
@@ -291,8 +279,7 @@ class SPXtlm:
         return images
 
     def __get_valid_tstamps(self) -> np.ndarray | None:
-        """Return valid timestamps from Science or NomHk packages.
-        """
+        """Return valid timestamps from Science or NomHk packages."""
         if self.sci_tstamp is None \
                 or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
             indx = self.hk_tstamp > datetime.datetime(
@@ -304,8 +291,7 @@ class SPXtlm:
 
     @property
     def reference_date(self) -> datetime.datetime:
-        """Return date of reference day (tzone aware).
-        """
+        """Return date of reference day (tzone aware)."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -315,8 +301,7 @@ class SPXtlm:
 
     @property
     def time_coverage_start(self) -> datetime.datetime:
-        """Return a string for the time_coverage_start.
-        """
+        """Return a string for the time_coverage_start."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -325,8 +310,7 @@ class SPXtlm:
 
     @property
     def time_coverage_end(self) -> datetime.datetime:
-        """Return a string for the time_coverage_end.
-        """
+        """Return a string for the time_coverage_end."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -388,8 +372,7 @@ class SPXtlm:
 
     @property
     def digital_offset(self) -> np.ndarray:
-        """Returns digital offset including ADC offset [count].
-        """
+        """Returns digital offset including ADC offset [count]."""
         buff = self.sci_tlm['DET_OFFSET'].astype('i4')
         buff[buff >= 8192] -= 16384
 
@@ -622,8 +605,7 @@ class SPXtlm:
             }
 
     def gen_l1a(self, config: dataclass, mode: str):
-        """Generate a SPEXone Level-1A product.
-        """
+        """Generate a SPEXone Level-1A product."""
         self.set_selection(mode)
         if self._selection is None:
             return
@@ -673,8 +655,7 @@ class SPXtlm:
             print(f'[INFO]: successfully generated: {prod_name}')
 
     def _fill_engineering(self, l1a):
-        """Fill datasets in group '/engineering_data'.
-        """
+        """Fill datasets in group '/engineering_data'."""
         if self.hk_tlm is None:
             return
         l1a.set_dset('/engineering_data/NomHK_telemetry', self.hk_tlm)
@@ -689,8 +670,7 @@ class SPXtlm:
                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
     def _fill_science(self, l1a):
-        """Fill datasets in group '/science_data'.
-        """
+        """Fill datasets in group '/science_data'."""
         if self.sci_tlm is None:
             return
 
@@ -705,8 +685,7 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
     def _fill_image_attrs(self, l1a, lv0_format: str):
-        """Fill datasets in group '/image_attributes'.
-        """
+        """Fill datasets in group '/image_attributes'."""
         if self.sci_tlm is None:
             return
 
@@ -720,7 +699,7 @@ class SPXtlm:
             # timestamp of 2024-01-01T00:00:00Z
             l1a.set_attr('valid_max', np.uint32(1704067200),
                          ds_name='/image_attributes/icu_time_sec')
-            l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+            l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
                          ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec',
                      self.sci_tstamp['sub_sec'])

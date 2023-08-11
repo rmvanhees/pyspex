@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Defines the spectral dependent DolP of the Moxtek polarizer.
-"""
+"""Defines the spectral dependent DolP of the Moxtek polarizer."""
 __all__ = ['gsfc_polarizer']
 
 import numpy as np
@@ -29,9 +27,7 @@ RATIO = [101.6, 118.9, 159., 229.5, 292.6, 383.6,
 
 # - local functions ----------------------------
 def gsfc_polarizer() -> xr.Dataset:
-    """
-    Define table for spectral dependent DolP
-    """
+    """Define table for spectral dependent DolP."""
     xar_wv = xr.DataArray(np.array(WAVE, dtype='f4'),
                           coords={'wavelength': WAVE},
                           attrs={'longname': 'wavelength grid',
@@ -51,8 +47,7 @@ def gsfc_polarizer() -> xr.Dataset:
 
 
 def __test(l1a_file: str) -> None:
-    """Small function to test this module.
-    """
+    """Small function to test this module."""
     # Create a netCDF4 file containing the spectralDoLP
     xds = gsfc_polarizer()
     xds.to_netcdf(l1a_file, mode='w', format='NETCDF4',

@@ -35,9 +35,7 @@ DB_WAV_MON = 'ogse_db_wave_mon.nc'
 
 # - local functions --------------------------------
 def create_ogse_db(args):
-    """
-    Create databases for reference diode and/or Avantes fibre spectrometer
-    """
+    """Create databases for reference diode and/or Avantes fibre spectrometer."""
     if args.ref_diode:
         # read reference-diode data
         xds = read_ref_diode(args.ogse_dir, args.ref_diode, args.verbose)
@@ -57,9 +55,7 @@ def create_ogse_db(args):
 
 
 def write_ogse(args):
-    """
-    Add OGSE data to a SPEXone level-1A product
-    """
+    """Add OGSE data to a SPEXone level-1A product."""
     if args.ref_diode:
         add_ogse_ref_diode(args.ogse_dir / DB_REF_DIODE, args.l1a_file)
 
@@ -92,38 +88,38 @@ def write_ogse(args):
 
 # - main function ----------------------------------
 def main():
-    """Main function."""
+    """Add OGSE data to an existing SPEXone L1A product."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--verbose', action='store_true', help="be verbose")
+    parser.add_argument('--verbose', action='store_true', help='be verbose')
     parser.add_argument('--ogse_dir', default='Logs', type=Path,
-                        help="directory with OGSE data")
+                        help='directory with OGSE data')
     subparsers = parser.add_subparsers(help='sub-command help')
     parser_db = subparsers.add_parser('create_db',
-                                      help="create new OGSE database")
+                                      help='create new OGSE database')
     parser_db.add_argument('--ref_diode', nargs='*', default=[],
-                           help="names of reference-diode files")
+                           help='names of reference-diode files')
     parser_db.add_argument('--wav_mon', nargs='*', default=[],
-                           help="names of Avantes wavelength-monitor files")
+                           help='names of Avantes wavelength-monitor files')
     parser_db.set_defaults(func=create_ogse_db)
 
     parser_wr = subparsers.add_parser('add',
-                                      help=("add OGSE information to a"
-                                            " SPEXone Level-1A product"))
+                                      help=('add OGSE information to a'
+                                            ' SPEXone Level-1A product'))
     parser_wr.add_argument('--ref_diode', action='store_true',
-                           help="add reference-diode data from OGSE database")
+                           help='add reference-diode data from OGSE database')
     parser_wr.add_argument('--avantes', action='store_true',
-                           help=("add Avantes wavelength monitoring"
-                                 "  from OGSE database"))
+                           help=('add Avantes wavelength monitoring'
+                                 '  from OGSE database'))
     group_wr = parser_wr.add_mutually_exclusive_group()
     group_wr.add_argument('--helios', action='store_true',
-                          help="add Helios reference spectrum")
+                          help='add Helios reference spectrum')
     group_wr.add_argument('--grande', action='store_true',
-                          help="add Grande reference spectrum")
+                          help='add Grande reference spectrum')
     parser_wr.add_argument('--opo_laser', action='store_true',
-                           help="add wavelength of OPO laser")
+                           help='add wavelength of OPO laser')
     parser_wr.add_argument('l1a_file', default=None, type=Path,
-                           help="SPEXone L1A product")
+                           help='SPEXone L1A product')
     parser_wr.set_defaults(func=write_ogse)
     args = parser.parse_args()
     if args.verbose:

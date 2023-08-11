@@ -8,9 +8,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Python script to generate a report from the CKD in a CKD product.
-"""
+"""Python script to generate a report from the CKD in a CKD product."""
 import argparse
 
 from moniplot.lib.fig_info import FIGinfo
@@ -23,9 +21,7 @@ from pyspex.ckd_io import CKDio
 
 # - local functions --------------------------------
 def init_plot_file(key: str, ckd, ckd_ref=None):
-    """
-    Initialize CKD report
-    """
+    """Initialize CKD report."""
     fig_info_in = FIGinfo()
     fig_info_in.add('processor_version',
                     (ckd.processor_version,
@@ -47,8 +43,7 @@ def init_plot_file(key: str, ckd, ckd_ref=None):
 
 
 def add_dark_figs(ckd, ckd_ref=None):
-    """Generate figures of Dark CKD.
-    """
+    """Generate figures of Dark CKD."""
     dark_ckd = ckd.dark()
     if dark_ckd is None:
         return
@@ -112,8 +107,7 @@ def add_dark_figs(ckd, ckd_ref=None):
 
 
 def add_noise_figs(ckd, ckd_ref=None):
-    """Generate figures of Noise CKD.
-    """
+    """Generate figures of Noise CKD."""
     noise_ckd = ckd.noise()
     if noise_ckd is None:
         return
@@ -143,8 +137,7 @@ def add_noise_figs(ckd, ckd_ref=None):
 
 
 def add_nlin_figs(ckd, ckd_ref=None):
-    """Generate figures of non-linearity CKD.
-    """
+    """Generate figures of non-linearity CKD."""
     nlin_ckd = ckd.nlin()
     if nlin_ckd is None:
         return
@@ -190,8 +183,7 @@ def add_nlin_figs(ckd, ckd_ref=None):
 
 
 def add_prnu_figs(ckd, ckd_ref=None):
-    """Generate figures of PRNU CKD.
-    """
+    """Generate figures of PRNU CKD."""
     prnu_ckd = ckd.prnu()
     if prnu_ckd is None:
         return
@@ -258,8 +250,7 @@ def add_prnu_figs(ckd, ckd_ref=None):
 
 
 def add_wave_figs(ckd, ckd_ref=None):
-    """Generate figures of Wavelength CKD.
-    """
+    """Generate figures of Wavelength CKD."""
     wave_ckd = ckd.wavelength()
     if wave_ckd is None:
         return
@@ -291,8 +282,7 @@ def add_wave_figs(ckd, ckd_ref=None):
 
 
 def add_rad_figs(ckd, ckd_ref=None):
-    """Generate figures of Radiometric CKD.
-    """
+    """Generate figures of Radiometric CKD."""
     rad_ckd = ckd.radiometric()
     if rad_ckd is None:
         return
@@ -318,8 +308,7 @@ def add_rad_figs(ckd, ckd_ref=None):
 
 
 def add_pol_figs(ckd, ckd_ref=None):
-    """Generate figures of Polarimetric CKD.
-    """
+    """Generate figures of Polarimetric CKD."""
     pol_ckd = ckd.polarimetric()
     if pol_ckd is None:
         return
@@ -352,9 +341,7 @@ def add_pol_figs(ckd, ckd_ref=None):
 
 # - main function ----------------------------------
 def main() -> None:
-    """
-    Main function
-    """
+    """Generate a report on SPEXone CKD."""
     # parse command-line parameters
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,

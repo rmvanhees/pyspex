@@ -6,3 +6,4 @@
 #   All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""Necessary but empty file."""

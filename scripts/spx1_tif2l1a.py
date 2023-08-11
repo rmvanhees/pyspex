@@ -8,8 +8,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Python implementation SPEXone instrument simulator output to L1A.
+"""Python implementation SPEXone instrument simulator output to L1A.
 
 Environment::
 
@@ -36,9 +35,7 @@ EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 # - local functions --------------------------------
 def get_table_id(ckd_dir, bin_table_name):
-    """
-    Quick en dirty implementation to obtain table_id from binning-table CKD
-    """
+    """Quick en dirty implementation to obtain table_id from binning-table CKD."""
     if not Path(ckd_dir).is_dir():
         ckd_dir = environ.get('CKD_DIR', '.')
 
@@ -62,9 +59,7 @@ def get_table_id(ckd_dir, bin_table_name):
 
 
 def get_stimulus(hdr):
-    """
-    Return stimulus data as a xarray::Dataset
-    """
+    """Return stimulus data as a xarray::Dataset."""
     if 'Spectral data stimulus' not in hdr:
         return None
 
@@ -106,7 +101,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
        vvvvvvv is the git-hash string of the pyspex repository
     """
     # define string of sensing start as yyyymmddThhmmss
-    sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
+    sensing_start = utc_sensing_start.strftime('%Y%m%dT%H%M%S')
 
     return (f'SPX1_OCAL_{msm_id}_{sensing_start}'
             f'_L1A_{pyspex_version(githash=True)}.nc')
@@ -114,8 +109,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
 
 # - main function ----------------------------------
 def main():
-    """
-    main program to illustate the creation of a L1A calibration product
+    """Create a L1A calibration product from data in Tiff format.
 
     Environment
     -----------
@@ -249,7 +243,7 @@ def main():
                      ds_name='/image_attributes/icu_time_sec')
         l1a.set_attr('valid_max', np.uint32(1735700000),
                      ds_name='/image_attributes/icu_time_sec')
-        l1a.set_attr('units', "seconds since 1970-01-01 00:00:00",
+        l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
                      ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec', img_subsec)
         l1a.set_dset('/image_attributes/image_time', img_time)
