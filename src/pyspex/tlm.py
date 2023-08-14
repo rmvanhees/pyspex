@@ -52,9 +52,6 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
     if not ccsds_hk:
         return None
 
-    if verbose:
-        print(f'[INFO]: processing housekeeping data [epoch: {epoch}]')
-
     hdr = np.empty(len(ccsds_hk),
                    dtype=ccsds_hk[0]['hdr'].dtype)
     tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
@@ -81,9 +78,6 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime,
     """Return dictionary with Science telemetry data."""
     if not ccsds_sci:
         return None
-
-    if verbose:
-        print(f'[INFO]: processing DemHK data [epoch: {epoch}]')
 
     n_frames = 0
     found_start_first = False
@@ -556,7 +550,7 @@ class SPXtlm:
 
             mps_list = np.unique(self.sci_tlm['MPS_ID'][sci_mask])
             if self._verbose:
-                print(f'[INFO]: unique Diagnostic MPS: {mps_list}')
+                print(f'[DEBUG]: unique Diagnostic MPS: {mps_list}')
             hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
 
             self._selection = {
@@ -577,7 +571,7 @@ class SPXtlm:
 
             mps_list = np.unique(self.sci_tlm['MPS_ID'][sci_mask])
             if self._verbose:
-                print(f'[INFO]: unique Science MPS: {mps_list}')
+                print(f'[DEBUG]: unique Science MPS: {mps_list}')
             hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
             self._selection = {
                 'sci_mask': sci_mask,
@@ -628,31 +622,31 @@ class SPXtlm:
                              timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
             if self._verbose:
-                print('[INFO]: 1) initialized Level-1A product')
+                print('[DEBUG]: 1) initialized Level-1A product')
 
             self._fill_engineering(l1a)
             if self._verbose:
-                print('[INFO]: 2) added engineering data')
+                print('[DEBUG]: 2) added engineering data')
             self._fill_science(l1a)
             if self._verbose:
-                print('[INFO]: 3) added science data')
+                print('[DEBUG]: 3) added science data')
             self._fill_image_attrs(l1a, config.l0_format)
             if self._verbose:
-                print('[INFO]: 4) added image attributes')
+                print('[DEBUG]: 4) added image attributes')
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
             add_hkt_navigation(config.outdir / prod_name,
                                config.hkt_list, self._verbose)
             if self._verbose:
-                print('[INFO]: 5) added PACE navigation data')
+                print('[DEBUG]: 5) added PACE navigation data')
 
         # add processor_configuration
         if config.yaml_fl:
             add_proc_conf(config.outdir / prod_name, config.yaml_fl)
 
         if self._verbose:
-            print(f'[INFO]: successfully generated: {prod_name}')
+            print(f'[DEBUG]: successfully generated: {prod_name}')
 
     def _fill_engineering(self, l1a):
         """Fill datasets in group '/engineering_data'."""
