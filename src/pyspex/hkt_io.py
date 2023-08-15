@@ -288,7 +288,6 @@ class HKTio:
             ii = values.size // 2
             leap_sec = get_leap_seconds(values[ii].timestamp(),
                                         epochyear=1970)
-            print(values[ii], leap_sec)
             values -= datetime.timedelta(seconds=leap_sec)
             mn_val = min(values)
             mx_val = max(values)

@@ -196,6 +196,7 @@ class SPXtlm:
         self._hk = None
         self._sci = None
         self._selection = None
+        self._coverage = None
 
     @property
     def hk_hdr(self) -> np.ndarray | None:
@@ -296,6 +297,8 @@ class SPXtlm:
     @property
     def time_coverage_start(self) -> datetime.datetime:
         """Return a string for the time_coverage_start."""
+        if self._coverage is not None:
+            return self._coverage[0]
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -305,6 +308,8 @@ class SPXtlm:
     @property
     def time_coverage_end(self) -> datetime.datetime:
         """Return a string for the time_coverage_end."""
+        if self._coverage is not None:
+            return self._coverage[1]
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
@@ -396,6 +401,12 @@ class SPXtlm:
         ccsds_hk: tuple[np.ndarray] | tuple = ()
         for name in flnames:
             hkt = HKTio(name)
+            coverage = hkt.coverage()
+            if self._coverage is None:
+                self._coverage = coverage
+            else:
+                self._coverage[0] = min(self._coverage[0], coverage[0])
+                self._coverage[1] = max(self._coverage[1], coverage[1])
             ccsds_hk += hkt.housekeeping(instrument)
 
         if not ccsds_hk:
