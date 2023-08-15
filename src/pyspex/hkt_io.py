@@ -23,10 +23,13 @@ import xarray as xr
 from netCDF4 import Dataset
 from moniplot.image_to_xarray import h5_to_xr
 
+from .lib.ccsds_hdr import CCSDShdr
+from .lib.leap_sec import get_leap_seconds
 from .lv0_lib import ap_id, dtype_tmtc
 
 # - global parameters -----------------------
 DTIME_MIN = 2 * 60
+EPOCH = datetime.datetime(1958, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 class CoverageFlag(IntFlag):
@@ -209,21 +212,15 @@ class HKTio:
     ----------
     filename : Path
         name of the PACE HKT product
-    instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
-        name of PACE instrument 'spx': SPEXone, 'oci': OCI, 'harp': HARP2,
-        'sc': Space Craft.
     """
 
-    def __init__(self, filename: Path, instrument: str = 'spx') -> None:
+    def __init__(self, filename: Path) -> None:
         """Initialize access to a PACE HKT product."""
         self._coverage = None
-        self._instrument = None
         self._reference_date = None
         self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError('HKT product does not exists')
-
-        self.set_instrument(instrument)
         self.set_reference_date()
 
     # ---------- PUBLIC FUNCTIONS ----------
@@ -251,29 +248,65 @@ class HKTio:
         else:
             self._reference_date = ref_date
 
-    @property
-    def instrument(self) -> str | None:
-        """Returns name of the PACE instrument.
+    def coverage(self) -> tuple[datetime.datetime, datetime.datetime]:
+        """Return data coverage."""
+        one_day = datetime.timedelta(days=1)
+        hk_dict = {
+            'HARP2_HKT_packets': (),
+            'OCI_HKT_packets': (),
+            'SPEXone_HKT_packets': (),
+            'SC_HKT_packets': ()
+        }
 
-        Returns
-        -------
-        str
-            Name of selected PACE instrument
-        """
-        return self._instrument
+        with h5py.File(self.filename) as fid:
+            for ds_set, tstamp in hk_dict.items():
+                if ds_set not in fid['housekeeping_data']:
+                    continue
 
-    def set_instrument(self, name: str) -> None:
-        """Set name of PACE instrument.
+                res = fid['housekeeping_data'][ds_set][:]
+                for packet in res:
+                    try:
+                        hdr = CCSDShdr(packet)
+                    except ValueError as exc:
+                        print(f'[WARNING]: header reading error with "{exc}"')
+                        break
+                    else:
+                        tstamp += (hdr.tstamp(EPOCH),)
+                hk_dict[ds_set] = tstamp
 
-        Parameters
-        ----------
-        name :  {'spx', 'oci', 'harp', 'sc'}
-            name of PACE instrument
-        """
-        if name.lower() in ('spx', 'oci', 'harp', 'sc'):
-            self._instrument = name.lower()
-        else:
-            raise KeyError('invalid name of instrument')
+        mn_list = []
+        mx_list = []
+        for ds_set, tstamp in hk_dict.items():
+            # use SC_HKT_packets only when other data is not available
+            if ds_set == 'SC_HKT_packets' and mn_list:
+                break
+            
+            if not hk_dict[ds_set]:
+                continue
+
+            values = np.array(tstamp)
+            ii = values.size // 2
+            leap_sec = get_leap_seconds(values[ii].timestamp(),
+                                        epochyear=1970)
+            print(values[ii], leap_sec)
+            values -= datetime.timedelta(seconds=leap_sec)
+            mn_val = min(values)
+            mx_val = max(values)
+            if mx_val - mn_val > one_day:
+                indx_close_to_mn = (values - mn_val) <= one_day
+                indx_close_to_mx = (mx_val - values) <= one_day
+                if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                    mx_val = max(values[indx_close_to_mn])
+                else:
+                    mn_val = min(values[indx_close_to_mx])
+
+            mn_list.append(mn_val)
+            mx_list.append(mx_val)
+
+        if len(mn_list) == 1:
+            return mn_list[0], mx_list[0]
+
+        return min(*mn_list), max(*mx_list)
 
     def navigation(self) -> dict:
         """Get navigation data."""
@@ -304,29 +337,34 @@ class HKTio:
             xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
-    def housekeeping(self) -> tuple[np.ndarray, ...]:
+    def housekeeping(self, instrument: str = 'spx') -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.
+
+        Parameters
+        ----------
+        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
+           name of PACE instrument: 'harp': HARP2, 'oci': OCI, 
+           'sc': Space Craft, 'spx': SPEXone.
 
         Notes
         -----
         Current implementation only works for SPEXone.
         """
-        hdr_dtype = np.dtype([('type', '>u2'),
-                              ('sequence', '>u2'),
-                              ('length', '>u2'),
-                              ('tai_sec', '>u4'),
-                              ('sub_sec', '>u2')])
-
         ds_set = {'spx': 'SPEXone_HKT_packets',
+                  'sc': 'SC_HKT_packets',
                   'oci': 'OCI_HKT_packets',
-                  'harp': 'HARP2_HKT_packets',
-                  'sc': 'SC_HKT_packets'}.get(self.instrument)
+                  'harp': 'HARP2_HKT_packets'}.get(instrument, None)
 
         with h5py.File(self.filename) as fid:
             if ds_set not in fid['housekeeping_data']:
                 return ()
             res = fid['housekeeping_data'][ds_set][:]
 
+        hdr_dtype = np.dtype([('type', '>u2'),
+                              ('sequence', '>u2'),
+                              ('length', '>u2'),
+                              ('tai_sec', '>u4'),
+                              ('sub_sec', '>u2')])
         ccsds_hk = ()
         for packet in res:
             try:
@@ -357,6 +395,12 @@ def _test():
         # data_dir0 / 'PACE.20230720T232456.HKT.nc',
         # data_dir1 / 'PACE.20230721T000054.HKT.nc'
     ]
+    data_dir = Path('/data/richardh/SPEXone/pace-sds/pace_hkt/V1.0/2023/07/25')
+    flname = data_dir / 'PACE.20230725T045720.HKT.nc'
+    
+    hkt = HKTio(flname)
+    print(hkt.coverage())
+    return
 
     l1a_file = 'test_hkt_io.nc'
     with Dataset(l1a_file, 'w') as fid:
@@ -369,6 +413,8 @@ def _test():
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
     check_coverage_nav(Path(l1a_file), xds_nav, True)
+
+    
 
 
 if __name__ == '__main__':

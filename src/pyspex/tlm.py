@@ -395,8 +395,8 @@ class SPXtlm:
         self.file_list = flnames
         ccsds_hk: tuple[np.ndarray] | tuple = ()
         for name in flnames:
-            hkt = HKTio(name, instrument)
-            ccsds_hk += hkt.housekeeping()
+            hkt = HKTio(name)
+            ccsds_hk += hkt.housekeeping(instrument)
 
         if not ccsds_hk:
             return
