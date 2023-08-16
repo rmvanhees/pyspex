@@ -237,8 +237,8 @@ class HKTio:
 
         if ref_date is None:
             coverage = self.coverage()
-            ref_date = datetime(coverage[0].date(), time(0),
-                                tzinfo=timezone.utc)
+            ref_date = datetime.combine(coverage[0].date(), time(0),
+                                        tzinfo=timezone.utc)
 
         self._reference_date = ref_date
 
