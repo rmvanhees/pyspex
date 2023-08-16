@@ -12,7 +12,7 @@ from __future__ import annotations
 
 __all__ = ['HKTio', 'read_hkt_nav', 'check_coverage_nav']
 
-import datetime
+from datetime import datetime, time, timedelta, timezone
 from enum import IntFlag, auto
 from pathlib import Path
 
@@ -28,18 +28,24 @@ from .lib.leap_sec import get_leap_seconds
 from .lv0_lib import ap_id, dtype_tmtc
 
 # - global parameters -----------------------
-DTIME_MIN = 2 * 60
-EPOCH = datetime.datetime(1958, 1, 1, tzinfo=datetime.timezone.utc)
+EPOCH = datetime(1958, 1, 1, tzinfo=timezone.utc)
+
+# valid data coverage range
+VALID_COVERAGE_MIN = datetime(2021, 1, 1, tzinfo=timezone.utc)
+VALID_COVERAGE_MAX = datetime(2035, 1, 1, tzinfo=timezone.utc)
+
+# expect the navigation data to extend at least 2 minutes at start and end
+TIMEDELTA_MIN = timedelta(seconds=2 * 60)
 
 
 class CoverageFlag(IntFlag):
-    """Define flags for coverage_quality."""
+    """Define flags for coverage_quality (navigation_data)."""
 
     GOOD = 0
     MISSING_SAMPLES = auto()
-    SHORT_EXTEND_START = auto()
-    SHORT_EXTEND_END = auto()
-    TOO_SHORT_COVERAGE = auto()
+    TOO_SHORT_EXTENDS = auto()
+    NO_EXTEND_AT_START = auto()
+    NO_EXTEND_AT_END = auto()
 
 
 # - high-level r/w functions ------------
@@ -123,56 +129,43 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
     verbose :  bool, default=False
        be verbose
     """
+    coverage_quality = CoverageFlag.GOOD
     # obtain the reference date of the navigation data
-    ref_date = datetime.datetime.fromisoformat(xds_nav.attrs['reference_date'])
+    ref_date = datetime.fromisoformat(xds_nav.attrs['reference_date'])
 
     # obtain time_coverage_range from the Level-1A product
-    coverage_start = None
-    coverage_end = None
-    if l1a_file.is_file():
+    with h5py.File(l1a_file) as fid:
         # pylint: disable=no-member
-        with Dataset(l1a_file, 'r') as fid:
-            if 'time_coverage_start' in fid.ncattrs():
-                dtime = fid.time_coverage_start
-                if isinstance(dtime, bytes):
-                    dtime = dtime.decode()
-                coverage_start = datetime.datetime.fromisoformat(dtime)
-            if 'time_coverage_end' in fid.ncattrs():
-                dtime = fid.time_coverage_end
-                if isinstance(dtime, bytes):
-                    dtime = dtime.decode()
-                coverage_end = datetime.datetime.fromisoformat(dtime)
+        val = fid.attrs['time_coverage_start'].decode()
+        coverage_start = datetime.fromisoformat(val)
+        val = fid.attrs['time_coverage_end'].decode()
+        coverage_end = datetime.fromisoformat(val)
 
     # check at the start of the data
-    coverage_quality = CoverageFlag.GOOD
     sec_of_day = xds_nav['att_time'].values[0]
-    att_coverage_start = ref_date + datetime.timedelta(seconds=sec_of_day)
+    att_coverage_start = ref_date + timedelta(seconds=sec_of_day)
     dtime = (coverage_start - att_coverage_start).total_seconds()
-    if verbose:
-        print(f'[INFO]: difference at start: {dtime} sec')
-    if dtime < 0:
-        coverage_quality |= CoverageFlag.TOO_SHORT_COVERAGE
+    if coverage_start - att_coverage_start < timedelta(0):
+        coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         print('[ERROR]: time coverage of navigation data starts'
               ' after "time_coverage_start"')
-    if dtime < DTIME_MIN:
-        coverage_quality |= CoverageFlag.SHORT_EXTEND_START
+    if coverage_start - att_coverage_start < TIMEDELTA_MIN:
+        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         print('[WARNING]: time coverage of navigation data starts'
-              f' after "time_coverage_start - {DTIME_MIN} seconds"')
+              f' after "time_coverage_start - {TIMEDELTA_MIN}"')
 
     # check at the end of the data
     sec_of_day = xds_nav['att_time'].values[-1]
-    att_coverage_end = ref_date + datetime.timedelta(seconds=sec_of_day)
+    att_coverage_end = ref_date + timedelta(seconds=sec_of_day)
     dtime = (att_coverage_end - coverage_end).total_seconds()
-    if verbose:
-        print(f'[INFO]: difference at end: {dtime} sec')
-    if dtime < 0:
-        coverage_quality |= CoverageFlag.TOO_SHORT_COVERAGE
+    if att_coverage_end - coverage_end < timedelta(0):
+        coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         print('[ERROR]: time coverage of navigation data ends'
               ' before "time_coverage_end"')
-    if dtime < DTIME_MIN:
-        coverage_quality |= CoverageFlag.SHORT_EXTEND_END
+    if att_coverage_end - coverage_end < TIMEDELTA_MIN:
+        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         print('[WARNING]: time coverage of navigation data ends'
-              f' before "time_coverage_end + {DTIME_MIN} seconds"')
+              f' before "time_coverage_end + {TIMEDELTA_MIN}"')
 
     # check for completeness
     dtime = (att_coverage_end - att_coverage_start).total_seconds()
@@ -192,15 +185,16 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
         gid.time_coverage_end = att_coverage_end.isoformat(
             timespec='milliseconds')
         dset = gid.createVariable('coverage_quality', 'u1', fill_value=255)
+        dset[:] = coverage_quality
         dset.long_name = 'coverage quality of navigation data'
         dset.standard_name = 'status_flag'
         dset.valid_range = np.array([0, 15], dtype='u2')
         dset.flag_values = np.array([0, 1, 2, 4, 8], dtype='u2')
-        dset.flag_meanings = ('good missing-samples short_extend_start'
-                              ' short_extend_start too_short_coverage')
+        dset.flag_meanings = ('good missing-samples too_short_extends'
+                              ' no_extend_at_start no_extend_at_end')
 
     # generate warning if time-coverage of navigation data is too short
-    if coverage_quality & CoverageFlag.TOO_SHORT_COVERAGE:
+    if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
         raise UserWarning('time-coverage of navigation data is too short')
 
 
@@ -214,52 +208,62 @@ class HKTio:
         name of the PACE HKT product
     """
 
-    def __init__(self, filename: Path) -> None:
+    def __init__(self, filename: Path, verbose=False) -> None:
         """Initialize access to a PACE HKT product."""
         self._coverage = None
         self._reference_date = None
         self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError('HKT product does not exists')
+        self._verbose = verbose
         self.set_reference_date()
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def reference_date(self) -> datetime.datetime:
+    def reference_date(self) -> datetime:
         """Return reference date of all time_of_day variables."""
         return self._reference_date
 
     def set_reference_date(self):
         """Set reference date of current PACE HKT product."""
         ref_date = None
-        with h5py.File(self.filename, 'r') as fid:
+        with h5py.File(self.filename) as fid:
             grp = fid['navigation_data']
             if 'att_time' in grp and 'units' in grp['att_time'].attrs:
                 # pylint: disable=no-member
                 words = grp['att_time'].attrs['units'].decode().split(' ')
                 if len(words) > 2:
-                    ref_date = datetime.datetime.fromisoformat(
-                        words[2] + 'T00Z')
+                    ref_date = datetime.fromisoformat(words[2] + 'T00Z')
 
         if ref_date is None:
-            words = self.filename.name.split('.')[1].split('T')
-            self._reference_date = datetime.datetime.strptime(
-                words[0] + 'T00Z', '%Y%m%dT%H%z')
-        else:
-            self._reference_date = ref_date
+            coverage = self.coverage()
+            ref_date = datetime(coverage[0].date(), time(0),
+                                tzinfo=timezone.utc)
 
-    def coverage(self) -> tuple[datetime.datetime, datetime.datetime]:
+        self._reference_date = ref_date
+
+    def coverage(self) -> tuple[datetime, datetime]:
         """Return data coverage."""
-        one_day = datetime.timedelta(days=1)
-        hk_dict = {
-            'HARP2_HKT_packets': (),
-            'OCI_HKT_packets': (),
-            'SPEXone_HKT_packets': (),
-            'SC_HKT_packets': ()
-        }
-
+        one_day = timedelta(days=1)
         with h5py.File(self.filename) as fid:
-            for ds_set, tstamp in hk_dict.items():
+            # pylint: disable=no-member
+            val = fid.attrs['time_coverage_start'].decode()
+            coverage_start = datetime.fromisoformat(val)
+            val = fid.attrs['time_coverage_end'].decode()
+            coverage_end = datetime.fromisoformat(val)
+
+        if abs(coverage_end - coverage_start) < one_day:
+            return coverage_start, coverage_end
+
+        # Oeps, now we have to check the timestamps of the measurement data
+        hk_dset_names = ('HARP2_HKT_packets', 'OCI_HKT_packets',
+                         'SPEXone_HKT_packets', 'SC_HKT_packets')
+
+        tstamp_mn_list = []
+        tstamp_mx_list = []
+        with h5py.File(self.filename) as fid:
+            for ds_set in hk_dset_names:
+                dt_list = ()
                 if ds_set not in fid['housekeeping_data']:
                     continue
 
@@ -270,42 +274,40 @@ class HKTio:
                     except ValueError as exc:
                         print(f'[WARNING]: header reading error with "{exc}"')
                         break
+
+                    val = hdr.tstamp(EPOCH)
+                    if ((val > VALID_COVERAGE_MIN)
+                        & (val < VALID_COVERAGE_MAX)):
+                        dt_list += (val,)
+
+                if not dt_list:
+                    continue
+
+                dt_arr = np.array(dt_list)
+                ii = dt_arr.size // 2
+                leap_sec = get_leap_seconds(dt_arr[ii].timestamp(),
+                                            epochyear=1970)
+                dt_arr -= timedelta(seconds=leap_sec)
+                mn_val = min(dt_arr)
+                mx_val = max(dt_arr)
+                if mx_val - mn_val > one_day:
+                    indx_close_to_mn = (dt_arr - mn_val) <= one_day
+                    indx_close_to_mx = (mx_val - dt_arr) <= one_day
+                    print('[WARNING]: coverage_range: '
+                          f'{mn_val}[{np.sum(indx_close_to_mn)}]'
+                          f' - {mx_val}[{np.sum(indx_close_to_mx)}]')
+                    if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                        mx_val = max(dt_arr[indx_close_to_mn])
                     else:
-                        tstamp += (hdr.tstamp(EPOCH),)
-                hk_dict[ds_set] = tstamp
+                        mn_val = min(dt_arr[indx_close_to_mx])
 
-        mn_list = []
-        mx_list = []
-        for ds_set, tstamp in hk_dict.items():
-            # use SC_HKT_packets only when other data is not available
-            if ds_set == 'SC_HKT_packets' and mn_list:
-                break
-            
-            if not hk_dict[ds_set]:
-                continue
+                tstamp_mn_list.append(mn_val)
+                tstamp_mx_list.append(mx_val)
 
-            values = np.array(tstamp)
-            ii = values.size // 2
-            leap_sec = get_leap_seconds(values[ii].timestamp(),
-                                        epochyear=1970)
-            values -= datetime.timedelta(seconds=leap_sec)
-            mn_val = min(values)
-            mx_val = max(values)
-            if mx_val - mn_val > one_day:
-                indx_close_to_mn = (values - mn_val) <= one_day
-                indx_close_to_mx = (mx_val - values) <= one_day
-                if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
-                    mx_val = max(values[indx_close_to_mn])
-                else:
-                    mn_val = min(values[indx_close_to_mx])
+        if len(tstamp_mn_list) == 1:
+            return tstamp_mn_list[0], tstamp_mx_list[0]
 
-            mn_list.append(mn_val)
-            mx_list.append(mx_val)
-
-        if len(mn_list) == 1:
-            return mn_list[0], mx_list[0]
-
-        return min(*mn_list), max(*mx_list)
+        return min(*tstamp_mn_list), max(*tstamp_mx_list)
 
     def navigation(self) -> dict:
         """Get navigation data."""
@@ -394,9 +396,11 @@ def _test():
         # data_dir0 / 'PACE.20230720T232456.HKT.nc',
         # data_dir1 / 'PACE.20230721T000054.HKT.nc'
     ]
-    data_dir = Path('/data/richardh/SPEXone/pace-sds/pace_hkt/V1.0/2023/07/25')
-    flname = data_dir / 'PACE.20230725T045720.HKT.nc'
-    
+    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/1957/12/31')
+    flname = data_dir / 'PACE.20230721T215555.HKT.nc'
+    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24')
+    flname = data_dir / 'PACE.20240324T120009.HKT.nc'
+
     hkt = HKTio(flname)
     print(hkt.coverage())
     return
@@ -412,8 +416,6 @@ def _test():
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
     check_coverage_nav(Path(l1a_file), xds_nav, True)
-
-    
 
 
 if __name__ == '__main__':
