@@ -12,6 +12,7 @@ Handle command-line parameters and settings from the YAML file
 for L1A generation.
 """
 from __future__ import annotations
+
 __all__ = ['get_l1a_settings']
 
 import argparse

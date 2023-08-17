@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
+
 class CCSDShdr:
     """Read CCSDS telemetry packet structure which consists of the
     primary header: version, type, apid, grouping flag, sequence count

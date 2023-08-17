@@ -18,11 +18,14 @@ from __future__ import annotations
 __all__ = ['CKDio']
 
 from datetime import datetime, timezone
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import h5py
 import xarray as xr
 from moniplot.image_to_xarray import h5_to_xr
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # - global parameters ------------------------------
 

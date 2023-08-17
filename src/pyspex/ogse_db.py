@@ -14,6 +14,7 @@ database. From which collocated data can be added to a SPEXone Level-1A
 product.
 """
 from __future__ import annotations
+
 __all__ = ['read_ref_diode', 'read_wav_mon',
            'add_ogse_ref_diode', 'add_ogse_wav_mon']
 

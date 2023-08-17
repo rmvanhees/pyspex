@@ -12,6 +12,7 @@ This module contains the class `BinningTables` to deal with SPEXone
 binning-tables or to generate a file with binning-table definitions.
 """
 from __future__ import annotations
+
 __all__ = ['BinningTables']
 
 from datetime import datetime, timezone
@@ -19,6 +20,7 @@ from os import environ
 from pathlib import Path
 
 import numpy as np
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 

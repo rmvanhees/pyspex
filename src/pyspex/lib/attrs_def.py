@@ -15,7 +15,7 @@ __all__ = ['attrs_def']
 
 from datetime import datetime, timezone
 
-from ..version import pyspex_version
+from pyspex.version import pyspex_version
 
 
 # - main functions --------------------------------

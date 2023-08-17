@@ -302,7 +302,7 @@ class CCSDSio:
 
         self.close()
         # pylint: disable=consider-using-with
-        self.fp = open(flname, 'rb')
+        self.fp = open(flname, 'rb')      # noqa: SIM115
 
     @staticmethod
     def fix_dem_hk24(dem_hk):

@@ -22,7 +22,6 @@ from pathlib import Path
 import h5py
 import numpy as np
 import xarray as xr
-
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv1_gse import LV1gse
 from pyspex.lv1_io import L1Aio
@@ -46,7 +45,7 @@ def get_table_id(ckd_dir, bin_table_name):
 
     table_id = None
     with h5py.File(bin_tables[-1], 'r') as fid:
-        for grp in [x for x in fid.keys() if x.startswith('Table')]:
+        for grp in [x for x in fid if x.startswith('Table')]:
             gid = fid[grp]
             if 'origin' not in gid.attrs:
                 continue

@@ -14,6 +14,7 @@ a SPEXone Level-1A product.
 __all__ = ['LV1gse']
 
 import numpy as np
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
@@ -56,10 +57,7 @@ class LV1gse:
         if alt_angle:
             vp_angle = np.array([-50., -20, 0, 20, 50])
             vp_diff = np.abs(vp_angle - alt_angle[0])
-            if vp_diff.min() > 6:
-                viewport = 0
-            else:
-                viewport = 2 ** np.argmin(vp_diff)
+            viewport = 0 if vp_diff.min() > 6 else 2 ** np.argmin(vp_diff)
         else:
             viewport = 0
 
@@ -118,14 +116,14 @@ class LV1gse:
                     print(f'[WARNING]: {key}={egse_data[key]}')
 
         act_angle = self.fid['/gse_data'].ACT_rotationAngle
-        if np.isfinite(act_angle):
-            if not np.allclose(egse_data['ACT_ANGLE'], act_angle, 1e-2):
-                print(f'[WARNING]: ACT_ANGLE={egse_data["ACT_ANGLE"]}')
+        if (np.isfinite(act_angle)
+            and not np.allclose(egse_data['ACT_ANGLE'], act_angle, 1e-2)):
+            print(f'[WARNING]: ACT_ANGLE={egse_data["ACT_ANGLE"]}')
 
         alt_angle = self.fid['/gse_data'].ALT_rotationAngle
-        if np.isfinite(alt_angle):
-            if not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2):
-                print(f'[WARNING]: ALT_ANGLE={egse_data["ALT_ANGLE"]}')
+        if (np.isfinite(alt_angle)
+            and not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2)):
+            print(f'[WARNING]: ALT_ANGLE={egse_data["ALT_ANGLE"]}')
 
     def set_attr(self, name: str, value) -> None:
         """Add attribute to group 'gse_data'.

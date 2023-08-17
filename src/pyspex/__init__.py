@@ -10,9 +10,9 @@
 """Python package pyspex contains software to read PACE HKT products,
 read SPEXone Level-0 products and read/write SPEXone Level-1A products.
 """
+import contextlib
 from importlib.metadata import PackageNotFoundError, version
 
-try:
+with contextlib.suppress(PackageNotFoundError):
     __version__ = version(__name__)
-except PackageNotFoundError:
-    pass
+

@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-
 from pyspex.ccsds_io import CCSDSio, hk_sec_of_day, img_sec_of_day
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv1_io import L1Aio

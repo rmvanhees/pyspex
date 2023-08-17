@@ -12,9 +12,9 @@ from __future__ import annotations
 
 __all__ = ['L1Aio', 'get_l1a_name']
 
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -22,6 +22,9 @@ from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.tlm_utils import convert_hk
 from .version import pyspex_version
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass
 
 # - global parameters -------------------
 MCP_TO_SEC = 1e-7

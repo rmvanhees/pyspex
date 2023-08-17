@@ -16,6 +16,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
@@ -294,10 +295,7 @@ def add_egse_data(args):
 
     # update Level-1A product with EGSE information
     with Dataset(args.l1a_file, 'r+') as fid:
-        if fid.groups.get('/gse_data'):
-            gid = fid['/gse_data']
-        else:
-            gid = init_gse_data(fid)
+        gid = fid['/gse_data'] if fid.groups.get('/gse_data') else init_gse_data(fid)
         _ = gid.createEnumType('u1', 'ldls_t',
                                {k.replace(b' ', b'_').upper(): v
                                 for k, v in LDLS_DICT.items()})

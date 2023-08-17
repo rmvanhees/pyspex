@@ -21,8 +21,12 @@ Possible OGSE information:
 import argparse
 from pathlib import Path
 
-from pyspex.ogse_db import (add_ogse_ref_diode, add_ogse_wav_mon,
-                            read_ref_diode, read_wav_mon)
+from pyspex.ogse_db import (
+    add_ogse_ref_diode,
+    add_ogse_wav_mon,
+    read_ref_diode,
+    read_wav_mon,
+)
 from pyspex.ogse_dolp import gsfc_polarizer
 from pyspex.ogse_grande import grande_spectrum
 from pyspex.ogse_helios import helios_spectrum

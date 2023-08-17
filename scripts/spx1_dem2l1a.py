@@ -22,7 +22,6 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-
 from pyspex.dem_io import DEMio, img_sec_of_day
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv1_gse import LV1gse
@@ -194,10 +193,7 @@ def main():
         prod_name = str(dest_dir / prod_name)
 
     # set dimensions of L1A datasets
-    if images.ndim == 2:
-        n_samples = images.size
-    else:
-        n_samples = images.shape[1] * images.shape[2]
+    n_samples = images.size if images.ndim == 2 else images.shape[1] * images.shape[2]
 
     dims = {'number_of_images': n_images,
             'samples_per_image': n_samples,

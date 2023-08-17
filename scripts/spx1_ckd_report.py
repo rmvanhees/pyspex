@@ -13,7 +13,6 @@ import argparse
 
 from moniplot.lib.fig_info import FIGinfo
 from moniplot.mon_plot import MONplot
-
 from pyspex.ckd_io import CKDio
 
 # - global parameters ------------------------------

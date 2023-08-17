@@ -12,9 +12,10 @@ __all__ = ['init_l1a']
 
 import datetime
 
+import numpy as np
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset, Variable
-import numpy as np
 
 from .tmtc_def import tmtc_dtype
 

@@ -10,7 +10,7 @@
 """Contains the class `HKTio` to read PACE HKT products."""
 from __future__ import annotations
 
-__all__ = ['HKTio', 'read_hkt_nav', 'check_coverage_nav']
+__all__ = ['HKTio', 'check_coverage_nav', 'read_hkt_nav']
 
 from datetime import datetime, time, timedelta, timezone
 from enum import IntFlag, auto
@@ -19,9 +19,10 @@ from pathlib import Path
 import h5py
 import numpy as np
 import xarray as xr
+from moniplot.image_to_xarray import h5_to_xr
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
-from moniplot.image_to_xarray import h5_to_xr
 
 from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
@@ -69,7 +70,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     # concatenate DataArrays with navigation data
     res = {}
     rdate = None
-    for name in hkt_list:
+    for name in sorted(hkt_list):
         hkt = HKTio(name)
         nav = hkt.navigation()
         if not res:
@@ -200,12 +201,22 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
 
 # - class HKTio -------------------------
 class HKTio:
-    """Read PACE HKT products.
+    """Class to read housekeeping and navigation data from PACE-HKT products.
 
     Parameters
     ----------
     filename : Path
         name of the PACE HKT product
+
+    Notes
+    -----
+    This class has the following methods::
+
+     - reference_date -> datetime
+     - set_reference_date()
+     - coverage() -> tuple[datetime, datetime]
+     - housekeeping(instrument: str) -> tuple[np.ndarray, ...]
+     - navigation() -> dict
     """
 
     def __init__(self, filename: Path, verbose=False) -> None:
@@ -309,6 +320,50 @@ class HKTio:
 
         return min(*tstamp_mn_list), max(*tstamp_mx_list)
 
+    def housekeeping(self, instrument: str = 'spx') -> tuple[np.ndarray, ...]:
+        """Get housekeeping telemetry data.
+
+        Parameters
+        ----------
+        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
+           name of PACE instrument: 'harp': HARP2, 'oci': OCI,
+           'sc': Space Craft, 'spx': SPEXone.
+
+        Notes
+        -----
+        Current implementation only works for SPEXone.
+        """
+        ds_set = {'spx': 'SPEXone_HKT_packets',
+                  'sc': 'SC_HKT_packets',
+                  'oci': 'OCI_HKT_packets',
+                  'harp': 'HARP2_HKT_packets'}.get(instrument)
+
+        with h5py.File(self.filename) as fid:
+            if ds_set not in fid['housekeeping_data']:
+                return ()
+            res = fid['housekeeping_data'][ds_set][:]
+
+        hdr_dtype = np.dtype([('type', '>u2'),
+                              ('sequence', '>u2'),
+                              ('length', '>u2'),
+                              ('tai_sec', '>u4'),
+                              ('sub_sec', '>u2')])
+        ccsds_hk = ()
+        for packet in res:
+            try:
+                hdr = np.frombuffer(packet, count=1, offset=0,
+                                    dtype=hdr_dtype)[0]
+            except ValueError as exc:
+                print(f'[WARNING]: header reading error with "{exc}"')
+                break
+
+            if 0x320 <= ap_id(hdr) < 0x335:           # all valid APIDs
+                buff = np.frombuffer(packet, count=1, offset=0,
+                                     dtype=dtype_tmtc(hdr))
+                ccsds_hk += (buff,)
+
+        return ccsds_hk
+
     def navigation(self) -> dict:
         """Get navigation data."""
         res = {'att_': (), 'orb_': (), 'tilt': ()}
@@ -338,51 +393,8 @@ class HKTio:
             xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
 
-    def housekeeping(self, instrument: str = 'spx') -> tuple[np.ndarray, ...]:
-        """Get housekeeping telemetry data.
 
-        Parameters
-        ----------
-        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
-           name of PACE instrument: 'harp': HARP2, 'oci': OCI, 
-           'sc': Space Craft, 'spx': SPEXone.
-
-        Notes
-        -----
-        Current implementation only works for SPEXone.
-        """
-        ds_set = {'spx': 'SPEXone_HKT_packets',
-                  'sc': 'SC_HKT_packets',
-                  'oci': 'OCI_HKT_packets',
-                  'harp': 'HARP2_HKT_packets'}.get(instrument, None)
-
-        with h5py.File(self.filename) as fid:
-            if ds_set not in fid['housekeeping_data']:
-                return ()
-            res = fid['housekeeping_data'][ds_set][:]
-
-        hdr_dtype = np.dtype([('type', '>u2'),
-                              ('sequence', '>u2'),
-                              ('length', '>u2'),
-                              ('tai_sec', '>u4'),
-                              ('sub_sec', '>u2')])
-        ccsds_hk = ()
-        for packet in res:
-            try:
-                hdr = np.frombuffer(packet, count=1, offset=0,
-                                    dtype=hdr_dtype)[0]
-            except ValueError as exc:
-                print(f'[WARNING]: header reading error with "{exc}"')
-                break
-
-            if 0x320 <= ap_id(hdr) < 0x335:           # all valid APIDs
-                buff = np.frombuffer(packet, count=1, offset=0,
-                                     dtype=dtype_tmtc(hdr))
-                ccsds_hk += (buff,)
-
-        return ccsds_hk
-
-
+# - test module -------------------------
 def _test():
     data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')
     # data_dir1 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/21')
@@ -403,7 +415,6 @@ def _test():
 
     hkt = HKTio(flname)
     print(hkt.coverage())
-    return
 
     l1a_file = 'test_hkt_io.nc'
     with Dataset(l1a_file, 'w') as fid:

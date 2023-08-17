@@ -17,7 +17,6 @@ from enum import Enum
 import numpy as np
 from numpy import ma
 
-
 # This dictionary is only valid when raw counts are converted to physical units
 UNITS_DICT = {'ADC1_GAIN': 'Volt',
               'ADC1_OFFSET': 'Volt',

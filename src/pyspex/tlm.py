@@ -15,21 +15,24 @@ from __future__ import annotations
 __all__ = ['SPXtlm']
 
 import datetime
-from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
+
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from .hkt_io import HKTio, read_hkt_nav, check_coverage_nav
+from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_lib import (ap_id, dump_numhk, dump_science, grouping_flag,
-                      read_lv0_data)
+from .lv0_lib import ap_id, dump_numhk, dump_science, grouping_flag, read_lv0_data
 from .lv1_io import L1Aio, get_l1a_name
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass
 
 # - global parameters -----------------------
 FULLFRAME_BYTES = 2 * 2048 * 2048
@@ -46,8 +49,7 @@ def subsec2musec(sub_sec: int) -> int:
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
-                  verbose: bool) -> dict | None:
+def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime) -> dict | None:
     """Return dictionary with NomHk telemetry data."""
     if not ccsds_hk:
         return None
@@ -73,8 +75,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime,
             'tstamp': np.array(tstamp)}
 
 
-def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime,
-                   verbose: bool) -> dict | None:
+def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
     """Return dictionary with Science telemetry data."""
     if not ccsds_sci:
         return None
@@ -187,16 +188,61 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path):
 
 # - class SPXtlm ----------------------------
 class SPXtlm:
-    """Access/convert parameters of SPEXone Science telemetry data."""
+    """Access/convert parameters of SPEXone Science telemetry data.
+
+    Parameters
+    ----------
+    verbose :  bool, default=False
+       be verbose
+
+    Notes
+    -----
+    This class has the following methods::
+
+     - set_coverage(coverage: tuple[datetime, datetime] | None)
+     - hk_hdr() -> np.ndarray | None
+     - hk_tlm() -> np.ndarray | None
+     - hk_tstamp() -> np.ndarray | None
+     - sci_hdr() -> np.ndarray | None
+     - sci_tlm() -> np.ndarray | None
+     - sci_tstamp() -> np.ndarray | None
+     - images() -> tuple | None
+     - reference_date() -> datetime
+     - time_coverage_start() -> datetime
+     - time_coverage_end() -> datetime
+     - binning_table()
+     - start_integration()
+     - digital_offset() -> np.ndarray
+     - from_hkt(flnames: Path | list[Path], *,
+                instrument: str | None = None, dump: bool = False)
+     - from_lv0(flnames: Path | list[Path], *,
+                file_format: str, tlm_type: str | None = None,
+                debug: bool = False, dump: bool = False)
+     - from_l1a(flname: Path, *, tlm_type: str | None = None)
+     - set_selection(mode: str)
+     - gen_l1a(config: dataclass, mode: str)
+     - convert(key: str, tm_type: str = 'both') -> np.ndarray
+     - units(key: str) -> str
+    """
 
     def __init__(self, verbose: bool = False):
         """Initialize class SPXtlm."""
         self.file_list: list | None = None
         self._verbose: bool = verbose
+        self._coverage: tuple[datetime, datetime] | None = None
         self._hk = None
         self._sci = None
         self._selection = None
-        self._coverage = None
+
+    def set_coverage(self, coverage: tuple[datetime, datetime] | None):
+        """Store or update the class attribute `coverage`."""
+        if coverage is None:
+            self._coverage = None
+        elif self._coverage is None:
+            self._coverage = coverage
+        else:
+            self._coverage[0] = min(self._coverage[0], coverage[0])
+            self._coverage[1] = max(self._coverage[1], coverage[1])
 
     @property
     def hk_hdr(self) -> np.ndarray | None:
@@ -358,9 +404,7 @@ class SPXtlm:
         - [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
         - [binned] 2 * COADD + 1   (always valid)
         """
-        if self.sci_tlm is None:
-            return 0
-        if self.sci_tlm['ICUSWVER'][0] <= 0x123:
+        if self.sci_tlm is None or self.sci_tlm['ICUSWVER'][0] <= 0x123:
             return 0
 
         if np.bincount(self.binning_table).argmax() == 0:
@@ -401,12 +445,7 @@ class SPXtlm:
         ccsds_hk: tuple[np.ndarray] | tuple = ()
         for name in flnames:
             hkt = HKTio(name)
-            coverage = hkt.coverage()
-            if self._coverage is None:
-                self._coverage = coverage
-            else:
-                self._coverage[0] = min(self._coverage[0], coverage[0])
-                self._coverage[1] = max(self._coverage[1], coverage[1])
+            self.set_coverage(hkt.coverage())
             ccsds_hk += hkt.housekeeping(instrument)
 
         if not ccsds_hk:
@@ -420,7 +459,7 @@ class SPXtlm:
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
         epoch -= datetime.timedelta(seconds=leap_sec)
-        self._hk = extract_l0_hk(ccsds_hk, epoch, self._verbose)
+        self._hk = extract_l0_hk(ccsds_hk, epoch)
 
     def from_lv0(self, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
@@ -476,12 +515,12 @@ class SPXtlm:
 
         # collect Science telemetry data
         if tlm_type != 'hk':
-            self._sci = extract_l0_sci(ccsds_sci, epoch, self._verbose)
+            self._sci = extract_l0_sci(ccsds_sci, epoch)
         del ccsds_sci
 
         # collected NomHk telemetry data
         if tlm_type != 'sci':
-            self._hk = extract_l0_hk(ccsds_hk, epoch, self._verbose)
+            self._hk = extract_l0_hk(ccsds_hk, epoch)
 
     def from_l1a(self, flname: Path, *, tlm_type: str | None = None):
         """Read telemetry data from SPEXone Level-1A product.

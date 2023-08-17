@@ -19,7 +19,6 @@ import numpy as np
 from moniplot.lib.fig_info import FIGinfo
 from moniplot.mon_plot import MONplot
 from moniplot.tol_colors import tol_cmap
-
 from pyspex.binning_tables import BinningTables
 
 
