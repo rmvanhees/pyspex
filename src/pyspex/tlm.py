@@ -241,8 +241,8 @@ class SPXtlm:
         elif self._coverage is None:
             self._coverage = coverage
         else:
-            self._coverage[0] = min(self._coverage[0], coverage[0])
-            self._coverage[1] = max(self._coverage[1], coverage[1])
+            self._coverage = (min(self._coverage[0], coverage[0]),
+                              max(self._coverage[1], coverage[1]))
 
     @property
     def hk_hdr(self) -> np.ndarray | None:
