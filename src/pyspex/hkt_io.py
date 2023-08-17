@@ -225,7 +225,7 @@ class HKTio:
         self._reference_date = None
         self.filename = filename
         if not self.filename.is_file():
-            raise FileNotFoundError('HKT product does not exists')
+            raise FileNotFoundError(f'file {filename} not found')
         self._verbose = verbose
         self.set_reference_date()
 
