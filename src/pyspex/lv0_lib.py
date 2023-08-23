@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from pyspex.lib.tmtc_def import tmtc_dtype
+from .lib.tmtc_def import tmtc_dtype
 
 
 # - local functions --------------------------------

@@ -73,7 +73,7 @@ class CCSDShdr:
         ----
         This flag is encoded as::
 
-         00 : continuation segement
+         00 : continuation segment
          01 : first segment
          10 : last segment
          11 : unsegmented
@@ -83,7 +83,7 @@ class CCSDShdr:
     @property
     def sequence(self):
         """Return a counter which is incremented with each consecutive packet
-        of a particular ApID. This value will rollover to 0 after 0x3FF is
+        of a particular ApID. This value will roll over to 0 after 0x3FF is
         reached.
         """
         return self.hdr['sequence'] & 0x3FFF
@@ -106,7 +106,7 @@ class CCSDShdr:
         return self.hdr['sub_sec']
 
     def tstamp(self, epoch: datetime) -> datetime:
-        """Return time of the telemetry packtet.
+        """Return time of the telemetry packet.
 
         Parameters
         ----------

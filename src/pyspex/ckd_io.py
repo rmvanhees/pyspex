@@ -88,7 +88,7 @@ class CKDio:
         Parameters
         ----------
         compact :  bool
-           return date in isoformat if not compact else return 'YYYYmmddHHMMSS'
+           return date in iso-format if not compact else return 'YYYYmmddHHMMSS'
         """
         # pylint: disable=no-member
         date_str = self.fid.attrs['date_created'].decode()

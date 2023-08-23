@@ -32,7 +32,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset | None:
     target_cwl: str
        Target laser wavelength as provided in the filename
     gse_dir: Path
-       Path to the folder with the Excel file
+       Name of folder with the Excel file
     """
     wbook = load_workbook(gse_dir / 'SPEXOne_ALL_360-840nm.xlsx')
     wsheet = wbook.active

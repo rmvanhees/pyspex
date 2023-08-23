@@ -225,7 +225,7 @@ class BinningTables:
         Returns
         -------
         np.ndarray
-           Unbinned image data (no interpolation).
+           unbinned image data (no interpolation).
         """
         with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
             if f'Table_{table_id:03d}' not in fid.groups:

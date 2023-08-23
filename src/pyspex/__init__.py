@@ -15,4 +15,3 @@ from importlib.metadata import PackageNotFoundError, version
 
 with contextlib.suppress(PackageNotFoundError):
     __version__ = version(__name__)
-

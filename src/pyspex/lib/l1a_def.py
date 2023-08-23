@@ -31,7 +31,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     Parameters
     ----------
     dset : Variable
-       Variable containing a timestamp as seconds since reference date
+       NetCDF4 variable containing a timestamp as seconds since reference date
     ref_date : datetime.datetime
        Reference date
 
@@ -49,15 +49,15 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     In CDL the variable `time` will be defined as::
 
        double time(number_of_scans) ;
-          time:_FillValue = -32767. ;
+          time:_FillValue = -32767 ;
           time:long_name = "time" ;
           time:units = "seconds since 2022-03-21 00:00:00" ;
-          time:description = "Earth view mid time in seconds of day" ;
+          time:description = "Earth view mid-time in seconds of day" ;
           time:year = 2022 ;
           time:month = 3 ;
           time:day = 21 ;
-          time:valid_min = 0. ;
-          time:valid_max = 86401. ;
+          time:valid_min = 0 ;
+          time:valid_max = 86401 ;
 
     Note that '_FillValue', 'long_name' and 'description' are not set by
     this function.

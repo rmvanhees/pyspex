@@ -555,7 +555,7 @@ class CCSDSio:
         Parameters
         ----------
         packets_in: tuple
-           Tuple with mix of SPEXone telemetry packages
+           SPEXone telemetry packages
         ap_id: int
            SPEXone ApID
 
@@ -580,7 +580,7 @@ class CCSDSio:
         Parameters
         ----------
         packets_in: tuple
-           Tuple with science or house-keeping telemetry packages
+           Science or house-keeping telemetry packages
 
         Returns
         -------

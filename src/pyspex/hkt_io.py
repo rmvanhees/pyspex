@@ -149,7 +149,6 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
     att_coverage_start = ref_date + timedelta(seconds=sec_of_day)
     if verbose:
         print(f'PACE-HKT time-coverage-start: {att_coverage_start}')
-    dtime = (coverage_start - att_coverage_start).total_seconds()
     if coverage_start - att_coverage_start < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         print('[ERROR]: time coverage of navigation data starts'
@@ -164,7 +163,6 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
     att_coverage_end = ref_date + timedelta(seconds=sec_of_day)
     if verbose:
         print(f'[DEBUG]: PACE-HKT time-coverage-end: {att_coverage_end}')
-    dtime = (att_coverage_end - coverage_end).total_seconds()
     if att_coverage_end - coverage_end < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         print('[ERROR]: time coverage of navigation data ends'
@@ -293,8 +291,7 @@ class HKTio:
                         break
 
                     val = hdr.tstamp(EPOCH)
-                    if ((val > VALID_COVERAGE_MIN)
-                        & (val < VALID_COVERAGE_MAX)):
+                    if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
                         dt_list += (val,)
 
                 if not dt_list:
@@ -333,7 +330,7 @@ class HKTio:
         ----------
         instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
            name of PACE instrument: 'harp': HARP2, 'oci': OCI,
-           'sc': Space Craft, 'spx': SPEXone.
+           'sc': spacecraft, 'spx': SPEXone.
 
         Notes
         -----
@@ -414,8 +411,8 @@ def _test():
         # data_dir0 / 'PACE.20230720T232456.HKT.nc',
         # data_dir1 / 'PACE.20230721T000054.HKT.nc'
     ]
-    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/1957/12/31')
-    flname = data_dir / 'PACE.20230721T215555.HKT.nc'
+    # data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/1957/12/31')
+    # flname = data_dir / 'PACE.20230721T215555.HKT.nc'
     data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24')
     flname = data_dir / 'PACE.20240324T120009.HKT.nc'
 

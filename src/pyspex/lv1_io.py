@@ -50,7 +50,7 @@ def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
 
     if full_frame == 1:
         if cmv_outputmode != 3:
-            raise KeyError('Diagnostic mode with REG_CMV_OUTPMODE != 3')
+            raise KeyError('Diagnostic mode with REG_CMV_OUTPUTMODE != 3')
         return np.zeros(len(img_hk), dtype='i1')
 
     if full_frame == 2:

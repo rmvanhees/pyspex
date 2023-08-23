@@ -81,6 +81,8 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
         return None
 
     n_frames = 0
+    hdr_dtype = None
+    hk_dtype = None
     found_start_first = False
     for buf in ccsds_sci:
         hdr = buf['hdr'][0]
@@ -111,6 +113,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
 
     # extract data from ccsds_sci
     ii = 0
+    img = None
     found_start_first = False
     for buf in ccsds_sci:
         hdr = buf['hdr'][0]
@@ -124,7 +127,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
                               seconds=int(buf['icu_tm']['tai_sec'][0]),
                               microseconds=subsec2musec(
                                   buf['icu_tm']['sub_sec'][0])))
-            img: tuple[np.ndarray] = (buf['frame'][0],)
+            img = (buf['frame'][0],)
             continue
 
         if not found_start_first:
@@ -502,7 +505,6 @@ class SPXtlm:
             return
 
         # set epoch
-        leap_sec = 0
         if file_format == 'dsb':
             epoch = datetime.datetime(1958, 1, 1,
                                       tzinfo=datetime.timezone.utc)
