@@ -297,7 +297,6 @@ variables:
 		:publisher_url = "http://oceancolor.gsfc.nasa.gov" ;
 		:processing_level = "L1A" ;
 		:CDM_data_type = "swath" ;
-		:orbit_number = -1LL ;
 		:CDL_version_date = "2020-02-20" ;
 		:product_name = "PACE_SPEXONE.20240324T143103.L1A.nc" ;
 		:start_direction = "Ascending" ;

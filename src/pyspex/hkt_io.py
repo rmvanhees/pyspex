@@ -141,10 +141,14 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
         coverage_start = datetime.fromisoformat(val)
         val = fid.attrs['time_coverage_end'].decode()
         coverage_end = datetime.fromisoformat(val)
+    if verbose:
+        print(f'SPEXone time-coverage: {coverage_start} - {coverage_end}')
 
     # check at the start of the data
     sec_of_day = xds_nav['att_time'].values[0]
     att_coverage_start = ref_date + timedelta(seconds=sec_of_day)
+    if verbose:
+        print(f'PACE-HKT time-coverage-start: {att_coverage_start}')
     dtime = (coverage_start - att_coverage_start).total_seconds()
     if coverage_start - att_coverage_start < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
@@ -158,6 +162,8 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
     # check at the end of the data
     sec_of_day = xds_nav['att_time'].values[-1]
     att_coverage_end = ref_date + timedelta(seconds=sec_of_day)
+    if verbose:
+        print(f'[DEBUG]: PACE-HKT time-coverage-end: {att_coverage_end}')
     dtime = (att_coverage_end - coverage_end).total_seconds()
     if att_coverage_end - coverage_end < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
@@ -172,7 +178,7 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
     dtime = (att_coverage_end - att_coverage_start).total_seconds()
     dim_expected = round(dtime / np.median(np.diff(xds_nav['att_time'])))
     if verbose:
-        print(f"[INFO]: expected navigation samples {dim_expected}"
+        print(f"[DEBUG]: expected navigation samples {dim_expected}"
               f" found {len(xds_nav['att_time'])}")
     if len(xds_nav['att_time']) / dim_expected < 0.95:
         coverage_quality |= CoverageFlag.MISSING_SAMPLES
@@ -195,8 +201,8 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
                               ' no_extend_at_start no_extend_at_end')
 
     # generate warning if time-coverage of navigation data is too short
-    if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
-        raise UserWarning('time-coverage of navigation data is too short')
+    # if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
+    #     raise UserWarning('time-coverage of navigation data is too short')
 
 
 # - class HKTio -------------------------

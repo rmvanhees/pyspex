@@ -210,7 +210,7 @@ class L1Aio:
         '/engineering_data/HK_tlm_time': 0
     }
 
-    def __init__(self, product: str, ref_date: datetime.datetime,
+    def __init__(self, product: str, ref_date: datetime,
                  dims: dict, compression: bool = False):
         """Initialize access to a SPEXone Level-1 product."""
         self.product = Path(product)
@@ -242,7 +242,7 @@ class L1Aio:
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self):
+    def close(self) -> None:
         """Close product and check if required datasets are filled with data."""
         if self.fid is None:
             return
@@ -264,7 +264,7 @@ class L1Aio:
         """Provide epoch for SPEXone."""
         return self.__epoch
 
-    def get_dim(self, name: str):
+    def get_dim(self, name: str) -> int:
         """Get size of a netCDF4 dimension."""
         return self.fid.dimensions[name].size
 
@@ -385,15 +385,12 @@ class L1Aio:
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
-    def fill_global_attrs(self, orbit=-1,
-                          bin_size=None,
-                          inflight=False) -> None:
+    def fill_global_attrs(self, bin_size: str | None = None,
+                          inflight: bool = False) -> None:
         """Define global attributes in the SPEXone Level-1 products.
 
         Parameters
         ----------
-        orbit :  int, default=-1
-           Orbit revolution counter
         bin_size :  str, default=None
            Size of the nadir footprint (cross-track), include unit: e.g. '5km'
         inflight :  bool, default=False
@@ -401,7 +398,6 @@ class L1Aio:
         """
         dict_attrs = attrs_def(self.processing_level, inflight)
         dict_attrs['product_name'] = self.product.name
-        dict_attrs['orbit_number'] = orbit
         if bin_size is not None:
             dict_attrs['bin_size_at_nadir'] = bin_size
 
@@ -410,7 +406,7 @@ class L1Aio:
                 self.fid.setncattr(key, value)
 
     # - L1A specific functions ------------------------
-    def check_stored(self, allow_empty=False):
+    def check_stored(self, allow_empty: bool = False):
         """Check variables with the same first dimension have equal sizes.
 
         Parameters
@@ -452,7 +448,8 @@ class L1Aio:
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def fill_science(self, img_data, img_hk, img_id) -> None:
+    def fill_science(self, img_data: np.ndarray, img_hk: np.ndarray,
+                     img_id: np.ndarray) -> None:
         """Write Science data and housekeeping telemetry (Science).
 
         Parameters
@@ -487,7 +484,7 @@ class L1Aio:
         self.set_dset('/image_attributes/nr_coadditions',
                       _nr_coadditions_(img_hk))
 
-    def fill_nomhk(self, nomhk_data):
+    def fill_nomhk(self, nomhk_data: np.ndarray):
         """Write nominal house-keeping telemetry packets (NomHK).
 
         Parameters
