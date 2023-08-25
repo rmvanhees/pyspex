@@ -14,6 +14,8 @@ Environment::
 
    CKD_DIR:  directory with SPEXone CKD, default is CWD.
 """
+from __future__ import annotations
+
 import argparse
 from datetime import datetime, time, timezone
 from os import environ

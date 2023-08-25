@@ -8,7 +8,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Add ITOS EGSE information of OCAL measurements to a SPEXone level-1A product."""
+"""Add ITOS EGSE information of OCAL measurements to one SPEXone L1A product."""
+from __future__ import annotations
+
 import argparse
 from pathlib import Path
 

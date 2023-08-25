@@ -8,9 +8,12 @@
 #
 # License:  BSD-3-Clause
 """Defines the format of a SPEXone Level-1A product."""
+from __future__ import annotations
+
 __all__ = ['init_l1a']
 
-import datetime
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -18,6 +21,9 @@ import numpy as np
 from netCDF4 import Dataset, Variable
 
 from .tmtc_def import tmtc_dtype
+
+if TYPE_CHECKING:
+    import datetime
 
 # - global parameters ------------------------------
 ORBIT_DURATION = 5904  # seconds

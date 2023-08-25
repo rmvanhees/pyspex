@@ -14,6 +14,8 @@ References
 ----------
 * SPX1-TN-005 Telemetry and Telecommand Handbook, issue 14, date 15-Mar-2021
 """
+from __future__ import annotations
+
 __all__ = ['tmtc_dtype']
 
 import numpy as np

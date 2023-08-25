@@ -9,6 +9,8 @@
 #
 # License:  BSD-3-Clause
 """Command-line implementation of spx1_level01a."""
+from __future__ import annotations
+
 from pyspex.lv1_args import get_l1a_settings
 from pyspex.tlm import SPXtlm
 

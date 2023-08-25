@@ -15,6 +15,8 @@ The source for the latest version of tai-utc.dat is the US Naval Observatory:
 
    https://maia.usno.navy.mil/ser7/tai-utc.dat
 """
+from __future__ import annotations
+
 __all__ = ['get_leap_seconds']
 
 from datetime import datetime, timezone

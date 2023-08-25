@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Quick and dirty script to generate simple Quick-Look figures."""
+from __future__ import annotations
 
 import argparse
 from datetime import datetime, timedelta

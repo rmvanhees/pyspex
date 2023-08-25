@@ -9,6 +9,8 @@
 #
 # License:  BSD-3-Clause
 """Python script to store SPEXone Level-0 data in a Level-1A product."""
+from __future__ import annotations
+
 import sys
 from datetime import datetime
 from pathlib import Path

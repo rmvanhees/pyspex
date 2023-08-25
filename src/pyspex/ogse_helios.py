@@ -8,6 +8,8 @@
 #
 # License:  BSD-3-Clause
 """Defines the Helios spectrum, used at SRON."""
+from __future__ import annotations
+
 __all__ = ['helios_spectrum']
 
 import numpy as np

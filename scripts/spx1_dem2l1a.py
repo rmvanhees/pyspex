@@ -16,6 +16,8 @@ References
 ----------
 * SRON-SPEX-TN-2020-001_0_5_SPEXone_Detector_Characterization.pdf
 """
+from __future__ import annotations
+
 import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

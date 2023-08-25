@@ -11,6 +11,8 @@
 Contains the class `LV1gse` which checks EGSE/OGSE data and/or writes it to
 a SPEXone Level-1A product.
 """
+from __future__ import annotations
+
 __all__ = ['LV1gse']
 
 import numpy as np

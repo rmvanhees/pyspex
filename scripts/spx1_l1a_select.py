@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Script to copy an SPEXone level-1A product to a new level-1A product."""
+from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone

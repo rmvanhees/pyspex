@@ -9,6 +9,8 @@
 #
 # License:  BSD-3-Clause
 """Python script to generate a report from the CKD in a CKD product."""
+from __future__ import annotations
+
 import argparse
 
 from moniplot.lib.fig_info import FIGinfo
