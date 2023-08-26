@@ -28,8 +28,8 @@ def main() -> int:
 
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
-    logger = logging.getLogger('pyspex.gen_l1a')
-    logger.setLevel(config.verbose)
+    logging.getLogger().setLevel(config.verbose) # first, set the root logger
+    logger = logging.getLogger('pyspex.gen_l1a') # then initiate a descendant
     logger.debug('%s', config)
 
     # check input files (SEPXone level-0)

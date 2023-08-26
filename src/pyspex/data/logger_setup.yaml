@@ -34,12 +34,16 @@ handlers:
     encoding: utf8
 
 root:  # Loggers are organized in hierarchy - this is the root logger config
-    level: INFO
+    level: WARNING
     handlers: [console, file]  # Attaches both handler defined above
 
 # Define descendants of root logger
-pyspex.gen_l1a:
-   level: INFO
+pyspex:
+   level: WARNING 
    handlers: [console, file]
-   propagate: yes
+   propagate: true
 
+pyspex.gen_l1a:
+   level: WARNING
+   handlers: [console, file]
+   propagate: true
