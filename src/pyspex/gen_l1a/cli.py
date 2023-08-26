@@ -28,7 +28,7 @@ def main() -> int:
 
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
-    logger = logging.getLogger()
+    logger = logging.getLogger('pyspex.gen_l1a')
     logger.setLevel(config.verbose)
     logger.debug('%s', config)
 

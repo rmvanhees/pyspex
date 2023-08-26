@@ -37,9 +37,9 @@ root:  # Loggers are organized in hierarchy - this is the root logger config
     level: INFO
     handlers: [console, file]  # Attaches both handler defined above
 
-#loggers:  # Defines descendants of root logger
-#  mymodule:  # Logger for "mymodule"
-#    level: INFO
-#    handlers: [file]  # Will only use "file" handler defined above
-#    propagate: no  # Will not propagate logs to "root" logger
+# Define descendants of root logger
+pyspex.gen_l1a:
+   level: INFO
+   handlers: [console, file]
+   propagate: yes
 
