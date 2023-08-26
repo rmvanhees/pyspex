@@ -15,6 +15,7 @@ from __future__ import annotations
 __all__ = ['SPXtlm']
 
 import datetime
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
     from dataclasses import dataclass
 
 # - global parameters -----------------------
+module_logger = logging.getLogger('pyspex.tlm')
+
 FULLFRAME_BYTES = 2 * 2048 * 2048
 MCP_TO_SEC = 1e-7
 TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
@@ -102,7 +105,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
 
     # print(f'n_frames: {n_frames}')
     if n_frames == 0:
-        print('[WARNING]: no valid Science package found')
+        module_logger.warning('no valid Science package found')
         return None
 
     # allocate memory
@@ -149,8 +152,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
             'images': images}
 
 
-def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path],
-                       verbose: bool = False):
+def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
     """Add PACE navigation information from PACE_HKT products.
 
     Parameters
@@ -159,15 +161,13 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path],
        name of an existing L1A product.
     hkt_list :  list[Path]
        listing of files from which the navigation data has to be read
-    verbose :  bool, default=False
-       be verbose
     """
     # read PACE navigation data from HKT files.
     xds_nav = read_hkt_nav(hkt_list)
     # add PACE navigation data to existing Level-1A product.
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
-    check_coverage_nav(l1a_file, xds_nav, verbose)
+    check_coverage_nav(l1a_file, xds_nav)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path):
@@ -193,16 +193,11 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path):
 class SPXtlm:
     """Access/convert parameters of SPEXone Science telemetry data.
 
-    Parameters
-    ----------
-    verbose :  bool, default=False
-       be verbose
-
     Notes
     -----
     This class has the following methods::
 
-     - set_coverage(coverage: tuple[datetime, datetime] | None)
+     - set_coverage(coverage: tuple[datetime, datetime] | None) -> None
      - hk_hdr() -> np.ndarray | None
      - hk_tlm() -> np.ndarray | None
      - hk_tstamp() -> np.ndarray | None
@@ -213,25 +208,25 @@ class SPXtlm:
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
-     - binning_table()
-     - start_integration()
+     - binning_table() -> np.ndarray
+     - start_integration() -> np.ndarray
      - digital_offset() -> np.ndarray
      - from_hkt(flnames: Path | list[Path], *,
-                instrument: str | None = None, dump: bool = False)
+                instrument: str | None = None, dump: bool = False) -> None
      - from_lv0(flnames: Path | list[Path], *,
                 file_format: str, tlm_type: str | None = None,
-                debug: bool = False, dump: bool = False)
-     - from_l1a(flname: Path, *, tlm_type: str | None = None)
-     - set_selection(mode: str)
-     - gen_l1a(config: dataclass, mode: str)
+                debug: bool = False, dump: bool = False) -> None
+     - from_l1a(flname: Path, *, tlm_type: str | None = None) -> None
+     - set_selection(mode: str) -> None
+     - gen_l1a(config: dataclass, mode: str) -> None
      - convert(key: str, tm_type: str = 'both') -> np.ndarray
      - units(key: str) -> str
     """
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self) -> None:
         """Initialize class SPXtlm."""
+        self.logger = logging.getLogger(__name__)
         self.file_list: list | None = None
-        self._verbose: bool = verbose
         self._coverage: tuple[datetime, datetime] | None = None
         self._hk = None
         self._sci = None
@@ -308,9 +303,9 @@ class SPXtlm:
         return self._sci['tstamp'][self._selection['sci_mask']]
 
     @property
-    def images(self) -> tuple | None:
+    def images(self) -> tuple[np.ndarray, ...] | None:
         """Return image-frames of Science telemetry packages."""
-        if self._sci is None:
+        if self._sci is None or 'images' not in self._sci:
             return None
 
         if self._selection is None:
@@ -366,7 +361,7 @@ class SPXtlm:
         return tstamp[-1]
 
     @property
-    def binning_table(self):
+    def binning_table(self) -> np.ndarray:
         """Return binning table identifier (zero for full-frame images).
 
         Notes
@@ -394,7 +389,7 @@ class SPXtlm:
         return bin_tbl
 
     @property
-    def start_integration(self):
+    def start_integration(self) -> np.ndarray:
         """Return offset wrt start-of-integration [msec].
 
         Notes
@@ -425,7 +420,7 @@ class SPXtlm:
         return buff + 70
 
     def from_hkt(self, flnames: Path | list[Path], *,
-                 instrument: str | None = None, dump: bool = False):
+                 instrument: str | None = None, dump: bool = False) -> None:
         """Read telemetry data from a PACE HKT product.
 
         Parameters
@@ -466,7 +461,7 @@ class SPXtlm:
 
     def from_lv0(self, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
-                 debug: bool = False, dump: bool = False):
+                 debug: bool = False, dump: bool = False) -> None:
         """Read telemetry data from SPEXone Level-0 product.
 
         Parameters
@@ -496,8 +491,7 @@ class SPXtlm:
         self.file_list = flnames
         self._hk = None
         self._sci = None
-        ccsds_sci, ccsds_hk = read_lv0_data(
-            flnames, file_format, debug=debug, verbose=self._verbose)
+        ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
         if dump:
             dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
             dump_science(flnames[0].stem + '_sci.dump', ccsds_sci)
@@ -524,7 +518,7 @@ class SPXtlm:
         if tlm_type != 'sci':
             self._hk = extract_l0_hk(ccsds_hk, epoch)
 
-    def from_l1a(self, flname: Path, *, tlm_type: str | None = None):
+    def from_l1a(self, flname: Path, *, tlm_type: str | None = None) -> None:
         """Read telemetry data from SPEXone Level-1A product.
 
         Parameters
@@ -561,6 +555,7 @@ class SPXtlm:
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
                 self._sci = {
                     'tlm': fid['/science_data/detector_telemetry'][:],
+                    'images': fid['/science_data/detector_images'][:],
                     'tstamp': np.empty(len(seconds), dtype=TSTAMP_TYPE)
                 }
                 self._sci['tstamp']['tai_sec'] = seconds
@@ -586,7 +581,7 @@ class SPXtlm:
                     self._hk['tstamp'].append(
                         epoch + datetime.timedelta(seconds=sec))
 
-    def set_selection(self, mode: str):
+    def set_selection(self, mode: str) -> None:
         """Obtain image and housekeeping dimensions.
 
         Parameters
@@ -601,8 +596,7 @@ class SPXtlm:
                 return
 
             mps_list = np.unique(self.sci_tlm['MPS_ID'][sci_mask])
-            if self._verbose:
-                print(f'[DEBUG]: unique Diagnostic MPS: {mps_list}')
+            self.logger.debug('unique Diagnostic MPS: %s', mps_list)
             hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
 
             self._selection = {
@@ -622,8 +616,7 @@ class SPXtlm:
                 return
 
             mps_list = np.unique(self.sci_tlm['MPS_ID'][sci_mask])
-            if self._verbose:
-                print(f'[DEBUG]: unique Science MPS: {mps_list}')
+            self.logger.debug('unique Science MPS: %s', mps_list)
             hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
             self._selection = {
                 'sci_mask': sci_mask,
@@ -650,7 +643,7 @@ class SPXtlm:
                     'hk_packets': nr_hk}
             }
 
-    def gen_l1a(self, config: dataclass, mode: str):
+    def gen_l1a(self, config: dataclass, mode: str) -> None:
         """Generate a SPEXone Level-1A product."""
         self.set_selection(mode)
         if self._selection is None:
@@ -673,34 +666,27 @@ class SPXtlm:
                          self.time_coverage_end.isoformat(
                              timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
-            if self._verbose:
-                print('[DEBUG]: 1) initialized Level-1A product')
+            self.logger.debug('(1) initialized Level-1A product')
 
             self._fill_engineering(l1a)
-            if self._verbose:
-                print('[DEBUG]: 2) added engineering data')
+            self.logger.debug('(2) added engineering data')
             self._fill_science(l1a)
-            if self._verbose:
-                print('[DEBUG]: 3) added science data')
+            self.logger.debug('(3) added science data')
             self._fill_image_attrs(l1a, config.l0_format)
-            if self._verbose:
-                print('[DEBUG]: 4) added image attributes')
+            self.logger.debug('(4) added image attributes')
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
-            add_hkt_navigation(config.outdir / prod_name,
-                               config.hkt_list, self._verbose)
-            if self._verbose:
-                print('[DEBUG]: 5) added PACE navigation data')
+            add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
+            self.logger.debug('(5) added PACE navigation data')
 
         # add processor_configuration
         if config.yaml_fl:
             add_proc_conf(config.outdir / prod_name, config.yaml_fl)
 
-        if self._verbose:
-            print(f'[DEBUG]: successfully generated: {prod_name}')
+        self.logger.info('successfully generated: %s', prod_name)
 
-    def _fill_engineering(self, l1a):
+    def _fill_engineering(self, l1a) -> None:
         """Fill datasets in group '/engineering_data'."""
         if self.hk_tlm is None:
             return
@@ -715,7 +701,7 @@ class SPXtlm:
         l1a.set_dset('/engineering_data/temp_radiator',
                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
-    def _fill_science(self, l1a):
+    def _fill_science(self, l1a) -> None:
         """Fill datasets in group '/science_data'."""
         if self.sci_tlm is None:
             return
@@ -730,7 +716,7 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
-    def _fill_image_attrs(self, l1a, lv0_format: str):
+    def _fill_image_attrs(self, l1a, lv0_format: str) -> None:
         """Fill datasets in group '/image_attributes'."""
         if self.sci_tlm is None:
             return

@@ -23,15 +23,18 @@ from __future__ import annotations
 __all__ = ['ap_id', 'dtype_tmtc', 'dump_numhk', 'dump_science',
            'grouping_flag', 'packet_length', 'read_lv0_data', 'sequence']
 
+import logging
 from pathlib import Path
 
 import numpy as np
 
 from .lib.tmtc_def import tmtc_dtype
 
-
 # - local functions --------------------------------
-def _cfe_header_(flname: Path, verbose: bool = False) -> np.ndarray:
+module_logger = logging.getLogger('pyspex.lv0_lib')
+
+
+def _cfe_header_(flname: Path) -> np.ndarray:
     """Read cFE file header (only for file_format='dsb')."""
     # define numpy data-type to read the cFE file-header
     dtype_cfe = np.dtype([
@@ -46,8 +49,7 @@ def _cfe_header_(flname: Path, verbose: bool = False) -> np.ndarray:
         ('Filename', 'S32')])
 
     cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
-    if verbose:
-        print(f'[INFO]: content of cFE header "{cfe_hdr}"')
+    module_logger.debug('content of cFE header "%s"', cfe_hdr)
     return cfe_hdr
 
 
@@ -265,8 +267,7 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
 # - main function ----------------------------------
 def read_lv0_data(file_list: list[Path, ...],
                   file_format: str, *,
-                  debug: bool = False,
-                  verbose: bool = False) -> tuple[tuple, tuple]:
+                  debug: bool = False) -> tuple[tuple, tuple]:
     """Read level 0 data and return Science and telemetry data.
 
     Parameters
@@ -277,8 +278,6 @@ def read_lv0_data(file_list: list[Path, ...],
        type of CCSDS data
     debug : bool, default=False
        run in debug mode
-    verbose : bool, default=False
-       be verbose
 
     Returns
     -------
@@ -297,14 +296,13 @@ def read_lv0_data(file_list: list[Path, ...],
     for flname in file_list:
         offs = 0
         if file_format == 'dsb':
-            cfe_hdr = _cfe_header_(flname, verbose)
+            cfe_hdr = _cfe_header_(flname)
             offs += cfe_hdr['FileHeaderLength']
 
         buff_sci = ()          # Use chunking to speed-up memory allocation
         buff_hk = ()
         with open(flname, 'rb') as fp:
-            if verbose:
-                print(f'[INFO]: processing file "{flname}"')
+            module_logger.info('processing file "%s"', flname)
 
             # read CCSDS header and user data
             ccsds_data = fp.read()
@@ -313,7 +311,7 @@ def read_lv0_data(file_list: list[Path, ...],
                     hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
                                         dtype=hdr_dtype)[0]
                 except ValueError as exc:
-                    print(f'[WARNING]: header reading error with "{exc}"')
+                    module_logger.warning('header read error with "%s".', exc)
                     break
 
                 if debug:
@@ -370,9 +368,8 @@ def read_lv0_data(file_list: list[Path, ...],
         ccsds_hk += buff_hk
         del ccsds_data
 
-    if verbose:
-        print(f'[INFO]: number of Science packages {len(ccsds_sci)}')
-        print(f'[INFO]: number of Engineering packages {len(ccsds_hk)}')
+    module_logger.info('number of Science packages %d', len(ccsds_sci))
+    module_logger.info('number of Engineering packages %d', len(ccsds_hk))
 
     return ccsds_sci, ccsds_hk
 

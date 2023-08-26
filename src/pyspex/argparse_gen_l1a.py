@@ -7,15 +7,15 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Handle command-line parameters and settings from the YAML file
+"""Handle command-line parameters and settings from the YAML file
 for L1A generation.
 """
 from __future__ import annotations
 
-__all__ = ['get_l1a_settings']
+__all__ = ['argparse_gen_l1a']
 
 import argparse
+import logging
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -127,7 +127,7 @@ class Config:
 
     debug: bool = False
     dump: bool = False
-    verbose: bool = False
+    verbose: int = logging.NOTSET
     compression: bool = False
     outdir: Path = Path('.').resolve()
     outfile: str = ''
@@ -141,26 +141,64 @@ class Config:
 
 def __commandline_settings():
     """Parse command-line parameters."""
+    class NumericLevel(argparse.Action):
+        """Store verbosity level of the logger as a numeric value."""
+
+        def __call__(self, parser_local, namespace, values, option_string=None):
+            numeric_level = getattr(logging, values.upper(), None)
+            setattr(namespace, self.dest, numeric_level)
+
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='Generate PACE level-1A product from SPEXone level-0 data.',
         epilog=EPILOG_HELP)
-    parser.add_argument('-v', '--version', action='version',
-                        version='%(prog)s v' + pyspex_version())
-    parser.add_argument('--debug', action='store_true',
-                        help='be extra verbose, no output files generated')
-    parser.add_argument('--dump', action='store_true',
-                        help='dump CCSDS packet headers in ASCII')
-    parser.add_argument('--verbose', action='store_true', help='be verbose')
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s v' + pyspex_version())
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='be extra verbose, no output files generated')
+    parser.add_argument(
+        '--dump',
+        action='store_true',
+        help='dump CCSDS packet headers in ASCII')
+    parser.add_argument(
+        '--verbose',
+        nargs='?',
+        const='info',
+        default=logging.WARNING,
+        action=NumericLevel,
+        choices=('debug', 'info', 'warning', 'error'),
+        help='set verbosity level, default is "warning"')
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument('--eclipse', action='store_true', default=None)
-    group.add_argument('--no_eclipse', dest='eclipse', action='store_false')
-    parser.add_argument('--outdir', type=Path, default=None,
-                        help=('directory to store the generated'
-                              ' level-1A product(s)'))
+    group.add_argument(
+        '--eclipse',
+        action='store_true',
+        default=None,
+        help='assume that measurements are perfomed in eclipse')
+    group.add_argument(
+        '--no_eclipse',
+        dest='eclipse',
+        action='store_false',
+        help='assume that measurements are not perfomed in eclipse')
+    parser.add_argument(
+        '--outdir',
+        type=Path,
+        default=None,
+        help='directory to store the generated level-1A product(s)')
     # group = parser.add_mutually_exclusive_group(required=True)
-    parser.add_argument('--yaml', type=Path, default=None, help=ARG_YAML_HELP)
-    parser.add_argument('lv0_list', nargs='*', help=ARG_INPUT_HELP)
+    parser.add_argument(
+        '--yaml',
+        type=Path,
+        default=None,
+        help=ARG_YAML_HELP)
+    parser.add_argument(
+        'lv0_list',
+        nargs='*',
+        help=ARG_INPUT_HELP)
     args = parser.parse_args()
 
     config = Config()
@@ -169,7 +207,7 @@ def __commandline_settings():
     if args.dump:
         config.dump = True
     if args.verbose:
-        config.verbose = True
+        config.verbose = args.verbose
     if args.eclipse is not None:
         config.eclipse = args.eclipse
     if args.outdir is not None:
@@ -222,66 +260,8 @@ def __yaml_settings(config: dataclass) -> dataclass:
     return config
 
 
-def check_input_files(config: dataclass) -> dataclass:
-    """
-    Check level-0 files on existence and format.
-
-    Parameters
-    ----------
-    config :  dataclass
-
-    Returns
-    -------
-    dataclass
-       fields 'l0_format' {'raw', 'st3', 'dsb'} and 'l0_list' are updated.
-
-    Raises
-    ------
-    FileNotFoundError
-       If files are not found on the system.
-    TypeError
-       If determined file type differs from value supplied by user.
-    """
-    file_list = config.l0_list
-    if file_list[0].suffix == '.H':
-        if not file_list[0].is_file():
-            raise FileNotFoundError(file_list[0])
-        data_dir = file_list[0].parent
-        file_stem = file_list[0].stem
-        file_list = (sorted(data_dir.glob(file_stem + '.[0-9]'))
-                     + sorted(data_dir.glob(file_stem + '.?[0-9]'))
-                     + sorted(data_dir.glob(file_stem + '_hk.[0-9]')))
-        if not file_list:
-            raise FileNotFoundError('No measurement or housekeeping data found')
-
-        config.l0_format = 'raw'
-        config.l0_list = file_list
-    elif file_list[0].suffix == '.ST3':
-        if not file_list[0].is_file():
-            raise FileNotFoundError(file_list[0])
-        config.l0_format = 'st3'
-        config.l0_list = [file_list[0]]
-    elif file_list[0].suffix == '.spx':
-        file_list_out = []
-        for flname in file_list:
-            if not flname.is_file():
-                raise FileNotFoundError(flname)
-
-            if flname.suffix == '.spx':
-                file_list_out.append(flname)
-
-        if not file_list:
-            raise FileNotFoundError('No measurement or housekeeping data found')
-        config.l0_format = 'dsb'
-        config.l0_list = file_list_out
-    else:
-        raise TypeError('File not recognized as SPEXone level-0 data')
-
-    return config
-
-
 # - main function ----------------------------------
-def get_l1a_settings() -> dataclass:
+def argparse_gen_l1a() -> dataclass:
     """Obtain settings from both command-line and YAML file (when provided).
 
     Returns
@@ -290,10 +270,10 @@ def get_l1a_settings() -> dataclass:
        settings from both command-line arguments and YAML config-file
     """
     config = __commandline_settings()
-    if config.yaml_fl is not None:
-        if not config.yaml_fl.is_file():
-            raise FileNotFoundError('settings file not found')
+    if config.yaml_fl is None:
+        return config
 
-        config = __yaml_settings(config)
+    if not config.yaml_fl.is_file():
+        raise FileNotFoundError(config.yaml_fl)
 
-    return check_input_files(config)
+    return __yaml_settings(config)

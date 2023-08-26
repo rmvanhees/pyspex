@@ -50,6 +50,12 @@ documentation = "https://pyspex.readthedocs.io/en/latest/"
 # Changelog = ""
 "Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.dat", "*.yaml"]
+
 [tool.setuptools_scm]
 
 [tool.ruff]

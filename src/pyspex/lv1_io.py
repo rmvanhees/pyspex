@@ -12,6 +12,7 @@ from __future__ import annotations
 
 __all__ = ['L1Aio', 'get_l1a_name']
 
+import logging
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
     from dataclasses import dataclass
 
 # - global parameters -------------------
+module_logger = logging.getLogger('pyspex.lv1_io')
+
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 
@@ -35,17 +38,17 @@ ONE_DAY = 24 * 60 * 60
 def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
     """Return binning table identifier (zero for full-frame images)."""
     if 'REG_FULL_FRAME' not in img_hk.dtype.names:
-        print('[WARNING]: can not determine binning table identifier')
+        module_logger.warning('can not determine binning table identifier')
         return np.full(len(img_hk), -1, dtype='i1')
 
     full_frame = np.unique(img_hk['REG_FULL_FRAME'])
     if len(full_frame) > 1:
-        print('[WARNING]: value of REG_FULL_FRAME not unique')
+        module_logger.warning('value of REG_FULL_FRAME not unique')
     full_frame = img_hk['REG_FULL_FRAME'][-1]
 
     cmv_outputmode = np.unique(img_hk['REG_CMV_OUTPUTMODE'])
     if len(cmv_outputmode) > 1:
-        print('[WARNING]: value of REG_CMV_OUTPUTMODE not unique')
+        module_logger.warning('value of REG_CMV_OUTPUTMODE not unique')
     cmv_outputmode = img_hk['REG_CMV_OUTPUTMODE'][-1]
 
     if full_frame == 1:

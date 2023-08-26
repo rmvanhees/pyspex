@@ -12,6 +12,7 @@ from __future__ import annotations
 
 __all__ = ['HKTio', 'check_coverage_nav', 'read_hkt_nav']
 
+import logging
 from datetime import datetime, time, timedelta, timezone
 from enum import IntFlag, auto
 from pathlib import Path
@@ -29,6 +30,8 @@ from .lib.leap_sec import get_leap_seconds
 from .lv0_lib import ap_id, dtype_tmtc
 
 # - global parameters -----------------------
+module_logger = logging.getLogger('pyspex.hkt_io')
+
 EPOCH = datetime(1958, 1, 1, tzinfo=timezone.utc)
 
 # valid data coverage range
@@ -117,8 +120,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     return xds_nav.assign_attrs({'reference_date': rdate.isoformat()})
 
 
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
-                       verbose: bool = False):
+def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset):
     """Check time coverage of navigation data.
 
     Parameters
@@ -127,8 +129,6 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
        name of the SPEXone level-1A product
     xds_nav :  xr.Dataset
        xarray dataset with PACE navigation data
-    verbose :  bool, default=False
-       be verbose
     """
     coverage_quality = CoverageFlag.GOOD
     # obtain the reference date of the navigation data
@@ -141,46 +141,43 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset,
         coverage_start = datetime.fromisoformat(val)
         val = fid.attrs['time_coverage_end'].decode()
         coverage_end = datetime.fromisoformat(val)
-    if verbose:
-        print(f'SPEXone time-coverage: {coverage_start} - {coverage_end}')
+    module_logger.debug('SPEXone time-coverage: %s - %s',
+                        coverage_start, coverage_end)
 
     # check at the start of the data
     sec_of_day = xds_nav['att_time'].values[0]
     att_coverage_start = ref_date + timedelta(seconds=sec_of_day)
-    if verbose:
-        print(f'PACE-HKT time-coverage-start: {att_coverage_start}')
+    module_logger.debug('PACE-HKT time-coverage-start: %s', att_coverage_start)
     if coverage_start - att_coverage_start < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
-        print('[ERROR]: time coverage of navigation data starts'
-              ' after "time_coverage_start"')
+        module_logger.error('time coverage of navigation data starts'
+                            ' after "time_coverage_start"')
     if coverage_start - att_coverage_start < TIMEDELTA_MIN:
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-        print('[WARNING]: time coverage of navigation data starts'
-              f' after "time_coverage_start - {TIMEDELTA_MIN}"')
+        module_logger.warning('time coverage of navigation data starts after'
+                              ' "time_coverage_start - %s"', TIMEDELTA_MIN)
 
     # check at the end of the data
     sec_of_day = xds_nav['att_time'].values[-1]
     att_coverage_end = ref_date + timedelta(seconds=sec_of_day)
-    if verbose:
-        print(f'[DEBUG]: PACE-HKT time-coverage-end: {att_coverage_end}')
+    module_logger.debug('PACE-HKT time-coverage-end: %s', att_coverage_end)
     if att_coverage_end - coverage_end < timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
-        print('[ERROR]: time coverage of navigation data ends'
-              ' before "time_coverage_end"')
+        module_logger.error('time coverage of navigation data ends'
+                            ' before "time_coverage_end"')
     if att_coverage_end - coverage_end < TIMEDELTA_MIN:
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-        print('[WARNING]: time coverage of navigation data ends'
-              f' before "time_coverage_end + {TIMEDELTA_MIN}"')
+        module_logger.warning('time coverage of navigation data ends before'
+                              ' "time_coverage_end + %s"', TIMEDELTA_MIN)
 
     # check for completeness
     dtime = (att_coverage_end - att_coverage_start).total_seconds()
     dim_expected = round(dtime / np.median(np.diff(xds_nav['att_time'])))
-    if verbose:
-        print(f"[DEBUG]: expected navigation samples {dim_expected}"
-              f" found {len(xds_nav['att_time'])}")
+    module_logger.debug('expected navigation samples %d found %d',
+                        len(xds_nav['att_time']), dim_expected)
     if len(xds_nav['att_time']) / dim_expected < 0.95:
         coverage_quality |= CoverageFlag.MISSING_SAMPLES
-        print('[WARNING]: navigation data poorly sampled')
+        module_logger.warning('navigation data poorly sampled')
 
     # add coverage flag and attributes to Level-1A product
     with Dataset(l1a_file, 'a') as fid:
@@ -223,14 +220,13 @@ class HKTio:
      - navigation() -> dict
     """
 
-    def __init__(self, filename: Path, verbose=False) -> None:
+    def __init__(self, filename: Path) -> None:
         """Initialize access to a PACE HKT product."""
         self._coverage = None
         self._reference_date = None
         self.filename = filename
         if not self.filename.is_file():
             raise FileNotFoundError(f'file {filename} not found')
-        self._verbose = verbose
         self.set_reference_date()
 
     # ---------- PUBLIC FUNCTIONS ----------
@@ -287,7 +283,8 @@ class HKTio:
                     try:
                         hdr = CCSDShdr(packet)
                     except ValueError as exc:
-                        print(f'[WARNING]: header reading error with "{exc}"')
+                        module_logger.warning(
+                            'CCSDS header read error with "%s"', exc)
                         break
 
                     val = hdr.tstamp(EPOCH)
@@ -307,9 +304,9 @@ class HKTio:
                 if mx_val - mn_val > one_day:
                     indx_close_to_mn = (dt_arr - mn_val) <= one_day
                     indx_close_to_mx = (mx_val - dt_arr) <= one_day
-                    print('[WARNING]: coverage_range: '
-                          f'{mn_val}[{np.sum(indx_close_to_mn)}]'
-                          f' - {mx_val}[{np.sum(indx_close_to_mx)}]')
+                    module_logger.warning('coverage_range: %s[%d] - %s[%d]',
+                                   mn_val, np.sum(indx_close_to_mn),
+                                   mx_val, np.sum(indx_close_to_mx))
                     if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
                         mx_val = max(dt_arr[indx_close_to_mn])
                     else:
@@ -357,7 +354,8 @@ class HKTio:
                 hdr = np.frombuffer(packet, count=1, offset=0,
                                     dtype=hdr_dtype)[0]
             except ValueError as exc:
-                print(f'[WARNING]: header reading error with "{exc}"')
+                module_logger.warning(
+                    'CCSDS header read error with "%s"', exc)
                 break
 
             if 0x320 <= ap_id(hdr) < 0x335:           # all valid APIDs
@@ -380,7 +378,7 @@ class HKTio:
                 elif key.startswith('tilt'):
                     res['tilt'] += (h5_to_xr(gid[key]),)
                 else:
-                    print(f'[WARNING]: fail to find dataset {key}')
+                    module_logger.warning('fail to find dataset %s', key)
 
         # repair the dimensions
         xds1 = xr.merge(res['att_'], combine_attrs='drop_conflicts')
