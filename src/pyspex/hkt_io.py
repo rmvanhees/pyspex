@@ -120,7 +120,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     return xds_nav.assign_attrs({'reference_date': rdate.isoformat()})
 
 
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset):
+def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
     """Check time coverage of navigation data.
 
     Parameters
@@ -196,8 +196,10 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset):
                               ' no_extend_at_start no_extend_at_end')
 
     # generate warning if time-coverage of navigation data is too short
-    # if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
-    #     raise UserWarning('time-coverage of navigation data is too short')
+    if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
+        return False
+
+    return True
 
 
 # - class HKTio -------------------------
@@ -427,7 +429,7 @@ def _test():
     # add PACE navigation data to existing Level-1A product.
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
-    check_coverage_nav(Path(l1a_file), xds_nav, True)
+    check_coverage_nav(Path(l1a_file), xds_nav)
 
 
 if __name__ == '__main__':

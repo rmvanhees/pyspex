@@ -30,7 +30,8 @@ from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
 from .lv0_lib import ap_id, dump_numhk, dump_science, grouping_flag, read_lv0_data
-from .lv1_io import L1Aio, get_l1a_name
+from .lv1_io import L1Aio
+from .version import pyspex_version
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
@@ -152,7 +153,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
             'images': images}
 
 
-def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
+def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]) -> int:
     """Add PACE navigation information from PACE_HKT products.
 
     Parameters
@@ -167,7 +168,7 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]):
     # add PACE navigation data to existing Level-1A product.
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
-    check_coverage_nav(l1a_file, xds_nav)
+    return check_coverage_nav(l1a_file, xds_nav)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path):
@@ -643,17 +644,85 @@ class SPXtlm:
                     'hk_packets': nr_hk}
             }
 
+    def l1a_file(self, config: dataclass, mode: str) -> Path:
+        """Return filename of Level-1A product.
+
+        Parameters
+        ----------
+        config :  dataclass
+           Settings for the L0->l1A processing.
+        mode :  {'all', 'full', 'binned'}
+           Select Science packages with full-frame image or binned images
+
+        Returns
+        -------
+        Path
+           Filename of Level-1A product.
+
+        Notes
+        -----
+        === Inflight ===
+        L1A file name format, following the NASA ... naming convention:
+           PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
+        where
+           TTT is an optional data type (e.g., for the calibration data files)
+           YYYYMMDDTHHMMSS is time stamp of the first image in the file
+           Vnn file-version number (omitted when nn=1)
+        for example (file-version=1):
+           [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
+           [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
+           [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
+
+        === OCAL ===
+        L1A file name format:
+           SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
+        where
+           msm_id is the measurement identifier
+           YYYYMMDDTHHMMSS is time stamp of the first image in the file
+           vvvvvvv is the git-hash string of the pyspex repository
+        """
+        if config.outfile:
+            return config.outdir / config.outfile
+
+        if config.l0_format != 'raw':
+            if config.eclipse is None:
+                subtype = '_OCAL'
+            elif not config.eclipse:
+                subtype = ''
+            else:
+                subtype = '_CAL' if mode == 'full' else '_DARK'
+
+            prod_ver = '' if config.file_version == 1 \
+                else f'.V{config.file_version:02d}'
+
+            return config.outdir / (
+                f'PACE_SPEXONE{subtype}'
+                f'.{self.time_coverage_start.strftime("%Y%m%dT%H%M%S"):15s}'
+                f'.L1A{prod_ver}.nc')
+
+        # OCAL product name
+        # determine measurement identifier
+        msm_id = config.l0_list[0].stem
+        try:
+            new_date = datetime.strptime(
+                msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
+        except ValueError:
+            pass
+        else:
+            msm_id = msm_id[:-22] + new_date
+
+        return (config.outdir /
+                f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc')
+
     def gen_l1a(self, config: dataclass, mode: str) -> None:
         """Generate a SPEXone Level-1A product."""
         self.set_selection(mode)
         if self._selection is None:
             return
 
-        prod_mode = 'all' if config.eclipse is None else mode
+        l1a_file = self.l1a_file(config, mode)
         ref_date = self.reference_date
-        prod_name = get_l1a_name(config, prod_mode, self.time_coverage_start)
-        with L1Aio(config.outdir / prod_name,
-                   ref_date, self._selection['dims'],
+        with L1Aio(l1a_file, ref_date, self._selection['dims'],
                    compression=config.compression) as l1a:
             if self.hk_tlm is None:
                 l1a.set_attr('icu_sw_version',
@@ -675,16 +744,19 @@ class SPXtlm:
             self._fill_image_attrs(l1a, config.l0_format)
             self.logger.debug('(4) added image attributes')
 
-        # add PACE navigation information from HKT products
-        if config.hkt_list:
-            add_hkt_navigation(config.outdir / prod_name, config.hkt_list)
-            self.logger.debug('(5) added PACE navigation data')
-
         # add processor_configuration
         if config.yaml_fl:
-            add_proc_conf(config.outdir / prod_name, config.yaml_fl)
+            add_proc_conf(l1a_file, config.yaml_fl)
 
-        self.logger.info('successfully generated: %s', prod_name)
+        # add PACE navigation information from HKT products
+        if config.hkt_list:
+            status_ok = add_hkt_navigation(l1a_file, config.hkt_list)
+            self.logger.debug('(5) added PACE navigation data')
+
+        if not status_ok:
+            raise UserWarning('time-coverage of navigation data is too short')
+
+        self.logger.info('successfully generated: %s', l1a_file.name)
 
     def _fill_engineering(self, l1a) -> None:
         """Fill datasets in group '/engineering_data'."""

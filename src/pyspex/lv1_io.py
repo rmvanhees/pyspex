@@ -10,10 +10,9 @@
 """Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format."""
 from __future__ import annotations
 
-__all__ = ['L1Aio', 'get_l1a_name']
+__all__ = ['L1Aio']
 
 import logging
-from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -22,10 +21,10 @@ import numpy as np
 from .lib.attrs_def import attrs_def
 from .lib.l1a_def import init_l1a
 from .lib.tlm_utils import convert_hk
-from .version import pyspex_version
 
 if TYPE_CHECKING:
-    from dataclasses import dataclass
+    from datetime import datetime
+    pass
 
 # - global parameters -------------------
 module_logger = logging.getLogger('pyspex.lv1_io')
@@ -95,80 +94,6 @@ def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
 def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
     """Return number of coadditions."""
     return img_hk['REG_NCOADDFRAMES']
-
-
-def get_l1a_name(config: dataclass, mode: str,
-                 sensing_start: datetime) -> str:
-    """
-    Generate name of Level-1A product based on filename conventions described
-    below.
-
-    Parameters
-    ----------
-    config :  dataclass
-       Settings for the L0->l1A processing.
-    mode :  {'all', 'full', 'binned'}, default='all'
-       Select Science packages with full-frame image or binned images
-    sensing_start :  datetime
-       Start date/time of the first detector frame
-
-    Returns
-    -------
-    str
-        Name of Level-1A product.
-
-    Notes
-    -----
-    === Inflight ===
-    L1A file name format, following the NASA ... naming convention:
-       PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
-    where
-       TTT is an optional data type (e.g., for the calibration data files)
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       Vnn file-version number (omitted when nn=1)
-    for example (file-version=1):
-       [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
-       [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
-       [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
-
-    === OCAL ===
-    L1A file name format:
-       SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
-    where
-       msm_id is the measurement identifier
-       YYYYMMDDTHHMMSS is time stamp of the first image in the file
-       vvvvvvv is the git-hash string of the pyspex repository
-    """
-    if config.outfile:
-        return config.outfile
-
-    if config.l0_format != 'raw':
-        if config.eclipse is None:
-            subtype = '_OCAL'
-        elif not config.eclipse:
-            subtype = ''
-        else:
-            subtype = '_CAL' if mode == 'full' else '_DARK'
-
-        prod_ver = '' if config.file_version == 1\
-            else f'.V{config.file_version:02d}'
-
-        return (f'PACE_SPEXONE{subtype}'
-                f'.{sensing_start.strftime("%Y%m%dT%H%M%S"):15s}.L1A'
-                f'{prod_ver}.nc')
-
-    # OCAL product name
-    # determine measurement identifier
-    msm_id = config.l0_list[0].stem
-    try:
-        new_date = datetime.strptime(
-            msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
-    except ValueError:
-        pass
-    else:
-        msm_id = msm_id[:-22] + new_date
-
-    return f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc'
 
 
 # - class L1Aio -------------------------
