@@ -14,7 +14,7 @@ from __future__ import annotations
 
 __all__ = ['SPXtlm']
 
-import datetime
+import datetime as dt
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -53,7 +53,7 @@ def subsec2musec(sub_sec: int) -> int:
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime) -> dict | None:
+def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
     """Return dictionary with NomHk telemetry data."""
     if not ccsds_hk:
         return None
@@ -69,7 +69,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime) -> dict | None:
             continue
 
         tlm[ii] = buf['hk']
-        tstamp.append(epoch + datetime.timedelta(
+        tstamp.append(epoch + dt.timedelta(
             seconds=int(hdr['tai_sec'][ii]),
             microseconds=subsec2musec(hdr['sub_sec'][ii])))
         ii += 1
@@ -79,7 +79,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: datetime.datetime) -> dict | None:
             'tstamp': np.array(tstamp)}
 
 
-def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
+def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
     """Return dictionary with Science telemetry data."""
     if not ccsds_sci:
         return None
@@ -104,7 +104,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
             found_start_first = False
             n_frames += 1
 
-    # print(f'n_frames: {n_frames}')
+    # do we have any detector images?
     if n_frames == 0:
         module_logger.warning('no valid Science package found')
         return None
@@ -127,7 +127,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: datetime.datetime) -> dict | None:
             tlm_arr[ii] = buf['hk']
             tstamp[ii] = (buf['icu_tm']['tai_sec'][0],
                           buf['icu_tm']['sub_sec'][0],
-                          epoch + datetime.timedelta(
+                          epoch + dt.timedelta(
                               seconds=int(buf['icu_tm']['tai_sec'][0]),
                               microseconds=subsec2musec(
                                   buf['icu_tm']['sub_sec'][0])))
@@ -228,12 +228,12 @@ class SPXtlm:
         """Initialize class SPXtlm."""
         self.logger = logging.getLogger(__name__)
         self.file_list: list | None = None
-        self._coverage: tuple[datetime, datetime] | None = None
+        self._coverage: tuple[dt.datetime, dt.datetime] | None = None
         self._hk = None
         self._sci = None
         self._selection = None
 
-    def set_coverage(self, coverage: tuple[datetime, datetime] | None):
+    def set_coverage(self, coverage: tuple[dt.datetime, dt.datetime] | None):
         """Store or update the class attribute `coverage`."""
         if coverage is None:
             self._coverage = None
@@ -322,25 +322,25 @@ class SPXtlm:
         """Return valid timestamps from Science or NomHk packages."""
         if self.sci_tstamp is None \
                 or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
-            indx = self.hk_tstamp > datetime.datetime(
-                2020, 1, 1, 1, tzinfo=datetime.timezone.utc)
+            indx = self.hk_tstamp > dt.datetime(
+                2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             return self.hk_tstamp[indx] if indx.size > 0 else None
 
         indx = np.where(self.sci_tstamp['tai_sec'] > TSTAMP_MIN)[0]
         return self.sci_tstamp['dt'][indx] if indx.size > 0 else None
 
     @property
-    def reference_date(self) -> datetime.datetime:
+    def reference_date(self) -> dt.datetime:
         """Return date of reference day (tzone aware)."""
         tstamp = self.__get_valid_tstamps()
         if tstamp is None:
             raise ValueError('no valid timestamps found')
 
-        return datetime.datetime.combine(
-                tstamp[0].date(), datetime.time(0), tstamp[0].tzinfo)
+        return dt.datetime.combine(
+                tstamp[0].date(), dt.time(0), tstamp[0].tzinfo)
 
     @property
-    def time_coverage_start(self) -> datetime.datetime:
+    def time_coverage_start(self) -> dt.datetime:
         """Return a string for the time_coverage_start."""
         if self._coverage is not None:
             return self._coverage[0]
@@ -351,7 +351,7 @@ class SPXtlm:
         return tstamp[0]
 
     @property
-    def time_coverage_end(self) -> datetime.datetime:
+    def time_coverage_end(self) -> dt.datetime:
         """Return a string for the time_coverage_end."""
         if self._coverage is not None:
             return self._coverage[1]
@@ -453,11 +453,10 @@ class SPXtlm:
         if dump:
             dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
 
-        epoch = datetime.datetime(1958, 1, 1,
-                                  tzinfo=datetime.timezone.utc)
+        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
-        epoch -= datetime.timedelta(seconds=leap_sec)
+        epoch -= dt.timedelta(seconds=leap_sec)
         self._hk = extract_l0_hk(ccsds_hk, epoch)
 
     def from_lv0(self, flnames: Path | list[Path], *,
@@ -501,14 +500,13 @@ class SPXtlm:
 
         # set epoch
         if file_format == 'dsb':
-            epoch = datetime.datetime(1958, 1, 1,
-                                      tzinfo=datetime.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1,
+                                      tzinfo=dt.timezone.utc)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
-            epoch -= datetime.timedelta(seconds=leap_sec)
+            epoch -= dt.timedelta(seconds=leap_sec)
         else:
-            epoch = datetime.datetime(1970, 1, 1,
-                                      tzinfo=datetime.timezone.utc)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
         # collect Science telemetry data
         if tlm_type != 'hk':
@@ -545,13 +543,10 @@ class SPXtlm:
                     # pylint: disable=no-member
                     _ = dset.attrs['units'].index(b'1958')
                 except ValueError:
-                    epoch = datetime.datetime(1970, 1, 1,
-                                              tzinfo=datetime.timezone.utc)
+                    epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
                 else:
-                    epoch = datetime.datetime(1958, 1, 1,
-                                              tzinfo=datetime.timezone.utc)
-                    epoch -= datetime.timedelta(
-                        seconds=get_leap_seconds(seconds[0]))
+                    epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+                    epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
 
                 subsec = fid['/image_attributes/icu_time_subsec'][:]
                 self._sci = {
@@ -563,7 +558,7 @@ class SPXtlm:
                 self._sci['tstamp']['sub_sec'] = subsec
                 _dt = []
                 for ii, sec in enumerate(seconds):
-                    _dt.append(epoch + datetime.timedelta(
+                    _dt.append(epoch + dt.timedelta(
                         seconds=int(sec),
                         milliseconds=-self.start_integration[ii],
                         microseconds=subsec2musec(subsec[ii])))
@@ -577,10 +572,9 @@ class SPXtlm:
                 dset = fid['/engineering_data/HK_tlm_time']
                 # pylint: disable=no-member
                 ref_date = dset.attrs['units'].decode()[14:] + 'Z'
-                epoch = datetime.datetime.fromisoformat(ref_date)
+                epoch = dt.datetime.fromisoformat(ref_date)
                 for sec in dset[:]:
-                    self._hk['tstamp'].append(
-                        epoch + datetime.timedelta(seconds=sec))
+                    self._hk['tstamp'].append(epoch + dt.timedelta(seconds=sec))
 
     def set_selection(self, mode: str) -> None:
         """Obtain image and housekeeping dimensions.
@@ -704,7 +698,7 @@ class SPXtlm:
         # determine measurement identifier
         msm_id = config.l0_list[0].stem
         try:
-            new_date = datetime.strptime(
+            new_date = dt.datetime.strptime(
                 msm_id[-22:], '%y-%j-%H:%M:%S.%f').strftime('%Y%m%dT%H%M%S.%f')
         except ValueError:
             pass
