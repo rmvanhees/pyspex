@@ -360,10 +360,15 @@ class HKTio:
                     'CCSDS header read error with "%s"', exc)
                 break
 
-            if 0x320 <= ap_id(hdr) < 0x335:           # all valid APIDs
+            dtype_apid = dtype_tmtc(hdr)
+            if dtype_apid is not None:           # all valid APIDs
                 buff = np.frombuffer(packet, count=1, offset=0,
-                                     dtype=dtype_tmtc(hdr))
+                                     dtype=dtype_apid)
                 ccsds_hk += (buff,)
+            else:
+                module_logger.warning(
+                     'package with APID 0x%x and length %d is not implemented',
+                     ap_id(hdr), hdr['length'])
 
         return ccsds_hk
 
@@ -399,25 +404,39 @@ class HKTio:
 
 # - test module -------------------------
 def _test():
+    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/14')
+    file_list = data_dir.glob('PACE.202307??T??????.HKT.nc')
+    for flname in sorted(file_list):
+        print(flname)
+        hkt = HKTio(flname)
+        hkt.housekeeping()
+    # return
     data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')
-    # data_dir1 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/21')
+    data_dir1 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/21')
     file_list = [
         data_dir0 / 'PACE.20230720T230606.HKT.nc',
         data_dir0 / 'PACE.20230720T230910.HKT.nc',
         data_dir0 / 'PACE.20230720T231216.HKT.nc',
         data_dir0 / 'PACE.20230720T231526.HKT.nc',
         data_dir0 / 'PACE.20230720T231836.HKT.nc',
-        # data_dir0 / 'PACE.20230720T232146.HKT.nc',
-        # data_dir0 / 'PACE.20230720T232456.HKT.nc',
-        # data_dir1 / 'PACE.20230721T000054.HKT.nc'
+        data_dir0 / 'PACE.20230720T232146.HKT.nc',
+        data_dir0 / 'PACE.20230720T232456.HKT.nc',
+        data_dir1 / 'PACE.20230721T000054.HKT.nc'
     ]
-    # data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/1957/12/31')
-    # flname = data_dir / 'PACE.20230721T215555.HKT.nc'
-    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24')
-    flname = data_dir / 'PACE.20240324T120009.HKT.nc'
+    for flname in file_list:
+        hkt = HKTio(flname)
+        print(hkt.coverage())
+        hkt.housekeeping()
+    # return
 
-    hkt = HKTio(flname)
-    print(hkt.coverage())
+    data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')
+    file_list = [
+        data_dir0 / 'PACE.20230720T230606.HKT.nc',
+        data_dir0 / 'PACE.20230720T230910.HKT.nc',
+        data_dir0 / 'PACE.20230720T231216.HKT.nc',
+        data_dir0 / 'PACE.20230720T231526.HKT.nc',
+        data_dir0 / 'PACE.20230720T231836.HKT.nc'
+    ]
 
     l1a_file = 'test_hkt_io.nc'
     with Dataset(l1a_file, 'w') as fid:

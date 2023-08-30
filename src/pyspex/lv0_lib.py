@@ -11,7 +11,7 @@
 
 Routines to read and write SPEXone CCSDS data:
 
-   `dtype_tmtc`, `read_lv0_data`, `dump_numhk`, `dump_science`
+   `dtype_tmtc`, `read_lv0_data`, `dump_hkt`, `dump_science`
 
 Handy routines to convert CCSDS parameters:
 
@@ -20,7 +20,7 @@ Handy routines to convert CCSDS parameters:
 """
 from __future__ import annotations
 
-__all__ = ['ap_id', 'dtype_tmtc', 'dump_numhk', 'dump_science',
+__all__ = ['ap_id', 'dtype_tmtc', 'dump_hkt', 'dump_science',
            'grouping_flag', 'packet_length', 'read_lv0_data', 'sequence']
 
 import logging
@@ -103,11 +103,11 @@ def _dtype_packet_(file_format: str) -> np.dtype | None:
 
 
 def _fix_hk24_(sci_hk: np.ndarray):
-    """
-    Correct 32-bit integers in the Science HK which originate from
-    24-bit integers in the detector register values.
+    """Correct 32-bit values in the Science HK.
 
-    In addition:
+    Which originate from 24-bit values in the detector register parameters.
+
+    In addition::
 
     - copy the first 4 bytes of 'DET_CHENA' to 'DET_ILVDS'
     - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
@@ -240,28 +240,88 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
     np.dtype
         numpy dtype of CCSDS TmTC package or None if APID is not implemented
     """
-    return {0x320: np.dtype([('hdr', hdr.dtype),
+    return {0x320: np.dtype([('hdr', hdr.dtype),           # NomHk
                              ('hk', tmtc_dtype(0x320))]),
-            0x322: np.dtype([('hdr', hdr.dtype),
+            0x322: np.dtype([('hdr', hdr.dtype),           # DemHk
                              ('hk', tmtc_dtype(0x322))]),
-            0x331: np.dtype([('hdr', hdr.dtype),
+            0x331: np.dtype([('hdr', hdr.dtype),           # TcAccept
                              ('TcPacketId', '>u2'),
                              ('TcSeqControl', '>u2')]),
-            0x332: np.dtype([('hdr', hdr.dtype),
+            0x332: np.dtype([('hdr', hdr.dtype),           # TcReject
                              ('TcPacketId', '>u2'),
                              ('TcSeqControl', '>u2'),
-                             ('TcErrorCode', '>u2'),
+                             ('TcRejectCode', '>u2'),
                              ('RejectParameter1', '>u2'),
                              ('RejectParameter2', '>u2')]),
-            0x333: np.dtype([('hdr', hdr.dtype),
+            0x333: np.dtype([('hdr', hdr.dtype),           # TcExecute
                              ('TcPacketId', '>u2'),
                              ('TcSeqControl', '>u2')]),
-            0x334: np.dtype([('hdr', hdr.dtype),
+            0x334: np.dtype([('hdr', hdr.dtype),           # TcFail
                              ('TcPacketId', '>u2'),
                              ('TcSeqControl', '>u2'),
-                             ('TcErrorCode', '>u2'),
+                             ('TcFailCode', '>u2'),
                              ('FailParameter1', '>u2'),
-                             ('FailParameter2', '>u2')])}.get(ap_id(hdr), None)
+                             ('FailParameter2', '>u2')]),
+            0x335: np.dtype([('hdr', hdr.dtype),           # EventRp
+                             ('Event_ID', 'u1'),
+                             ('Event_Sev', 'u1'),
+                             ('Word1', '>u2'),
+                             ('Word2', '>u2'),
+                             ('Word3', '>u2'),
+                             ('Word4', '>u2'),
+                             ('Word5', '>u2'),
+                             ('Word6', '>u2'),
+                             ('Word7', '>u2'),
+                             ('Word8', '>u2')]),
+            0x340: np.dtype([('hdr', hdr.dtype),           # MemDump
+                             ('Image_ID', 'u1'),
+                             ('_FillerByte', 'u1'),
+                             ('Address32', '>u4'),
+                             ('Length', '>u4'),
+                             ('Data', 'u1', (2036,))]),
+            0x341: np.dtype([('hdr', hdr.dtype),           # MemCheckRp
+                             ('Image_ID', 'u1'),
+                             ('_FillerByte', 'u1'),
+                             ('Address32', '>u4'),
+                             ('Length', '>u4'),
+                             ('CheckSum', '>u4')]),
+            0x33d: np.dtype([('HTR_1_IsEna', 'u1'),        # ThemTableRp
+                             ('HTR_1_AtcCorMan', 'u1'),
+                             ('HTR_1_THMCH', 'u1'),
+                             ('_FillerByte1', 'u1'),
+                             ('HTR_1_ManOutput', '>u2'),
+                             ('HTR_1_ATC_SP', '>u4'),
+                             ('HTR_1_ATC_P', '>u4'),
+                             ('HTR_1_ATC_I', '>u4'),
+                             ('HTR_1_ATC_I_INIT', '>u4'),
+                             ('HTR_2_IsEna', 'u1'),
+                             ('HTR_2_AtcCorMan', 'u1'),
+                             ('HTR_2_THMCH', 'u1'),
+                             ('_FillerByte2', 'u1'),
+                             ('HTR_2_ManOutput', '>u2'),
+                             ('HTR_2_ATC_SP', '>u4'),
+                             ('HTR_2_ATC_P', '>u4'),
+                             ('HTR_2_ATC_I', '>u4'),
+                             ('HTR_2_ATC_I_INIT', '>u4'),
+                             ('HTR_3_IsEna', 'u1'),
+                             ('HTR_3_AtcCorMan', 'u1'),
+                             ('HTR_3_THMCH', 'u1'),
+                             ('_FillerByte3', 'u1'),
+                             ('HTR_3_ManOutput', '>u2'),
+                             ('HTR_3_ATC_SP', '>u4'),
+                             ('HTR_3_ATC_P', '>u4'),
+                             ('HTR_3_ATC_I', '>u4'),
+                             ('HTR_3_ATC_I_INIT', '>u4'),
+                             ('HTR_4_IsEna', 'u1'),
+                             ('HTR_4_AtcCorMan', 'u1'),
+                             ('HTR_4_THMCH', 'u1'),
+                             ('_FillerByte4', 'u1'),
+                             ('HTR_4_ManOutput', '>u2'),
+                             ('HTR_4_ATC_SP', '>u4'),
+                             ('HTR_4_ATC_P', '>u4'),
+                             ('HTR_4_ATC_I', '>u4'),
+                             ('HTR_4_ATC_I_INIT', '>u4')])
+            }.get(ap_id(hdr), None)
 
 
 # - main function ----------------------------------
@@ -355,7 +415,7 @@ def read_lv0_data(file_list: list[Path, ...],
                                                      offset=offs, dtype='>u2')
                     buff_sci += (buff.copy(),)
                     offs += nbytes
-                elif 0x320 <= ap_id(hdr) < 0x335:           # other valid APIDs
+                elif 0x320 <= ap_id(hdr) <= 0x335:           # other valid APIDs
                     buff = np.frombuffer(ccsds_data, count=1, offset=offs,
                                          dtype=dtype_tmtc(hdr))
                     buff_hk += (buff,)
@@ -374,8 +434,8 @@ def read_lv0_data(file_list: list[Path, ...],
     return ccsds_sci, ccsds_hk
 
 
-def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
-    """Dump telemetry header info (NomHk)."""
+def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]):
+    """Dump header info of the SPEXone housekeeping telemetry packets."""
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
@@ -385,23 +445,24 @@ def dump_numhk(flname: str, ccsds_hk: tuple[np.ndarray]):
                    f" {sequence(hdr):7d} {packet_length(hdr):6d}"
                    f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
 
-            if ap_id(hdr) == 0x320:
-                _hk = buf['hk'][0]
-                msg += f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}"
-            elif ap_id(hdr) in (0x331, 0x332, 0x333, 0x334):
-                msg += f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
-                if ap_id(hdr) == 0x332:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+            _hk = buf['hk'][0] if 'hk' in buf else None
+            msg += {0x320: f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}",
+                    0x331: f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}",
+                    0x332: (f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
+                            f" {bin(buf['TcRejectCode'][0])}"
                             f" {buf['RejectParameter1'][0]}"
-                            f" {buf['RejectParameter2'][0]}")
-                if ap_id(hdr) == 0x334:
-                    msg += (f" {bin(buf['TcErrorCode'][0])}"
+                            f" {buf['RejectParameter2'][0]}"),
+                    0x333: f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}",
+                    0x334: (f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
+                            f" {bin(buf['TcFailCode'][0])}"
                             f" {buf['FailParameter1'][0]}"
-                            f" {buf['FailParameter2'][0]}")
+                            f" {buf['FailParameter2'][0]}"),
+                    0x335: (f" {-1:8x} {-1:6d} {buf['Event_ID'][0]:d}"
+                            f" {buf['Event_Sev'][0]}")}.get(ap_id(hdr), '')
             fp.write(msg + '\n')
 
 
-def dump_science(flname: str, ccsds_sci: tuple[np.ndarray]):
+def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]):
     """Dump telemetry header info (Science)."""
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'

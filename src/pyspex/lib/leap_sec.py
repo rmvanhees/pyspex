@@ -8,8 +8,7 @@
 #
 # Author: Sean Bailey - DAAC Manager, OB.DAAC, NASA/GSFC Code 619
 # License:  BSD-3-Clause
-"""
-Python script to determine the number of leap seconds for given timestamp.
+"""Python script to determine the number of leap seconds for given timestamp.
 
 The source for the latest version of tai-utc.dat is the US Naval Observatory:
 
@@ -33,9 +32,9 @@ import julian
 
 
 def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
-    """
-    Return the number of elapsed leap seconds given a TAI time in seconds
-    Requires tai-utc.dat.
+    """Return the number of elapsed leap seconds given a TAI time in seconds.
+
+    Requires the file tai-utc.dat.
     """
     # determine location of the file 'tai-utc.dat'
     ocvarroot = environ['OCVARROOT'] if 'OCVARROOT' in environ else None

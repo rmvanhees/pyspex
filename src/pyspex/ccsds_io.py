@@ -306,8 +306,9 @@ class CCSDSio:
 
     @staticmethod
     def fix_dem_hk24(dem_hk):
-        """Correct 32-bit integers in the DemHK which originate from
-        24-bit integers in the detector register values.
+        """Correct 32-bit values in the DemHk.
+
+        Which originate from 24-bit values of the detector register parameters.
 
         Parameters
         ----------
@@ -327,10 +328,11 @@ class CCSDSio:
 
     @staticmethod
     def fix_sci_hk24(sci_hk):
-        """Correct 32-bit integers in the Science HK which originate from
-        24-bit integers in the detector register values.
+        """Correct 32-bit values in the Science HK.
 
-        In addition:
+        Which originate from 24-bit values in the detector register parameters.
+        In addition::
+
          - copy the first 4 bytes of DET_CHENA to DET_ILVDS
          - parameter 'REG_BINNING_TABLE_START' was writen in little-endian
 

@@ -18,9 +18,11 @@ import numpy as np
 
 
 class CCSDShdr:
-    """Read CCSDS telemetry packet structure which consists of the
-    primary header: version, type, apid, grouping flag, sequence count
-    and packet length, and the secondary header: tai_sec and sub_sec.
+    """Read CCSDS telemetry packet structure.
+
+    Which consists of the primary header: version, type, apid, grouping flag,
+    sequence count and packet length, and the secondary header: tai_sec and
+    sub_sec.
 
     Parameters
     ----------
@@ -82,16 +84,19 @@ class CCSDShdr:
 
     @property
     def sequence(self):
-        """Return a counter which is incremented with each consecutive packet
-        of a particular ApID. This value will roll over to 0 after 0x3FF is
-        reached.
+        """Return the sequence counter.
+
+        This counter is incremented with each consecutive packet of a
+        particular ApID. This value will roll over to 0 after 0x3FF is reached.
         """
         return self.hdr['sequence'] & 0x3FFF
 
     @property
     def packet_length(self):
-        """Returns a value equal to the number of bytes in the Secondary
-        header plus User Data minus 1.
+        """Returns the CCSDS packet-length.
+
+        Which is equal to the number of bytes in the Secondary header plus
+        User Data minus 1.
         """
         return self.hdr['length']
 

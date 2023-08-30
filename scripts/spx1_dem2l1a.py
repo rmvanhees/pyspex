@@ -8,8 +8,8 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Python implementation to convert SPEXone DEM measurements to L1A format.
+"""Convert SPEXone DEM measurements to L1A format.
+
 The DEM measurements are performed at SRON between 17-10-2019 and 13-12-2019.
 
 References

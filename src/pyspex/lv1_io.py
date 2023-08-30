@@ -7,14 +7,14 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Contains the class `L1Aio` to write PACE/SPEXone data in Level-1A format."""
+"""Contains the class `L1Aio` to write PACE/SPEXone data in Level-1a format."""
 from __future__ import annotations
 
 __all__ = ['L1Aio']
 
 import logging
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -24,10 +24,10 @@ from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     from datetime import datetime
-    pass
+
 
 # - global parameters -------------------
-module_logger = logging.getLogger('pyspex.lv1_io')
+module_logger = logging.getLogger('pyspex.l1a_io')
 
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
@@ -117,8 +117,6 @@ class L1Aio:
        Use compression on dataset /science_data/detector_images
     """
 
-    product: Path
-    processing_level = 'L1A'
     dset_stored = {
         '/science_data/detector_images': 0,
         '/science_data/detector_telemetry': 0,
@@ -138,8 +136,8 @@ class L1Aio:
         '/engineering_data/HK_tlm_time': 0
     }
 
-    def __init__(self, product: str, ref_date: datetime,
-                 dims: dict, compression: bool = False):
+    def __init__(self, product: Path | str, ref_date: datetime,
+                 dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
         self.product = Path(product)
         self.fid = None
@@ -148,20 +146,17 @@ class L1Aio:
         self.__epoch = ref_date
 
         # initialize Level-1 product
-        if self.processing_level == 'L1A':
-            self.fid = init_l1a(product, ref_date, dims, compression)
-        else:
-            raise KeyError('valid processing levels are: L1A')
+        self.fid = init_l1a(product, ref_date, dims, compression)
         for key in self.dset_stored:
             self.dset_stored[key] = 0
 
-    def __iter__(self):
+    def __iter__(self) -> None:
         """Allow iteration."""
         for attr in sorted(self.__dict__):
             if not attr.startswith('__'):
                 yield attr
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         """Initiate the context manager."""
         return self
 
@@ -197,16 +192,16 @@ class L1Aio:
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------
-    def get_attr(self, name: str, ds_name=None):
+    def get_attr(self, name: str, ds_name: str | None = None) -> None:
         """Read data of an attribute.
 
         Global or attached to a group or variable.
 
         Parameters
         ----------
-        name : string
+        name : str
            name of the attribute
-        ds_name : string, default=None
+        ds_name : str, default=None
            name of dataset to which the attribute is attached
 
         Returns
@@ -227,7 +222,8 @@ class L1Aio:
 
         return res
 
-    def set_attr(self, name: str, value, ds_name=None) -> None:
+    def set_attr(self, name: str, value: Any,
+                 ds_name: str | None = None) -> None:
         """Write data to an attribute.
 
         Global or attached to a group or variable.
@@ -238,7 +234,7 @@ class L1Aio:
            name of the attribute
         value : scalar, array_like
            value or values to be written
-        ds_name : string, default=None
+        ds_name : str, default=None
            name of group or dataset to which the attribute is attached
            **Use group name without starting '/'**
         """
@@ -265,12 +261,12 @@ class L1Aio:
                 self.fid[ds_name].setncattr(name, value)
 
     # ----- VARIABLES --------------------
-    def get_dset(self, name: str):
+    def get_dset(self, name: str) -> None:
         """Read data of a netCDF4 variable.
 
         Parameters
         ----------
-        name : string
+        name : str
            name of dataset
 
         Returns
@@ -289,12 +285,12 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self, name: str, value) -> None:
+    def set_dset(self, name: str, value: Any) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters
         ----------
-        name : string
+        name : str
            Name of Level-1 dataset
         value : scalar or array_like
            Value or values to be written
@@ -324,7 +320,7 @@ class L1Aio:
         inflight :  bool, default=False
            Measurements performed on-ground or inflight
         """
-        dict_attrs = attrs_def(self.processing_level, inflight)
+        dict_attrs = attrs_def('1a', inflight)
         dict_attrs['product_name'] = self.product.name
         if bin_size is not None:
             dict_attrs['bin_size_at_nadir'] = bin_size
@@ -334,7 +330,7 @@ class L1Aio:
                 self.fid.setncattr(key, value)
 
     # - L1A specific functions ------------------------
-    def check_stored(self, allow_empty: bool = False):
+    def check_stored(self, allow_empty: bool = False) -> None:
         """Check variables with the same first dimension have equal sizes.
 
         Parameters
@@ -412,7 +408,7 @@ class L1Aio:
         self.set_dset('/image_attributes/nr_coadditions',
                       _nr_coadditions_(img_hk))
 
-    def fill_nomhk(self, nomhk_data: np.ndarray):
+    def fill_nomhk(self, nomhk_data: np.ndarray) -> None:
         """Write nominal house-keeping telemetry packets (NomHK).
 
         Parameters

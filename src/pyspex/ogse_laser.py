@@ -7,9 +7,9 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Read characteristics of the OPO laser used at NASA GSFC for the ISRF and
-Stray-light measurements.
+"""Read settings of the OPO laser used at NASA GSFC.
+
+The OPO laser is used for ISRF and stray-light calibration measurements.
 """
 from __future__ import annotations
 
@@ -24,8 +24,7 @@ from openpyxl import load_workbook
 
 # - main functions ----------------------------
 def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset | None:
-    """
-    Return GSE info on central wavelength, line-width and laser radiance.
+    """Return GSE info on central wavelength, line-width and laser radiance.
 
     Parameters
     ----------

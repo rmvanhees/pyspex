@@ -6,9 +6,10 @@
 #   All Rights Reserved
 #
 # License:  BSD-3-Clause
+"""This is the Python package `pyspex`.
 
-"""Python package pyspex contains software to read PACE HKT products,
-read SPEXone Level-0 products and read/write SPEXone Level-1A products.
+It contains software to read PACE HKT products and SPEXone Level-0 products,
+and read/write SPEXone Level-1A products.
 """
 import contextlib
 from importlib.metadata import PackageNotFoundError, version

@@ -7,10 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-This module contains the class `BinningTables` to deal with SPEXone
-binning-tables or to generate a file with binning-table definitions.
-"""
+"""Tools to read or write definitions of SPEXone binning-tables."""
 from __future__ import annotations
 
 __all__ = ['BinningTables']

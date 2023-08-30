@@ -7,10 +7,11 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
+"""Collect OGSE data in a database.
+
 This module contain routines to read reference diode measurements and
 wavelength monitor data. These data are supposed to be written to a HDF5
-database. From which collocated data can be added to a SPEXone Level-1A
+database. From these database selected data can be added to a SPEXone Level-1a
 product.
 """
 from __future__ import annotations
@@ -32,8 +33,8 @@ from xarray import DataArray, Dataset, open_dataset
 
 # ---------- CREATE OGSE DATABASES ----------
 def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
-    """
-    Read reference diode data into a xarray.Dataset.
+    """Read reference diode data into a xarray.Dataset.
+
     (input: comma separated values).
     """
     data = None
@@ -120,6 +121,7 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
 def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
     """
     Read wavelength monitor data into a xarray.Dataset.
+
     (input comma separated values).
     """
     def byte_to_timestamp(str_date: bytes) -> float:

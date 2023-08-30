@@ -21,13 +21,13 @@ from pyspex.version import pyspex_version
 # - main functions --------------------------------
 def attrs_def(level: str, inflight: bool = True,
               origin: str | None = None) -> dict:
-    """Define the SPEXone Level-1A global attributes.
+    """Define global attributes of a SPEXone Level-1a product.
 
     Parameters
     ----------
-    level : str
-       Product processing level 'L1A'
-    inflight : bool
+    level : {'1a', '1b', '1c'}
+       Product processing level
+    inflight : bool, default=True
        Flag for in-flight or on-ground products
     origin : str
        Product origin: 'SRON' or 'NASA'
@@ -37,52 +37,51 @@ def attrs_def(level: str, inflight: bool = True,
     dict
        Global attributes for a Level-1A product
     """
+    if level not in ('1a', '1b', '1c'):
+        raise KeyError('valid processing levels are: "1a", "1b" or "1c"')
     if origin is None:
         origin = 'NASA' if inflight else 'SRON'
 
     res = {
-        'title': f'PACE SPEX Level-{level[1:]} data',
-        'project': 'PACE Project',
+        'title': f'PACE SPEX Level-{level:s} data',
         'platform': 'PACE',
         'instrument': 'SPEX',
-        'product_name': None,
-        'processing_version': 'V1.0',
-        'processing_level': level,
+        'conventions': 'CF-1.8 ACDD-1.3',
         'institution': ('NASA Goddard Space Flight Center,'
                         ' Ocean Biology Processing Group'),
         'license': ('http://science.nasa.gov/earth-science/'
                     'earth-science-data/data-information-policy/'),
-        'conventions': 'CF-1.8 ACDD-1.3',
         'naming_authority': 'gov.nasa.gsfc.sci.oceancolor',
         'keyword_vocabulary': ('NASA Global Change Master Directory (GCMD)'
                                ' Science Keywords'),
-        'standard_name_vocabulary': 'CF Standard Name Table v79',
-        'creator_name': 'NASA/GSFC/OBPG',
+        'standard_name_vocabulary': ('NetCDF Climate and Forecast (CF)'
+                                     ' Metadata Convention'),
+        'creator_name': 'NASA/GSFC',
         'creator_email': 'data@oceancolor.gsfc.nasa.gov',
         'creator_url': 'http://oceancolor.gsfc.nasa.gov',
-        'publisher_name': 'NASA/GSFC/OB.DAAC',
+        'project': 'PACE Project',
+        'publisher_name': 'NASA/GSFC',
         'publisher_email': 'data@oceancolor.gsfc.nasa.gov',
         'publisher_url': 'http://oceancolor.gsfc.nasa.gov',
-        'CDM_data_type': 'swath' if inflight else 'on-ground calibration',
+        'processing_level': f'L{level.upper():s}',
+        'cdm_data_type': ('One orbit swath or granule' \
+                          if inflight else 'granule'),
+        'cdl_version_date': '2021-09-10',
+        'product_name': None,
+        'date_created': datetime.now(timezone.utc).isoformat(
+            timespec='milliseconds'),
+        'processing_version': 'V1.0',
+        'software_name': 'https://github.com/rmvanhees/pyspex',
+        'software_version': pyspex_version(),
+        'history': 'l1agen_spex.py',
         'start_direction': 'Ascending' if inflight else None,
         'end_direction': 'Ascending' if inflight else None,
         'time_coverage_start': 'yyyy-mm-ddTHH:MM:DD',
-        'time_coverage_end': 'yyyy-mm-ddTHH:MM:DD',
-        'software_name': 'https://github.com/rmvanhees/pyspex',
-        'software_version': pyspex_version(),
-        'history': None,
-        'date_created': datetime.now(timezone.utc).isoformat(
-            timespec='milliseconds'),
-        'sun_earth_distance': None,
-        'terrain_data_source': None,
-        'spectral_response_function': None,
-        'systematic_uncertainty_model': None,
-        'nadir_bin': None,
-        'bin_size_at_nadir': None
+        'time_coverage_end': 'yyyy-mm-ddTHH:MM:DD'
     }
 
     if origin == 'SRON':
-        res['title'] = f'SPEXone Level-{level[1:]} data'
+        res['title'] = f'SPEXone Level-{level:s} data'
         res['instrument'] = 'SPEXone'
         res['institution'] = 'SRON Netherlands Institute for Space Research'
         res['creator_name'] = 'SRON/Earth'

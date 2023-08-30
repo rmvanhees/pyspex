@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Contains the class `SPXtlm` to read/access/convert telemetry house-keeping
-parameters of SPEXone.
-"""
+"""`SPXtlm` can read telemetry house-keeping data from SPEXone."""
 from __future__ import annotations
 
 __all__ = ['SPXtlm']
@@ -29,7 +27,7 @@ from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_lib import ap_id, dump_numhk, dump_science, grouping_flag, read_lv0_data
+from .lv0_lib import ap_id, dump_hkt, dump_science, grouping_flag, read_lv0_data
 from .lv1_io import L1Aio
 from .version import pyspex_version
 
@@ -451,7 +449,7 @@ class SPXtlm:
             return
 
         if dump:
-            dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
+            dump_hkt(flnames[0].stem + '_hkt.dump', ccsds_hk)
 
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
         ii = len(ccsds_hk) // 2
@@ -493,7 +491,7 @@ class SPXtlm:
         self._sci = None
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
         if dump:
-            dump_numhk(flnames[0].stem + '_hk.dump', ccsds_hk)
+            dump_hkt(flnames[0].stem + '_hkt.dump', ccsds_hk)
             dump_science(flnames[0].stem + '_sci.dump', ccsds_sci)
         if debug or dump:
             return

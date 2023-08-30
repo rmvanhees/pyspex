@@ -7,9 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Handle command-line parameters and settings from the YAML file
-for L1A generation.
-"""
+"""Obtain settings to generate a L1A product."""
 from __future__ import annotations
 
 __all__ = ['argparse_gen_l1a']
