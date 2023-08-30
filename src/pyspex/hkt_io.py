@@ -246,7 +246,9 @@ class HKTio:
                 # pylint: disable=no-member
                 words = grp['att_time'].attrs['units'].decode().split(' ')
                 if len(words) > 2:
-                    ref_date = datetime.fromisoformat(words[2] + 'T00Z')
+                    # Note python3.8 does not recognize 'Z' and needs '+00:00'
+                    ref_date = datetime.fromisoformat(words[2]
+                                                      + 'T00:00:00+00:00')
 
         if ref_date is None:
             coverage = self.coverage()

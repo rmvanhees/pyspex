@@ -24,11 +24,11 @@ import numpy as np
 from netCDF4 import Dataset
 
 from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
+from .l1a_io import L1Aio
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
 from .lv0_lib import ap_id, dump_hkt, dump_science, grouping_flag, read_lv0_data
-from .lv1_io import L1Aio
 from .version import pyspex_version
 
 if TYPE_CHECKING:
@@ -745,8 +745,9 @@ class SPXtlm:
             status_ok = add_hkt_navigation(l1a_file, config.hkt_list)
             self.logger.debug('(5) added PACE navigation data')
 
-        if not status_ok:
-            raise UserWarning('time-coverage of navigation data is too short')
+            if not status_ok:
+                raise UserWarning(
+                    'time-coverage of navigation data is too short')
 
         self.logger.info('successfully generated: %s', l1a_file.name)
 
