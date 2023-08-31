@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Read Primary and Secondary CCSDS headers and obtain their parameters."""
+
 from __future__ import annotations
 
 __all__ = ['CCSDShdr']
@@ -32,7 +33,7 @@ class CCSDShdr:
        Start reading the buffer from this offset (in bytes)
     """
 
-    def __init__(self, buffer: np.ndarray, offs: int = 0):
+    def __init__(self: CCSDShdr, buffer: np.ndarray, offs: int = 0) -> None:
         """Initialise the class instance."""
         self.__dtype__ = np.dtype([('type', '>u2'),
                                    ('sequence', '>u2'),
@@ -43,32 +44,32 @@ class CCSDShdr:
                                    dtype=self.__dtype__)[0]
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self: CCSDShdr) -> np.dtype:
         """Data-type of the returned array."""
         return self.__dtype__
 
     @property
-    def hdr(self) -> np.ndarray:
+    def hdr(self: CCSDShdr) -> np.ndarray:
         """Structured array holding the CCSDS header."""
         return self.__hdr
 
     @property
-    def version(self):
+    def version(self: CCSDShdr) -> int:
         """Return zero to indicate that this is a version 1 packet."""
         return (self.hdr['type'] >> 13) & 0x7
 
     @property
-    def type(self):
+    def type(self: CCSDShdr) -> int:
         """Return zero to indicate that this is a telemetry packet."""
         return (self.hdr['type'] >> 12) & 0x1
 
     @property
-    def apid(self):
+    def apid(self: CCSDShdr) -> int:
         """Return ApID: an identifier for this telemetry packet."""
         return self.hdr['type'] & 0x7FF
 
     @property
-    def grouping_flag(self):
+    def grouping_flag(self: CCSDShdr) -> int:
         """Data packages can be segmented.
 
         Note
@@ -83,7 +84,7 @@ class CCSDShdr:
         return (self.hdr['sequence'] >> 14) & 0x3
 
     @property
-    def sequence(self):
+    def sequence(self: CCSDShdr) -> int:
         """Return the sequence counter.
 
         This counter is incremented with each consecutive packet of a
@@ -92,7 +93,7 @@ class CCSDShdr:
         return self.hdr['sequence'] & 0x3FFF
 
     @property
-    def packet_length(self):
+    def packet_length(self: CCSDShdr) -> int:
         """Returns the CCSDS packet-length.
 
         Which is equal to the number of bytes in the Secondary header plus
@@ -101,16 +102,16 @@ class CCSDShdr:
         return self.hdr['length']
 
     @property
-    def tai_sec(self):
+    def tai_sec(self: CCSDShdr) -> int:
         """Seconds since 1958 (TAI)."""
         return self.hdr['tai_sec']
 
     @property
-    def sub_sec(self):
+    def sub_sec(self: CCSDShdr) -> int:
         """Sub-seconds (1 / 2**16)."""
         return self.hdr['sub_sec']
 
-    def tstamp(self, epoch: datetime) -> datetime:
+    def tstamp(self: CCSDShdr, epoch: datetime) -> datetime:
         """Return time of the telemetry packet.
 
         Parameters

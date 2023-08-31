@@ -32,7 +32,8 @@ from xarray import DataArray, Dataset, open_dataset
 
 
 # ---------- CREATE OGSE DATABASES ----------
-def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
+def read_ref_diode(ogse_dir: Path, file_list: list,
+                   verbose: bool = False) -> Dataset:
     """Read reference diode data into a xarray.Dataset.
 
     (input: comma separated values).
@@ -118,7 +119,8 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
 
 
 # ---------------
-def read_wav_mon(ogse_dir: Path, file_list: list, verbose=False) -> Dataset:
+def read_wav_mon(ogse_dir: Path, file_list: list,
+                 verbose: bool = False) -> Dataset:
     """
     Read wavelength monitor data into a xarray.Dataset.
 
@@ -330,7 +332,7 @@ def add_ogse_wav_mon(ref_db: Path, l1a_file: Path) -> None:
     xds.to_netcdf(l1a_file, mode='a', group='/gse_data/WaveMonitor')
 
 
-def __test():
+def __test() -> None:
     """Small function to test this module."""
     ogse_dir = Path('/data/richardh/SPEXone/ambient/polarimetric/calibration/'
                     'light_level/Logs/')

@@ -53,7 +53,7 @@ class CKDio:
 
     """
 
-    def __init__(self, ckd_file: Path, verbose=False) -> None:
+    def __init__(self: CKDio, ckd_file: Path, verbose: bool = False) -> None:
         """Initialize class attributes."""
         self.verbose = verbose
 
@@ -62,27 +62,27 @@ class CKDio:
         if 'processor_configuration' not in self.fid:
             raise RuntimeError('SPEXone CKD product corrupted?')
 
-    def __enter__(self):
+    def __enter__(self: CKDio) -> CKDio:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self: CKDio, exc_type, exc_value, traceback) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self) -> None:
+    def close(self: CKDio) -> None:
         """Make sure that we close all resources."""
         if self.fid is not None:
             self.fid.close()
 
     @property
-    def processor_version(self) -> str:
+    def processor_version(self: CKDio) -> str:
         """Return the version of the `spexone_cal` program."""
         # pylint: disable=no-member
         return self.fid.attrs['processor_version'].decode()
 
-    def date_created(self, compact=False) -> str:
+    def date_created(self: CKDio, compact: bool = False) -> str:
         """Return creation date of the CKD product.
 
         Parameters
@@ -99,12 +99,12 @@ class CKDio:
         return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
 
     @property
-    def git_commit(self) -> str:
+    def git_commit(self: CKDio) -> str:
         """Return git hash of repository `spexone_cal`, used to generate the CKD."""
         # pylint: disable=no-member
         return self.fid.attrs['git_commit'].decode()
 
-    def dark(self) -> xr.Dataset | None:
+    def dark(self: CKDio) -> xr.Dataset | None:
         """Read Dark CKD.
 
         Returns
@@ -125,7 +125,7 @@ class CKDio:
         res += (h5_to_xr(gid['dark_current']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def noise(self) -> xr.Dataset | None:
+    def noise(self: CKDio) -> xr.Dataset | None:
         """Read Noise CKD.
 
         Returns
@@ -142,7 +142,7 @@ class CKDio:
         res += (h5_to_xr(gid['n']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def nlin(self) -> xr.Dataset | None:
+    def nlin(self: CKDio) -> xr.Dataset | None:
         """Read non-linearity CKD.
 
         Returns
@@ -182,7 +182,7 @@ class CKDio:
             res += (h5_to_xr(gid['nonlin_fit']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def prnu(self) -> xr.DataArray | None:
+    def prnu(self: CKDio) -> xr.DataArray | None:
         """Read PRNU CKD.
 
         Returns
@@ -196,7 +196,7 @@ class CKDio:
             return None
         return h5_to_xr(gid['prnu'])
 
-    def fov(self) -> xr.Dataset | None:
+    def fov(self: CKDio) -> xr.Dataset | None:
         """Read field-of-view CKD.
 
         Returns
@@ -215,7 +215,7 @@ class CKDio:
         res += (h5_to_xr(gid['fov_ispat']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def wavelength(self) -> xr.Dataset | None:
+    def wavelength(self: CKDio) -> xr.Dataset | None:
         """Read Wavelength CKD.
 
         Returns
@@ -235,7 +235,7 @@ class CKDio:
         res += (h5_to_xr(gid['wave_common']),)
         return xr.merge(res, combine_attrs='drop_conflicts')
 
-    def radiometric(self) -> xr.DataArray | None:
+    def radiometric(self: CKDio) -> xr.DataArray | None:
         """Read Radiometric CKD.
 
         Returns
@@ -249,7 +249,7 @@ class CKDio:
             return None
         return h5_to_xr(gid['rad_spectra'])
 
-    def polarimetric(self) -> xr.Dataset | None:
+    def polarimetric(self: CKDio) -> xr.Dataset | None:
         """Read Polarimetric CKD.
 
         Returns

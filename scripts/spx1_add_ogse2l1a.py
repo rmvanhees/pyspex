@@ -40,7 +40,7 @@ DB_WAV_MON = 'ogse_db_wave_mon.nc'
 
 
 # - local functions --------------------------------
-def create_ogse_db(args):
+def create_ogse_db(args: argparse.Namespace) -> None:
     """Create databases for reference diode and/or Avantes fibre spectrometer."""
     if args.ref_diode:
         # read reference-diode data
@@ -60,7 +60,7 @@ def create_ogse_db(args):
                       group='/gse_data/WaveMonitor')
 
 
-def write_ogse(args):
+def write_ogse(args: argparse.Namespace) -> None:
     """Add OGSE data to a SPEXone level-1A product."""
     if args.ref_diode:
         add_ogse_ref_diode(args.ogse_dir / DB_REF_DIODE, args.l1a_file)
@@ -93,7 +93,7 @@ def write_ogse(args):
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Add OGSE data to an existing SPEXone L1A product."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()

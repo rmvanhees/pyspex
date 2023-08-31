@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Tools to read or write definitions of SPEXone binning-tables."""
+
 from __future__ import annotations
 
 __all__ = ['BinningTables']
@@ -81,7 +82,7 @@ class BinningTables:
     > img = bin_tbl.unbin(130, img_binned)
     """
 
-    def __init__(self, ckd_dir: str | None = None) -> None:
+    def __init__(self: BinningTables, ckd_dir: str | None = None) -> None:
         """Initialize class attributes."""
         if ckd_dir is None:
             self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
@@ -94,7 +95,8 @@ class BinningTables:
 
         self.ckd_file = None
 
-    def create_if_needed(self, validity_start: str, release: int = 1) -> None:
+    def create_if_needed(self: BinningTables, validity_start: str,
+                         release: int = 1) -> None:
         """Initialize CKD file for binning tables if not exist.
 
         Parameters
@@ -125,7 +127,7 @@ class BinningTables:
             fid.createDimension('row', 1024)
             fid.createDimension('column', 1024)
 
-    def search(self, coverage_start: str | None = None) -> None:
+    def search(self: BinningTables, coverage_start: str | None = None) -> None:
         """Search CKD file with binning tables.
 
         Parameters
@@ -159,7 +161,7 @@ class BinningTables:
         else:
             raise FileNotFoundError('No valid CKD with binning tables found')
 
-    def add_table(self, table_id: int, lineskip_arr: np.ndarray,
+    def add_table(self: BinningTables, table_id: int, lineskip_arr: np.ndarray,
                   binning_table: np.ndarray) -> None:
         """Add a binning table definition to existing file.
 
@@ -209,7 +211,8 @@ class BinningTables:
             dset.valid_max = np.uint16(count.max())
             dset[:] = count.astype('u2')
 
-    def unbin(self, table_id: int, img_binned: np.ndarray) -> np.ndarray:
+    def unbin(self: BinningTables, table_id: int,
+              img_binned: np.ndarray) -> np.ndarray:
         """Return unbinned detector data.
 
         Parameters

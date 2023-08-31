@@ -66,7 +66,7 @@ select = [
   "F",   # pyflakes
   "I",   # isort
   "UP",  # pyupgrade
-  # "ANN", # flake8-annotations
+  "ANN", # flake8-annotations
   "B",   # flake8-bugbear
   "Q",   # flake8-quotes
   "SIM", # flake8-simplify

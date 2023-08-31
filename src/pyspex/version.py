@@ -10,12 +10,14 @@
 
 """Provide access to the software version as obtained from git."""
 
+from __future__ import annotations
+
 __all__ = ['pyspex_version']
 
 from pyspex import __version__
 
 
-def pyspex_version(full=False, githash=False):
+def pyspex_version(full: bool = False, githash: bool = False) -> str:
     """Return the software version as obtained from git."""
     if full:
         return __version__

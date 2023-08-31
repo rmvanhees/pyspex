@@ -102,7 +102,7 @@ def _dtype_packet_(file_format: str) -> np.dtype | None:
     return None
 
 
-def _fix_hk24_(sci_hk: np.ndarray):
+def _fix_hk24_(sci_hk: np.ndarray) -> np.ndarray:
     """Correct 32-bit values in the Science HK.
 
     Which originate from 24-bit values in the detector register parameters.
@@ -434,7 +434,7 @@ def read_lv0_data(file_list: list[Path, ...],
     return ccsds_sci, ccsds_hk
 
 
-def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]):
+def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
     """Dump header info of the SPEXone housekeeping telemetry packets."""
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
@@ -462,7 +462,7 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]):
             fp.write(msg + '\n')
 
 
-def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]):
+def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
     """Dump telemetry header info (Science)."""
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length'

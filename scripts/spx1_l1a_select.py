@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Script to copy an SPEXone level-1A product to a new level-1A product."""
+
 from __future__ import annotations
 
 import argparse
@@ -19,10 +20,13 @@ import h5py
 import numpy as np
 from pyspex.l1a_io import L1Aio
 
+DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 
 # --------------------------------------------------
-def inv_sec_of_day(reference_day, sec_of_day,
-                   epoch=datetime(1970, 1, 1, tzinfo=timezone.utc)):
+def inv_sec_of_day(reference_day: datetime, sec_of_day: np.ndarray,
+                   epoch: datetime = DEFAULT_EPOCH) -> tuple[np.ndarray,
+                                                             np.ndarray]:
     """Convert seconds after midnight to CCSDS timestamps.
 
     Parameters
@@ -43,7 +47,7 @@ def inv_sec_of_day(reference_day, sec_of_day,
 
 
 # --------------------------------------------------
-def main():
+def main() -> None:
     """Copy data from one SPEXone L1A product to a new L1A product."""
     parser = argparse.ArgumentParser(
         description=('Copy selected data from one SPEXone L1A product'

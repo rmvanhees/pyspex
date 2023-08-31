@@ -23,7 +23,7 @@ from pyspex.egse_db import add_egse_data, create_egse_db
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Add EGSE data to an existing SPEXone L1A product."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()

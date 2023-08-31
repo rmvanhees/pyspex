@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Contains the class `HKTio` to read PACE HKT products."""
+
 from __future__ import annotations
 
 __all__ = ['HKTio', 'check_coverage_nav', 'read_hkt_nav']
@@ -222,7 +223,7 @@ class HKTio:
      - navigation() -> dict
     """
 
-    def __init__(self, filename: Path) -> None:
+    def __init__(self: HKTio, filename: Path) -> None:
         """Initialize access to a PACE HKT product."""
         self._coverage = None
         self._reference_date = None
@@ -233,11 +234,11 @@ class HKTio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def reference_date(self) -> datetime:
+    def reference_date(self: HKTio) -> datetime:
         """Return reference date of all time_of_day variables."""
         return self._reference_date
 
-    def set_reference_date(self):
+    def set_reference_date(self: HKTio) -> None:
         """Set reference date of current PACE HKT product."""
         ref_date = None
         with h5py.File(self.filename) as fid:
@@ -257,7 +258,7 @@ class HKTio:
 
         self._reference_date = ref_date
 
-    def coverage(self) -> tuple[datetime, datetime]:
+    def coverage(self: HKTio) -> tuple[datetime, datetime]:
         """Return data coverage."""
         one_day = timedelta(days=1)
         with h5py.File(self.filename) as fid:
@@ -324,7 +325,8 @@ class HKTio:
 
         return min(*tstamp_mn_list), max(*tstamp_mx_list)
 
-    def housekeeping(self, instrument: str = 'spx') -> tuple[np.ndarray, ...]:
+    def housekeeping(self: HKTio,
+                     instrument: str = 'spx') -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.
 
         Parameters
@@ -374,7 +376,7 @@ class HKTio:
 
         return ccsds_hk
 
-    def navigation(self) -> dict:
+    def navigation(self: HKTio) -> dict:
         """Get navigation data."""
         res = {'att_': (), 'orb_': (), 'tilt': ()}
         with h5py.File(self.filename) as fid:
@@ -405,7 +407,7 @@ class HKTio:
 
 
 # - test module -------------------------
-def _test():
+def _test() -> None:
     data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/14')
     file_list = data_dir.glob('PACE.202307??T??????.HKT.nc')
     for flname in sorted(file_list):

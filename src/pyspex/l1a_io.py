@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Contains the class `L1Aio` to write PACE/SPEXone data in Level-1a format."""
+
 from __future__ import annotations
 
 __all__ = ['L1Aio']
@@ -136,7 +137,7 @@ class L1Aio:
         '/engineering_data/HK_tlm_time': 0
     }
 
-    def __init__(self, product: Path | str, ref_date: datetime,
+    def __init__(self: L1Aio, product: Path | str, ref_date: datetime,
                  dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
         self.product = Path(product)
@@ -150,22 +151,22 @@ class L1Aio:
         for key in self.dset_stored:
             self.dset_stored[key] = 0
 
-    def __iter__(self) -> None:
+    def __iter__(self: L1Aio) -> None:
         """Allow iteration."""
         for attr in sorted(self.__dict__):
             if not attr.startswith('__'):
                 yield attr
 
-    def __enter__(self) -> None:
+    def __enter__(self: L1Aio) -> L1Aio:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: L1Aio, exc_type, exc_value, traceback) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self) -> None:
+    def close(self: L1Aio) -> None:
         """Close product and check if required datasets are filled with data."""
         if self.fid is None:
             return
@@ -183,16 +184,16 @@ class L1Aio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def epoch(self) -> datetime:
+    def epoch(self: L1Aio) -> datetime:
         """Provide epoch for SPEXone."""
         return self.__epoch
 
-    def get_dim(self, name: str) -> int:
+    def get_dim(self: L1Aio, name: str) -> int:
         """Get size of a netCDF4 dimension."""
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------
-    def get_attr(self, name: str, ds_name: str | None = None) -> None:
+    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> None:
         """Read data of an attribute.
 
         Global or attached to a group or variable.
@@ -222,7 +223,7 @@ class L1Aio:
 
         return res
 
-    def set_attr(self, name: str, value: Any,
+    def set_attr(self: L1Aio, name: str, value: Any,
                  ds_name: str | None = None) -> None:
         """Write data to an attribute.
 
@@ -261,7 +262,7 @@ class L1Aio:
                 self.fid[ds_name].setncattr(name, value)
 
     # ----- VARIABLES --------------------
-    def get_dset(self, name: str) -> None:
+    def get_dset(self: L1Aio, name: str) -> None:
         """Read data of a netCDF4 variable.
 
         Parameters
@@ -285,7 +286,7 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self, name: str, value: Any) -> None:
+    def set_dset(self: L1Aio, name: str, value: Any) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters
@@ -309,7 +310,7 @@ class L1Aio:
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
-    def fill_global_attrs(self, bin_size: str | None = None,
+    def fill_global_attrs(self: L1Aio, bin_size: str | None = None,
                           inflight: bool = False) -> None:
         """Define global attributes in the SPEXone Level-1 products.
 
@@ -330,7 +331,7 @@ class L1Aio:
                 self.fid.setncattr(key, value)
 
     # - L1A specific functions ------------------------
-    def check_stored(self, allow_empty: bool = False) -> None:
+    def check_stored(self: L1Aio, allow_empty: bool = False) -> None:
         """Check variables with the same first dimension have equal sizes.
 
         Parameters
@@ -372,7 +373,7 @@ class L1Aio:
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def fill_science(self, img_data: np.ndarray, img_hk: np.ndarray,
+    def fill_science(self: L1Aio, img_data: np.ndarray, img_hk: np.ndarray,
                      img_id: np.ndarray) -> None:
         """Write Science data and housekeeping telemetry (Science).
 
@@ -408,7 +409,7 @@ class L1Aio:
         self.set_dset('/image_attributes/nr_coadditions',
                       _nr_coadditions_(img_hk))
 
-    def fill_nomhk(self, nomhk_data: np.ndarray) -> None:
+    def fill_nomhk(self: L1Aio, nomhk_data: np.ndarray) -> None:
         """Write nominal house-keeping telemetry packets (NomHK).
 
         Parameters

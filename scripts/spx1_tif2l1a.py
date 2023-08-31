@@ -35,8 +35,8 @@ EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
-def get_table_id(ckd_dir, bin_table_name):
-    """Quick en dirty implementation to obtain table_id from binning-table CKD."""
+def get_table_id(ckd_dir: str, bin_table_name: str) -> str:
+    """Quick implementation to obtain table_id from binning-table CKD."""
     if not Path(ckd_dir).is_dir():
         ckd_dir = environ.get('CKD_DIR', '.')
 
@@ -59,7 +59,7 @@ def get_table_id(ckd_dir, bin_table_name):
     return table_id
 
 
-def get_stimulus(hdr):
+def get_stimulus(hdr: np.ndarray) -> xr.Dataset:
     """Return stimulus data as a xarray::Dataset."""
     if 'Spectral data stimulus' not in hdr:
         return None
@@ -109,7 +109,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Create a L1A calibration product from data in Tiff format.
 
     Environment

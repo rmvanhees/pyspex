@@ -52,8 +52,8 @@ if FOUND_PYTIFF:
         >>  print(tif.images().shape)
         """
 
-        def __init__(self, hdr_file: str, inp_tif: bool = False,
-                     lineskip: bool = False):
+        def __init__(self: TIFio, hdr_file: str, inp_tif: bool = False,
+                     lineskip: bool = False) -> None:
             """Initialize TIFio object."""
             if not Path(hdr_file).is_file():
                 raise FileNotFoundError(f'file {hdr_file} not found')
@@ -67,7 +67,7 @@ if FOUND_PYTIFF:
             self.lineskip = lineskip
 
         # --------------------------------------------------
-        def header(self) -> dict:
+        def header(self: TIFio) -> dict:
             """Read header as dictionary."""
             res = {}
             with self.filename.open(encoding='ascii', errors='ignore') as fp:
@@ -102,7 +102,7 @@ if FOUND_PYTIFF:
             return res
 
         # --------------------------------------------------
-        def tags(self) -> list:
+        def tags(self: TIFio) -> list:
             """Return TIFF tags as dictionary."""
             if self.__header is None:
                 self.header()
@@ -117,7 +117,7 @@ if FOUND_PYTIFF:
             return res
 
         # --------------------------------------------------
-        def images(self, n_frame: int | None = None):
+        def images(self: TIFio, n_frame: int | None = None) -> np.ndarray:
             """Return TIFF data as numpy array.
 
             Parameters

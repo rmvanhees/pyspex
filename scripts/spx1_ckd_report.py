@@ -21,7 +21,8 @@ from pyspex.ckd_io import CKDio
 
 
 # - local functions --------------------------------
-def init_plot_file(key: str, ckd, ckd_ref=None):
+def init_plot_file(key: str, ckd: CKDio,
+                   ckd_ref: CKDio | None = None) -> tuple:
     """Initialize CKD report."""
     fig_info_in = FIGinfo()
     fig_info_in.add('processor_version',
@@ -43,7 +44,7 @@ def init_plot_file(key: str, ckd, ckd_ref=None):
     return plot, fig_info_in
 
 
-def add_dark_figs(ckd, ckd_ref=None):
+def add_dark_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of Dark CKD."""
     dark_ckd = ckd.dark()
     if dark_ckd is None:
@@ -107,7 +108,7 @@ def add_dark_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_noise_figs(ckd, ckd_ref=None):
+def add_noise_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of Noise CKD."""
     noise_ckd = ckd.noise()
     if noise_ckd is None:
@@ -137,7 +138,7 @@ def add_noise_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_nlin_figs(ckd, ckd_ref=None):
+def add_nlin_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of non-linearity CKD."""
     nlin_ckd = ckd.nlin()
     if nlin_ckd is None:
@@ -183,7 +184,7 @@ def add_nlin_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_prnu_figs(ckd, ckd_ref=None):
+def add_prnu_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of PRNU CKD."""
     prnu_ckd = ckd.prnu()
     if prnu_ckd is None:
@@ -214,7 +215,7 @@ def add_prnu_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-# def add_fov_figs(ckd, ckd_ref=None):
+# def add_fov_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
 #    """Generate figures of Field-of-View CKD.
 #    """
 #    fov_ckd = ckd.fov()
@@ -232,7 +233,7 @@ def add_prnu_figs(ckd, ckd_ref=None):
 #    plot.close()
 
 
-# def add_swath_figs(ckd, ckd_ref=None):
+# def add_swath_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
 #    """Generate figures of Swath CKD.
 #    """
 #    swath_ckd = ckd.swath()
@@ -250,7 +251,7 @@ def add_prnu_figs(ckd, ckd_ref=None):
 #    plot.close()
 
 
-def add_wave_figs(ckd, ckd_ref=None):
+def add_wave_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of Wavelength CKD."""
     wave_ckd = ckd.wavelength()
     if wave_ckd is None:
@@ -282,7 +283,7 @@ def add_wave_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_rad_figs(ckd, ckd_ref=None):
+def add_rad_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of Radiometric CKD."""
     rad_ckd = ckd.radiometric()
     if rad_ckd is None:
@@ -308,7 +309,7 @@ def add_rad_figs(ckd, ckd_ref=None):
     plot.close()
 
 
-def add_pol_figs(ckd, ckd_ref=None):
+def add_pol_figs(ckd: CKDio, ckd_ref: CKDio | None = None) -> None:
     """Generate figures of Polarimetric CKD."""
     pol_ckd = ckd.polarimetric()
     if pol_ckd is None:

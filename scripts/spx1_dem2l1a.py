@@ -31,7 +31,7 @@ from pyspex.lv1_gse import LV1gse
 from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
-EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 # - local functions --------------------------------
@@ -63,7 +63,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Create a SPEXone L1A product from data of a DEM measurement."""
     parser = argparse.ArgumentParser(
         description='create SPEXone L1A product from DEM measurement(s)')
@@ -181,7 +181,7 @@ def main():
     img_sec = np.empty(n_images, dtype='u4')
     img_subsec = np.empty(n_images, dtype='u2')
     for ii, tval in enumerate(tstamp):
-        img_sec[ii] = (tval - EPOCH).total_seconds()
+        img_sec[ii] = (tval - DEFAULT_EPOCH).total_seconds()
         img_subsec[ii] = tval.microsecond * 2**16 // 1000000
 
     ref_date, img_time = img_sec_of_day(img_sec, img_subsec, img_hk)

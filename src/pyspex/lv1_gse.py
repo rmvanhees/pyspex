@@ -8,14 +8,20 @@
 #
 # License:  BSD-3-Clause
 """Collect EGSE/OGSE data and/or add this to a SPEXone Level-1A product."""
+
 from __future__ import annotations
 
 __all__ = ['LV1gse']
+
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
+
+if TYPE_CHECKING:
+    import xarray as xr
 
 
 # --------------------------------------------------
@@ -28,7 +34,7 @@ class LV1gse:
         Name of the Level-1A product
     """
 
-    def __init__(self, l1a_file: str) -> None:
+    def __init__(self: LV1gse, l1a_file: str) -> None:
         """Initialize netCDF4 group 'gse_data' in a SPEXone Level-1 product."""
         self.fid = Dataset(l1a_file, 'r+')
 
@@ -83,22 +89,22 @@ class LV1gse:
         else:
             gid.DoLP = 0.
 
-    def __iter__(self) -> None:
+    def __iter__(self: LV1gse) -> None:
         """Allow iteration."""
         for attr in sorted(self.__dict__):
             if not attr.startswith('__'):
                 yield attr
 
-    def __enter__(self):
+    def __enter__(self: LV1gse) -> LV1gse:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: LV1gse, exc_type, exc_value, traceback) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
 
-    def close(self) -> None:
+    def close(self: LV1gse) -> None:
         """Close all resources (currently a placeholder function)."""
         if self.fid is None:
             return
@@ -106,7 +112,7 @@ class LV1gse:
         self.fid.close()
         self.fid = None
 
-    def check_egse(self, egse_data: np.ndarray) -> None:
+    def check_egse(self: LV1gse, egse_data: np.ndarray) -> None:
         """Check consistency of OGSE/EGSE information during measurement."""
         for key, fmt in egse_data.dtype.fields.items():
             if fmt[0] == np.uint8:
@@ -124,7 +130,7 @@ class LV1gse:
             and not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2)):
             print(f'[WARNING]: ALT_ANGLE={egse_data["ALT_ANGLE"]}')
 
-    def set_attr(self, name: str, value) -> None:
+    def set_attr(self: LV1gse, name: str, value: Any) -> None:
         """Add attribute to group 'gse_data'.
 
         Parameters
@@ -134,7 +140,8 @@ class LV1gse:
         """
         self.fid['/gse_data'].setncattr(name, value)
 
-    def write_attr_act(self, angle: float, illumination=None) -> None:
+    def write_attr_act(self: LV1gse, angle: float,
+                       illumination: float | None = None) -> None:
         """Add act rotation angle as a group attribute.
 
         Parameters
@@ -146,7 +153,8 @@ class LV1gse:
         if illumination is not None:
             self.fid['/gse_data'].ACT_illumination = illumination
 
-    def write_attr_alt(self, angle: float, illumination=None) -> None:
+    def write_attr_alt(self: LV1gse, angle: float,
+                       illumination: float | None = None) -> None:
         """Add altitude rotation angle as a group attribute.
 
         Parameters
@@ -158,7 +166,7 @@ class LV1gse:
         if illumination is not None:
             self.fid['/gse_data'].ALT_illumination = illumination
 
-    def write_attr_polarization(self, aolp: float, dolp: float) -> None:
+    def write_attr_polarization(self: LV1gse, aolp: float, dolp: float) -> None:
         """Add polarization parameters AoLP & DoLP as group attributes.
 
         Parameters
@@ -173,7 +181,8 @@ class LV1gse:
         if dolp is not None:
             self.fid['/gse_data'].DoLP = dolp
 
-    def write_egse(self, egse_time, egse_data, egse_attrs: dict) -> None:
+    def write_egse(self: LV1gse, egse_time: np.ndarray,
+                   egse_data: np.ndarray, egse_attrs: dict) -> None:
         """Add EGSE parameters.
 
         Parameters
@@ -198,7 +207,7 @@ class LV1gse:
         dset.comment = egse_attrs['comment']
         dset[:] = egse_data
 
-    def write_viewport(self, viewport: int) -> None:
+    def write_viewport(self: LV1gse, viewport: int) -> None:
         """Add/update which viewports are illuminated.
 
         Parameters
@@ -207,7 +216,8 @@ class LV1gse:
         """
         self.fid['/gse_data/viewport'][:] = viewport
 
-    def write_reference_signal(self, signal, stdev) -> None:
+    def write_reference_signal(self: LV1gse,
+                               signal: np.ndarray, stdev: np.ndarray) -> None:
         """Write reference detector signal and variance.
 
         Parameters
@@ -235,7 +245,9 @@ class LV1gse:
         dset.units = 'A'
         dset[:] = stdev
 
-    def write_reference_diode(self, ref_time, ref_data, ref_attrs) -> None:
+    def write_reference_diode(self: LV1gse,
+                              ref_time: np.ndarray, ref_data: np.ndarray,
+                              ref_attrs: dict) -> None:
         """Add data measured by the reference diode during the measurement.
 
         Parameters
@@ -257,7 +269,8 @@ class LV1gse:
         dset.setncatts(ref_attrs)
         dset[:] = ref_data
 
-    def write_wavelength_monitor(self, xds_wav_mon) -> None:
+    def write_wavelength_monitor(self: LV1gse,
+                                 xds_wav_mon: xr.Dataset) -> None:
         """Add wavelength monitoring data of the Avantas fibre-spectrometer.
 
         Parameters

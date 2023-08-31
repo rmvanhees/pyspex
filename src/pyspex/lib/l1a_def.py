@@ -8,10 +8,10 @@
 #
 # License:  BSD-3-Clause
 """Defines the format of a SPEXone Level-1A product."""
+
 from __future__ import annotations
 
 __all__ = ['init_l1a']
-
 
 from typing import TYPE_CHECKING
 
@@ -76,7 +76,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     dset.valid_max = 86400 + ORBIT_DURATION
 
 
-def image_attributes(rootgrp: Dataset, ref_date: datetime.datetime):
+def image_attributes(rootgrp: Dataset, ref_date: datetime.datetime) -> None:
     """Define group /image_attributes and its datasets."""
     sgrp = rootgrp.createGroup('/image_attributes')
     dset = sgrp.createVariable('icu_time_sec', 'u4', ('number_of_images',))
@@ -138,7 +138,7 @@ def get_chunksizes(ydim: int, compression: bool) -> tuple[int, int]:
 
 
 def science_data(rootgrp: Dataset, compression: bool,
-                 chunksizes: tuple[int, int]):
+                 chunksizes: tuple[int, int]) -> None:
     """Define group /science_data and its datasets."""
     sgrp = rootgrp.createGroup('/science_data')
     dset = sgrp.createVariable('detector_images', 'u2',
@@ -157,7 +157,7 @@ def science_data(rootgrp: Dataset, compression: bool,
     dset.comment = 'A subset of MPS and housekeeping parameters.'
 
 
-def engineering_data(rootgrp: Dataset, ref_date: datetime.datetime):
+def engineering_data(rootgrp: Dataset, ref_date: datetime.datetime) -> None:
     """Define group /engineering_data and its datasets."""
     sgrp = rootgrp.createGroup('/engineering_data')
     dset = sgrp.createVariable('HK_tlm_time', 'f8', ('hk_packets',),

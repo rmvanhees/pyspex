@@ -52,7 +52,7 @@ def get_l1a_name(msm_id: str) -> str:
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Create a SPEXone L1A product from data of as OCAL measurement.
 
     Examples

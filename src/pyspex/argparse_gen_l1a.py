@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Obtain settings to generate a L1A product."""
+
 from __future__ import annotations
 
 __all__ = ['argparse_gen_l1a']
@@ -137,12 +138,16 @@ class Config:
     l0_list: list[Path] = field(default_factory=list)
 
 
-def __commandline_settings():
+def __commandline_settings() -> argparse.Namespace:
     """Parse command-line parameters."""
     class NumericLevel(argparse.Action):
         """Store verbosity level of the logger as a numeric value."""
 
-        def __call__(self, parser_local, namespace, values, option_string=None):
+        def __call__(self: NumericLevel,
+                     parser_local: argparse.ArgumentParser,
+                     namespace: argparse.Namespace,
+                     values: str,
+                     option_string: str | None = None) -> argparse.Namespace:
             numeric_level = getattr(logging, values.upper(), None)
             setattr(namespace, self.dest, numeric_level)
 

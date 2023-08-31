@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Quick and dirty script to generate simple Quick-Look figures."""
+
 from __future__ import annotations
 
 import argparse
@@ -24,7 +25,8 @@ from pyspex.binning_tables import BinningTables
 
 
 # --------------------------------------------------
-def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
+def binned_to_2x2_image(coverage_start: str, table_id: int,
+                        img_binned: np.ndarray) -> np.ndarray:
     """Convert binned detector data to image (1024, 1024)."""
     try:
         bin_ckd = BinningTables()
@@ -36,7 +38,7 @@ def binned_to_2x2_image(coverage_start: str, table_id: int, img_binned):
 
 
 # --------------------------------------------------
-def main():
+def main() -> None:
     """Create a PDF from a SPEXone Level-1A product."""
     parser = argparse.ArgumentParser(
         description='create Quick-Look from SPEXone L1A product')

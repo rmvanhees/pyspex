@@ -28,7 +28,7 @@ from pyspex.binning_tables import BinningTables
 
 
 # - main function ----------------------------------
-def main():
+def main() -> None:
     """Generate SPEXone binning tables.
 
     Create or update SPEXone binning-table CKD.
