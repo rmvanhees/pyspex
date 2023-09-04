@@ -66,7 +66,7 @@ class CKDio:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: CKDio, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: CKDio, *args: str) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.

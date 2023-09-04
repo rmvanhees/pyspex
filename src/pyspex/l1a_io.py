@@ -161,7 +161,7 @@ class L1Aio:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: L1Aio, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: L1Aio, *args: str) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
@@ -223,7 +223,7 @@ class L1Aio:
 
         return res
 
-    def set_attr(self: L1Aio, name: str, value: Any,
+    def set_attr(self: L1Aio, name: str, value: Any,           # noqa: ANN401
                  ds_name: str | None = None) -> None:
         """Write data to an attribute.
 
@@ -286,7 +286,7 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: Any) -> None:
+    def set_dset(self: L1Aio, name: str, value: Any) -> None:   # noqa: ANN401
         """Write data to a netCDF4 variable.
 
         Parameters

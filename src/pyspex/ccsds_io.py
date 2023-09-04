@@ -211,7 +211,7 @@ class CCSDSio:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: CCSDSio, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: CCSDSio, *args: str) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.

@@ -99,7 +99,7 @@ class LV1gse:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: LV1gse, exc_type, exc_value, traceback) -> bool:
+    def __exit__(self: LV1gse, *args: str) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
@@ -130,7 +130,7 @@ class LV1gse:
             and not np.allclose(egse_data['ALT_ANGLE'], alt_angle, 1e-2)):
             print(f'[WARNING]: ALT_ANGLE={egse_data["ALT_ANGLE"]}')
 
-    def set_attr(self: LV1gse, name: str, value: Any) -> None:
+    def set_attr(self: LV1gse, name: str, value: Any) -> None:   # noqa: ANN401
         """Add attribute to group 'gse_data'.
 
         Parameters
