@@ -38,7 +38,6 @@ if TYPE_CHECKING:
 module_logger = logging.getLogger('pyspex.tlm')
 
 FULLFRAME_BYTES = 2 * 2048 * 2048
-MCP_TO_SEC = 1e-7
 TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
 
 TSTAMP_TYPE = np.dtype(
@@ -49,6 +48,57 @@ TSTAMP_TYPE = np.dtype(
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
     return 100 * int(sub_sec / 65536 * 10000)
+
+
+def __exposure_time__(science: np.ndarray) -> np.ndarray:
+    """Return exposure time [ms]."""
+    return 129e-4 * (0.43 * science['DET_FOTLEN'] + science['DET_EXPTIME'])
+
+
+def __frame_period__(science: np.ndarray) -> np.ndarray:
+    """Return frame period of detector measurement [ms]."""
+    n_coad = science['REG_NCOADDFRAMES']
+    # full-frame mode
+    if science['IMRLEN'] == FULLFRAME_BYTES:
+        n_chan = 2 ** (4 - (science['DET_OUTMODE'] & 0x3))
+        mcp_t_exp = 0.43 * science['DET_FOTLEN'] + science['DET_EXPTIME']
+        mcp_t_fot = science['DET_FOTLEN'] + 2 * (16 // n_chan)
+        mcp_t_rot = science['DET_NUMLINES'] * (16 // n_chan)
+        mcp_t_offs = 81     # I need this value to get the right value!?!
+        mcp_t_frm = mcp_t_exp + mcp_t_fot + mcp_t_rot + mcp_t_offs
+        return n_coad * np.max(240., 129e-4 * mcp_t_frm)
+
+    # binning mode
+    return n_coad * np.full(len(science), 1000 / 15)
+
+
+def __readout_offset__(science: np.ndarray) -> float:
+    """Return offset wrt start-of-integration [ms]."""
+    n_coad = science['REG_NCOADDFRAMES']
+    n_frm = n_coad + 3 if science['IMRLEN'] == FULLFRAME_BYTES \
+        else 2 * n_coad + 2
+
+    return n_frm * __frame_period__(science)
+
+
+def __binning_table__(science: np.ndarray) -> np.ndarray:
+    """Return binning table identifier (zero for full-frame images)."""
+    bin_tbl = np.zeros(len(science), dtype='i1')
+    _mm = science['IMRLEN'] == FULLFRAME_BYTES
+    if np.sum(_mm) == len(science):
+        return bin_tbl
+
+    bin_tbl_start = science['REG_BINNING_TABLE_START']
+    bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
+    return bin_tbl
+
+
+def __digital_offset__(science: np.ndarray) -> np.ndarray:
+    """Return digital offset including ADC offset [count]."""
+    buff = science['DET_OFFSET'].astype('i4')
+    buff[buff >= 8192] -= 16384
+
+    return buff + 70
 
 
 def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
@@ -71,6 +121,18 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
             seconds=int(hdr['tai_sec'][ii]),
             microseconds=subsec2musec(hdr['sub_sec'][ii])))
         ii += 1
+
+    # These values are originally stored in little-endian, but
+    # Numpy does not accepts a mix of little & big-endian values
+    # in a structured array.
+    tlm['HTR1_CALCPVAL'][:] = tlm['HTR1_CALCPVAL'].byteswap()
+    tlm['HTR2_CALCPVAL'][:] = tlm['HTR2_CALCPVAL'].byteswap()
+    tlm['HTR3_CALCPVAL'][:] = tlm['HTR3_CALCPVAL'].byteswap()
+    tlm['HTR4_CALCPVAL'][:] = tlm['HTR4_CALCPVAL'].byteswap()
+    tlm['HTR1_CALCIVAL'][:] = tlm['HTR1_CALCIVAL'].byteswap()
+    tlm['HTR2_CALCIVAL'][:] = tlm['HTR2_CALCIVAL'].byteswap()
+    tlm['HTR3_CALCIVAL'][:] = tlm['HTR3_CALCIVAL'].byteswap()
+    tlm['HTR4_CALCIVAL'][:] = tlm['HTR4_CALCIVAL'].byteswap()
 
     return {'hdr': hdr[:ii],
             'tlm': tlm[:ii],
@@ -207,9 +269,6 @@ class SPXtlm:
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
-     - binning_table() -> np.ndarray
-     - start_integration() -> np.ndarray
-     - digital_offset() -> np.ndarray
      - from_hkt(flnames: Path | list[Path], *,
                 instrument: str | None = None, dump: bool = False) -> None
      - from_lv0(flnames: Path | list[Path], *,
@@ -358,66 +417,9 @@ class SPXtlm:
         if tstamp is None:
             raise ValueError('no valid timestamps found')
 
-        return tstamp[-1]
-
-    @property
-    def binning_table(self: SPXtlm) -> np.ndarray:
-        """Return binning table identifier (zero for full-frame images).
-
-        Notes
-        -----
-        Requires SPEXone DemHK, will not work with NomHk
-
-        v126: Sometimes the MPS information is not updated for the first \
-              images. We try to fix this and warn the user.
-        v129: REG_BINNING_TABLE_START is stored in BE instead of LE
-
-        Returns
-        -------
-        np.ndarray, dtype=int
-        """
-        if self.sci_tlm is None:
-            return None
-
-        bin_tbl = np.zeros(len(self.sci_tlm), dtype='i1')
-        _mm = self.sci_tlm['IMRLEN'] == FULLFRAME_BYTES
-        if np.sum(_mm) == len(self.sci_tlm):
-            return bin_tbl
-
-        bin_tbl_start = self.sci_tlm['REG_BINNING_TABLE_START']
-        bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
-        return bin_tbl
-
-    @property
-    def start_integration(self: SPXtlm) -> np.ndarray:
-        """Return offset wrt start-of-integration [msec].
-
-        Notes
-        -----
-        Requires SPEXone DemHK, will not work with NomHk
-
-        Determine offset wrt start-of-integration (IMRO + 1)
-        Where the default is defined as IMRO::
-
-        - [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
-        - [binned] 2 * COADD + 1   (always valid)
-        """
-        if self.sci_tlm is None or self.sci_tlm['ICUSWVER'][0] <= 0x123:
-            return 0
-
-        if np.bincount(self.binning_table).argmax() == 0:
-            imro = self.sci_tlm['REG_NCOADDFRAMES'] + 2
-        else:
-            imro = 2 * self.sci_tlm['REG_NCOADDFRAMES'] + 1
-        return self.sci_tlm['FTI'] * (imro + 1) / 10
-
-    @property
-    def digital_offset(self: SPXtlm) -> np.ndarray:
-        """Returns digital offset including ADC offset [count]."""
-        buff = self.sci_tlm['DET_OFFSET'].astype('i4')
-        buff[buff >= 8192] -= 16384
-
-        return buff + 70
+        frame_period = __frame_period__(self.sci_tlm[-1:])[0] \
+            if self.sci_tlm is not None else  1.
+        return tstamp[-1] + dt.timedelta(milliseconds=frame_period)
 
     def from_hkt(self: SPXtlm, flnames: Path | list[Path], *,
                  instrument: str | None = None, dump: bool = False) -> None:
@@ -516,7 +518,8 @@ class SPXtlm:
         if tlm_type != 'sci':
             self._hk = extract_l0_hk(ccsds_hk, epoch)
 
-    def from_l1a(self: SPXtlm, flname: Path, *, tlm_type: str | None = None) -> None:
+    def from_l1a(self: SPXtlm, flname: Path, *,
+                 tlm_type: str | None = None) -> None:
         """Read telemetry data from SPEXone Level-1A product.
 
         Parameters
@@ -559,7 +562,7 @@ class SPXtlm:
                 for ii, sec in enumerate(seconds):
                     _dt.append(epoch + dt.timedelta(
                         seconds=int(sec),
-                        milliseconds=-self.start_integration[ii],
+                        milliseconds=-__readout_offset__(self._sci['tlm'][0]),
                         microseconds=subsec2musec(subsec[ii])))
                 self._sci['tstamp']['dt'] = _dt
 
@@ -782,7 +785,8 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
-    def _fill_image_attrs(self: SPXtlm, l1a: h5py.File, lv0_format: str) -> None:
+    def _fill_image_attrs(self: SPXtlm, l1a: h5py.File,
+                          lv0_format: str) -> None:
         """Fill datasets in group '/image_attributes'."""
         if self.sci_tlm is None:
             return
@@ -807,11 +811,12 @@ class SPXtlm:
                       for x in self.sci_tstamp['dt']])
         l1a.set_dset('/image_attributes/image_ID',
                      np.bitwise_and(self.sci_hdr['sequence'], 0x3fff))
-        l1a.set_dset('/image_attributes/binning_table', self.binning_table)
-        l1a.set_dset('/image_attributes/digital_offset', self.digital_offset)
+        l1a.set_dset('/image_attributes/binning_table',
+                     __binning_table__(self.sci_tlm))
+        l1a.set_dset('/image_attributes/digital_offset',
+                     __digital_offset__(self.sci_tlm))
         l1a.set_dset('/image_attributes/exposure_time',
-                     1.29e-5 * (0.43 * self.sci_tlm['DET_FOTLEN']
-                                + self.sci_tlm['DET_EXPTIME']))
+                     1000 * __exposure_time__(self.sci_tlm))
         l1a.set_dset('/image_attributes/nr_coadditions',
                      self.sci_tlm['REG_NCOADDFRAMES'])
 
