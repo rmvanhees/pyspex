@@ -49,7 +49,6 @@ DET_CONSTS = {
     'FTI_science': 1000 / 15,       # [ms]
     'FTI_diagnostic': 240.,         # [ms]
     'FTI_margin': 212.4,            # [ms]
-    'imageTransferTime': 6.825e3,   # [ms]
     'overheadTime': 0.4644,         # [ms]
     'FOT_length': 20
 }
@@ -72,16 +71,13 @@ def __frame_period__(science: np.ndarray) -> np.ndarray:
     n_coad = science['REG_NCOADDFRAMES']
     # binning mode
     if science['REG_FULL_FRAME'] == 2:
-        return n_coad * np.full(len(science), DET_CONSTS['FTI_science'])
+        return np.full(len(science), n_coad * DET_CONSTS['FTI_science'])
 
     # full-frame mode
-    mcp_t_exp = 0.43 * science['DET_FOTLEN'] + science['DET_EXPTIME']
-    frame_period = (DET_CONSTS['FTI_margin'] + DET_CONSTS['overheadTime']
-                    + 129e-4 * mcp_t_exp)
-    return n_coad * np.clip(frame_period, a_max=None,
-                            a_min=max(
-                                DET_CONSTS['imageTransferTime'] / n_coad,
-                                DET_CONSTS['FTI_diagnostic']))
+    return n_coad * np.clip(DET_CONSTS['FTI_margin']
+                            + DET_CONSTS['overheadTime']
+                            + __exposure_time__(science),
+                            a_min=DET_CONSTS['FTI_diagnostic'], a_max=None)
 
 
 def __readout_offset__(science: np.ndarray) -> float:
@@ -613,7 +609,7 @@ class SPXtlm:
                 'hk_mask': hk_mask,
                 'dims': {
                     'number_of_images': np.sum(sci_mask),
-                    'samples_per_image': 2048 * 2048,
+                    'samples_per_image': DET_CONSTS['dimFullFrame'],
                     'hk_packets': np.sum(hk_mask)}
             }
             return
@@ -647,7 +643,7 @@ class SPXtlm:
                 'sci_mask': np.full(nr_sci, True),
                 'dims': {
                     'number_of_images': nr_sci,
-                    'samples_per_image': 2048
+                    'samples_per_image': DET_CONSTS['dimRow']
                     if nr_sci == 0 else np.max([len(x) for x in self.images]),
                     'hk_packets': nr_hk}
             }
