@@ -37,11 +37,23 @@ if TYPE_CHECKING:
 # - global parameters -----------------------
 module_logger = logging.getLogger('pyspex.tlm')
 
-FULLFRAME_BYTES = 2 * 2048 * 2048
 TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
-
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
+
+DET_CONSTS = {
+    'dimRow': 2048,
+    'dimColumn': 2048,
+    'dimFullFrame': 2048 * 2048,
+    'DEM_frequency': 10,            # [MHz]
+    'FTI_science': 1000 / 15,       # [ms]
+    'FTI_diagnostic': 240.,         # [ms]
+    'FTI_margin': 212.4,            # [ms]
+    'imageTransferTime': 6.825e3,   # [ms]
+    'overheadTime': 0.4644,         # [ms]
+    'FOT_length': 20
+}
+FULLFRAME_BYTES = 2 * DET_CONSTS['dimFullFrame']
 
 
 # - helper functions ------------------------
@@ -58,18 +70,18 @@ def __exposure_time__(science: np.ndarray) -> np.ndarray:
 def __frame_period__(science: np.ndarray) -> np.ndarray:
     """Return frame period of detector measurement [ms]."""
     n_coad = science['REG_NCOADDFRAMES']
-    # full-frame mode
-    if science['IMRLEN'] == FULLFRAME_BYTES:
-        n_chan = 2 ** (4 - (science['DET_OUTMODE'] & 0x3))
-        mcp_t_exp = 0.43 * science['DET_FOTLEN'] + science['DET_EXPTIME']
-        mcp_t_fot = science['DET_FOTLEN'] + 2 * (16 // n_chan)
-        mcp_t_rot = science['DET_NUMLINES'] * (16 // n_chan)
-        mcp_t_offs = 81     # I need this value to get the right value!?!
-        mcp_t_frm = mcp_t_exp + mcp_t_fot + mcp_t_rot + mcp_t_offs
-        return n_coad * np.max(240., 129e-4 * mcp_t_frm)
-
     # binning mode
-    return n_coad * np.full(len(science), 1000 / 15)
+    if science['REG_FULL_FRAME'] == 2:
+        return n_coad * np.full(len(science), DET_CONSTS['FTI_science'])
+
+    # full-frame mode
+    mcp_t_exp = 0.43 * science['DET_FOTLEN'] + science['DET_EXPTIME']
+    frame_period = (DET_CONSTS['FTI_margin'] + DET_CONSTS['overheadTime']
+                    + 129e-4 * mcp_t_exp)
+    return n_coad * np.clip(frame_period, a_max=None,
+                            a_min=max(
+                                DET_CONSTS['imageTransferTime'] / n_coad,
+                                DET_CONSTS['FTI_diagnostic']))
 
 
 def __readout_offset__(science: np.ndarray) -> float:
