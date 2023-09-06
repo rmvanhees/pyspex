@@ -824,7 +824,7 @@ class SPXtlm:
         l1a.set_dset('/image_attributes/digital_offset',
                      __digital_offset__(self.sci_tlm))
         l1a.set_dset('/image_attributes/exposure_time',
-                     1000 * __exposure_time__(self.sci_tlm))
+                     __exposure_time__(self.sci_tlm) / 1000)
         l1a.set_dset('/image_attributes/nr_coadditions',
                      self.sci_tlm['REG_NCOADDFRAMES'])
 
