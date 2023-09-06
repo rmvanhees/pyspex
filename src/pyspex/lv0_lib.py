@@ -20,10 +20,12 @@ Handy routines to convert CCSDS parameters:
 """
 from __future__ import annotations
 
-__all__ = ['ap_id', 'dtype_tmtc', 'dump_hkt', 'dump_science',
+__all__ = ['CorruptPacketWarning', 'ap_id', 'dtype_tmtc',
+           'dump_hkt', 'dump_science',
            'grouping_flag', 'packet_length', 'read_lv0_data', 'sequence']
 
 import logging
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -325,6 +327,10 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
 
 
 # - main function ----------------------------------
+class CorruptPacketWarning(UserWarning):
+    """Creating a custom warning."""
+
+
 def read_lv0_data(file_list: list[Path, ...],
                   file_format: str, *,
                   debug: bool = False) -> tuple[tuple, tuple]:
@@ -378,7 +384,10 @@ def read_lv0_data(file_list: list[Path, ...],
                     print(ap_id(hdr), grouping_flag(hdr),
                           hdr_dtype.itemsize, hdr['length'], offs)
                     if hdr['length'] == 0 or not 0x320 <= ap_id(hdr) < 0x351:
-                        raise ValueError('corrupted CCSDS header detected')
+                        warnings.warn('corrupted CCSDS packet detected',
+                                      category=CorruptPacketWarning,
+                                      stacklevel=1)
+                        break
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
                     continue
 
@@ -422,7 +431,10 @@ def read_lv0_data(file_list: list[Path, ...],
                     offs += dtype_tmtc(hdr).itemsize
                 else:
                     if hdr['length'] == 0:
-                        raise ValueError('corrupted CCSDS header detected')
+                        warnings.warn('corrupted CCSDS packet detected',
+                                      category=CorruptPacketWarning,
+                                      stacklevel=1)
+                        break
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
         ccsds_sci += buff_sci
         ccsds_hk += buff_hk
@@ -436,6 +448,31 @@ def read_lv0_data(file_list: list[Path, ...],
 
 def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
     """Dump header info of the SPEXone housekeeping telemetry packets."""
+    def msg_320(val: np.ndarray) -> str:
+        return f" {val['ICUSWVER']:8x} {val['MPS_ID']:6d}"
+
+    def msg_321(val: np.ndarray) -> str:
+        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+
+    def msg_322(val: np.ndarray) -> str:
+        return(f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+               f" {bin(val['TcRejectCode'][0])}"
+               f" {val['RejectParameter1'][0]:s}"
+               f" {val['RejectParameter2'][0]:s}")
+
+    def msg_323(val: np.ndarray) -> str:
+        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+
+    def msg_324(val: np.ndarray) -> str:
+        return (f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+                f" {bin(val['TcFailCode'][0])}"
+                f" {val['FailParameter1'][0]:s}"
+                f" {val['FailParameter2'][0]:s}")
+
+    def msg_325(val: np.ndarray) -> str:
+        return (f" {-1:8x} {-1:6d} {val['Event_ID'][0]:d}"
+                f" {val['Event_Sev'][0]:s}")
+
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
@@ -445,20 +482,14 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
                    f" {sequence(hdr):7d} {packet_length(hdr):6d}"
                    f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
 
-            _hk = buf['hk'][0] if 'hk' in buf else None
-            msg += {0x320: f" {_hk['ICUSWVER']:8x} {_hk['MPS_ID']:6d}",
-                    0x331: f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}",
-                    0x332: (f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
-                            f" {bin(buf['TcRejectCode'][0])}"
-                            f" {buf['RejectParameter1'][0]}"
-                            f" {buf['RejectParameter2'][0]}"),
-                    0x333: f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}",
-                    0x334: (f" {-1:8x} {-1:6d} {buf['TcSeqControl'][0]:12d}"
-                            f" {bin(buf['TcFailCode'][0])}"
-                            f" {buf['FailParameter1'][0]}"
-                            f" {buf['FailParameter2'][0]}"),
-                    0x335: (f" {-1:8x} {-1:6d} {buf['Event_ID'][0]:d}"
-                            f" {buf['Event_Sev'][0]}")}.get(ap_id(hdr), '')
+            if ap_id(hdr) == 0x320:
+                msg_320(buf['hk'][0])
+            else:
+                msg += {0x331: msg_321(buf),
+                        0x332: msg_322(buf),
+                        0x333: msg_323(buf),
+                        0x334: msg_324(buf),
+                        0x335: msg_325(buf)}.get(ap_id(hdr), '')
             fp.write(msg + '\n')
 
 
