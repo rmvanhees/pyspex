@@ -310,22 +310,16 @@ class L1Aio:
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
-    def fill_global_attrs(self: L1Aio, bin_size: str | None = None,
-                          inflight: bool = False) -> None:
+    def fill_global_attrs(self: L1Aio, inflight: bool = False) -> None:
         """Define global attributes in the SPEXone Level-1 products.
 
         Parameters
         ----------
-        bin_size :  str, default=None
-           Size of the nadir footprint (cross-track), include unit: e.g. '5km'
         inflight :  bool, default=False
            Measurements performed on-ground or inflight
         """
-        dict_attrs = attrs_def('1a', inflight)
+        dict_attrs = attrs_def(inflight)
         dict_attrs['product_name'] = self.product.name
-        if bin_size is not None:
-            dict_attrs['bin_size_at_nadir'] = bin_size
-
         for key, value in dict_attrs.items():
             if value is not None:
                 self.fid.setncattr(key, value)

@@ -19,14 +19,11 @@ from pyspex.version import pyspex_version
 
 
 # - main functions --------------------------------
-def attrs_def(level: str, inflight: bool = True,
-              origin: str | None = None) -> dict:
-    """Define global attributes of a SPEXone Level-1a product.
+def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
+    """Define global attributes of a SPEXone Level-1A product.
 
     Parameters
     ----------
-    level : {'1a', '1b', '1c'}
-       Product processing level
     inflight : bool, default=True
        Flag for in-flight or on-ground products
     origin : str
@@ -37,16 +34,13 @@ def attrs_def(level: str, inflight: bool = True,
     dict
        Global attributes for a Level-1A product
     """
-    if level not in ('1a', '1b', '1c'):
-        raise KeyError('valid processing levels are: "1a", "1b" or "1c"')
     if origin is None:
         origin = 'NASA' if inflight else 'SRON'
 
     res = {
-        'title': f'PACE SPEX Level-{level:s} data',
+        'title': 'PACE SPEXone Level-1A data',
         'platform': 'PACE',
-        'instrument': 'SPEX',
-        'conventions': 'CF-1.8 ACDD-1.3',
+        'instrument': 'SPEXone',
         'institution': ('NASA Goddard Space Flight Center,'
                         ' Ocean Biology Processing Group'),
         'license': ('http://science.nasa.gov/earth-science/'
@@ -54,8 +48,12 @@ def attrs_def(level: str, inflight: bool = True,
         'naming_authority': 'gov.nasa.gsfc.sci.oceancolor',
         'keyword_vocabulary': ('NASA Global Change Master Directory (GCMD)'
                                ' Science Keywords'),
-        'standard_name_vocabulary': ('NetCDF Climate and Forecast (CF)'
+        'stdname_vocabulary': ('NetCDF Climate and Forecast (CF)'
                                      ' Metadata Convention'),
+        'standard_name_vocabulary': 'CF Standard Name Table v79',
+        'conventions': 'CF-1.8 ACDD-1.3',
+        # 'identifier_product_doi_authority'
+        # 'identifier_product_doi'
         'creator_name': 'NASA/GSFC',
         'creator_email': 'data@oceancolor.gsfc.nasa.gov',
         'creator_url': 'http://oceancolor.gsfc.nasa.gov',
@@ -63,17 +61,18 @@ def attrs_def(level: str, inflight: bool = True,
         'publisher_name': 'NASA/GSFC',
         'publisher_email': 'data@oceancolor.gsfc.nasa.gov',
         'publisher_url': 'http://oceancolor.gsfc.nasa.gov',
-        'processing_level': f'L{level.upper():s}',
+        'processing_level': 'L1A',
         'cdm_data_type': ('One orbit swath or granule' \
                           if inflight else 'granule'),
         'cdl_version_date': '2021-09-10',
         'product_name': None,
+        'processing_version': 'V1.0',
         'date_created': datetime.now(timezone.utc).isoformat(
             timespec='milliseconds'),
-        'processing_version': 'V1.0',
-        'software_name': 'https://github.com/rmvanhees/pyspex',
+        'software_name': 'SPEXone L0-L1A processor',
+        'software_url': 'https://github.com/rmvanhees/pyspex',
         'software_version': pyspex_version(),
-        'history': 'l1agen_spex.py',
+        'history': 'spx1_level01a.py',
         'start_direction': 'Ascending' if inflight else None,
         'end_direction': 'Ascending' if inflight else None,
         'time_coverage_start': 'yyyy-mm-ddTHH:MM:DD',
@@ -81,8 +80,7 @@ def attrs_def(level: str, inflight: bool = True,
     }
 
     if origin == 'SRON':
-        res['title'] = f'SPEXone Level-{level:s} data'
-        res['instrument'] = 'SPEXone'
+        res['title'] = 'SPEXone Level-1A data'
         res['institution'] = 'SRON Netherlands Institute for Space Research'
         res['creator_name'] = 'SRON/Earth'
         res['creator_email'] = 'SPEXone-MPC@sron.nl'
