@@ -6,7 +6,7 @@
 #   All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""This is the Python package `pyspex`.
+"""This is the SRON Python package `pyspex`.
 
 It contains software to read PACE HKT products and SPEXone Level-0 products,
 and read/write SPEXone Level-1A products.
