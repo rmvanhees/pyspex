@@ -2924,6 +2924,7 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
         dset = fid.createVariable('processor_configuration', str)
         dset.comment = ('Configuration parameters used during'
                         ' the processor run that produced this file.')
+        dset.markup_language = 'YAML'
         dset[0] = ''.join(
             [s for s in yaml_conf.open(encoding='ascii').readlines()
              if not (s == '\n' or s.startswith('#'))])
