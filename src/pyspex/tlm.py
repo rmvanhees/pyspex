@@ -728,10 +728,10 @@ class SPXtlm:
         ref_date = self.reference_date
         with L1Aio(l1a_file, ref_date, self._selection['dims'],
                    compression=config.compression) as l1a:
-            if self.hk_tlm is None:
+            l1a.fill_global_attrs(inflight=config.l0_format != 'raw')
+            if self.hk_tlm is not None:
                 l1a.set_attr('icu_sw_version',
                              f'0x{self.hk_tlm["ICUSWVER"][0]:x}')
-            l1a.fill_global_attrs(inflight=config.l0_format != 'raw')
             l1a.set_attr('time_coverage_start',
                          self.time_coverage_start.isoformat(
                              timespec='milliseconds'))
