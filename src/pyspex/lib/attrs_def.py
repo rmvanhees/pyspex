@@ -52,8 +52,8 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
                                      ' Metadata Convention'),
         'standard_name_vocabulary': 'CF Standard Name Table v79',
         'conventions': 'CF-1.8 ACDD-1.3',
-        # 'identifier_product_doi_authority'
-        # 'identifier_product_doi'
+        'identifier_product_doi_authority': 'http://dx.doi.org/',
+        'identifier_product_doi': 'https://doi.org/10.5281/zenodo.5705691',
         'creator_name': 'NASA/GSFC',
         'creator_email': 'data@oceancolor.gsfc.nasa.gov',
         'creator_url': 'http://oceancolor.gsfc.nasa.gov',
