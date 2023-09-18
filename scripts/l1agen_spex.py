@@ -8,8 +8,11 @@
 #
 # License:  BSD-3-Clause
 #
-"""An amalgamation of the pyspex code needed for SPEXone L0-L1A processing
-at NASA Goddard Space Flight Center, Ocean Biology Processing Group."""
+"""An amalgamation of the pyspex code needed for SPEXone L0-L1A processing.
+
+Intended for operational processing of SPEXone data at NASA Goddard Space
+ Flight Center, Ocean Biology Processing Group.
+"""
 from __future__ import annotations
 
 import argparse
@@ -43,7 +46,7 @@ MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 ORBIT_DURATION = 5904  # seconds
 
-TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
+TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00+00:00
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
 
@@ -651,10 +654,11 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
     # obtain time_coverage_range from the Level-1A product
     with h5py.File(l1a_file) as fid:
         # pylint: disable=no-member
+        # Note timezone 'Z' is only accepted by Python 3.11+
         val = fid.attrs['time_coverage_start'].decode()
-        coverage_start = dt.datetime.fromisoformat(val)
+        coverage_start = dt.datetime.fromisoformat(val).replace('Z', '+00:00')
         val = fid.attrs['time_coverage_end'].decode()
-        coverage_end = dt.datetime.fromisoformat(val)
+        coverage_end = dt.datetime.fromisoformat(val).replace('Z', '+00:00')
     module_logger.debug('SPEXone time-coverage: %s - %s',
                         coverage_start, coverage_end)
 
@@ -760,7 +764,7 @@ class HKTio:
                 # pylint: disable=no-member
                 words = grp['att_time'].attrs['units'].decode().split(' ')
                 if len(words) > 2:
-                    # Note python3.8 does not recognize 'Z' and needs '+00:00'
+                    # Note timezone 'Z' is only accepted by Python 3.11+
                     ref_date = dt.datetime.fromisoformat(words[2]
                                                          + 'T00:00:00+00:00')
 
@@ -876,6 +880,13 @@ class HKTio:
                 module_logger.warning(
                     'CCSDS header read error with "%s"', exc)
                 break
+
+            try:
+                dtype_apid = dtype_tmtc(hdr)
+            except ValueError:
+                print(f'APID: 0x{ap_id(hdr):x};'
+                      f' Packet Length: {hdr["length"]:d}')
+                dtype_apid = None
 
             dtype_apid = dtype_tmtc(hdr)
             if dtype_apid is not None:           # all valid APIDs
@@ -2490,14 +2501,110 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
                              ('_FillerByte', 'u1'),
                              ('Address32', '>u4'),
                              ('Length', '>u4'),
-                             ('Data', 'u1', (2036,))]),
+                             ('Data', 'u1', (max(1, hdr['length'] - 15),))]),
             0x341: np.dtype([('hdr', hdr.dtype),           # MemCheckRp
                              ('Image_ID', 'u1'),
                              ('_FillerByte', 'u1'),
                              ('Address32', '>u4'),
                              ('Length', '>u4'),
                              ('CheckSum', '>u4')]),
-            0x33d: np.dtype([('HTR_1_IsEna', 'u1'),        # ThemTableRp
+            0x33c: np.dtype([('hdr', hdr.dtype),           # MpsTableRp
+                             ('MPS_ID', 'u1'),
+                             ('MPS_VER', 'u1'),
+                             ('FTO', '>u2'),
+                             ('FTI', '>u2'),
+                             ('FTC', '>u2'),
+                             ('IMRO', '>u2'),
+                             ('IMRSA_A', '>u4'),
+                             ('IMRSA_B', '>u4'),
+                             ('IMRLEN', '>u4'),
+                             ('PKTLEN', '>u2'),
+                             ('TMRO', '>u2'),
+                             ('TMRI', '>u2'),
+                             ('IMDMODE', 'u1'),
+                             ('_FillerByte1', 'u1'),
+                             ('_Filler1', '>u2'),
+                             ('_Filler2', '>u2'),
+                             ('_Filler3', '>u2'),
+                             ('DEM_RST', 'u1'),
+                             ('DEM_CMV_CTRL', 'u1'),
+                             ('COADD', 'u1'),
+                             ('DEM_IGEN', 'u1'),
+                             ('FRAME_MODE', 'u1'),
+                             ('OUTPMODE', 'u1'),
+                             ('BIN_TBL', '>u4'),
+                             ('COADD_BUF', '>u4'),
+                             ('COADD_RESA', '>u4'),
+                             ('COADD_RESB', '>u4'),
+                             ('FRAME_BUFA', '>u4'),
+                             ('FRAME_BUFB', '>u4'),
+                             ('LINE_ENA', '>u4'),
+                             ('NUMLIN', '>u2'),
+                             ('STR1', '>u2'),
+                             ('STR2', '>u2'),
+                             ('STR3', '>u2'),
+                             ('STR4', '>u2'),
+                             ('STR5', '>u2'),
+                             ('STR6', '>u2'),
+                             ('STR7', '>u2'),
+                             ('STR8', '>u2'),
+                             ('NumLin1', '>u2'),
+                             ('NumLin2', '>u2'),
+                             ('NumLin3', '>u2'),
+                             ('NumLin4', '>u2'),
+                             ('NumLin5', '>u2'),
+                             ('NumLin6', '>u2'),
+                             ('NumLin7', '>u2'),
+                             ('NumLin8', '>u2'),
+                             ('SubS', '>u2'),
+                             ('SubA', '>u2'),
+                             ('mono', 'u1'),
+                             ('ImFlp', 'u1'),
+                             ('ExpCtrl', '>u4'),
+                             ('ExpTime', '>u4'),
+                             ('ExpStep', '>u4'),
+                             ('ExpKp1', '>u4'),
+                             ('ExpKp2', '>u4'),
+                             ('NrSlope', 'u1'),
+                             ('ExpSeq', 'u1'),
+                             ('ExpTime2', '>u4'),
+                             ('ExpStep2', '>u4'),
+                             ('NumFr', '>u2'),
+                             ('FotLen', '>u2'),
+                             ('ILvdsRcvr', 'u1'),
+                             ('Calib', 'u1'),
+                             ('TrainPtrn', '>u2'),
+                             ('ChEna', '>u4'),
+                             #('ILvds', 'u1'),
+                             ('Icol', 'u1'),
+                             ('ICOLPR', 'u1'),
+                             ('Iadc', 'u1'),
+                             ('Iamp', 'u1'),
+                             ('VTFL1', 'u1'),
+                             ('VTFL2', 'u1'),
+                             ('VTFL3', 'u1'),
+                             ('VRSTL', 'u1'),
+                             ('VPreCh', 'u1'),
+                             ('VREF', 'u1'),
+                             ('Vramp1', 'u1'),
+                             ('Vramp2', 'u1'),
+                             ('OFFSET', '>u2'),
+                             ('PGAGAIN', 'u1'),
+                             ('ADCGAIN', 'u1'),
+                             ('TDIG1', 'u1'),
+                             ('TDIG2', 'u1'),
+                             ('BitMode', 'u1'),
+                             ('AdcRes', 'u1'),
+                             ('PLLENA', 'u1'),
+                             ('PLLinFRE', 'u1'),
+                             ('PLLByp', 'u1'),
+                             ('PLLRATE', 'u1'),
+                             ('PLLLoad', 'u1'),
+                             ('DETDum', 'u1'),
+                             ('BLACKCOL', 'u1'),
+                             ('VBLACKSUN', 'u1')]),
+            0x33d: np.dtype([('hdr', hdr.dtype),           # ThemTableRp
+                             ('HTR_1_IsEna', 'u1'),
                              ('HTR_1_AtcCorMan', 'u1'),
                              ('HTR_1_THMCH', 'u1'),
                              ('_FillerByte1', 'u1'),
@@ -2590,6 +2697,15 @@ def read_lv0_data(file_list: list[Path, ...],
                     module_logger.warning('header read error with "%s".', exc)
                     break
 
+                # check for data corruption (length > 0 and odd)
+                if hdr['length'] % 2 == 0:
+                    print(ap_id(hdr), grouping_flag(hdr),
+                          hdr_dtype.itemsize, hdr['length'], offs)
+                    warnings.warn('corrupted CCSDS packet detected',
+                                  category=CorruptPacketWarning,
+                                  stacklevel=1)
+                    break
+
                 if debug:
                     print(ap_id(hdr), grouping_flag(hdr),
                           hdr_dtype.itemsize, hdr['length'], offs)
@@ -2640,15 +2756,11 @@ def read_lv0_data(file_list: list[Path, ...],
                     buff_hk += (buff,)
                     offs += dtype_tmtc(hdr).itemsize
                 else:
-                    if hdr['length'] == 0:
-                        warnings.warn('corrupted CCSDS packet detected',
-                                      category=CorruptPacketWarning,
-                                      stacklevel=1)
-                        break
                     offs += hdr_dtype.itemsize + hdr['length'] - 5
+            del ccsds_data
+
         ccsds_sci += buff_sci
         ccsds_hk += buff_hk
-        del ccsds_data
 
     module_logger.info('number of Science packages %d', len(ccsds_sci))
     module_logger.info('number of Engineering packages %d', len(ccsds_hk))
@@ -3252,7 +3364,7 @@ class SPXtlm:
                 }
                 dset = fid['/engineering_data/HK_tlm_time']
                 # pylint: disable=no-member
-                ref_date = dset.attrs['units'].decode()[14:] + 'Z'
+                ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
                 epoch = dt.datetime.fromisoformat(ref_date)
                 for sec in dset[:]:
                     self._hk['tstamp'].append(epoch + dt.timedelta(seconds=sec))
@@ -3474,10 +3586,10 @@ class SPXtlm:
                      self.sci_tstamp['tai_sec'])
         # modify attribute units for non-DSB products
         if lv0_format != 'dsb':
-            # timestamp of 2020-01-01T00:00:00Z
+            # timestamp of 2020-01-01T00:00:00+00:00
             l1a.set_attr('valid_min', np.uint32(1577836800),
                          ds_name='/image_attributes/icu_time_sec')
-            # timestamp of 2024-01-01T00:00:00Z
+            # timestamp of 2024-01-01T00:00:00+00:00
             l1a.set_attr('valid_max', np.uint32(1704067200),
                          ds_name='/image_attributes/icu_time_sec')
             l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
