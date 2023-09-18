@@ -16,7 +16,7 @@ __all__ = ['HKTio', 'check_coverage_nav', 'read_hkt_nav']
 import logging
 from datetime import datetime, time, timedelta, timezone
 from enum import IntFlag, auto
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
@@ -29,6 +29,9 @@ from netCDF4 import Dataset
 from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
 from .lv0_lib import ap_id, dtype_tmtc
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # - global parameters -----------------------
 module_logger = logging.getLogger('pyspex.hkt_io')
@@ -247,7 +250,7 @@ class HKTio:
                 # pylint: disable=no-member
                 words = grp['att_time'].attrs['units'].decode().split(' ')
                 if len(words) > 2:
-                    # Note python3.8 does not recognize 'Z' and needs '+00:00'
+                    # Note timezone 'Z' is only accepted by Python 3.11+
                     ref_date = datetime.fromisoformat(words[2]
                                                       + 'T00:00:00+00:00')
 
@@ -263,10 +266,11 @@ class HKTio:
         one_day = timedelta(days=1)
         with h5py.File(self.filename) as fid:
             # pylint: disable=no-member
+            # Note timezone 'Z' is only accepted by Python 3.11+
             val = fid.attrs['time_coverage_start'].decode()
-            coverage_start = datetime.fromisoformat(val)
+            coverage_start = datetime.fromisoformat(val.replace('Z', '+00:00'))
             val = fid.attrs['time_coverage_end'].decode()
-            coverage_end = datetime.fromisoformat(val)
+            coverage_end = datetime.fromisoformat(val.replace('Z', '+00:00'))
 
         if abs(coverage_end - coverage_start) < one_day:
             return coverage_start, coverage_end
@@ -364,7 +368,13 @@ class HKTio:
                     'CCSDS header read error with "%s"', exc)
                 break
 
-            dtype_apid = dtype_tmtc(hdr)
+            try:
+                dtype_apid = dtype_tmtc(hdr)
+            except ValueError:
+                print(f'APID: 0x{ap_id(hdr):x};'
+                      f' Packet Length: {hdr["length"]:d}')
+                dtype_apid = None
+
             if dtype_apid is not None:           # all valid APIDs
                 buff = np.frombuffer(packet, count=1, offset=0,
                                      dtype=dtype_apid)
@@ -404,56 +414,3 @@ class HKTio:
             xds3 = xds3.set_coords(['tilt_time'])
             xds3 = xds3.swap_dims({'tilt_records': 'tilt_time'})
         return {'att_': xds1, 'orb_': xds2, 'tilt': xds3}
-
-
-# - test module -------------------------
-def _test() -> None:
-    data_dir = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/14')
-    file_list = data_dir.glob('PACE.202307??T??????.HKT.nc')
-    for flname in sorted(file_list):
-        print(flname)
-        hkt = HKTio(flname)
-        hkt.housekeeping()
-    # return
-    data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')
-    data_dir1 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/21')
-    file_list = [
-        data_dir0 / 'PACE.20230720T230606.HKT.nc',
-        data_dir0 / 'PACE.20230720T230910.HKT.nc',
-        data_dir0 / 'PACE.20230720T231216.HKT.nc',
-        data_dir0 / 'PACE.20230720T231526.HKT.nc',
-        data_dir0 / 'PACE.20230720T231836.HKT.nc',
-        data_dir0 / 'PACE.20230720T232146.HKT.nc',
-        data_dir0 / 'PACE.20230720T232456.HKT.nc',
-        data_dir1 / 'PACE.20230721T000054.HKT.nc'
-    ]
-    for flname in file_list:
-        hkt = HKTio(flname)
-        print(hkt.coverage())
-        hkt.housekeeping()
-    # return
-
-    data_dir0 = Path('/nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/20')
-    file_list = [
-        data_dir0 / 'PACE.20230720T230606.HKT.nc',
-        data_dir0 / 'PACE.20230720T230910.HKT.nc',
-        data_dir0 / 'PACE.20230720T231216.HKT.nc',
-        data_dir0 / 'PACE.20230720T231526.HKT.nc',
-        data_dir0 / 'PACE.20230720T231836.HKT.nc'
-    ]
-
-    l1a_file = 'test_hkt_io.nc'
-    with Dataset(l1a_file, 'w') as fid:
-        fid.time_coverage_start = '2023-07-20T23:12:16.874Z'
-        fid.time_coverage_end = '2023-07-20T23:19:36.374Z'
-
-    # read PACE navigation data from HKT files.
-    xds_nav = read_hkt_nav(file_list)
-    # add PACE navigation data to existing Level-1A product.
-    xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
-    # check time coverage of navigation data.
-    check_coverage_nav(Path(l1a_file), xds_nav)
-
-
-if __name__ == '__main__':
-    _test()
