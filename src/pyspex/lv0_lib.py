@@ -153,15 +153,20 @@ def ap_id(hdr: np.ndarray) -> int:
     -----
     The following values are recognized:
 
-    - 0x350 : Science
-    - 0x320 : NomHk
-    - 0x322 : DemHk
-    - 0x331 : TcAccept
-    - 0x332 : TcReject
-    - 0x333 : TcExecute
-    - 0x334 : TcFail
-    - 0x335 : EventRp
-
+    - 0x350:  Science
+    - 0x320:  NomHk
+    - 0x322:  DemHk
+    - 0x331:  TcAccept
+    - 0x332:  TcReject
+    - 0x333:  TcExecute
+    - 0x334:  TcFail
+    - 0x335:  EventRp
+    - 0x340:  MemDump
+    - 0x341:  MemCheckRp
+    - 0x33A:  MonListRp
+    - 0x33B:  EvRpListRp
+    - 0x33C:  MpsTableRp
+    - 0x33D:  ThermTableRp
     """
     return hdr['type'] & 0x7FF
 
@@ -229,8 +234,244 @@ def packet_length(hdr: np.ndarray) -> int:
     return hdr['length']
 
 
+class DtypeTmTc:
+    """Definition of a CCSDS TmTc packages as np.dtype."""
+
+    def __init__(self: DtypeTmTc, hdr: np.ndarray) -> None:
+        self._hdr = hdr
+
+    def tm_800(self: DtypeTmTc) -> np.dtype:          # ApID = 0x320
+        """Return data-type of NomHk packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('hk', tmtc_dtype(0x320))])
+
+    def tm_802(self: DtypeTmTc) -> np.dtype:          # ApID = 0x322
+        """Return data-type of DemHk packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('hk', tmtc_dtype(0x322))])
+
+    def tm_817(self: DtypeTmTc) -> np.dtype:          # ApID = 0x331
+        """Return data-type of TcAccept packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('TcPacketId', '>u2'),
+                         ('TcSeqControl', '>u2')])
+
+    def tm_818(self: DtypeTmTc) -> np.dtype:          # ApID = 0x332
+        """Return data-type of TcReject packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('TcPacketId', '>u2'),
+                         ('TcSeqControl', '>u2'),
+                         ('TcRejectCode', '>u2'),
+                         ('RejectParameter1', '>u2'),
+                         ('RejectParameter2', '>u2')])
+
+    def tm_819(self: DtypeTmTc) -> np.dtype:          # ApID = 0x333
+        """Return data-type of TcExecute packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('TcPacketId', '>u2'),
+                         ('TcSeqControl', '>u2')])
+
+    def tm_820(self: DtypeTmTc) -> np.dtype:          # ApID = 0x334
+        """Return data-type of TcFail packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('TcPacketId', '>u2'),
+                         ('TcSeqControl', '>u2'),
+                         ('TcFailCode', '>u2'),
+                         ('FailParameter1', '>u2'),
+                         ('FailParameter2', '>u2')])
+
+    def tm_821(self: DtypeTmTc) -> np.dtype:          # ApID = 0x335
+        """Return data-type of EventRp packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('Event_ID', 'u1'),
+                         ('Event_Sev', 'u1'),
+                         ('Word1', '>u2'),
+                         ('Word2', '>u2'),
+                         ('Word3', '>u2'),
+                         ('Word4', '>u2'),
+                         ('Word5', '>u2'),
+                         ('Word6', '>u2'),
+                         ('Word7', '>u2'),
+                         ('Word8', '>u2')])
+
+    def tm_832(self: DtypeTmTc) -> np.dtype:          # ApID = 0x340
+        """Return data-type of MemDump packet."""
+        if self._hdr['length'] - 15 == 1:
+            return np.dtype([('hdr', self._hdr.dtype),
+                             ('Image_ID', 'u1'),
+                             ('_FillerByte', 'u1'),
+                             ('Address32', '>u4'),
+                             ('Length', '>u4'),
+                             ('Data', 'u1')])
+        else:
+            return np.dtype([('hdr', self._hdr.dtype),
+                             ('Image_ID', 'u1'),
+                             ('_FillerByte', 'u1'),
+                             ('Address32', '>u4'),
+                             ('Length', '>u4'),
+                             ('Data', 'u1', (self._hdr['length'] - 15),)])
+
+    def tm_833(self: DtypeTmTc) -> np.dtype:          # ApID = 0x341
+        """Return data-type of MemCheckRp packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('Image_ID', 'u1'),
+                         ('_FillerByte', 'u1'),
+                         ('Address32', '>u4'),
+                         ('Length', '>u4'),
+                         ('CheckSum', '>u4')])
+
+    #def tm_826(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33A
+    #    return None
+    #
+    #def tm_827(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33B
+    #    return None
+
+    def tm_828(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33C
+        """Return data-type of MpsTableRp packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('MPS_ID', 'u1'),
+                         ('MPS_VER', 'u1'),
+                         ('FTO', '>u2'),
+                         ('FTI', '>u2'),
+                         ('FTC', '>u2'),
+                         ('IMRO', '>u2'),
+                         ('IMRSA_A', '>u4'),
+                         ('IMRSA_B', '>u4'),
+                         ('IMRLEN', '>u4'),
+                         ('PKTLEN', '>u2'),
+                         ('TMRO', '>u2'),
+                         ('TMRI', '>u2'),
+                         ('IMDMODE', 'u1'),
+                         ('_FillerByte1', 'u1'),
+                         ('_Filler1', '>u2'),
+                         ('_Filler2', '>u2'),
+                         ('_Filler3', '>u2'),
+                         ('DEM_RST', 'u1'),
+                         ('DEM_CMV_CTRL', 'u1'),
+                         ('COADD', 'u1'),
+                         ('DEM_IGEN', 'u1'),
+                         ('FRAME_MODE', 'u1'),
+                         ('OUTPMODE', 'u1'),
+                         ('BIN_TBL', '>u4'),
+                         ('COADD_BUF', '>u4'),
+                         ('COADD_RESA', '>u4'),
+                         ('COADD_RESB', '>u4'),
+                         ('FRAME_BUFA', '>u4'),
+                         ('FRAME_BUFB', '>u4'),
+                         ('LINE_ENA', '>u4'),
+                         ('NUMLIN', '>u2'),
+                         ('STR1', '>u2'),
+                         ('STR2', '>u2'),
+                         ('STR3', '>u2'),
+                         ('STR4', '>u2'),
+                         ('STR5', '>u2'),
+                         ('STR6', '>u2'),
+                         ('STR7', '>u2'),
+                         ('STR8', '>u2'),
+                         ('NumLin1', '>u2'),
+                         ('NumLin2', '>u2'),
+                         ('NumLin3', '>u2'),
+                         ('NumLin4', '>u2'),
+                         ('NumLin5', '>u2'),
+                         ('NumLin6', '>u2'),
+                         ('NumLin7', '>u2'),
+                         ('NumLin8', '>u2'),
+                         ('SubS', '>u2'),
+                         ('SubA', '>u2'),
+                         ('mono', 'u1'),
+                         ('ImFlp', 'u1'),
+                         ('ExpCtrl', '>u4'),
+                         ('ExpTime', '>u4'),
+                         ('ExpStep', '>u4'),
+                         ('ExpKp1', '>u4'),
+                         ('ExpKp2', '>u4'),
+                         ('NrSlope', 'u1'),
+                         ('ExpSeq', 'u1'),
+                         ('ExpTime2', '>u4'),
+                         ('ExpStep2', '>u4'),
+                         ('NumFr', '>u2'),
+                         ('FotLen', '>u2'),
+                         ('ILvdsRcvr', 'u1'),
+                         ('Calib', 'u1'),
+                         ('TrainPtrn', '>u2'),
+                         ('ChEna', '>u4'),
+                         #('ILvds', 'u1'),
+                         ('Icol', 'u1'),
+                         ('ICOLPR', 'u1'),
+                         ('Iadc', 'u1'),
+                         ('Iamp', 'u1'),
+                         ('VTFL1', 'u1'),
+                         ('VTFL2', 'u1'),
+                         ('VTFL3', 'u1'),
+                         ('VRSTL', 'u1'),
+                         ('VPreCh', 'u1'),
+                         ('VREF', 'u1'),
+                         ('Vramp1', 'u1'),
+                         ('Vramp2', 'u1'),
+                         ('OFFSET', '>u2'),
+                         ('PGAGAIN', 'u1'),
+                         ('ADCGAIN', 'u1'),
+                         ('TDIG1', 'u1'),
+                         ('TDIG2', 'u1'),
+                         ('BitMode', 'u1'),
+                         ('AdcRes', 'u1'),
+                         ('PLLENA', 'u1'),
+                         ('PLLinFRE', 'u1'),
+                         ('PLLByp', 'u1'),
+                         ('PLLRATE', 'u1'),
+                         ('PLLLoad', 'u1'),
+                         ('DETDum', 'u1'),
+                         ('BLACKCOL', 'u1'),
+                         ('VBLACKSUN', 'u1')])
+
+    def tm_829(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33D
+        """Return data-type of ThemTableRp packet."""
+        return np.dtype([('hdr', self._hdr.dtype),
+                         ('HTR_1_IsEna', 'u1'),
+                         ('HTR_1_AtcCorMan', 'u1'),
+                         ('HTR_1_THMCH', 'u1'),
+                         ('_FillerByte1', 'u1'),
+                         ('HTR_1_ManOutput', '>u2'),
+                         ('HTR_1_ATC_SP', '>u4'),
+                         ('HTR_1_ATC_P', '>u4'),
+                         ('HTR_1_ATC_I', '>u4'),
+                         ('HTR_1_ATC_I_INIT', '>u4'),
+                         ('HTR_2_IsEna', 'u1'),
+                         ('HTR_2_AtcCorMan', 'u1'),
+                         ('HTR_2_THMCH', 'u1'),
+                         ('_FillerByte2', 'u1'),
+                         ('HTR_2_ManOutput', '>u2'),
+                         ('HTR_2_ATC_SP', '>u4'),
+                         ('HTR_2_ATC_P', '>u4'),
+                         ('HTR_2_ATC_I', '>u4'),
+                         ('HTR_2_ATC_I_INIT', '>u4'),
+                         ('HTR_3_IsEna', 'u1'),
+                         ('HTR_3_AtcCorMan', 'u1'),
+                         ('HTR_3_THMCH', 'u1'),
+                         ('_FillerByte3', 'u1'),
+                         ('HTR_3_ManOutput', '>u2'),
+                         ('HTR_3_ATC_SP', '>u4'),
+                         ('HTR_3_ATC_P', '>u4'),
+                         ('HTR_3_ATC_I', '>u4'),
+                         ('HTR_3_ATC_I_INIT', '>u4'),
+                         ('HTR_4_IsEna', 'u1'),
+                         ('HTR_4_AtcCorMan', 'u1'),
+                         ('HTR_4_THMCH', 'u1'),
+                         ('_FillerByte4', 'u1'),
+                         ('HTR_4_ManOutput', '>u2'),
+                         ('HTR_4_ATC_SP', '>u4'),
+                         ('HTR_4_ATC_P', '>u4'),
+                         ('HTR_4_ATC_I', '>u4'),
+                         ('HTR_4_ATC_I_INIT', '>u4')])
+
+    def dispatch(self: DtypeTmTc) -> np.dtype:
+        method_name = 'tm_' + str(ap_id(self._hdr))
+        method = getattr(self, method_name, None)
+        return None if method is None else method()
+
+
 def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
-    """Return definition of a CCSDS TmTc package (given APID).
+    """Return data-type definition of a CCSDS TmTc package.
 
     Parameters
     ----------
@@ -242,184 +483,7 @@ def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
     np.dtype
         numpy dtype of CCSDS TmTC package or None if APID is not implemented
     """
-    return {0x320: np.dtype([('hdr', hdr.dtype),           # NomHk
-                             ('hk', tmtc_dtype(0x320))]),
-            0x322: np.dtype([('hdr', hdr.dtype),           # DemHk
-                             ('hk', tmtc_dtype(0x322))]),
-            0x331: np.dtype([('hdr', hdr.dtype),           # TcAccept
-                             ('TcPacketId', '>u2'),
-                             ('TcSeqControl', '>u2')]),
-            0x332: np.dtype([('hdr', hdr.dtype),           # TcReject
-                             ('TcPacketId', '>u2'),
-                             ('TcSeqControl', '>u2'),
-                             ('TcRejectCode', '>u2'),
-                             ('RejectParameter1', '>u2'),
-                             ('RejectParameter2', '>u2')]),
-            0x333: np.dtype([('hdr', hdr.dtype),           # TcExecute
-                             ('TcPacketId', '>u2'),
-                             ('TcSeqControl', '>u2')]),
-            0x334: np.dtype([('hdr', hdr.dtype),           # TcFail
-                             ('TcPacketId', '>u2'),
-                             ('TcSeqControl', '>u2'),
-                             ('TcFailCode', '>u2'),
-                             ('FailParameter1', '>u2'),
-                             ('FailParameter2', '>u2')]),
-            0x335: np.dtype([('hdr', hdr.dtype),           # EventRp
-                             ('Event_ID', 'u1'),
-                             ('Event_Sev', 'u1'),
-                             ('Word1', '>u2'),
-                             ('Word2', '>u2'),
-                             ('Word3', '>u2'),
-                             ('Word4', '>u2'),
-                             ('Word5', '>u2'),
-                             ('Word6', '>u2'),
-                             ('Word7', '>u2'),
-                             ('Word8', '>u2')]),
-            0x340: np.dtype([('hdr', hdr.dtype),           # MemDump
-                             ('Image_ID', 'u1'),
-                             ('_FillerByte', 'u1'),
-                             ('Address32', '>u4'),
-                             ('Length', '>u4'),
-                             ('Data', 'u1', (max(1, hdr['length'] - 15),))]),
-            0x341: np.dtype([('hdr', hdr.dtype),           # MemCheckRp
-                             ('Image_ID', 'u1'),
-                             ('_FillerByte', 'u1'),
-                             ('Address32', '>u4'),
-                             ('Length', '>u4'),
-                             ('CheckSum', '>u4')]),
-            0x33c: np.dtype([('hdr', hdr.dtype),           # MpsTableRp
-                             ('MPS_ID', 'u1'),
-                             ('MPS_VER', 'u1'),
-                             ('FTO', '>u2'),
-                             ('FTI', '>u2'),
-                             ('FTC', '>u2'),
-                             ('IMRO', '>u2'),
-                             ('IMRSA_A', '>u4'),
-                             ('IMRSA_B', '>u4'),
-                             ('IMRLEN', '>u4'),
-                             ('PKTLEN', '>u2'),
-                             ('TMRO', '>u2'),
-                             ('TMRI', '>u2'),
-                             ('IMDMODE', 'u1'),
-                             ('_FillerByte1', 'u1'),
-                             ('_Filler1', '>u2'),
-                             ('_Filler2', '>u2'),
-                             ('_Filler3', '>u2'),
-                             ('DEM_RST', 'u1'),
-                             ('DEM_CMV_CTRL', 'u1'),
-                             ('COADD', 'u1'),
-                             ('DEM_IGEN', 'u1'),
-                             ('FRAME_MODE', 'u1'),
-                             ('OUTPMODE', 'u1'),
-                             ('BIN_TBL', '>u4'),
-                             ('COADD_BUF', '>u4'),
-                             ('COADD_RESA', '>u4'),
-                             ('COADD_RESB', '>u4'),
-                             ('FRAME_BUFA', '>u4'),
-                             ('FRAME_BUFB', '>u4'),
-                             ('LINE_ENA', '>u4'),
-                             ('NUMLIN', '>u2'),
-                             ('STR1', '>u2'),
-                             ('STR2', '>u2'),
-                             ('STR3', '>u2'),
-                             ('STR4', '>u2'),
-                             ('STR5', '>u2'),
-                             ('STR6', '>u2'),
-                             ('STR7', '>u2'),
-                             ('STR8', '>u2'),
-                             ('NumLin1', '>u2'),
-                             ('NumLin2', '>u2'),
-                             ('NumLin3', '>u2'),
-                             ('NumLin4', '>u2'),
-                             ('NumLin5', '>u2'),
-                             ('NumLin6', '>u2'),
-                             ('NumLin7', '>u2'),
-                             ('NumLin8', '>u2'),
-                             ('SubS', '>u2'),
-                             ('SubA', '>u2'),
-                             ('mono', 'u1'),
-                             ('ImFlp', 'u1'),
-                             ('ExpCtrl', '>u4'),
-                             ('ExpTime', '>u4'),
-                             ('ExpStep', '>u4'),
-                             ('ExpKp1', '>u4'),
-                             ('ExpKp2', '>u4'),
-                             ('NrSlope', 'u1'),
-                             ('ExpSeq', 'u1'),
-                             ('ExpTime2', '>u4'),
-                             ('ExpStep2', '>u4'),
-                             ('NumFr', '>u2'),
-                             ('FotLen', '>u2'),
-                             ('ILvdsRcvr', 'u1'),
-                             ('Calib', 'u1'),
-                             ('TrainPtrn', '>u2'),
-                             ('ChEna', '>u4'),
-                             #('ILvds', 'u1'),
-                             ('Icol', 'u1'),
-                             ('ICOLPR', 'u1'),
-                             ('Iadc', 'u1'),
-                             ('Iamp', 'u1'),
-                             ('VTFL1', 'u1'),
-                             ('VTFL2', 'u1'),
-                             ('VTFL3', 'u1'),
-                             ('VRSTL', 'u1'),
-                             ('VPreCh', 'u1'),
-                             ('VREF', 'u1'),
-                             ('Vramp1', 'u1'),
-                             ('Vramp2', 'u1'),
-                             ('OFFSET', '>u2'),
-                             ('PGAGAIN', 'u1'),
-                             ('ADCGAIN', 'u1'),
-                             ('TDIG1', 'u1'),
-                             ('TDIG2', 'u1'),
-                             ('BitMode', 'u1'),
-                             ('AdcRes', 'u1'),
-                             ('PLLENA', 'u1'),
-                             ('PLLinFRE', 'u1'),
-                             ('PLLByp', 'u1'),
-                             ('PLLRATE', 'u1'),
-                             ('PLLLoad', 'u1'),
-                             ('DETDum', 'u1'),
-                             ('BLACKCOL', 'u1'),
-                             ('VBLACKSUN', 'u1')]),
-            0x33d: np.dtype([('hdr', hdr.dtype),           # ThemTableRp
-                             ('HTR_1_IsEna', 'u1'),
-                             ('HTR_1_AtcCorMan', 'u1'),
-                             ('HTR_1_THMCH', 'u1'),
-                             ('_FillerByte1', 'u1'),
-                             ('HTR_1_ManOutput', '>u2'),
-                             ('HTR_1_ATC_SP', '>u4'),
-                             ('HTR_1_ATC_P', '>u4'),
-                             ('HTR_1_ATC_I', '>u4'),
-                             ('HTR_1_ATC_I_INIT', '>u4'),
-                             ('HTR_2_IsEna', 'u1'),
-                             ('HTR_2_AtcCorMan', 'u1'),
-                             ('HTR_2_THMCH', 'u1'),
-                             ('_FillerByte2', 'u1'),
-                             ('HTR_2_ManOutput', '>u2'),
-                             ('HTR_2_ATC_SP', '>u4'),
-                             ('HTR_2_ATC_P', '>u4'),
-                             ('HTR_2_ATC_I', '>u4'),
-                             ('HTR_2_ATC_I_INIT', '>u4'),
-                             ('HTR_3_IsEna', 'u1'),
-                             ('HTR_3_AtcCorMan', 'u1'),
-                             ('HTR_3_THMCH', 'u1'),
-                             ('_FillerByte3', 'u1'),
-                             ('HTR_3_ManOutput', '>u2'),
-                             ('HTR_3_ATC_SP', '>u4'),
-                             ('HTR_3_ATC_P', '>u4'),
-                             ('HTR_3_ATC_I', '>u4'),
-                             ('HTR_3_ATC_I_INIT', '>u4'),
-                             ('HTR_4_IsEna', 'u1'),
-                             ('HTR_4_AtcCorMan', 'u1'),
-                             ('HTR_4_THMCH', 'u1'),
-                             ('_FillerByte4', 'u1'),
-                             ('HTR_4_ManOutput', '>u2'),
-                             ('HTR_4_ATC_SP', '>u4'),
-                             ('HTR_4_ATC_P', '>u4'),
-                             ('HTR_4_ATC_I', '>u4'),
-                             ('HTR_4_ATC_I_INIT', '>u4')])
-            }.get(ap_id(hdr), None)
+    return DtypeTmTc(hdr).dispatch()
 
 
 # - main function ----------------------------------
