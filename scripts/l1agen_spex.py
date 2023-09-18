@@ -12,6 +12,10 @@
 
 Intended for operational processing of SPEXone data at NASA Goddard Space
  Flight Center, Ocean Biology Processing Group.
+
+Notes
+-----
+* Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 """
 from __future__ import annotations
 
@@ -77,7 +81,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS['dimFullFrame']
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return '1.4.0'
+    return '1.4.2'
 
 
 # --------------------------------------------------
@@ -656,9 +660,9 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
         # pylint: disable=no-member
         # Note timezone 'Z' is only accepted by Python 3.11+
         val = fid.attrs['time_coverage_start'].decode()
-        coverage_start = dt.datetime.fromisoformat(val).replace('Z', '+00:00')
+        coverage_start = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
         val = fid.attrs['time_coverage_end'].decode()
-        coverage_end = dt.datetime.fromisoformat(val).replace('Z', '+00:00')
+        coverage_end = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
     module_logger.debug('SPEXone time-coverage: %s - %s',
                         coverage_start, coverage_end)
 
@@ -3669,7 +3673,7 @@ def main() -> int:
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
     logging.getLogger().setLevel(config.verbose) # first, set the root logger
-    logger = logging.getLogger('pyspex.gen_l1a') # then initiate a descendant
+    logger = logging.getLogger('l1agen_spex.py') # then initiate a descendant
     logger.debug('%s', config)
 
     # check input files (SEPXone level-0)
@@ -3729,7 +3733,7 @@ def main() -> int:
         error_code = 132
     except Exception as exc:
         # raise RuntimeError from exc
-        logger.fatal('Unexpected exception occurred with "%s".', exc)
+        logger.error('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 
     return warn_code if error_code == 0 else error_code
