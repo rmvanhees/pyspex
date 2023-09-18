@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 # - global parameters -----------------------
 module_logger = logging.getLogger('pyspex.tlm')
 
-TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00Z
+TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00+00:00
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
 
@@ -582,7 +582,7 @@ class SPXtlm:
                 }
                 dset = fid['/engineering_data/HK_tlm_time']
                 # pylint: disable=no-member
-                ref_date = dset.attrs['units'].decode()[14:] + 'Z'
+                ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
                 epoch = dt.datetime.fromisoformat(ref_date)
                 for sec in dset[:]:
                     self._hk['tstamp'].append(epoch + dt.timedelta(seconds=sec))
@@ -804,10 +804,10 @@ class SPXtlm:
                      self.sci_tstamp['tai_sec'])
         # modify attribute units for non-DSB products
         if lv0_format != 'dsb':
-            # timestamp of 2020-01-01T00:00:00Z
+            # timestamp of 2020-01-01T00:00:00+00:00
             l1a.set_attr('valid_min', np.uint32(1577836800),
                          ds_name='/image_attributes/icu_time_sec')
-            # timestamp of 2024-01-01T00:00:00Z
+            # timestamp of 2024-01-01T00:00:00+00:00
             l1a.set_attr('valid_max', np.uint32(1704067200),
                          ds_name='/image_attributes/icu_time_sec')
             l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
