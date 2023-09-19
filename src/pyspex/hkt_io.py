@@ -28,7 +28,6 @@ from netCDF4 import Dataset
 
 from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
-from .lv0_lib import ap_id, dtype_tmtc
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -290,13 +289,14 @@ class HKTio:
                 res = fid['housekeeping_data'][ds_set][:]
                 for packet in res:
                     try:
-                        hdr = CCSDShdr(packet)
+                        ccsds_hdr = CCSDShdr()
+                        ccsds_hdr.read('raw', packet)
                     except ValueError as exc:
                         module_logger.warning(
                             'CCSDS header read error with "%s"', exc)
                         break
 
-                    val = hdr.tstamp(EPOCH)
+                    val = ccsds_hdr.tstamp(EPOCH)
                     if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
                         dt_list += (val,)
 
@@ -353,26 +353,21 @@ class HKTio:
                 return ()
             res = fid['housekeeping_data'][ds_set][:]
 
-        hdr_dtype = np.dtype([('type', '>u2'),
-                              ('sequence', '>u2'),
-                              ('length', '>u2'),
-                              ('tai_sec', '>u4'),
-                              ('sub_sec', '>u2')])
         ccsds_hk = ()
         for packet in res:
             try:
-                hdr = np.frombuffer(packet, count=1, offset=0,
-                                    dtype=hdr_dtype)[0]
+                ccsds_hdr = CCSDShdr()
+                ccsds_hdr.read('raw', packet)
             except ValueError as exc:
                 module_logger.warning(
                     'CCSDS header read error with "%s"', exc)
                 break
 
             try:
-                dtype_apid = dtype_tmtc(hdr)
+                dtype_apid = ccsds_hdr.data_dtype
             except ValueError:
-                print(f'APID: 0x{ap_id(hdr):x};'
-                      f' Packet Length: {hdr["length"]:d}')
+                print(f'APID: 0x{ccsds_hdr.apid:x};'
+                      f' Packet Length: {ccsds_hdr.packet_size:d}')
                 dtype_apid = None
 
             if dtype_apid is not None:           # all valid APIDs
@@ -382,7 +377,7 @@ class HKTio:
             else:
                 module_logger.warning(
                      'package with APID 0x%x and length %d is not implemented',
-                     ap_id(hdr), hdr['length'])
+                     ccsds_hdr.apid, ccsds_hdr.packet_size)
 
         return ccsds_hk
 

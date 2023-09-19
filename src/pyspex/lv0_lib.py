@@ -15,14 +15,11 @@ Routines to read and write SPEXone CCSDS data:
 
 Handy routines to convert CCSDS parameters:
 
-   `ap_id`, `grouping_flag`, `packet_length`, `sequence`,
    `hk_sec_of_day`, `img_sec_of_day`
 """
 from __future__ import annotations
 
-__all__ = ['CorruptPacketWarning', 'ap_id', 'dtype_tmtc',
-           'dump_hkt', 'dump_science',
-           'grouping_flag', 'packet_length', 'read_lv0_data', 'sequence']
+__all__ = ['CorruptPacketWarning', 'read_lv0_data']
 
 import logging
 import warnings
@@ -30,6 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .lib.ccsds_hdr import CCSDShdr
 from .lib.tmtc_def import tmtc_dtype
 
 # - local functions --------------------------------
@@ -53,56 +51,6 @@ def _cfe_header_(flname: Path) -> np.ndarray:
     cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
     module_logger.debug('content of cFE header "%s"', cfe_hdr)
     return cfe_hdr
-
-
-def _dtype_packet_(file_format: str) -> np.dtype | None:
-    """Return definition of the CCSDS packet headers (primary and secondary).
-
-    Parameters
-    ----------
-    file_format : {'raw', 'dsb' or 'st3'}
-        File format of level 0 products
-
-    Returns
-    -------
-    np.dtype
-        numpy dtype of the packet headers or None if file format is unknown
-
-    Notes
-    -----
-    'raw': data has no file header and standard CCSDS packet headers
-
-    'st3': data has no file header and ITOS + spacewire + CCSDS packet headers
-
-    'dsb': data has a cFE file-header and spacewire + CCSDS packet headers
-
-    """
-    if file_format == 'raw':
-        return np.dtype([('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    if file_format == 'dsb':
-        return np.dtype([('spacewire', 'u1', (2,)),
-                         ('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    if file_format == 'st3':
-        return np.dtype([('itos_hdr', '>u2', (8,)),
-                         ('spacewire', 'u1', (2,)),
-                         ('type', '>u2'),
-                         ('sequence', '>u2'),
-                         ('length', '>u2'),
-                         ('tai_sec', '>u4'),
-                         ('sub_sec', '>u2')])
-
-    return None
-
 
 def _fix_hk24_(sci_hk: np.ndarray) -> np.ndarray:
     """Correct 32-bit values in the Science HK.
@@ -135,357 +83,6 @@ def _fix_hk24_(sci_hk: np.ndarray) -> np.ndarray:
     return res
 
 
-# - helper functions to read Level-0 data ----------
-def ap_id(hdr: np.ndarray) -> int:
-    """Return Telemetry APID, the range 0x320 to 0x351 is available to SPEXone.
-
-    Parameters
-    ----------
-    hdr :  np.ndarray
-        Structured numpy array with contents of the level 0 CCSDS header
-
-    Returns
-    -------
-    int
-        Telemetry APID
-
-    Notes
-    -----
-    The following values are recognized:
-
-    - 0x350:  Science
-    - 0x320:  NomHk
-    - 0x322:  DemHk
-    - 0x331:  TcAccept
-    - 0x332:  TcReject
-    - 0x333:  TcExecute
-    - 0x334:  TcFail
-    - 0x335:  EventRp
-    - 0x340:  MemDump
-    - 0x341:  MemCheckRp
-    - 0x33A:  MonListRp
-    - 0x33B:  EvRpListRp
-    - 0x33C:  MpsTableRp
-    - 0x33D:  ThermTableRp
-    """
-    return hdr['type'] & 0x7FF
-
-
-def grouping_flag(hdr: np.ndarray) -> int:
-    """Return grouping flag.
-
-    Parameters
-    ----------
-    hdr :  np.ndarray
-        Structured numpy array with contents of the level 0 CCSDS header
-
-    Returns
-    -------
-    int
-        Grouping flag
-
-    Notes
-    -----
-    The 2-byte flag is encoded as follows::
-
-       00: continuation packet-data segment
-       01: first packet-data segment
-       10: last packet-data segment
-       11: packet-data unsegmented
-
-    """
-    return (hdr['sequence'] >> 14) & 0x3
-
-
-def sequence(hdr: np.ndarray) -> int:
-    """Return sequence counter, rollover to zero at 0x3FFF.
-
-    Parameters
-    ----------
-    hdr :  np.ndarray
-        Structured numpy array with contents of the level 0 CCSDS header
-
-    Returns
-    -------
-    int
-        Sequence counter
-    """
-    return hdr['sequence'] & 0x3FFF
-
-
-def packet_length(hdr: np.ndarray) -> int:
-    """Return size of secondary header + user data - 1 in bytes.
-
-    Parameters
-    ----------
-    hdr :  np.ndarray
-        Structured numpy array with contents of the level 0 CCSDS header
-
-    Returns
-    -------
-    int
-        Size of variable part of the CCSDS package
-
-    Notes
-    -----
-    We always read the primary header and secondary header at once.
-    Value range: 7 - 16375
-    """
-    return hdr['length']
-
-
-class DtypeTmTc:
-    """Definition of a CCSDS TmTc packages as np.dtype."""
-
-    def __init__(self: DtypeTmTc, hdr: np.ndarray) -> None:
-        self._hdr = hdr
-
-    def tm_800(self: DtypeTmTc) -> np.dtype:          # ApID = 0x320
-        """Return data-type of NomHk packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('hk', tmtc_dtype(0x320))])
-
-    def tm_802(self: DtypeTmTc) -> np.dtype:          # ApID = 0x322
-        """Return data-type of DemHk packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('hk', tmtc_dtype(0x322))])
-
-    def tm_817(self: DtypeTmTc) -> np.dtype:          # ApID = 0x331
-        """Return data-type of TcAccept packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('TcPacketId', '>u2'),
-                         ('TcSeqControl', '>u2')])
-
-    def tm_818(self: DtypeTmTc) -> np.dtype:          # ApID = 0x332
-        """Return data-type of TcReject packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('TcPacketId', '>u2'),
-                         ('TcSeqControl', '>u2'),
-                         ('TcRejectCode', '>u2'),
-                         ('RejectParameter1', '>u2'),
-                         ('RejectParameter2', '>u2')])
-
-    def tm_819(self: DtypeTmTc) -> np.dtype:          # ApID = 0x333
-        """Return data-type of TcExecute packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('TcPacketId', '>u2'),
-                         ('TcSeqControl', '>u2')])
-
-    def tm_820(self: DtypeTmTc) -> np.dtype:          # ApID = 0x334
-        """Return data-type of TcFail packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('TcPacketId', '>u2'),
-                         ('TcSeqControl', '>u2'),
-                         ('TcFailCode', '>u2'),
-                         ('FailParameter1', '>u2'),
-                         ('FailParameter2', '>u2')])
-
-    def tm_821(self: DtypeTmTc) -> np.dtype:          # ApID = 0x335
-        """Return data-type of EventRp packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('Event_ID', 'u1'),
-                         ('Event_Sev', 'u1'),
-                         ('Word1', '>u2'),
-                         ('Word2', '>u2'),
-                         ('Word3', '>u2'),
-                         ('Word4', '>u2'),
-                         ('Word5', '>u2'),
-                         ('Word6', '>u2'),
-                         ('Word7', '>u2'),
-                         ('Word8', '>u2')])
-
-    def tm_832(self: DtypeTmTc) -> np.dtype:          # ApID = 0x340
-        """Return data-type of MemDump packet."""
-        if self._hdr['length'] - 15 == 1:
-            return np.dtype([('hdr', self._hdr.dtype),
-                             ('Image_ID', 'u1'),
-                             ('_FillerByte', 'u1'),
-                             ('Address32', '>u4'),
-                             ('Length', '>u4'),
-                             ('Data', 'u1')])
-        else:
-            return np.dtype([('hdr', self._hdr.dtype),
-                             ('Image_ID', 'u1'),
-                             ('_FillerByte', 'u1'),
-                             ('Address32', '>u4'),
-                             ('Length', '>u4'),
-                             ('Data', 'u1', (self._hdr['length'] - 15),)])
-
-    def tm_833(self: DtypeTmTc) -> np.dtype:          # ApID = 0x341
-        """Return data-type of MemCheckRp packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('Image_ID', 'u1'),
-                         ('_FillerByte', 'u1'),
-                         ('Address32', '>u4'),
-                         ('Length', '>u4'),
-                         ('CheckSum', '>u4')])
-
-    #def tm_826(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33A
-    #    return None
-    #
-    #def tm_827(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33B
-    #    return None
-
-    def tm_828(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33C
-        """Return data-type of MpsTableRp packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('MPS_ID', 'u1'),
-                         ('MPS_VER', 'u1'),
-                         ('FTO', '>u2'),
-                         ('FTI', '>u2'),
-                         ('FTC', '>u2'),
-                         ('IMRO', '>u2'),
-                         ('IMRSA_A', '>u4'),
-                         ('IMRSA_B', '>u4'),
-                         ('IMRLEN', '>u4'),
-                         ('PKTLEN', '>u2'),
-                         ('TMRO', '>u2'),
-                         ('TMRI', '>u2'),
-                         ('IMDMODE', 'u1'),
-                         ('_FillerByte1', 'u1'),
-                         ('_Filler1', '>u2'),
-                         ('_Filler2', '>u2'),
-                         ('_Filler3', '>u2'),
-                         ('DEM_RST', 'u1'),
-                         ('DEM_CMV_CTRL', 'u1'),
-                         ('COADD', 'u1'),
-                         ('DEM_IGEN', 'u1'),
-                         ('FRAME_MODE', 'u1'),
-                         ('OUTPMODE', 'u1'),
-                         ('BIN_TBL', '>u4'),
-                         ('COADD_BUF', '>u4'),
-                         ('COADD_RESA', '>u4'),
-                         ('COADD_RESB', '>u4'),
-                         ('FRAME_BUFA', '>u4'),
-                         ('FRAME_BUFB', '>u4'),
-                         ('LINE_ENA', '>u4'),
-                         ('NUMLIN', '>u2'),
-                         ('STR1', '>u2'),
-                         ('STR2', '>u2'),
-                         ('STR3', '>u2'),
-                         ('STR4', '>u2'),
-                         ('STR5', '>u2'),
-                         ('STR6', '>u2'),
-                         ('STR7', '>u2'),
-                         ('STR8', '>u2'),
-                         ('NumLin1', '>u2'),
-                         ('NumLin2', '>u2'),
-                         ('NumLin3', '>u2'),
-                         ('NumLin4', '>u2'),
-                         ('NumLin5', '>u2'),
-                         ('NumLin6', '>u2'),
-                         ('NumLin7', '>u2'),
-                         ('NumLin8', '>u2'),
-                         ('SubS', '>u2'),
-                         ('SubA', '>u2'),
-                         ('mono', 'u1'),
-                         ('ImFlp', 'u1'),
-                         ('ExpCtrl', '>u4'),
-                         ('ExpTime', '>u4'),
-                         ('ExpStep', '>u4'),
-                         ('ExpKp1', '>u4'),
-                         ('ExpKp2', '>u4'),
-                         ('NrSlope', 'u1'),
-                         ('ExpSeq', 'u1'),
-                         ('ExpTime2', '>u4'),
-                         ('ExpStep2', '>u4'),
-                         ('NumFr', '>u2'),
-                         ('FotLen', '>u2'),
-                         ('ILvdsRcvr', 'u1'),
-                         ('Calib', 'u1'),
-                         ('TrainPtrn', '>u2'),
-                         ('ChEna', '>u4'),
-                         #('ILvds', 'u1'),
-                         ('Icol', 'u1'),
-                         ('ICOLPR', 'u1'),
-                         ('Iadc', 'u1'),
-                         ('Iamp', 'u1'),
-                         ('VTFL1', 'u1'),
-                         ('VTFL2', 'u1'),
-                         ('VTFL3', 'u1'),
-                         ('VRSTL', 'u1'),
-                         ('VPreCh', 'u1'),
-                         ('VREF', 'u1'),
-                         ('Vramp1', 'u1'),
-                         ('Vramp2', 'u1'),
-                         ('OFFSET', '>u2'),
-                         ('PGAGAIN', 'u1'),
-                         ('ADCGAIN', 'u1'),
-                         ('TDIG1', 'u1'),
-                         ('TDIG2', 'u1'),
-                         ('BitMode', 'u1'),
-                         ('AdcRes', 'u1'),
-                         ('PLLENA', 'u1'),
-                         ('PLLinFRE', 'u1'),
-                         ('PLLByp', 'u1'),
-                         ('PLLRATE', 'u1'),
-                         ('PLLLoad', 'u1'),
-                         ('DETDum', 'u1'),
-                         ('BLACKCOL', 'u1'),
-                         ('VBLACKSUN', 'u1')])
-
-    def tm_829(self: DtypeTmTc) -> np.dtype:          # ApID = 0x33D
-        """Return data-type of ThemTableRp packet."""
-        return np.dtype([('hdr', self._hdr.dtype),
-                         ('HTR_1_IsEna', 'u1'),
-                         ('HTR_1_AtcCorMan', 'u1'),
-                         ('HTR_1_THMCH', 'u1'),
-                         ('_FillerByte1', 'u1'),
-                         ('HTR_1_ManOutput', '>u2'),
-                         ('HTR_1_ATC_SP', '>u4'),
-                         ('HTR_1_ATC_P', '>u4'),
-                         ('HTR_1_ATC_I', '>u4'),
-                         ('HTR_1_ATC_I_INIT', '>u4'),
-                         ('HTR_2_IsEna', 'u1'),
-                         ('HTR_2_AtcCorMan', 'u1'),
-                         ('HTR_2_THMCH', 'u1'),
-                         ('_FillerByte2', 'u1'),
-                         ('HTR_2_ManOutput', '>u2'),
-                         ('HTR_2_ATC_SP', '>u4'),
-                         ('HTR_2_ATC_P', '>u4'),
-                         ('HTR_2_ATC_I', '>u4'),
-                         ('HTR_2_ATC_I_INIT', '>u4'),
-                         ('HTR_3_IsEna', 'u1'),
-                         ('HTR_3_AtcCorMan', 'u1'),
-                         ('HTR_3_THMCH', 'u1'),
-                         ('_FillerByte3', 'u1'),
-                         ('HTR_3_ManOutput', '>u2'),
-                         ('HTR_3_ATC_SP', '>u4'),
-                         ('HTR_3_ATC_P', '>u4'),
-                         ('HTR_3_ATC_I', '>u4'),
-                         ('HTR_3_ATC_I_INIT', '>u4'),
-                         ('HTR_4_IsEna', 'u1'),
-                         ('HTR_4_AtcCorMan', 'u1'),
-                         ('HTR_4_THMCH', 'u1'),
-                         ('_FillerByte4', 'u1'),
-                         ('HTR_4_ManOutput', '>u2'),
-                         ('HTR_4_ATC_SP', '>u4'),
-                         ('HTR_4_ATC_P', '>u4'),
-                         ('HTR_4_ATC_I', '>u4'),
-                         ('HTR_4_ATC_I_INIT', '>u4')])
-
-    def dispatch(self: DtypeTmTc) -> np.dtype:
-        method_name = 'tm_' + str(ap_id(self._hdr))
-        method = getattr(self, method_name, None)
-        return None if method is None else method()
-
-
-def dtype_tmtc(hdr: np.ndarray) -> np.dtype:
-    """Return data-type definition of a CCSDS TmTc package.
-
-    Parameters
-    ----------
-    hdr :  np.ndarray
-        Structured numpy array with contents of the level 0 CCSDS header
-
-    Returns
-    -------
-    np.dtype
-        numpy dtype of CCSDS TmTC package or None if APID is not implemented
-    """
-    return DtypeTmTc(hdr).dispatch()
-
-
 # - main function ----------------------------------
 class CorruptPacketWarning(UserWarning):
     """Creating a custom warning."""
@@ -511,7 +108,6 @@ def read_lv0_data(file_list: list[Path, ...],
          Contains all Science and TmTc CCSDS packages as numpy arrays,
          or None if called with debug is True
     """
-    hdr_dtype = _dtype_packet_(file_format)
     scihk_dtype = tmtc_dtype(0x350)
     icutm_dtype = np.dtype([('tai_sec', '>u4'),
                             ('sub_sec', '>u2')])
@@ -534,42 +130,41 @@ def read_lv0_data(file_list: list[Path, ...],
             ccsds_data = fp.read()
             while offs < len(ccsds_data):
                 try:
-                    hdr = np.frombuffer(ccsds_data, count=1, offset=offs,
-                                        dtype=hdr_dtype)[0]
+                    ccsds_hdr = CCSDShdr()
+                    ccsds_hdr.read(file_format, ccsds_data, offs)
+                    hdr_dtype = ccsds_hdr.dtype
                 except ValueError as exc:
                     module_logger.warning('header read error with "%s".', exc)
                     break
 
                 # check for data corruption (length > 0 and odd)
-                if hdr['length'] % 2 == 0:
-                    print(ap_id(hdr), grouping_flag(hdr),
-                          hdr_dtype.itemsize, hdr['length'], offs)
+                if ccsds_hdr.packet_size % 2 == 0:
+                    print(ccsds_hdr.apid, ccsds_hdr.grouping_flag,
+                          hdr_dtype.itemsize, ccsds_hdr.packet_size, offs)
                     warnings.warn('corrupted CCSDS packet detected',
                                   category=CorruptPacketWarning,
                                   stacklevel=1)
                     break
 
                 if debug:
-                    print(ap_id(hdr), grouping_flag(hdr),
-                          hdr_dtype.itemsize, hdr['length'], offs)
-                    if hdr['length'] == 0 or not 0x320 <= ap_id(hdr) < 0x351:
-                        warnings.warn('corrupted CCSDS packet detected',
-                                      category=CorruptPacketWarning,
-                                      stacklevel=1)
+                    print(ccsds_hdr.apid, ccsds_hdr.grouping_flag,
+                          hdr_dtype.itemsize, ccsds_hdr.packet_size, offs)
+                    if not 0x320 <= ccsds_hdr.apid <= 0x350:
                         break
-                    offs += hdr_dtype.itemsize + hdr['length'] - 5
+
+                    offs += hdr_dtype.itemsize + ccsds_hdr.packet_size - 5
                     continue
 
                 # copy the full CCSDS package
-                if ap_id(hdr) == 0x350:                   # Science APID
-                    nbytes = hdr['length'] - 5
-                    if grouping_flag(hdr) == 1:
+                if ccsds_hdr.apid == 0x350:                   # Science APID
+                    nbytes = ccsds_hdr.packet_size - 5
+                    if ccsds_hdr.grouping_flag == 1:
                         buff = np.empty(1, dtype=np.dtype([
                             ('hdr', hdr_dtype),
                             ('hk', scihk_dtype),
                             ('icu_tm', icutm_dtype),
                             ('frame', 'O')]))
-                        buff['hdr'] = hdr
+                        buff['hdr'] = ccsds_hdr.hdr
                         offs += hdr_dtype.itemsize
                         buff['hk'] = _fix_hk24_(
                             np.frombuffer(ccsds_data,
@@ -585,7 +180,7 @@ def read_lv0_data(file_list: list[Path, ...],
                         buff = np.empty(1, dtype=np.dtype([
                             ('hdr', hdr_dtype),
                             ('frame', 'O')]))
-                        buff['hdr'] = hdr
+                        buff['hdr'] = ccsds_hdr.hdr
                         offs += hdr_dtype.itemsize
 
                     buff['frame'][0] = np.frombuffer(ccsds_data,
@@ -593,13 +188,14 @@ def read_lv0_data(file_list: list[Path, ...],
                                                      offset=offs, dtype='>u2')
                     buff_sci += (buff.copy(),)
                     offs += nbytes
-                elif 0x320 <= ap_id(hdr) <= 0x335:           # other valid APIDs
+                elif 0x320 <= ccsds_hdr.apid < 0x350:       # other valid APIDs
+                    dtype_tmtc = ccsds_hdr.data_dtype
                     buff = np.frombuffer(ccsds_data, count=1, offset=offs,
-                                         dtype=dtype_tmtc(hdr))
+                                         dtype=dtype_tmtc)
                     buff_hk += (buff,)
-                    offs += dtype_tmtc(hdr).itemsize
+                    offs += dtype_tmtc.itemsize
                 else:
-                    offs += hdr_dtype.itemsize + hdr['length'] - 5
+                    offs += hdr_dtype.itemsize + ccsds_hdr.packet_size - 5
             del ccsds_data
 
         ccsds_sci += buff_sci
@@ -642,19 +238,19 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
                  ' ICUSWVER MPS_ID TcSeqControl TcErrorCode\n')
         for buf in ccsds_hk:
-            hdr = buf['hdr'][0]
-            msg = (f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                   f" {sequence(hdr):7d} {packet_length(hdr):6d}"
-                   f" {hdr['tai_sec']:11d} {hdr['sub_sec']:10d}")
+            ccsds_hdr = CCSDShdr(buf['hdr'][0])
+            msg = (f'{ccsds_hdr.apid:4x} {ccsds_hdr.grouping_flag:8d}'
+                   f' {ccsds_hdr.sequence:7d} {ccsds_hdr.packet_size:6d}'
+                   f' {ccsds_hdr.tai_sec:11d} {ccsds_hdr.sub_sec:10d}')
 
-            if ap_id(hdr) == 0x320:
+            if ccsds_hdr.apid == 0x320:
                 msg_320(buf['hk'][0])
             else:
                 msg += {0x331: msg_321(buf),
                         0x332: msg_322(buf),
                         0x333: msg_323(buf),
                         0x334: msg_324(buf),
-                        0x335: msg_325(buf)}.get(ap_id(hdr), '')
+                        0x335: msg_325(buf)}.get(ccsds_hdr.apid, '')
             fp.write(msg + '\n')
 
 
@@ -664,17 +260,21 @@ def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
         fp.write('APID Grouping Counter Length'
                  ' ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n')
         for segment in ccsds_sci:
-            hdr = segment['hdr'][0]
-            if grouping_flag(hdr) == 1:
+            ccsds_hdr = CCSDShdr(segment['hdr'][0])
+            if ccsds_hdr.grouping_flag == 1:
                 nom_hk = segment['hk']
                 icu_tm = segment['icu_tm']
-                fp.write(f"{ap_id(hdr):4x} {grouping_flag(hdr):8d}"
-                         f" {sequence(hdr):7d} {packet_length(hdr):6d}"
+                fp.write(f"{ccsds_hdr.apid:4x}"
+                         f" {ccsds_hdr.grouping_flag:8d}"
+                         f" {ccsds_hdr.sequence:7d}"
+                         f" {ccsds_hdr.packet_size:6d}"
                          f" {nom_hk['ICUSWVER'][0]:8x}"
                          f" {nom_hk['MPS_ID'][0]:6d}"
                          f" {nom_hk['IMRLEN'][0]:7d}"
                          f" {icu_tm['tai_sec'][0]:11d}"
                          f" {icu_tm['sub_sec'][0]:10d}\n")
             else:
-                fp.write(f'{ap_id(hdr):4x} {grouping_flag(hdr):8d}'
-                         f' {sequence(hdr):7d} {packet_length(hdr):6d}\n')
+                fp.write(f'{ccsds_hdr.apid:4x}'
+                         f' {ccsds_hdr.grouping_flag:8d}'
+                         f' {ccsds_hdr.sequence:7d}'
+                         f' {ccsds_hdr.packet_size:6d}\n')

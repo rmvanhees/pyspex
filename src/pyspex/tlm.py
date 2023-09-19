@@ -25,10 +25,11 @@ from netCDF4 import Dataset
 
 from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
 from .l1a_io import L1Aio
+from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
-from .lv0_lib import ap_id, dump_hkt, dump_science, grouping_flag, read_lv0_data
+from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 from .version import pyspex_version
 
 if TYPE_CHECKING:
@@ -121,13 +122,14 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
     ii = 0
     for buf in ccsds_hk:
         hdr[ii] = buf['hdr']
-        if ap_id(hdr[ii]) != 0x320 or hdr['tai_sec'][ii] < len(ccsds_hk):
+        ccsds_hdr = CCSDShdr(buf['hdr'])
+        if ccsds_hdr.apid != 0x320 or buf['hdr']['tai_sec'] < len(ccsds_hk):
             continue
 
         tlm[ii] = buf['hk']
         tstamp.append(epoch + dt.timedelta(
-            seconds=int(hdr['tai_sec'][ii]),
-            microseconds=subsec2musec(hdr['sub_sec'][ii])))
+            seconds=int(buf['hdr']['tai_sec']),
+            microseconds=subsec2musec(buf['hdr']['sub_sec'])))
         ii += 1
 
     # These values are originally stored in little-endian, but
@@ -157,8 +159,8 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
     hk_dtype = None
     found_start_first = False
     for buf in ccsds_sci:
-        hdr = buf['hdr'][0]
-        if grouping_flag(hdr) == 1:
+        ccsds_hdr = CCSDShdr(buf['hdr'][0])
+        if ccsds_hdr.grouping_flag == 1:
             found_start_first = True
             if n_frames == 0:
                 hdr_dtype = buf['hdr'].dtype
@@ -168,7 +170,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
         if not found_start_first:
             continue
 
-        if grouping_flag(hdr) == 2:
+        if ccsds_hdr.grouping_flag == 2:
             found_start_first = False
             n_frames += 1
 
@@ -188,8 +190,8 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
     img = None
     found_start_first = False
     for buf in ccsds_sci:
-        hdr = buf['hdr'][0]
-        if grouping_flag(hdr) == 1:
+        ccsds_hdr = CCSDShdr(buf['hdr'][0])
+        if ccsds_hdr.grouping_flag == 1:
             found_start_first = True
             hdr_arr[ii] = buf['hdr']
             tlm_arr[ii] = buf['hk']
@@ -205,9 +207,9 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
         if not found_start_first:
             continue
 
-        if grouping_flag(hdr) == 0:
+        if ccsds_hdr.grouping_flag == 0:
             img += (buf['frame'][0],)
-        elif grouping_flag(hdr) == 2:
+        elif ccsds_hdr.grouping_flag == 2:
             found_start_first = False
             img += (buf['frame'][0],)
             images += (np.concatenate(img),)
