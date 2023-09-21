@@ -41,8 +41,9 @@ EPOCH = datetime(1958, 1, 1, tzinfo=timezone.utc)
 VALID_COVERAGE_MIN = datetime(2021, 1, 1, tzinfo=timezone.utc)
 VALID_COVERAGE_MAX = datetime(2035, 1, 1, tzinfo=timezone.utc)
 
-# expect the navigation data to extend at least 2 minutes at start and end
-TIMEDELTA_MIN = timedelta(seconds=2 * 60)
+# expect the navigation data to extend at least 10 seconds
+# w.r.t. time_coverage_start and time_coverage_end.
+TIMEDELTA_MIN = timedelta(seconds=10)
 
 
 class CoverageFlag(IntFlag):

@@ -1,3 +1,4 @@
 prune docs/_build
 prune .DS_Store
 prune .idea
+recursive-include examples *.cdl *.rst *.yaml
