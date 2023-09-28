@@ -212,25 +212,25 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
     def msg_320(val: np.ndarray) -> str:
         return f" {val['ICUSWVER']:8x} {val['MPS_ID']:6d}"
 
-    def msg_321(val: np.ndarray) -> str:
+    def msg_331(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
-    def msg_322(val: np.ndarray) -> str:
+    def msg_332(val: np.ndarray) -> str:
         return(f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
                f" {bin(val['TcRejectCode'][0])}"
                f" {val['RejectParameter1'][0]:s}"
                f" {val['RejectParameter2'][0]:s}")
 
-    def msg_323(val: np.ndarray) -> str:
+    def msg_333(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
-    def msg_324(val: np.ndarray) -> str:
+    def msg_334(val: np.ndarray) -> str:
         return (f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
                 f" {bin(val['TcFailCode'][0])}"
                 f" {val['FailParameter1'][0]:s}"
                 f" {val['FailParameter2'][0]:s}")
 
-    def msg_325(val: np.ndarray) -> str:
+    def msg_335(val: np.ndarray) -> str:
         return (f" {-1:8x} {-1:6d} {val['Event_ID'][0]:d}"
                 f" {val['Event_Sev'][0]:s}")
 
@@ -246,11 +246,13 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
             if ccsds_hdr.apid == 0x320:
                 msg_320(buf['hk'][0])
             else:
-                msg += {0x331: msg_321(buf),
-                        0x332: msg_322(buf),
-                        0x333: msg_323(buf),
-                        0x334: msg_324(buf),
-                        0x335: msg_325(buf)}.get(ccsds_hdr.apid, '')
+                method = {
+                    0x331: msg_331,
+                    0x332: msg_332,
+                    0x333: msg_333,
+                    0x334: msg_334,
+                    0x335: msg_335}.get(ccsds_hdr.apid, None)
+                msg += '' if method is None else method(buf)
             fp.write(msg + '\n')
 
 
