@@ -69,10 +69,11 @@ def __exposure_time__(science: np.ndarray) -> np.ndarray:
 
 def __frame_period__(science: np.ndarray) -> np.ndarray:
     """Return frame period of detector measurement [ms]."""
+    n_science = 1 if isinstance(science, np.void) else len(science)
     n_coad = science['REG_NCOADDFRAMES']
     # binning mode
     if science['REG_FULL_FRAME'] == 2:
-        return np.full(len(science), n_coad * DET_CONSTS['FTI_science'])
+        return np.full(n_science, n_coad * DET_CONSTS['FTI_science'])
 
     # full-frame mode
     return n_coad * np.clip(DET_CONSTS['FTI_margin']
@@ -87,7 +88,7 @@ def __readout_offset__(science: np.ndarray) -> float:
     n_frm = n_coad + 3 if science['IMRLEN'] == FULLFRAME_BYTES \
         else 2 * n_coad + 2
 
-    return n_frm * __frame_period__(science)
+    return n_frm * __frame_period__(science)[0]
 
 
 def __binning_table__(science: np.ndarray) -> np.ndarray:
