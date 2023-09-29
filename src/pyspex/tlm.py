@@ -175,7 +175,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
             found_start_first = False
             n_frames += 1
 
-    # do we have any detector images?
+    # do we have any complete detector images (Note ccsds_sci not empty!)?
     if n_frames == 0:
         module_logger.warning('no valid Science package found')
         return None

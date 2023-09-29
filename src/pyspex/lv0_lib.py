@@ -138,11 +138,14 @@ def read_lv0_data(file_list: list[Path, ...],
                     break
 
                 # check for data corruption (length > 0 and odd)
-                if ccsds_hdr.packet_size % 2 == 0:
-                    print(ccsds_hdr.apid, ccsds_hdr.grouping_flag,
-                          hdr_dtype.itemsize, ccsds_hdr.packet_size, offs)
-                    warnings.warn('corrupted CCSDS packet detected',
-                                  category=CorruptPacketWarning,
+                if ccsds_hdr.apid != 0x340 and ccsds_hdr.packet_size % 2 == 0:
+                    msg = ('corrupted CCSDS packet detected:'
+                           f' APID: {ccsds_hdr.apid}'
+                           f', grouping_flag: {ccsds_hdr.grouping_flag}'
+                           f', itemsize: {hdr_dtype.itemsize}'
+                           f', packet_length: {ccsds_hdr.packet_size}'
+                           f', file position: {offs}')
+                    warnings.warn(msg, category=CorruptPacketWarning,
                                   stacklevel=1)
                     break
 
@@ -231,8 +234,8 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
                 f" {val['FailParameter2'][0]:s}")
 
     def msg_335(val: np.ndarray) -> str:
-        return (f" {-1:8x} {-1:6d} {val['Event_ID'][0]:d}"
-                f" {val['Event_Sev'][0]:s}")
+        return (f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}"
+                f" {bin(val['Event_Sev'][0])}")
 
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
