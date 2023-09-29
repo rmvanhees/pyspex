@@ -173,7 +173,7 @@ class CCSDShdr:
                          ('EXP_KP1', '>u4'), ('EXP_KP2', '>u4'),
                          ('NRSLOPE', 'u1'), ('EXP_SEQ', 'u1'),
                          ('EXP_TIME2', '>u4'), ('EXP_STEP2', '>u4'),
-                         ('NUMFR', '>u2'), 
+                         ('NUMFR', '>u2'),
                          ('FOTLEN', 'u1'), ('_FillerByte5', 'u1'),
                          ('ILVDSRCVR', 'u1'), ('CALIB', 'u1'),
                          ('TRAINPTRN', '>u2'), ('CHENA', '>u4'),
