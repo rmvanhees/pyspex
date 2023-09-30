@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ['CCSDShdr']
 
-from datetime import datetime, timedelta
+import datetime as dt
 
 import numpy as np
 
@@ -309,7 +309,7 @@ class CCSDShdr:
         method = getattr(self, f'_tm_{self.apid:d}_', None)
         return None if method is None else method()
 
-    def tstamp(self: CCSDShdr, epoch: datetime) -> datetime:
+    def tstamp(self: CCSDShdr, epoch: dt.datetime) -> dt.datetime:
         """Return time of the telemetry packet.
 
         Parameters
@@ -317,7 +317,7 @@ class CCSDShdr:
         epoch :  datetime
            Provide the UTC epoch of the time (thus corrected for leap seconds)
         """
-        return (epoch + timedelta(
+        return (epoch + dt.timedelta(
             seconds=int(self.tai_sec),
             microseconds=100 * int(self.sub_sec / 65536 * 10000)))
 

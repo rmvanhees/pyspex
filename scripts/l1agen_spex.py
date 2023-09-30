@@ -15,7 +15,7 @@ Intended for operational processing of SPEXone data at NASA Goddard Space
 
 Notes
 -----
-* Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
+- Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 """
 from __future__ import annotations
 
@@ -54,12 +54,15 @@ TSTAMP_MIN = 1561939200           # 2019-07-01T00:00:00+00:00
 TSTAMP_TYPE = np.dtype(
     [('tai_sec', int), ('sub_sec', int), ('dt', 'O')])
 
+# expect the navigation data to extend at least 10 seconds
+# w.r.t. time_coverage_start and time_coverage_end.
+TIMEDELTA_MIN = dt.timedelta(seconds=10)
+
 # valid data coverage range
 VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
 VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.timezone.utc)
 
-# expect the navigation data to extend at least 2 minutes at start and end
-TIMEDELTA_MIN = dt.timedelta(seconds=2 * 60)
+# define detector constants/settings of the SPEXone instrument
 DET_CONSTS = {
     'dimRow': 2048,
     'dimColumn': 2048,
@@ -81,7 +84,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS['dimFullFrame']
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return '1.4.3'
+    return '1.4.4'
 
 
 # --------------------------------------------------
@@ -460,6 +463,7 @@ class CCSDShdr:
     Which consists of the primary header: version, type, apid, grouping flag,
     sequence count and packet length, and the secondary header: tai_sec and
     sub_sec.
+
     """
 
     def __init__(self: CCSDShdr, hdr: np.array | None = None) -> None:
@@ -556,149 +560,97 @@ class CCSDShdr:
                          ('Length', '>u4'),
                          ('CheckSum', '>u4')])
 
-    #def _tm_826_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33A
-    #    return None
-    #
-    #def _tm_827_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33B
-    #    return None
+    def _tm_826_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33A
+        """Return data-type of MonListRp packet."""
+        mon_dtype = np.dtype([('Mon1_EnSts', '>u2'), ('Mon1_ParID', '>u2'),
+                              ('Mon1_Int', 'u1'), ('Mon1_NofSampl', 'u1'),
+                              ('Mon1_CheckType', '>u2'),
+                              ('Mon1_LowOrExpCheckVal', '>u4'),
+                              ('Mon1_LowOrExpCheckRpId', '>u4'),
+                              ('Mon1_UppOrExpCheckVal', '>u4'),
+                              ('Mon1_UppOrExpCheckRpId', '>u4')])
+        num = (self.__hdr['length'] - 5) // mon_dtype.itemsize
+        return np.dtype([('hdr', self.__hdr.dtype),
+                         ('Report', mon_dtype, (num,))])
+
+    def _tm_827_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33B
+        """Return data-type of EvRpListRp packet."""
+        return np.dtype([('hdr', self.__hdr.dtype),
+                         ('Data', 'u1', (self.__hdr['length'] - 5),)])
 
     def _tm_828_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33C
         """Return data-type of MpsTableRp packet."""
         return np.dtype([('hdr', self.__hdr.dtype),
-                         ('MPS_ID', 'u1'),
-                         ('MPS_VER', 'u1'),
-                         ('FTO', '>u2'),
-                         ('FTI', '>u2'),
-                         ('FTC', '>u2'),
-                         ('IMRO', '>u2'),
-                         ('IMRSA_A', '>u4'),
-                         ('IMRSA_B', '>u4'),
-                         ('IMRLEN', '>u4'),
-                         ('PKTLEN', '>u2'),
-                         ('TMRO', '>u2'),
-                         ('TMRI', '>u2'),
-                         ('IMDMODE', 'u1'),
-                         ('_FillerByte1', 'u1'),
-                         ('_Filler1', '>u2'),
-                         ('_Filler2', '>u2'),
-                         ('_Filler3', '>u2'),
-                         ('DEM_RST', 'u1'),
-                         ('DEM_CMV_CTRL', 'u1'),
-                         ('COADD', 'u1'),
-                         ('DEM_IGEN', 'u1'),
-                         ('FRAME_MODE', 'u1'),
-                         ('OUTPMODE', 'u1'),
-                         ('BIN_TBL', '>u4'),
-                         ('COADD_BUF', '>u4'),
-                         ('COADD_RESA', '>u4'),
-                         ('COADD_RESB', '>u4'),
-                         ('FRAME_BUFA', '>u4'),
-                         ('FRAME_BUFB', '>u4'),
-                         ('LINE_ENA', '>u4'),
-                         ('NUMLIN', '>u2'),
-                         ('STR1', '>u2'),
-                         ('STR2', '>u2'),
-                         ('STR3', '>u2'),
-                         ('STR4', '>u2'),
-                         ('STR5', '>u2'),
-                         ('STR6', '>u2'),
-                         ('STR7', '>u2'),
-                         ('STR8', '>u2'),
-                         ('NumLin1', '>u2'),
-                         ('NumLin2', '>u2'),
-                         ('NumLin3', '>u2'),
-                         ('NumLin4', '>u2'),
-                         ('NumLin5', '>u2'),
-                         ('NumLin6', '>u2'),
-                         ('NumLin7', '>u2'),
-                         ('NumLin8', '>u2'),
-                         ('SubS', '>u2'),
-                         ('SubA', '>u2'),
-                         ('mono', 'u1'),
-                         ('ImFlp', 'u1'),
-                         ('ExpCtrl', '>u4'),
-                         ('ExpTime', '>u4'),
-                         ('ExpStep', '>u4'),
-                         ('ExpKp1', '>u4'),
-                         ('ExpKp2', '>u4'),
-                         ('NrSlope', 'u1'),
-                         ('ExpSeq', 'u1'),
-                         ('ExpTime2', '>u4'),
-                         ('ExpStep2', '>u4'),
-                         ('NumFr', '>u2'),
-                         ('FotLen', '>u2'),
-                         ('ILvdsRcvr', 'u1'),
-                         ('Calib', 'u1'),
-                         ('TrainPtrn', '>u2'),
-                         ('ChEna', '>u4'),
-                         #('ILvds', 'u1'),
-                         ('Icol', 'u1'),
-                         ('ICOLPR', 'u1'),
-                         ('Iadc', 'u1'),
-                         ('Iamp', 'u1'),
-                         ('VTFL1', 'u1'),
-                         ('VTFL2', 'u1'),
-                         ('VTFL3', 'u1'),
-                         ('VRSTL', 'u1'),
-                         ('VPreCh', 'u1'),
-                         ('VREF', 'u1'),
-                         ('Vramp1', 'u1'),
-                         ('Vramp2', 'u1'),
+                         ('MPS_ID', 'u1'), ('MPS_VER', 'u1'),
+                         ('FTO', '>u2'), ('FTI', '>u2'), ('FTC', '>u2'),
+                         ('IMRO', '>u2'), ('IMRSA_A', '>u4'),
+                         ('IMRSA_B', '>u4'), ('IMRLEN', '>u4'),
+                         ('PKTLEN', '>u2'), ('TMRO', '>u2'),
+                         ('TMRI', '>u2'), ('IMDMODE', 'u1'),
+                         ('I_LVDS', 'u1'), ('_Filler1', '>u2'),
+                         ('_Filler2', '>u2'), ('_Filler3', '>u2'),
+                         ('DEM_RST', 'u1'), ('DEM_CMV_CTRL', 'u1'),
+                         ('COADD', 'u1'), ('DEM_IGEN', 'u1'),
+                         ('FRAME_MODE', 'u1'), ('OUTPMODE', 'u1'),
+                         ('BIN_TBL', '>u4'), ('COADD_BUF', '>u4'),
+                         ('COADD_RESA', '>u4'), ('COADD_RESB', '>u4'),
+                         ('FRAME_BUFA', '>u4'),  ('FRAME_BUFB', '>u4'),
+                         ('LINE_ENA', '>u4'), ('NUMLIN', '>u2'),
+                         ('STR1', '>u2'), ('STR2', '>u2'), ('STR3', '>u2'),
+                         ('STR4', '>u2'), ('STR5', '>u2'), ('STR6', '>u2'),
+                         ('STR7', '>u2'), ('STR8', '>u2'),
+                         ('NUMLIN1', '>u2'), ('NUMLIN2', '>u2'),
+                         ('NUMLIN3', '>u2'), ('NUMLIN4', '>u2'),
+                         ('NUMLIN5', '>u2'), ('NUMLIN6', '>u2'),
+                         ('NUMLIN7', '>u2'), ('NUMLIN8', '>u2'),
+                         ('SUBS', '>u2'), ('SUBA', '>u2'),
+                         ('MONO', 'u1'),  ('IMFLP', 'u1'),
+                         ('EXP_CTRL', 'u1'),  ('_FillerByte4', 'u1'),
+                         ('EXP_TIME', '>u4'), ('EXP_STEP', '>u4'),
+                         ('EXP_KP1', '>u4'), ('EXP_KP2', '>u4'),
+                         ('NRSLOPE', 'u1'), ('EXP_SEQ', 'u1'),
+                         ('EXP_TIME2', '>u4'), ('EXP_STEP2', '>u4'),
+                         ('NUMFR', '>u2'),
+                         ('FOTLEN', 'u1'), ('_FillerByte5', 'u1'),
+                         ('ILVDSRCVR', 'u1'), ('CALIB', 'u1'),
+                         ('TRAINPTRN', '>u2'), ('CHENA', '>u4'),
+                         ('ICOL', 'u1'), ('ICOLPR', 'u1'),
+                         ('IADC', 'u1'), ('IAMP', 'u1'),
+                         ('VTFL1', 'u1'), ('VTFL2', 'u1'),
+                         ('VTFL3', 'u1'), ('VRSTL', 'u1'),
+                         ('VPRECH', 'u1'), ('VREF', 'u1'),
+                         ('VRAMP1', 'u1'), ('VRAMP2', 'u1'),
                          ('OFFSET', '>u2'),
-                         ('PGAGAIN', 'u1'),
-                         ('ADCGAIN', 'u1'),
-                         ('TDIG1', 'u1'),
-                         ('TDIG2', 'u1'),
-                         ('BitMode', 'u1'),
-                         ('AdcRes', 'u1'),
-                         ('PLLENA', 'u1'),
-                         ('PLLinFRE', 'u1'),
-                         ('PLLByp', 'u1'),
-                         ('PLLRATE', 'u1'),
-                         ('PLLLoad', 'u1'),
-                         ('DETDum', 'u1'),
-                         ('BLACKCOL', 'u1'),
-                         ('VBLACKSUN', 'u1')])
+                         ('PGAGAIN', 'u1'), ('ADCGAIN', 'u1'),
+                         ('TDIG1', 'u1'), ('TDIG2', 'u1'),
+                         ('BITMODE', 'u1'), ('ADCRES', 'u1'),
+                         ('PLLENA', 'u1'), ('PLLINFRE', 'u1'),
+                         ('PLLBYP', 'u1'), ('PLLRATE', 'u1'),
+                         ('PLLLOAD', 'u1'), ('DETDUM', 'u1'),
+                         ('BLACKCOL', 'u1'), ('VBLACKSUN', 'u1'),
+                         ('_Filler6', '>u4'), ('_Filler7', '>u4')])
 
     def _tm_829_(self: CCSDShdr) -> np.dtype:          # ApID = 0x33D
         """Return data-type of ThemTableRp packet."""
         return np.dtype([('hdr', self.__hdr.dtype),
-                         ('HTR_1_IsEna', 'u1'),
-                         ('HTR_1_AtcCorMan', 'u1'),
-                         ('HTR_1_THMCH', 'u1'),
-                         ('_FillerByte1', 'u1'),
-                         ('HTR_1_ManOutput', '>u2'),
-                         ('HTR_1_ATC_SP', '>u4'),
-                         ('HTR_1_ATC_P', '>u4'),
-                         ('HTR_1_ATC_I', '>u4'),
-                         ('HTR_1_ATC_I_INIT', '>u4'),
-                         ('HTR_2_IsEna', 'u1'),
-                         ('HTR_2_AtcCorMan', 'u1'),
-                         ('HTR_2_THMCH', 'u1'),
-                         ('_FillerByte2', 'u1'),
-                         ('HTR_2_ManOutput', '>u2'),
-                         ('HTR_2_ATC_SP', '>u4'),
-                         ('HTR_2_ATC_P', '>u4'),
-                         ('HTR_2_ATC_I', '>u4'),
-                         ('HTR_2_ATC_I_INIT', '>u4'),
-                         ('HTR_3_IsEna', 'u1'),
-                         ('HTR_3_AtcCorMan', 'u1'),
-                         ('HTR_3_THMCH', 'u1'),
-                         ('_FillerByte3', 'u1'),
-                         ('HTR_3_ManOutput', '>u2'),
-                         ('HTR_3_ATC_SP', '>u4'),
-                         ('HTR_3_ATC_P', '>u4'),
-                         ('HTR_3_ATC_I', '>u4'),
-                         ('HTR_3_ATC_I_INIT', '>u4'),
-                         ('HTR_4_IsEna', 'u1'),
-                         ('HTR_4_AtcCorMan', 'u1'),
-                         ('HTR_4_THMCH', 'u1'),
-                         ('_FillerByte4', 'u1'),
-                         ('HTR_4_ManOutput', '>u2'),
-                         ('HTR_4_ATC_SP', '>u4'),
-                         ('HTR_4_ATC_P', '>u4'),
-                         ('HTR_4_ATC_I', '>u4'),
-                         ('HTR_4_ATC_I_INIT', '>u4')])
+                         ('HTR_1_IsEna', 'u1'), ('HTR_1_AtcCorMan', 'u1'),
+                         ('HTR_1_THMCH', 'u1'), ('_FillerByte1', 'u1'),
+                         ('HTR_1_ManOutput', '>u2'), ('HTR_1_ATC_SP', '>u4'),
+                         ('HTR_1_ATC_P', '>u4'), ('HTR_1_ATC_I', '>u4'),
+                         ('HTR_1_ATC_I_INIT', '>u4'), ('HTR_2_IsEna', 'u1'),
+                         ('HTR_2_AtcCorMan', 'u1'), ('HTR_2_THMCH', 'u1'),
+                         ('_FillerByte2', 'u1'), ('HTR_2_ManOutput', '>u2'),
+                         ('HTR_2_ATC_SP', '>u4'), ('HTR_2_ATC_P', '>u4'),
+                         ('HTR_2_ATC_I', '>u4'), ('HTR_2_ATC_I_INIT', '>u4'),
+                         ('HTR_3_IsEna', 'u1'), ('HTR_3_AtcCorMan', 'u1'),
+                         ('HTR_3_THMCH', 'u1'), ('_FillerByte3', 'u1'),
+                         ('HTR_3_ManOutput', '>u2'), ('HTR_3_ATC_SP', '>u4'),
+                         ('HTR_3_ATC_P', '>u4'), ('HTR_3_ATC_I', '>u4'),
+                         ('HTR_3_ATC_I_INIT', '>u4'), ('HTR_4_IsEna', 'u1'),
+                         ('HTR_4_AtcCorMan', 'u1'), ('HTR_4_THMCH', 'u1'),
+                         ('_FillerByte4', 'u1'), ('HTR_4_ManOutput', '>u2'),
+                         ('HTR_4_ATC_SP', '>u4'), ('HTR_4_ATC_P', '>u4'),
+                         ('HTR_4_ATC_I', '>u4'), ('HTR_4_ATC_I_INIT', '>u4')])
 
     @property
     def hdr(self: CCSDShdr) -> np.ndarray:
@@ -799,7 +751,7 @@ class CCSDShdr:
 
         Parameters
         ----------
-        epoch :  dt.datetime
+        epoch :  datetime
            Provide the UTC epoch of the time (thus corrected for leap seconds)
         """
         return (epoch + dt.timedelta(
@@ -2658,11 +2610,14 @@ def read_lv0_data(file_list: list[Path, ...],
                     break
 
                 # check for data corruption (length > 0 and odd)
-                if ccsds_hdr.packet_size % 2 == 0:
-                    print(ccsds_hdr.apid, ccsds_hdr.grouping_flag,
-                          hdr_dtype.itemsize, ccsds_hdr.packet_size, offs)
-                    warnings.warn('corrupted CCSDS packet detected',
-                                  category=CorruptPacketWarning,
+                if ccsds_hdr.apid != 0x340 and ccsds_hdr.packet_size % 2 == 0:
+                    msg = ('corrupted CCSDS packet detected:'
+                           f' APID: {ccsds_hdr.apid}'
+                           f', grouping_flag: {ccsds_hdr.grouping_flag}'
+                           f', itemsize: {hdr_dtype.itemsize}'
+                           f', packet_length: {ccsds_hdr.packet_size}'
+                           f', file position: {offs}')
+                    warnings.warn(msg, category=CorruptPacketWarning,
                                   stacklevel=1)
                     break
 
@@ -2731,27 +2686,27 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
     def msg_320(val: np.ndarray) -> str:
         return f" {val['ICUSWVER']:8x} {val['MPS_ID']:6d}"
 
-    def msg_321(val: np.ndarray) -> str:
+    def msg_331(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
-    def msg_322(val: np.ndarray) -> str:
+    def msg_332(val: np.ndarray) -> str:
         return(f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
                f" {bin(val['TcRejectCode'][0])}"
                f" {val['RejectParameter1'][0]:s}"
                f" {val['RejectParameter2'][0]:s}")
 
-    def msg_323(val: np.ndarray) -> str:
+    def msg_333(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
-    def msg_324(val: np.ndarray) -> str:
+    def msg_334(val: np.ndarray) -> str:
         return (f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
                 f" {bin(val['TcFailCode'][0])}"
                 f" {val['FailParameter1'][0]:s}"
                 f" {val['FailParameter2'][0]:s}")
 
-    def msg_325(val: np.ndarray) -> str:
-        return (f" {-1:8x} {-1:6d} {val['Event_ID'][0]:d}"
-                f" {val['Event_Sev'][0]:s}")
+    def msg_335(val: np.ndarray) -> str:
+        return (f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}"
+                f" {bin(val['Event_Sev'][0])}")
 
     with Path(flname).open('w', encoding='ascii') as fp:
         fp.write('APID Grouping Counter Length     TAI_SEC    SUB_SEC'
@@ -2765,12 +2720,14 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
             if ccsds_hdr.apid == 0x320:
                 msg_320(buf['hk'][0])
             else:
-                msg += {0x331: msg_321(buf),
-                        0x332: msg_322(buf),
-                        0x333: msg_323(buf),
-                        0x334: msg_324(buf),
-                        0x335: msg_325(buf)}.get(ccsds_hdr.apid, '')
-            fp.write(msg + '\n')
+                method = {
+                    0x331: msg_331,
+                    0x332: msg_332,
+                    0x333: msg_333,
+                    0x334: msg_334,
+                    0x335: msg_335}.get(ccsds_hdr.apid, None)
+                msg += '' if method is None else method(buf)
+                fp.write(msg + '\n')
 
 
 def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
@@ -2799,6 +2756,9 @@ def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
                          f' {ccsds_hdr.packet_size:6d}\n')
 
 
+# --------------------------------------------------
+# from pyspex.tlm import SPXtlm, extract_l0_hk, extract_l0_sci
+# --------------------------------------------------
 # - helper functions ------------------------
 def __exposure_time__(science: np.ndarray) -> np.ndarray:
     """Return exposure time [ms]."""
@@ -2807,10 +2767,11 @@ def __exposure_time__(science: np.ndarray) -> np.ndarray:
 
 def __frame_period__(science: np.ndarray) -> np.ndarray:
     """Return frame period of detector measurement [ms]."""
+    n_science = 1 if isinstance(science, np.void) else len(science)
     n_coad = science['REG_NCOADDFRAMES']
     # binning mode
     if science['REG_FULL_FRAME'] == 2:
-        return np.full(len(science), n_coad * DET_CONSTS['FTI_science'])
+        return np.full(n_science, n_coad * DET_CONSTS['FTI_science'])
 
     # full-frame mode
     return n_coad * np.clip(DET_CONSTS['FTI_margin']
@@ -2825,7 +2786,7 @@ def __readout_offset__(science: np.ndarray) -> float:
     n_frm = n_coad + 3 if science['IMRLEN'] == FULLFRAME_BYTES \
         else 2 * n_coad + 2
 
-    return n_frm * __frame_period__(science)
+    return n_frm * __frame_period__(science)[0]
 
 
 def __binning_table__(science: np.ndarray) -> np.ndarray:
@@ -2917,7 +2878,7 @@ def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
             found_start_first = False
             n_frames += 1
 
-    # do we have any detector images?
+    # do we have any complete detector images (Note ccsds_sci not empty!)?
     if n_frames == 0:
         module_logger.warning('no valid Science package found')
         return None
