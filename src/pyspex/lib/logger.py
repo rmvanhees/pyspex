@@ -13,14 +13,10 @@ from __future__ import annotations
 
 __all__ = ['start_logger']
 
+from importlib.resources import files
 from logging.config import dictConfig
 
 import yaml
-
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
 
 
 def start_logger() -> None:

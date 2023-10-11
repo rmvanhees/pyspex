@@ -19,7 +19,7 @@ Handy routines to convert CCSDS parameters:
 """
 from __future__ import annotations
 
-__all__ = ['CorruptPacketWarning', 'read_lv0_data']
+__all__ = ['CorruptPacketWarning', 'dump_hkt', 'dump_science', 'read_lv0_data']
 
 import logging
 import warnings
@@ -51,6 +51,7 @@ def _cfe_header_(flname: Path) -> np.ndarray:
     cfe_hdr = np.fromfile(flname, count=1, dtype=dtype_cfe)[0]
     module_logger.debug('content of cFE header "%s"', cfe_hdr)
     return cfe_hdr
+
 
 def _fix_hk24_(sci_hk: np.ndarray) -> np.ndarray:
     """Correct 32-bit values in the Science HK.

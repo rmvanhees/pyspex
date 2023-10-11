@@ -29,12 +29,12 @@ class CCSDShdr:
 
     """
 
-    def __init__(self: CCSDShdr, hdr: np.array | None = None) -> None:
+    def __init__(self: CCSDShdr, hdr: np.ndarray | None = None) -> None:
         """Initialise the class instance.
 
         Parameters
         ----------
-        hdr :  np.array, optional
+        hdr :  np.ndarray, optional
            CCSDS primary and secondary headers
         """
         self.__dtype = None

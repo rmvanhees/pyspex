@@ -13,13 +13,14 @@ from __future__ import annotations
 
 __all__ = ['HKTio', 'check_coverage_nav', 'read_hkt_nav']
 
+import datetime as dt
 import logging
-from datetime import datetime, time, timedelta, timezone
 from enum import IntFlag, auto
 from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 from moniplot.image_to_xarray import h5_to_xr
 
@@ -35,15 +36,15 @@ if TYPE_CHECKING:
 # - global parameters -----------------------
 module_logger = logging.getLogger('pyspex.hkt_io')
 
-EPOCH = datetime(1958, 1, 1, tzinfo=timezone.utc)
+EPOCH = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
 
 # valid data coverage range
-VALID_COVERAGE_MIN = datetime(2021, 1, 1, tzinfo=timezone.utc)
-VALID_COVERAGE_MAX = datetime(2035, 1, 1, tzinfo=timezone.utc)
+VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
+VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.timezone.utc)
 
 # expect the navigation data to extend at least 10 seconds
 # w.r.t. time_coverage_start and time_coverage_end.
-TIMEDELTA_MIN = timedelta(seconds=10)
+TIMEDELTA_MIN = dt.timedelta(seconds=10)
 
 
 class CoverageFlag(IntFlag):
@@ -136,23 +137,23 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
     """
     coverage_quality = CoverageFlag.GOOD
     # obtain the reference date of the navigation data
-    ref_date = datetime.fromisoformat(xds_nav.attrs['reference_date'])
+    ref_date = dt.datetime.fromisoformat(xds_nav.attrs['reference_date'])
 
     # obtain time_coverage_range from the Level-1A product
     with h5py.File(l1a_file) as fid:
         # pylint: disable=no-member
         val = fid.attrs['time_coverage_start'].decode()
-        coverage_start = datetime.fromisoformat(val)
+        coverage_start = dt.datetime.fromisoformat(val)
         val = fid.attrs['time_coverage_end'].decode()
-        coverage_end = datetime.fromisoformat(val)
+        coverage_end = dt.datetime.fromisoformat(val)
     module_logger.debug('SPEXone time-coverage: %s - %s',
                         coverage_start, coverage_end)
 
     # check at the start of the data
     sec_of_day = xds_nav['att_time'].values[0]
-    att_coverage_start = ref_date + timedelta(seconds=sec_of_day)
+    att_coverage_start = ref_date + dt.timedelta(seconds=sec_of_day)
     module_logger.debug('PACE-HKT time-coverage-start: %s', att_coverage_start)
-    if coverage_start - att_coverage_start < timedelta(0):
+    if coverage_start - att_coverage_start < dt.timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         module_logger.error('time coverage of navigation data starts'
                             ' after "time_coverage_start"')
@@ -163,9 +164,9 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
 
     # check at the end of the data
     sec_of_day = xds_nav['att_time'].values[-1]
-    att_coverage_end = ref_date + timedelta(seconds=sec_of_day)
+    att_coverage_end = ref_date + dt.timedelta(seconds=sec_of_day)
     module_logger.debug('PACE-HKT time-coverage-end: %s', att_coverage_end)
-    if att_coverage_end - coverage_end < timedelta(0):
+    if att_coverage_end - coverage_end < dt.timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         module_logger.error('time coverage of navigation data ends'
                             ' before "time_coverage_end"')
@@ -237,7 +238,7 @@ class HKTio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def reference_date(self: HKTio) -> datetime:
+    def reference_date(self: HKTio) -> dt.datetime:
         """Return reference date of all time_of_day variables."""
         return self._reference_date
 
@@ -251,26 +252,26 @@ class HKTio:
                 words = grp['att_time'].attrs['units'].decode().split(' ')
                 if len(words) > 2:
                     # Note timezone 'Z' is only accepted by Python 3.11+
-                    ref_date = datetime.fromisoformat(words[2]
-                                                      + 'T00:00:00+00:00')
+                    ref_date = dt.datetime.fromisoformat(words[2]
+                                                         + 'T00:00:00+00:00')
 
         if ref_date is None:
             coverage = self.coverage()
-            ref_date = datetime.combine(coverage[0].date(), time(0),
-                                        tzinfo=timezone.utc)
+            ref_date = dt.datetime.combine(coverage[0].date(), dt.time(0),
+                                           tzinfo=dt.timezone.utc)
 
         self._reference_date = ref_date
 
-    def coverage(self: HKTio) -> tuple[datetime, datetime]:
+    def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
         """Return data coverage."""
-        one_day = timedelta(days=1)
+        one_day = dt.timedelta(days=1)
         with h5py.File(self.filename) as fid:
             # pylint: disable=no-member
             # Note timezone 'Z' is only accepted by Python 3.11+
             val = fid.attrs['time_coverage_start'].decode()
-            coverage_start = datetime.fromisoformat(val.replace('Z', '+00:00'))
+            coverage_start = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
             val = fid.attrs['time_coverage_end'].decode()
-            coverage_end = datetime.fromisoformat(val.replace('Z', '+00:00'))
+            coverage_end = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
 
         if abs(coverage_end - coverage_start) < one_day:
             return coverage_start, coverage_end
@@ -304,19 +305,19 @@ class HKTio:
                 if not dt_list:
                     continue
 
-                dt_arr = np.array(dt_list)
+                dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
                 ii = dt_arr.size // 2
                 leap_sec = get_leap_seconds(dt_arr[ii].timestamp(),
                                             epochyear=1970)
-                dt_arr -= timedelta(seconds=leap_sec)
+                dt_arr -= dt.timedelta(seconds=leap_sec)
                 mn_val = min(dt_arr)
                 mx_val = max(dt_arr)
                 if mx_val - mn_val > one_day:
                     indx_close_to_mn = (dt_arr - mn_val) <= one_day
                     indx_close_to_mx = (mx_val - dt_arr) <= one_day
                     module_logger.warning('coverage_range: %s[%d] - %s[%d]',
-                                   mn_val, np.sum(indx_close_to_mn),
-                                   mx_val, np.sum(indx_close_to_mx))
+                                          mn_val, np.sum(indx_close_to_mn),
+                                          mx_val, np.sum(indx_close_to_mx))
                     if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
                         mx_val = max(dt_arr[indx_close_to_mn])
                     else:

@@ -11,8 +11,3 @@
 It contains software to read PACE HKT products and SPEXone Level-0 products,
 and read/write SPEXone Level-1A products.
 """
-import contextlib
-from importlib.metadata import PackageNotFoundError, version
-
-with contextlib.suppress(PackageNotFoundError):
-    __version__ = version(__name__)

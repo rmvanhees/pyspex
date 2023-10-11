@@ -73,8 +73,8 @@ def __test(l1a_file: str) -> None:
     """Small function to test this module."""
     # Create a netCDF4 file with the ISRF data in it
     gse_dir = Path('/data/richardh/SPEXone/GSFC')
-    xds = read_gse_excel(gse_dir, '465.4nm')
-    xds = read_gse_excel(gse_dir, '360nm', )
+    # xds = read_gse_excel(gse_dir, '465.4nm')
+    # xds = read_gse_excel(gse_dir, '360nm', )
     xds = read_gse_excel(gse_dir, '840nm')
     xds.to_netcdf(l1a_file, mode='w', group='/gse_data/OPO_laser')
 

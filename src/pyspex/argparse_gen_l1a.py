@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 
-from .version import pyspex_version
+from .lib import pyspex_version
 
 # - global parameters ------------------------------
 ARG_INPUT_HELP = """provide one or more input files:

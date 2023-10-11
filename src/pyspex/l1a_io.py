@@ -140,7 +140,7 @@ class L1Aio:
     def __init__(self: L1Aio, product: Path | str, ref_date: datetime,
                  dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
-        self.product = Path(product)
+        self.product: Path = Path(product) if isinstance(product, str) else product
         self.fid = None
 
         # initialize private class-attributes

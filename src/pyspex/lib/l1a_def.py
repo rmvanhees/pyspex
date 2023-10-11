@@ -43,14 +43,14 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
 
     Examples
     --------
-    Update the attributes of variable 'time'::
+    Update the attributes of variable 'time':
 
-    >> ref_date = datetime.datetime(2022, 3, 21)
-    >> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
-    >>                            fill_value=-32767)
-    >> dset.long_name = "image time"
-    >> dset.description = "Integration start time in seconds of day."
-    >> attrs_sec_per_day(dset, ref_date)
+      ref_date = datetime.datetime(2022, 3, 21)
+      dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
+                                fill_value=-32767)
+      dset.long_name = "image time"
+      dset.description = "Integration start time in seconds of day."
+      attrs_sec_per_day(dset, ref_date)
 
     In CDL the variable `time` will be defined as::
 

@@ -22,7 +22,7 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from .version import pyspex_version
+from .lib import pyspex_version
 
 # - global parameters ------------------------------
 FILL_VALUE = 0xFFFFFFFF  # 0X7FFFFFFF

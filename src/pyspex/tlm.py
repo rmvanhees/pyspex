@@ -25,12 +25,12 @@ from netCDF4 import Dataset
 
 from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
 from .l1a_io import L1Aio
+from .lib import pyspex_version
 from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
 from .lib.tlm_utils import UNITS_DICT, convert_hk
 from .lib.tmtc_def import tmtc_dtype
 from .lv0_lib import dump_hkt, dump_science, read_lv0_data
-from .version import pyspex_version
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
@@ -134,7 +134,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
         ii += 1
 
     # These values are originally stored in little-endian, but
-    # Numpy does not accepts a mix of little & big-endian values
+    # Numpy does not accept a mix of little & big-endian values
     # in a structured array.
     tlm['HTR1_CALCPVAL'][:] = tlm['HTR1_CALCPVAL'].byteswap()
     tlm['HTR2_CALCPVAL'][:] = tlm['HTR2_CALCPVAL'].byteswap()
@@ -430,7 +430,7 @@ class SPXtlm:
             raise ValueError('no valid timestamps found')
 
         frame_period = __frame_period__(self.sci_tlm[-1:])[0] \
-            if self.sci_tlm is not None else  1.
+            if self.sci_tlm is not None else 1.
         return tstamp[-1] + dt.timedelta(milliseconds=frame_period)
 
     def from_hkt(self: SPXtlm, flnames: Path | list[Path], *,
@@ -514,7 +514,7 @@ class SPXtlm:
         # set epoch
         if file_format == 'dsb':
             epoch = dt.datetime(1958, 1, 1,
-                                      tzinfo=dt.timezone.utc)
+                                tzinfo=dt.timezone.utc)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
             epoch -= dt.timedelta(seconds=leap_sec)
@@ -767,7 +767,7 @@ class SPXtlm:
 
         self.logger.info('successfully generated: %s', l1a_file.name)
 
-    def _fill_engineering(self: SPXtlm, l1a: h5py.File) -> None:
+    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/engineering_data'."""
         if self.hk_tlm is None:
             return
@@ -782,7 +782,7 @@ class SPXtlm:
         l1a.set_dset('/engineering_data/temp_radiator',
                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
-    def _fill_science(self: SPXtlm, l1a: h5py.File) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/science_data'."""
         if self.sci_tlm is None:
             return
@@ -797,7 +797,7 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
-    def _fill_image_attrs(self: SPXtlm, l1a: h5py.File,
+    def _fill_image_attrs(self: SPXtlm, l1a: L1Aio,
                           lv0_format: str) -> None:
         """Fill datasets in group '/image_attributes'."""
         if self.sci_tlm is None:

@@ -19,12 +19,7 @@ from __future__ import annotations
 __all__ = ['get_leap_seconds']
 
 from datetime import datetime, timezone
-
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
-
+from importlib.resources import files
 from os import environ
 from pathlib import Path
 

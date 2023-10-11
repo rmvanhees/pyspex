@@ -15,7 +15,7 @@ __all__ = ['attrs_def']
 
 from datetime import datetime, timezone
 
-from pyspex.version import pyspex_version
+from . import pyspex_version
 
 
 # - main functions --------------------------------
@@ -49,7 +49,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         'keyword_vocabulary': ('NASA Global Change Master Directory (GCMD)'
                                ' Science Keywords'),
         'stdname_vocabulary': ('NetCDF Climate and Forecast (CF)'
-                                     ' Metadata Convention'),
+                               ' Metadata Convention'),
         'standard_name_vocabulary': 'CF Standard Name Table v79',
         'conventions': 'CF-1.8 ACDD-1.3',
         'identifier_product_doi_authority': 'http://dx.doi.org/',
@@ -62,7 +62,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         'publisher_email': 'data@oceancolor.gsfc.nasa.gov',
         'publisher_url': 'http://oceancolor.gsfc.nasa.gov',
         'processing_level': 'L1A',
-        'cdm_data_type': ('One orbit swath or granule' \
+        'cdm_data_type': ('One orbit swath or granule'
                           if inflight else 'granule'),
         'cdl_version_date': '2021-09-10',
         'product_name': None,
