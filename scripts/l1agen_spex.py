@@ -34,6 +34,7 @@ from typing import Any
 import h5py
 import julian
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 import yaml
 
@@ -75,6 +76,7 @@ DET_CONSTS = {
     'FOT_length': 20
 }
 FULLFRAME_BYTES = 2 * DET_CONSTS['dimFullFrame']
+
 
 # --------------------------------------------------
 # from pyspex.version import pyspex_version
@@ -205,7 +207,7 @@ class Config:
     l0_list: list[Path] = field(default_factory=list)
 
 
-def __commandline_settings() -> argparse.Namespace:
+def __commandline_settings() -> Config:
     """Parse command-line parameters."""
     class NumericLevel(argparse.Action):
         """Store verbosity level of the logger as a numeric value."""
@@ -214,10 +216,9 @@ def __commandline_settings() -> argparse.Namespace:
                      parser_local: argparse.ArgumentParser,
                      namespace: argparse.Namespace,
                      values: str,
-                     option_string: str | None = None) -> argparse.Namespace:
+                     option_string: str | None = None) -> None:
             numeric_level = getattr(logging, values.upper(), None)
             setattr(namespace, self.dest, numeric_level)
-
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
@@ -466,7 +467,7 @@ class CCSDShdr:
 
     """
 
-    def __init__(self: CCSDShdr, hdr: np.array | None = None) -> None:
+    def __init__(self: CCSDShdr, hdr: np.ndarray | None = None) -> None:
         """Initialise the class instance.
 
         Parameters
@@ -743,7 +744,7 @@ class CCSDShdr:
     @property
     def data_dtype(self: CCSDShdr) -> np.dtype:
         """Return numpy data-type of CCSDS User Data."""
-        method = getattr(self, f'_tm_{self.apid:d}_', None)
+        method = getattr(self, f'_tm_{self.apid}_', None)
         return None if method is None else method()
 
     def tstamp(self: CCSDShdr, epoch: dt.datetime) -> dt.datetime:
@@ -759,7 +760,7 @@ class CCSDShdr:
             microseconds=100 * int(self.sub_sec / 65536 * 10000)))
 
     def read(self: CCSDShdr, file_format: str,
-             buffer: np.ndarray, offs: int = 0) -> None:
+             buffer: bytes, offs: int = 0) -> None:
         """Read CCSDS primary and secondary headers from data.
 
         Parameters
@@ -891,7 +892,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     return xds_nav.assign_attrs({'reference_date': rdate.isoformat()})
 
 
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
+def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> bool:
     """Check time coverage of navigation data.
 
     Parameters
@@ -917,7 +918,7 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
                         coverage_start, coverage_end)
 
     # check at the start of the data
-    sec_of_day = xds_nav['att_time'].values[0]
+    sec_of_day = float(xds_nav['att_time'].values[0])
     att_coverage_start = ref_date + dt.timedelta(seconds=sec_of_day)
     module_logger.debug('PACE-HKT time-coverage-start: %s', att_coverage_start)
     if coverage_start - att_coverage_start < dt.timedelta(0):
@@ -930,7 +931,7 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
                               ' "time_coverage_start - %s"', TIMEDELTA_MIN)
 
     # check at the end of the data
-    sec_of_day = xds_nav['att_time'].values[-1]
+    sec_of_day = float(xds_nav['att_time'].values[-1])
     att_coverage_end = ref_date + dt.timedelta(seconds=sec_of_day)
     module_logger.debug('PACE-HKT time-coverage-end: %s', att_coverage_end)
     if att_coverage_end - coverage_end < dt.timedelta(0):
@@ -1071,7 +1072,7 @@ class HKTio:
                 if not dt_list:
                     continue
 
-                dt_arr = np.array(dt_list)
+                dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
                 ii = dt_arr.size // 2
                 leap_sec = get_leap_seconds(dt_arr[ii].timestamp(),
                                             epochyear=1970)
@@ -1082,8 +1083,8 @@ class HKTio:
                     indx_close_to_mn = (dt_arr - mn_val) <= one_day
                     indx_close_to_mx = (mx_val - dt_arr) <= one_day
                     module_logger.warning('coverage_range: %s[%d] - %s[%d]',
-                                   mn_val, np.sum(indx_close_to_mn),
-                                   mx_val, np.sum(indx_close_to_mx))
+                                          mn_val, np.sum(indx_close_to_mn),
+                                          mx_val, np.sum(indx_close_to_mx))
                     if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
                         mx_val = max(dt_arr[indx_close_to_mn])
                     else:
@@ -1212,7 +1213,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         'keyword_vocabulary': ('NASA Global Change Master Directory (GCMD)'
                                ' Science Keywords'),
         'stdname_vocabulary': ('NetCDF Climate and Forecast (CF)'
-                                     ' Metadata Convention'),
+                               ' Metadata Convention'),
         'standard_name_vocabulary': 'CF Standard Name Table v79',
         'conventions': 'CF-1.8 ACDD-1.3',
         'identifier_product_doi_authority': 'http://dx.doi.org/',
@@ -1225,7 +1226,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         'publisher_email': 'data@oceancolor.gsfc.nasa.gov',
         'publisher_url': 'http://oceancolor.gsfc.nasa.gov',
         'processing_level': 'L1A',
-        'cdm_data_type': ('One orbit swath or granule' \
+        'cdm_data_type': ('One orbit swath or granule'
                           if inflight else 'granule'),
         'cdl_version_date': '2021-09-10',
         'product_name': None,
@@ -1536,7 +1537,7 @@ class L1Aio:
     def __init__(self: L1Aio, product: Path | str, ref_date: dt.datetime,
                  dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
-        self.product = Path(product)
+        self.product: Path = Path(product) if isinstance(product, str) else product
         self.fid = None
 
         # initialize private class-attributes
@@ -1589,7 +1590,8 @@ class L1Aio:
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------
-    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> None:
+    def get_attr(self: L1Aio, name: str,
+                 ds_name: str | None = None) -> str | None:
         """Read data of an attribute.
 
         Global or attached to a group or variable.
@@ -1646,11 +1648,11 @@ class L1Aio:
             if grp_name != '.':
                 if var_name not in self.fid[grp_name].groups \
                    and var_name not in self.fid[grp_name].variables:
-                    raise KeyError(f'ds_name {ds_name} not present in product')
+                    raise KeyError(f'ds_name {ds_name} not in product')
             else:
                 if var_name not in self.fid.groups \
                    and var_name not in self.fid.variables:
-                    raise KeyError(f'ds_name {ds_name} not present in product')
+                    raise KeyError(f'ds_name {ds_name} not in product')
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.string_(value))
@@ -1675,10 +1677,10 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
 
         return self.fid[name][:]
 
@@ -1697,10 +1699,10 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
@@ -1789,7 +1791,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     epochsecs = (
         dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
         - dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)).total_seconds()
-    taidt = dt.datetime.utcfromtimestamp(taitime + epochsecs)
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.timezone.utc)
     leapsec: float = 0
     with taiutc.open('r', encoding='ascii') as fp:
         for line in fp:
@@ -3133,7 +3135,7 @@ class SPXtlm:
             raise ValueError('no valid timestamps found')
 
         frame_period = __frame_period__(self.sci_tlm[-1:])[0] \
-            if self.sci_tlm is not None else  1.
+            if self.sci_tlm is not None else 1.
         return tstamp[-1] + dt.timedelta(milliseconds=frame_period)
 
     def from_hkt(self: SPXtlm, flnames: Path | list[Path], *,
@@ -3171,7 +3173,7 @@ class SPXtlm:
 
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
         ii = len(ccsds_hk) // 2
-        leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
+        leap_sec = get_leap_seconds(float(ccsds_hk[ii]['hdr']['tai_sec'][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
         self._hk = extract_l0_hk(ccsds_hk, epoch)
 
@@ -3217,7 +3219,7 @@ class SPXtlm:
         # set epoch
         if file_format == 'dsb':
             epoch = dt.datetime(1958, 1, 1,
-                                      tzinfo=dt.timezone.utc)
+                                tzinfo=dt.timezone.utc)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
             epoch -= dt.timedelta(seconds=leap_sec)
@@ -3470,7 +3472,7 @@ class SPXtlm:
 
         self.logger.info('successfully generated: %s', l1a_file.name)
 
-    def _fill_engineering(self: SPXtlm, l1a: h5py.File) -> None:
+    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/engineering_data'."""
         if self.hk_tlm is None:
             return
@@ -3485,7 +3487,7 @@ class SPXtlm:
         l1a.set_dset('/engineering_data/temp_radiator',
                      self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
 
-    def _fill_science(self: SPXtlm, l1a: h5py.File) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/science_data'."""
         if self.sci_tlm is None:
             return
@@ -3500,8 +3502,7 @@ class SPXtlm:
         l1a.set_dset('/science_data/detector_images', images)
         l1a.set_dset('/science_data/detector_telemetry', self.sci_tlm)
 
-    def _fill_image_attrs(self: SPXtlm, l1a: h5py.File,
-                          lv0_format: str) -> None:
+    def _fill_image_attrs(self: SPXtlm, l1a: L1Aio, lv0_format: str) -> None:
         """Fill datasets in group '/image_attributes'."""
         if self.sci_tlm is None:
             return
@@ -3592,8 +3593,8 @@ def main() -> int:
 
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
-    logging.getLogger().setLevel(config.verbose) # first, set the root logger
-    logger = logging.getLogger('l1agen_spex.py') # then initiate a descendant
+    logging.getLogger().setLevel(config.verbose)   # first, set the root logger
+    logger = logging.getLogger('l1agen_spex.py')   # then initiate a descendant
     logger.debug('%s', config)
 
     # check input files (SEPXone level-0)

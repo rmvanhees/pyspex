@@ -138,7 +138,7 @@ class Config:
     l0_list: list[Path] = field(default_factory=list)
 
 
-def __commandline_settings() -> argparse.Namespace:
+def __commandline_settings() -> Config:
     """Parse command-line parameters."""
     class NumericLevel(argparse.Action):
         """Store verbosity level of the logger as a numeric value."""
@@ -147,10 +147,9 @@ def __commandline_settings() -> argparse.Namespace:
                      parser_local: argparse.ArgumentParser,
                      namespace: argparse.Namespace,
                      values: str,
-                     option_string: str | None = None) -> argparse.Namespace:
+                     option_string: str | None = None) -> None:
             numeric_level = getattr(logging, values.upper(), None)
             setattr(namespace, self.dest, numeric_level)
-
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
