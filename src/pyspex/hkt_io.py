@@ -58,13 +58,13 @@ class CoverageFlag(IntFlag):
 
 
 # - high-level r/w functions ------------
-def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
+def read_hkt_nav(hkt_list: tuple[Path, ...]) -> xr.Dataset:
     """Read navigation data from one or more HKT products.
 
     Parameters
     ----------
-    hkt_list : list[Path, ...]
-       list of PACE-HKT products collocated with SPEXone measurements
+    hkt_list : tuple[Path, ...]
+       listing of PACE-HKT products collocated with SPEXone measurements
 
     Returns
     -------
