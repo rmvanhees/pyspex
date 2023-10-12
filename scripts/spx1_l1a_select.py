@@ -77,7 +77,7 @@ def main() -> None:
     if not out_dir.is_dir():
         out_dir.mkdir(mode=0o755, parents=True)
 
-    # ----- read data from orignal product -----
+    # ----- read data from original product -----
     # pylint: disable=no-member, unsubscriptable-object
     with h5py.File(l1a_product) as fid:
         # read image data, detector telemetry and image attributes

@@ -325,7 +325,7 @@ def add_egse_data(args: argparse.Namespace) -> None:
         def smart_average(data: np.ndarray, thres_range: float = 0.1) -> float:
             val_range = np.abs(data.max() - data.min())
             if val_range == 0:
-                return data[0]
+                return float(data[0])
 
             if val_range < thres_range:
                 return np.mean(data)

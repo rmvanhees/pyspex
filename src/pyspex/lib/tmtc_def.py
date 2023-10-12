@@ -22,7 +22,7 @@ import numpy as np
 
 
 def __tmtc_def(apid: int) -> list:
-    """Returna list of tuples with the definition os SPEXone telemetry packets.
+    """Return a list of tuples with the definition os SPEXone telemetry packets.
 
     Parameters
     ----------
@@ -180,7 +180,7 @@ def __tmtc_def(apid: int) -> list:
             ('DET_REG124', 'u1'),               # 276   0x0120
             ('DET_REG125', 'u1'),               # 277   0x0121
             ('DET_T', '>u2'),                   # 278   0x0122
-            ('FTI', '>u2'),                     # 280   0x0124  (100 usec)
+            ('FTI', '>u2'),                     # 280   0x0124  (100 musec)
             ('IMDMODE', 'u1'),                  # 282   0x0126
             ('dummy_03', 'u1'),                 # 283   0x0127
             ('IMRLEN', '>u4')                   # 284   0x0128
@@ -473,7 +473,7 @@ def tmtc_dtype(apid: int) -> np.dtype:
     Returns
     -------
     numpy.dtype
-       Definition of Spexone telemetry packet.
+       Definition of SPEXone telemetry packet.
 
     Examples
     --------

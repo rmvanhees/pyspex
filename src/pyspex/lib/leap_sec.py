@@ -18,7 +18,7 @@ from __future__ import annotations
 
 __all__ = ['get_leap_seconds']
 
-from datetime import datetime, timezone
+import datetime as dt
 from importlib.resources import files
 from os import environ
 from pathlib import Path
@@ -38,9 +38,10 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     else:
         taiutc = Path(ocvarroot) / 'common' / 'tai-utc.dat'
 
-    epochsecs = (datetime(epochyear, 1, 1, tzinfo=timezone.utc)
-                 - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
-    taidt = datetime.utcfromtimestamp(taitime + epochsecs)
+    epochsecs = (dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
+                 - dt.datetime(1970, 1, 1,
+                               tzinfo=dt.timezone.utc)).total_seconds()
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.timezone.utc)
     leapsec: float = 0
     with taiutc.open('r', encoding='ascii') as fp:
         for line in fp:

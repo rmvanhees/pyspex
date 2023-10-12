@@ -25,6 +25,7 @@ from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     from datetime import datetime
+    from netCDF4 import Dataset
 
 
 # - global parameters -------------------
@@ -141,7 +142,7 @@ class L1Aio:
                  dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
         self.product: Path = Path(product) if isinstance(product, str) else product
-        self.fid = None
+        self.fid: Dataset | None = None
 
         # initialize private class-attributes
         self.__epoch = ref_date
@@ -193,7 +194,7 @@ class L1Aio:
         return self.fid.dimensions[name].size
 
     # ----- ATTRIBUTES --------------------
-    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> None:
+    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> str | None:
         """Read data of an attribute.
 
         Global or attached to a group or variable.
@@ -250,11 +251,11 @@ class L1Aio:
             if grp_name != '.':
                 if var_name not in self.fid[grp_name].groups \
                    and var_name not in self.fid[grp_name].variables:
-                    raise KeyError(f'ds_name {ds_name} not present in product')
+                    raise KeyError(f'ds_name {ds_name} not in product')
             else:
                 if var_name not in self.fid.groups \
                    and var_name not in self.fid.variables:
-                    raise KeyError(f'ds_name {ds_name} not present in product')
+                    raise KeyError(f'ds_name {ds_name} not in product')
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.string_(value))
@@ -279,10 +280,10 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
 
         return self.fid[name][:]
 
@@ -301,10 +302,10 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not present in Level-1 product')
+                raise KeyError(f'dataset {name} not in Level-1 product')
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]

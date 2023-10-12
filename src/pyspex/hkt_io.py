@@ -125,7 +125,7 @@ def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
     return xds_nav.assign_attrs({'reference_date': rdate.isoformat()})
 
 
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
+def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> bool:
     """Check time coverage of navigation data.
 
     Parameters
@@ -151,7 +151,7 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
 
     # check at the start of the data
     sec_of_day = xds_nav['att_time'].values[0]
-    att_coverage_start = ref_date + dt.timedelta(seconds=sec_of_day)
+    att_coverage_start = ref_date + dt.timedelta(seconds=float(sec_of_day))
     module_logger.debug('PACE-HKT time-coverage-start: %s', att_coverage_start)
     if coverage_start - att_coverage_start < dt.timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
@@ -164,7 +164,7 @@ def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> None:
 
     # check at the end of the data
     sec_of_day = xds_nav['att_time'].values[-1]
-    att_coverage_end = ref_date + dt.timedelta(seconds=sec_of_day)
+    att_coverage_end = ref_date + dt.timedelta(seconds=float(sec_of_day))
     module_logger.debug('PACE-HKT time-coverage-end: %s', att_coverage_end)
     if att_coverage_end - coverage_end < dt.timedelta(0):
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END

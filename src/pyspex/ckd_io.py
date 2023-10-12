@@ -250,12 +250,12 @@ class CKDio:
         return h5_to_xr(gid['rad_spectra'])
 
     def polarimetric(self: CKDio) -> xr.Dataset | None:
-        """Read Polarimetric CKD.
+        """Read polarimetric CKD.
 
         Returns
         -------
         xarray.Dataset
-           parameters of the SPEXone Polarimetric CKD
+           parameters of the SPEXone polarimetric CKD
         """
         try:
             gid = self.fid['POLARIMETRIC']

@@ -322,7 +322,7 @@ class CCSDShdr:
             microseconds=100 * int(self.sub_sec / 65536 * 10000)))
 
     def read(self: CCSDShdr, file_format: str,
-             buffer: np.ndarray, offs: int = 0) -> None:
+             buffer: bytes, offs: int = 0) -> None:
         """Read CCSDS primary and secondary headers from data.
 
         Parameters
