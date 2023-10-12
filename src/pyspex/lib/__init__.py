@@ -14,12 +14,12 @@ __all__ = ['pyspex_version']
 import contextlib
 from importlib.metadata import PackageNotFoundError, version
 
-with contextlib.suppress(PackageNotFoundError):
-    __version__ = version(__name__)
-
 
 def pyspex_version(full: bool = False, githash: bool = False) -> str:
     """Return the software version as obtained from git."""
+    with contextlib.suppress(PackageNotFoundError):
+        __version__ = version('pyspex')
+
     if full:
         return __version__
 

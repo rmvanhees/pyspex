@@ -41,7 +41,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     epochsecs = (dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
                  - dt.datetime(1970, 1, 1,
                                tzinfo=dt.timezone.utc)).total_seconds()
-    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.timezone.utc)
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs)
     leapsec: float = 0
     with taiutc.open('r', encoding='ascii') as fp:
         for line in fp:
