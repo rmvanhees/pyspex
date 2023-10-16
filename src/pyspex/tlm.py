@@ -82,7 +82,7 @@ def __frame_period__(science: np.ndarray) -> np.ndarray:
                             a_min=DET_CONSTS['FTI_diagnostic'], a_max=None)
 
 
-def __readout_offset__(science: np.ndarray) -> float:
+def __readout_offset__(science: np.void) -> float:
     """Return offset wrt start-of-integration [ms]."""
     n_coad = science['REG_NCOADDFRAMES']
     n_frm = n_coad + 3 if science['IMRLEN'] == FULLFRAME_BYTES \
@@ -531,7 +531,8 @@ class SPXtlm:
             self._hk = extract_l0_hk(ccsds_hk, epoch)
 
     def from_l1a(self: SPXtlm, flname: Path, *,
-                 tlm_type: str | None = None) -> None:
+                 tlm_type: str | None = None,
+                 mps_id: int | None = None) -> None:
         """Read telemetry data from SPEXone Level-1A product.
 
         Parameters
@@ -540,6 +541,8 @@ class SPXtlm:
            name of one SPEXone Level-1A product
         tlm_type :  {'hk', 'sci', 'all'}, optional
            select type of telemetry packages
+        mps_id :  int, optional
+           select on MPS ID
         """
         if tlm_type is None:
             tlm_type = 'all'
@@ -551,8 +554,14 @@ class SPXtlm:
         self._sci = None
         with h5py.File(flname) as fid:
             if tlm_type != 'hk':
+                # pylint: disable=no-member
+                dset = fid['/science_data/detector_telemetry']
+                mask = np.s_[:] if mps_id is None \
+                    else dset.fields('MPS_ID')[:] == mps_id
+
                 dset = fid['/image_attributes/icu_time_sec']
-                seconds = dset[:]
+                seconds = dset[mask]
+                subsec = fid['/image_attributes/icu_time_subsec'][mask]
                 try:
                     # pylint: disable=no-member
                     _ = dset.attrs['units'].index(b'1958')
@@ -562,32 +571,37 @@ class SPXtlm:
                     epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
                     epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
 
-                subsec = fid['/image_attributes/icu_time_subsec'][:]
+                _dt = []
+                dset = fid['/science_data/detector_telemetry']
+                for ii, sec in enumerate(seconds):
+                    msec_offs = __readout_offset__(dset[mask][ii])
+                    _dt.append(epoch + dt.timedelta(
+                        seconds=int(sec), milliseconds=-msec_offs,
+                        microseconds=subsec2musec(subsec[ii])))
+
                 self._sci = {
-                    'tlm': fid['/science_data/detector_telemetry'][:],
-                    'images': fid['/science_data/detector_images'][:],
+                    'tlm': fid['/science_data/detector_telemetry'][mask],
+                    'images': fid['/science_data/detector_images'][mask, :],
                     'tstamp': np.empty(len(seconds), dtype=TSTAMP_TYPE)
                 }
                 self._sci['tstamp']['tai_sec'] = seconds
                 self._sci['tstamp']['sub_sec'] = subsec
-                _dt = []
-                for ii, sec in enumerate(seconds):
-                    _dt.append(epoch + dt.timedelta(
-                        seconds=int(sec),
-                        milliseconds=-__readout_offset__(self._sci['tlm'][0]),
-                        microseconds=subsec2musec(subsec[ii])))
                 self._sci['tstamp']['dt'] = _dt
 
             if tlm_type != 'sci':
+                # pylint: disable=no-member
+                dset = fid['/engineering_data/NomHK_telemetry']
+                mask = np.s_[:] if mps_id is None \
+                    else dset.fields('MPS_ID')[:] == mps_id
+
                 self._hk = {
-                    'tlm': fid['/engineering_data/NomHK_telemetry'][:],
+                    'tlm': dset[mask],
                     'tstamp': []
                 }
                 dset = fid['/engineering_data/HK_tlm_time']
-                # pylint: disable=no-member
                 ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
                 epoch = dt.datetime.fromisoformat(ref_date)
-                for sec in dset[:]:
+                for sec in dset[mask]:
                     self._hk['tstamp'].append(epoch + dt.timedelta(seconds=sec))
 
     def set_selection(self: SPXtlm, mode: str) -> None:

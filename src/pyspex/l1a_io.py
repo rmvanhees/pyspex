@@ -25,6 +25,7 @@ from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     from datetime import datetime
+
     from netCDF4 import Dataset
 
 
