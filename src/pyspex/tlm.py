@@ -108,6 +108,7 @@ class HKtlm:
         self.hdr: np.ndarray | None = None
         self.tlm: np.ndarray | None = None
         self.tstamp: list[dt.datetime, ...] | list = []
+        self.events: list[np.ndarray, ...] | list = []
 
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple,
                       epoch: dt.datetime) -> None:
@@ -119,19 +120,27 @@ class HKtlm:
                             dtype=ccsds_hk[0]['hdr'].dtype)
         self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
         self.tstamp = []
+        self.events = []
         ii = 0
         for buf in ccsds_hk:
-            self.hdr[ii] = buf['hdr']
-            ccsds_hdr = CCSDShdr(buf['hdr'])
+            ccsds_hdr = CCSDShdr(buf['hdr'][0])
+
+            # Catch TcAccept, TcReject, TcExecute, TcFail and EventRp as events
             if ccsds_hdr.apid != 0x320 \
                or buf['hdr']['tai_sec'] < len(ccsds_hk):
+                if 0x331 <= ccsds_hdr.apid <= 0x335:
+                    self.events.append(buf)
                 continue
 
+            self.hdr[ii] = buf['hdr']
             self.tlm[ii] = buf['hk']
             self.tstamp.append(epoch + dt.timedelta(
                 seconds=int(buf['hdr']['tai_sec']),
                 microseconds=subsec2musec(buf['hdr']['sub_sec'])))
             ii += 1
+
+        self.hdr = self.hdr[:ii]
+        self.tlm = self.tlm[:ii]
 
         # These values are originally stored in little-endian, but
         # Numpy does not accept a mix of little & big-endian values
@@ -325,8 +334,8 @@ class SCItlm:
 
     def readout_offset(self: SCItlm, indx: int) -> float:
         """Return offset wrt start-of-integration [ms]."""
-        n_coad = self.tlm['REG_NCOADDFRAMES']
-        n_frm = n_coad + 3 if self.tlm['IMRLEN'] == FULLFRAME_BYTES \
+        n_coad = self.tlm['REG_NCOADDFRAMES'][indx]
+        n_frm = n_coad + 3 if self.tlm['IMRLEN'][indx] == FULLFRAME_BYTES \
             else 2 * n_coad + 2
 
         return n_frm * self.frame_period(indx)
@@ -516,7 +525,7 @@ class SPXtlm:
                 self.set_coverage((tstamp[0], tstamp[-1] + intg))
         del ccsds_sci
 
-        # collected NomHk telemetry data
+        # collected NomHK telemetry data
         if tlm_type != 'sci':
             dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
