@@ -62,47 +62,6 @@ def subsec2musec(sub_sec: int) -> int:
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
-    """Return dictionary with NomHk telemetry data."""
-    if not ccsds_hk:
-        return None
-
-    hdr = np.empty(len(ccsds_hk),
-                   dtype=ccsds_hk[0]['hdr'].dtype)
-    tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
-    tstamp = []
-    ii = 0
-    for buf in ccsds_hk:
-        hdr[ii] = buf['hdr']
-        ccsds_hdr = CCSDShdr(buf['hdr'])
-        if ccsds_hdr.apid != 0x320 or buf['hdr']['tai_sec'] < len(ccsds_hk):
-            continue
-
-        tlm[ii] = buf['hk']
-        tstamp.append(epoch + dt.timedelta(
-            seconds=int(buf['hdr']['tai_sec']),
-            microseconds=subsec2musec(buf['hdr']['sub_sec'])))
-        ii += 1
-
-    # These values are originally stored in little-endian, but
-    # Numpy does not accept a mix of little & big-endian values
-    # in a structured array.
-    tlm['HTR1_CALCPVAL'][:] = tlm['HTR1_CALCPVAL'].byteswap()
-    tlm['HTR2_CALCPVAL'][:] = tlm['HTR2_CALCPVAL'].byteswap()
-    tlm['HTR3_CALCPVAL'][:] = tlm['HTR3_CALCPVAL'].byteswap()
-    tlm['HTR4_CALCPVAL'][:] = tlm['HTR4_CALCPVAL'].byteswap()
-    tlm['HTR1_CALCIVAL'][:] = tlm['HTR1_CALCIVAL'].byteswap()
-    tlm['HTR2_CALCIVAL'][:] = tlm['HTR2_CALCIVAL'].byteswap()
-    tlm['HTR3_CALCIVAL'][:] = tlm['HTR3_CALCIVAL'].byteswap()
-    tlm['HTR4_CALCIVAL'][:] = tlm['HTR4_CALCIVAL'].byteswap()
-
-    return {'hdr': hdr[:ii],
-            'tlm': tlm[:ii],
-            'tstamp': np.array(tstamp)}
-
-
-
-
 def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]) -> int:
     """Add PACE navigation information from PACE_HKT products.
 
@@ -139,6 +98,89 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
         dset[0] = ''.join(
             [s for s in yaml_conf.open(encoding='ascii').readlines()
              if not (s == '\n' or s.startswith('#'))])
+
+
+# - class SCItlm ----------------------------
+class HKtlm:
+    """..."""
+
+    def __init__(self: HKtlm) -> None:
+        self.hdr: np.ndarray | None = None
+        self.tlm: np.ndarray | None = None
+        self.tstamp: list[dt.datetime, ...] | list = []
+
+    def extract_l0_hk(self: HKtlm, ccsds_hk: tuple,
+                      epoch: dt.datetime) -> None:
+        """Return dictionary with NomHk telemetry data."""
+        if not ccsds_hk:
+            return
+
+        self.hdr = np.empty(len(ccsds_hk),
+                       dtype=ccsds_hk[0]['hdr'].dtype)
+        self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
+        self.tstamp = []
+        ii = 0
+        for buf in ccsds_hk:
+            self.hdr[ii] = buf['hdr']
+            ccsds_hdr = CCSDShdr(buf['hdr'])
+            if (ccsds_hdr.apid != 0x320
+                or buf['hdr']['tai_sec'] < len(ccsds_hk)):
+                continue
+
+            self.tlm[ii] = buf['hk']
+            self.tstamp.append(epoch + dt.timedelta(
+                seconds=int(buf['hdr']['tai_sec']),
+                microseconds=subsec2musec(buf['hdr']['sub_sec'])))
+            ii += 1
+
+        # These values are originally stored in little-endian, but
+        # Numpy does not accept a mix of little & big-endian values
+        # in a structured array.
+        self.tlm['HTR1_CALCPVAL'][:] = self.tlm['HTR1_CALCPVAL'].byteswap()
+        self.tlm['HTR2_CALCPVAL'][:] = self.tlm['HTR2_CALCPVAL'].byteswap()
+        self.tlm['HTR3_CALCPVAL'][:] = self.tlm['HTR3_CALCPVAL'].byteswap()
+        self.tlm['HTR4_CALCPVAL'][:] = self.tlm['HTR4_CALCPVAL'].byteswap()
+        self.tlm['HTR1_CALCIVAL'][:] = self.tlm['HTR1_CALCIVAL'].byteswap()
+        self.tlm['HTR2_CALCIVAL'][:] = self.tlm['HTR2_CALCIVAL'].byteswap()
+        self.tlm['HTR3_CALCIVAL'][:] = self.tlm['HTR3_CALCIVAL'].byteswap()
+        self.tlm['HTR4_CALCIVAL'][:] = self.tlm['HTR4_CALCIVAL'].byteswap()
+
+    def extract_l1a_hk(self: HKtlm,
+                       fid: h5py.File, mps_id: int | None) -> None:
+        """..."""
+        self.hdr = None
+
+        # pylint: disable=no-member
+        dset = fid['/engineering_data/NomHK_telemetry']
+        mask = np.s_[:] if mps_id is None \
+            else dset.fields('MPS_ID')[:] == mps_id
+        self.tlm = dset[mask]
+
+        self.tstamp = []
+        dset = fid['/engineering_data/HK_tlm_time']
+        ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
+        epoch = dt.datetime.fromisoformat(ref_date)
+        for sec in dset[mask]:
+            self.tstamp.append(epoch + dt.timedelta(seconds=sec))
+
+    def convert(self: HKtlm, key: str) -> np.ndarray:
+        """Convert telemetry parameter to physical units.
+
+        Parameters
+        ----------
+        key :  str
+           Name of telemetry parameter
+
+        Returns
+        -------
+        np.ndarray
+        """
+        if key.upper() not in self.tlm.dtype.names:
+            raise KeyError(f'Parameter: {key.upper()} not found'
+                           f' in {self.tlm.dtype.names}')
+
+        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        return convert_hk(key.upper(), raw_data)
 
 
 # - class SCItlm ----------------------------
@@ -335,7 +377,6 @@ class SPXtlm:
      - from_l1a(flname: Path, *, tlm_type: str | None = None) -> None
      - set_selection(mode: str) -> None
      - gen_l1a(config: dataclass, mode: str) -> None
-     - convert(key: str, tm_type: str = 'both') -> np.ndarray
      - units(key: str) -> str
     """
 
@@ -344,7 +385,8 @@ class SPXtlm:
         self.logger = logging.getLogger(__name__)
         self.file_list: list | None = None
         self._coverage: tuple[dt.datetime, dt.datetime] | None = None
-        self._hk = None
+        self.events = None
+        self.nomhk = HKtlm()
         self.science = SCItlm()
         self._selection = None
 
@@ -362,32 +404,32 @@ class SPXtlm:
     @property
     def hk_hdr(self: SPXtlm) -> np.ndarray | None:
         """Return CCSDS header data of telemetry packages @1Hz."""
-        if self._hk is None:
+        if self.nomhk.hdr is None:
             return None
 
         if self._selection is None or self._selection:
-            return self._hk['hdr']
-        return self._hk['hdr'][self._selection['hk_mask']]
+            return self.nomhk.hdr
+        return self.nomhk.hdr[self._selection['hk_mask']]
 
     @property
     def hk_tlm(self: SPXtlm) -> np.ndarray | None:
         """Return telemetry packages @1Hz."""
-        if self._hk is None:
+        if self.nomhk.tlm is None:
             return None
 
         if self._selection is None:
-            return self._hk['tlm']
-        return self._hk['tlm'][self._selection['hk_mask']]
+            return self.nomhk.tlm
+        return self.nomhk.tlm[self._selection['hk_mask']]
 
     @property
     def hk_tstamp(self: SPXtlm) -> np.ndarray | None:
         """Return timestamps of telemetry packages @1Hz."""
-        if self._hk is None:
+        if not self.nomhk.tstamp:
             return None
 
         if self._selection is None:
-            return self._hk['tstamp']
-        return self._hk['tstamp'][self._selection['hk_mask']]
+            return self.nomhk.tstamp
+        return self.nomhk.tstamp[self._selection['hk_mask']]
 
     @property
     def sci_hdr(self: SPXtlm) -> np.ndarray | None:
@@ -516,7 +558,7 @@ class SPXtlm:
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
         epoch -= dt.timedelta(seconds=leap_sec)
-        self._hk = extract_l0_hk(ccsds_hk, epoch)
+        self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
     def from_lv0(self: SPXtlm, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
@@ -548,7 +590,6 @@ class SPXtlm:
             raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
 
         self.file_list = flnames
-        self._hk = None
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
         if dump:
             dump_hkt(flnames[0].stem + '_hkt.dump', ccsds_hk)
@@ -573,7 +614,7 @@ class SPXtlm:
 
         # collected NomHk telemetry data
         if tlm_type != 'sci':
-            self._hk = extract_l0_hk(ccsds_hk, epoch)
+            self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
     def from_l1a(self: SPXtlm, flname: Path, *,
                  tlm_type: str | None = None,
@@ -595,26 +636,12 @@ class SPXtlm:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
         self.file_list = [flname]
-        self._hk = None
         with h5py.File(flname) as fid:
             if tlm_type != 'hk':
                 self.science.extract_l1a_sci(fid, mps_id)
 
             if tlm_type != 'sci':
-                # pylint: disable=no-member
-                dset = fid['/engineering_data/NomHK_telemetry']
-                mask = np.s_[:] if mps_id is None \
-                    else dset.fields('MPS_ID')[:] == mps_id
-
-                self._hk = {
-                    'tlm': dset[mask],
-                    'tstamp': []
-                }
-                dset = fid['/engineering_data/HK_tlm_time']
-                ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
-                epoch = dt.datetime.fromisoformat(ref_date)
-                for sec in dset[mask]:
-                    self._hk['tstamp'].append(epoch + dt.timedelta(seconds=sec))
+                self.nomhk.extract_l1a_hk(fid, mps_id)
 
     def set_selection(self: SPXtlm, mode: str) -> None:
         """Obtain image and housekeeping dimensions.
@@ -803,11 +830,11 @@ class SPXtlm:
         l1a.set_dset('/engineering_data/HK_tlm_time',
                      [(x - ref_date).total_seconds() for x in self.hk_tstamp])
         l1a.set_dset('/engineering_data/temp_detector',
-                     self.convert('TS1_DEM_N_T', tm_type='hk'))
+                     self.nomhk.convert('TS1_DEM_N_T'))
         l1a.set_dset('/engineering_data/temp_housing',
-                     self.convert('TS2_HOUSING_N_T', tm_type='hk'))
+                     self.nomhk.convert('TS2_HOUSING_N_T'))
         l1a.set_dset('/engineering_data/temp_radiator',
-                     self.convert('TS3_RADIATOR_N_T', tm_type='hk'))
+                     self.nomhk.convert('TS3_RADIATOR_N_T'))
 
     def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/science_data'."""
@@ -858,34 +885,6 @@ class SPXtlm:
                      self.science.exposure_time() / 1000)
         l1a.set_dset('/image_attributes/nr_coadditions',
                      self.science.tlm['REG_NCOADDFRAMES'])
-
-    def convert(self: SPXtlm, key: str, tm_type: str = 'both') -> np.ndarray:
-        """Convert telemetry parameter to physical units.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-        tm_type :  {'hk', 'sci', 'both'}, default 'both'
-           Default is to check if key is present in sci_tlm else hk_tlm
-
-        Returns
-        -------
-        np.ndarray
-        """
-        if tm_type == 'hk':
-            tlm = self.hk_tlm
-        elif tm_type == 'sci':
-            tlm = self.science.tlm
-        else:
-            tlm = self.science.tlm if self.science.tlm is not None \
-                else self.hk_tlm
-        if key.upper() not in tlm.dtype.names:
-            raise KeyError(f'Parameter: {key.upper()} not found'
-                           f' in {tlm.dtype.names}')
-
-        raw_data = np.array([x[key.upper()] for x in tlm])
-        return convert_hk(key.upper(), raw_data)
 
     @staticmethod
     def units(key: str) -> str:
