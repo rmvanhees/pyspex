@@ -220,10 +220,10 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
     def msg_332(val: np.ndarray) -> str:
-        return(f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
-               f" {bin(val['TcRejectCode'][0])}"
-               f" {val['RejectParameter1'][0]:s}"
-               f" {val['RejectParameter2'][0]:s}")
+        return (f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+                f" {bin(val['TcRejectCode'][0])}"
+                f" {val['RejectParameter1'][0]:s}"
+                f" {val['RejectParameter2'][0]:s}")
 
     def msg_333(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"

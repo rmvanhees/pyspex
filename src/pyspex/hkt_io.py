@@ -269,9 +269,11 @@ class HKTio:
             # pylint: disable=no-member
             # Note timezone 'Z' is only accepted by Python 3.11+
             val = fid.attrs['time_coverage_start'].decode()
-            coverage_start = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
+            coverage_start = dt.datetime.fromisoformat(
+                val.replace('Z', '+00:00'))
             val = fid.attrs['time_coverage_end'].decode()
-            coverage_end = dt.datetime.fromisoformat(val.replace('Z', '+00:00'))
+            coverage_end = dt.datetime.fromisoformat(
+                val.replace('Z', '+00:00'))
 
         if abs(coverage_end - coverage_start) < one_day:
             return coverage_start, coverage_end

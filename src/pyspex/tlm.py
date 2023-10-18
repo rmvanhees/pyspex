@@ -62,14 +62,14 @@ def subsec2musec(sub_sec: int) -> int:
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]) -> int:
+def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     """Add PACE navigation information from PACE_HKT products.
 
     Parameters
     ----------
     l1a_file :  Path
        name of an existing L1A product.
-    hkt_list :  list[Path]
+    hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
     """
     # read PACE navigation data from HKT files.
@@ -102,7 +102,7 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
 
 # - class SCItlm ----------------------------
 class HKtlm:
-    """..."""
+    """Class to handle SPEXone NomHK data."""
 
     def __init__(self: HKtlm) -> None:
         self.hdr: np.ndarray | None = None
@@ -116,15 +116,15 @@ class HKtlm:
             return
 
         self.hdr = np.empty(len(ccsds_hk),
-                       dtype=ccsds_hk[0]['hdr'].dtype)
+                            dtype=ccsds_hk[0]['hdr'].dtype)
         self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
         self.tstamp = []
         ii = 0
         for buf in ccsds_hk:
             self.hdr[ii] = buf['hdr']
             ccsds_hdr = CCSDShdr(buf['hdr'])
-            if (ccsds_hdr.apid != 0x320
-                or buf['hdr']['tai_sec'] < len(ccsds_hk)):
+            if ccsds_hdr.apid != 0x320 \
+               or buf['hdr']['tai_sec'] < len(ccsds_hk):
                 continue
 
             self.tlm[ii] = buf['hk']
@@ -191,7 +191,7 @@ class SCItlm:
         self.hdr: np.ndarray | None = None
         self.tlm: np.ndarray | None = None
         self.tstamp: np.ndarray | None = None
-        self.images: tuple(np.ndarray, ...) | () = ()
+        self.images: tuple[np.ndarray, ...] | () = ()
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple,
                        epoch: dt.datetime) -> None:
@@ -359,13 +359,6 @@ class SPXtlm:
     This class has the following methods::
 
      - set_coverage(coverage: tuple[datetime, datetime] | None) -> None
-     - hk_hdr() -> np.ndarray | None
-     - hk_tlm() -> np.ndarray | None
-     - hk_tstamp() -> np.ndarray | None
-     - sci_hdr() -> np.ndarray | None
-     - sci_tlm() -> np.ndarray | None
-     - sci_tstamp() -> np.ndarray | None
-     - images() -> tuple | None
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
@@ -374,8 +367,9 @@ class SPXtlm:
      - from_lv0(flnames: Path | list[Path], *,
                 file_format: str, tlm_type: str | None = None,
                 debug: bool = False, dump: bool = False) -> None
-     - from_l1a(flname: Path, *, tlm_type: str | None = None) -> None
-     - set_selection(mode: str) -> None
+     - from_l1a(flname: Path, *, tlm_type: str | None = None,
+                mps_id: int | None = None) -> None
+     - get_selection(mode: str) -> dict
      - gen_l1a(config: dataclass, mode: str) -> None
      - units(key: str) -> str
     """
@@ -388,7 +382,6 @@ class SPXtlm:
         self.events = None
         self.nomhk = HKtlm()
         self.science = SCItlm()
-        self._selection = None
 
     def set_coverage(self: SPXtlm,
                      coverage: tuple[dt.datetime, dt.datetime] | None) -> None:
@@ -402,133 +395,38 @@ class SPXtlm:
                               max(self._coverage[1], coverage[1]))
 
     @property
-    def hk_hdr(self: SPXtlm) -> np.ndarray | None:
-        """Return CCSDS header data of telemetry packages @1Hz."""
-        if self.nomhk.hdr is None:
-            return None
-
-        if self._selection is None or self._selection:
-            return self.nomhk.hdr
-        return self.nomhk.hdr[self._selection['hk_mask']]
-
-    @property
-    def hk_tlm(self: SPXtlm) -> np.ndarray | None:
-        """Return telemetry packages @1Hz."""
-        if self.nomhk.tlm is None:
-            return None
-
-        if self._selection is None:
-            return self.nomhk.tlm
-        return self.nomhk.tlm[self._selection['hk_mask']]
-
-    @property
-    def hk_tstamp(self: SPXtlm) -> np.ndarray | None:
-        """Return timestamps of telemetry packages @1Hz."""
-        if not self.nomhk.tstamp:
-            return None
-
-        if self._selection is None:
-            return self.nomhk.tstamp
-        return self.nomhk.tstamp[self._selection['hk_mask']]
-
-    @property
-    def sci_hdr(self: SPXtlm) -> np.ndarray | None:
-        """Return CCSDS header data of Science telemetry packages."""
-        if self.science.hdr is None:
-            return None
-
-        if self._selection is None:
-            return self.science.hdr
-        return self.science.hdr[self._selection['sci_mask']]
-
-    @property
-    def sci_tlm(self: SPXtlm) -> np.ndarray | None:
-        """Return Science telemetry packages."""
-        if self.science.tlm is None:
-            return None
-
-        if self._selection is None:
-            return self.science.tlm
-        return self.science.tlm[self._selection['sci_mask']]
-
-    @property
-    def sci_tstamp(self: SPXtlm) -> np.ndarray | None:
-        """Return timestamps of Science telemetry packages."""
-        if self.science.tstamp is None:
-            return None
-
-        if self._selection is None:
-            return self.science.tstamp
-        return self.science.tstamp[self._selection['sci_mask']]
-
-    @property
-    def images(self: SPXtlm) -> tuple[np.ndarray, ...] | None:
-        """Return image-frames of Science telemetry packages."""
-        if not self.science.images:
-            return None
-
-        if self._selection is None:
-            return self.science.images
-
-        images = ()
-        for ii, img in enumerate(self.science.images):
-            if self._selection['sci_mask'][ii]:
-                images += (img,)
-        return images
-
-    def __get_valid_tstamps(self: SPXtlm) -> np.ndarray | None:
-        """Return valid timestamps from Science or NomHk packages."""
-        if self.sci_tstamp is None \
-                or np.all(self.sci_tstamp['tai_sec'] < TSTAMP_MIN):
-            indx = self.hk_tstamp > dt.datetime(
-                2020, 1, 1, 1, tzinfo=dt.timezone.utc)
-            return self.hk_tstamp[indx] if indx.size > 0 else None
-
-        indx = np.where(self.sci_tstamp['tai_sec'] > TSTAMP_MIN)[0]
-        return self.sci_tstamp['dt'][indx] if indx.size > 0 else None
-
-    @property
     def reference_date(self: SPXtlm) -> dt.datetime:
         """Return date of reference day (tzone aware)."""
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
+        if self._coverage is None:
             raise ValueError('no valid timestamps found')
 
         return dt.datetime.combine(
-                tstamp[0].date(), dt.time(0), tstamp[0].tzinfo)
+                self._coverage[0].date(), dt.time(0), dt.timezone.utc)
 
     @property
-    def time_coverage_start(self: SPXtlm) -> dt.datetime:
-        """Return a string for the time_coverage_start."""
-        if self._coverage is not None:
-            return self._coverage[0]
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
-            raise ValueError('no valid timestamps found')
+    def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
+        """Return time_coverage_start."""
+        if self._coverage is None:
+            return None
 
-        return tstamp[0]
+        return self._coverage[0]
 
     @property
-    def time_coverage_end(self: SPXtlm) -> dt.datetime:
-        """Return a string for the time_coverage_end."""
-        if self._coverage is not None:
-            return self._coverage[1]
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
-            raise ValueError('no valid timestamps found')
+    def time_coverage_end(self: SPXtlm) -> dt.datetime | None:
+        """Return time_coverage_end."""
+        if self._coverage is None:
+            return None
 
-        frame_period = 1. if self.science.tlm is None \
-            else self.science.frame_period(-1)
-        return tstamp[-1] + dt.timedelta(milliseconds=frame_period)
+        return self._coverage[1]
 
     def from_hkt(self: SPXtlm, flnames: Path | list[Path], *,
                  instrument: str | None = None, dump: bool = False) -> None:
-        """Read telemetry data from a PACE HKT product.
+        """Read telemetry data from PACE HKT product(s).
 
         Parameters
         ----------
         flnames :  Path | list[Path]
-           list of PACE_HKT filenames (netCDF4 format)
+           sorted list of PACE_HKT filenames (netCDF4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, optional
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
@@ -542,7 +440,7 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
-        ccsds_hk: tuple[np.ndarray] | tuple = ()
+        ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
         for name in flnames:
             hkt = HKTio(name)
             self.set_coverage(hkt.coverage())
@@ -556,24 +454,24 @@ class SPXtlm:
 
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
         ii = len(ccsds_hk) // 2
-        leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
+        leap_sec = get_leap_seconds(float(ccsds_hk[ii]['hdr']['tai_sec'][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
     def from_lv0(self: SPXtlm, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
                  debug: bool = False, dump: bool = False) -> None:
-        """Read telemetry data from SPEXone Level-0 product.
+        """Read telemetry data from SPEXone Level-0 product(s).
 
         Parameters
         ----------
         flnames :  Path | list[Path]
-           list of CCSDS filenames
+           sorted list of CCSDS filenames
         file_format : {'raw', 'st3', 'dsb'}
            type of CCSDS data
         tlm_type :  {'hk', 'sci', 'all'}, optional
            select type of telemetry packages.
-           Note that we allways read the complete Level-0 producs.
+           Note that we allways read the complete Level-0 products.
         debug : bool, default=False
            run in debug mode, read only packages heades
         dump :  bool, default=False
@@ -599,8 +497,7 @@ class SPXtlm:
 
         # set epoch
         if file_format == 'dsb':
-            epoch = dt.datetime(1958, 1, 1,
-                                tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]['hdr']['tai_sec'][0])
             epoch -= dt.timedelta(seconds=leap_sec)
@@ -608,13 +505,25 @@ class SPXtlm:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
         # collect Science telemetry data
+        tstamp = None
         if tlm_type != 'hk':
             self.science.extract_l0_sci(ccsds_sci, epoch)
+            _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
+            if np.count_nonzero(_mm):
+                tstamp = self.science.tstamp['dt'][_mm]
+                ii = int(np.nonzero(_mm)[0][-1])
+                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                self.set_coverage((tstamp[0], tstamp[-1] + intg))
         del ccsds_sci
 
         # collected NomHk telemetry data
         if tlm_type != 'sci':
+            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
+            if tstamp is None:
+                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                self.set_coverage(
+                    (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
     def from_l1a(self: SPXtlm, flname: Path, *,
                  tlm_type: str | None = None,
@@ -635,75 +544,94 @@ class SPXtlm:
         elif tlm_type not in ['hk', 'sci', 'all']:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
+        tstamp = None
         self.file_list = [flname]
         with h5py.File(flname) as fid:
+            # collect Science telemetry data
             if tlm_type != 'hk':
                 self.science.extract_l1a_sci(fid, mps_id)
+                _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
+                if np.count_nonzero(_mm):
+                    tstamp = self.science.tstamp['dt'][_mm]
+                    ii = int(np.nonzero(_mm)[0][-1])
+                    intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                    self.set_coverage((tstamp[0], tstamp[-1] + intg))
 
+            # collected NomHk telemetry data
             if tlm_type != 'sci':
+                dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
                 self.nomhk.extract_l1a_hk(fid, mps_id)
+                if tstamp is None:
+                    tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                    self.set_coverage(
+                        (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
-    def set_selection(self: SPXtlm, mode: str) -> None:
-        """Obtain image and housekeeping dimensions.
+    def get_selection(self: SPXtlm, mode: str) -> dict | None:
+        """Obtain image and housekeeping dimensions given data-mode.
 
         Parameters
         ----------
         mode :  {'full', 'binned', 'all'}
-        """
-        self._selection = None
-        if mode == 'full':
-            sci_mask = [] if self.science.tlm is None else \
-                self.science.tlm['IMRLEN'] == FULLFRAME_BYTES
-            if np.sum(sci_mask) == 0:
-                return
+           Select Science packages with full-frame images or binned images
 
+        Returns
+        -------
+        dict {'sci_mask': np.ndarray | [],
+              'hk_mask': np.ndarray,
+              'dims': {'number_of_images': int,
+                       'samples_per_image': int,
+                       'hk_packets': int}
+        }
+        """
+        if mode == 'full':
+            if self.science.tlm is None \
+               or np.sum(self.science.tlm['IMRLEN'] == FULLFRAME_BYTES) == 0:
+                return None
+
+            sci_mask = self.science.tlm['IMRLEN'] == FULLFRAME_BYTES
             mps_list = np.unique(self.science.tlm['MPS_ID'][sci_mask])
             self.logger.debug('unique Diagnostic MPS: %s', mps_list)
-            hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
+            hk_mask = np.in1d(self.nomhk.tlm['MPS_ID'], mps_list)
 
-            self._selection = {
-                'sci_mask': sci_mask,
-                'hk_mask': hk_mask,
-                'dims': {
-                    'number_of_images': np.sum(sci_mask),
-                    'samples_per_image': DET_CONSTS['dimFullFrame'],
-                    'hk_packets': np.sum(hk_mask)}
-            }
-            return
+            return {'sci_mask': sci_mask,
+                    'hk_mask': hk_mask,
+                    'dims': {
+                        'number_of_images': np.sum(sci_mask),
+                        'samples_per_image': DET_CONSTS['dimFullFrame'],
+                        'hk_packets': np.sum(hk_mask)}
+                    }
 
         if mode == 'binned':
-            sci_mask = [] if self.science.tlm is None else \
-                self.science.tlm['IMRLEN'] < FULLFRAME_BYTES
-            if np.sum(sci_mask) == 0:
-                return
+            if self.science.tlm is None \
+               or np.sum(self.science.tlm['IMRLEN'] < FULLFRAME_BYTES) == 0:
+                return None
 
+            sci_mask = self.science.tlm['IMRLEN'] < FULLFRAME_BYTES
             mps_list = np.unique(self.science.tlm['MPS_ID'][sci_mask])
             self.logger.debug('unique Science MPS: %s', mps_list)
-            hk_mask = np.in1d(self.hk_tlm['MPS_ID'], mps_list)
-            self._selection = {
-                'sci_mask': sci_mask,
-                'hk_mask': hk_mask,
-                'dims': {
-                    'number_of_images': np.sum(sci_mask),
-                    'samples_per_image': np.max(
-                        [len(self.images[ii])
-                         for ii in sci_mask.nonzero()[0]]),
-                    'hk_packets': np.sum(hk_mask)}
-            }
-            return
+            hk_mask = np.in1d(self.nomhk.tlm['MPS_ID'], mps_list)
+            return {'sci_mask': sci_mask,
+                    'hk_mask': hk_mask,
+                    'dims': {
+                        'number_of_images': np.sum(sci_mask),
+                        'samples_per_image': np.max(
+                            [self.science.images[ii].size
+                             for ii in sci_mask.nonzero()[0]]),
+                        'hk_packets': np.sum(hk_mask)}
+                    }
 
-        if mode == 'all':
-            nr_hk = 0 if self.hk_hdr is None else len(self.hk_hdr)
-            nr_sci = 0 if self.sci_hdr is None else len(self.sci_hdr)
-            self._selection = {
-                'hk_mask': np.full(nr_hk, True),
+        # mode == 'all':
+        nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
+        nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
+        return {'hk_mask': np.full(nr_hk, True),
                 'sci_mask': np.full(nr_sci, True),
                 'dims': {
                     'number_of_images': nr_sci,
-                    'samples_per_image': DET_CONSTS['dimRow']
-                    if nr_sci == 0 else np.max([len(x) for x in self.images]),
+                    'samples_per_image': (
+                        DET_CONSTS['dimRow'] if nr_sci == 0
+                        else np.max([x.size for x in self.science.images])),
                     'hk_packets': nr_hk}
-            }
+                }
 
     def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
         """Return filename of Level-1A product.
@@ -711,9 +639,9 @@ class SPXtlm:
         Parameters
         ----------
         config :  dataclass
-           Settings for the L0->l1A processing.
+           Settings for the L0->l1A processing
         mode :  {'all', 'full', 'binned'}
-           Select Science packages with full-frame image or binned images
+           Select Science packages with full-frame images or binned images
 
         Returns
         -------
@@ -745,6 +673,7 @@ class SPXtlm:
         if config.outfile:
             return config.outdir / config.outfile
 
+        # +++++ in-flight product-name convention +++++
         if config.l0_format != 'raw':
             if config.eclipse is None:
                 subtype = '_OCAL'
@@ -761,7 +690,7 @@ class SPXtlm:
                 f'.{self.time_coverage_start.strftime("%Y%m%dT%H%M%S"):15s}'
                 f'.L1A{prod_ver}.nc')
 
-        # OCAL product name
+        # +++++ OCAL product-name convention +++++
         # determine measurement identifier
         msm_id = config.l0_list[0].stem
         try:
@@ -776,33 +705,56 @@ class SPXtlm:
                 f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc')
 
     def gen_l1a(self: SPXtlm, config: dataclass, mode: str) -> None:
-        """Generate a SPEXone Level-1A product."""
-        self.set_selection(mode)
-        if self._selection is None:
+        """Generate a SPEXone Level-1A product.
+
+        Parameters
+        ----------
+        config :  dataclass
+           Settings for the L0->l1A processing
+        mode :  {'all', 'full', 'binned'}
+           Select Science packages with full-frame images or binned images
+        """
+        selection = self.get_selection(mode)
+        if selection is None:
             return
+
+        # set time-coverage range
+        coverage = None
+        if np.sum(selection['sci_mask']) > 0:
+            _mm = (selection['sci_mask']
+                   & self.science.tstamp['tai_sec'] > TSTAMP_MIN)
+            if np.count_nonzero(_mm):
+                tstamp = self.science.tstamp['dt'][_mm]
+                ii = int(np.nonzero(_mm)[0][-1])
+                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                coverage = (tstamp[0], tstamp[-1] + intg)
+
+        if coverage is None:
+            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+            tstamp = [self.nomhk.tstamp[ii]
+                      for ii in np.nonzero(selection['hk_mask'])[0]]
+            tstamp = [x for x in tstamp if x > dt_min]
+            coverage = (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1))
 
         l1a_file = self.l1a_file(config, mode)
         ref_date = self.reference_date
-        with L1Aio(l1a_file, ref_date, self._selection['dims'],
+        with L1Aio(l1a_file, ref_date, selection['dims'],
                    compression=config.compression) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != 'raw')
-            if self.hk_tlm is not None:
-                l1a.set_attr('icu_sw_version',
-                             f'0x{self.hk_tlm["ICUSWVER"][0]:x}')
+            l1a.set_attr('icu_sw_version',
+                         f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
             l1a.set_attr('time_coverage_start',
-                         self.time_coverage_start.isoformat(
-                             timespec='milliseconds'))
+                         coverage[0].isoformat(timespec='milliseconds'))
             l1a.set_attr('time_coverage_end',
-                         self.time_coverage_end.isoformat(
-                             timespec='milliseconds'))
+                         coverage[1].isoformat(timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
             self.logger.debug('(1) initialized Level-1A product')
 
-            self._fill_engineering(l1a)
+            self._fill_engineering(l1a, selection['hk_mask'])
             self.logger.debug('(2) added engineering data')
-            self._fill_science(l1a)
+            self._fill_science(l1a, selection['sci_mask'])
             self.logger.debug('(3) added science data')
-            self._fill_image_attrs(l1a, config.l0_format)
+            self._fill_image_attrs(l1a, config.l0_format, selection['sci_mask'])
             self.logger.debug('(4) added image attributes')
 
         # add processor_configuration
@@ -820,45 +772,53 @@ class SPXtlm:
 
         self.logger.info('successfully generated: %s', l1a_file.name)
 
-    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
+    def _fill_engineering(self: SPXtlm, l1a: L1Aio,
+                          hk_mask: np.ndarray) -> None:
         """Fill datasets in group '/engineering_data'."""
-        if self.hk_tlm is None:
+        if np.sum(hk_mask) == 0:
             return
 
-        l1a.set_dset('/engineering_data/NomHK_telemetry', self.hk_tlm)
+        l1a.set_dset('/engineering_data/NomHK_telemetry',
+                     self.nomhk.tlm[hk_mask])
         ref_date = self.reference_date
         l1a.set_dset('/engineering_data/HK_tlm_time',
-                     [(x - ref_date).total_seconds() for x in self.hk_tstamp])
+                     [(x - ref_date).total_seconds()
+                      for ii, x in enumerate(self.nomhk.tstamp)
+                      if hk_mask[ii]])
         l1a.set_dset('/engineering_data/temp_detector',
-                     self.nomhk.convert('TS1_DEM_N_T'))
+                     self.nomhk.convert('TS1_DEM_N_T')[hk_mask])
         l1a.set_dset('/engineering_data/temp_housing',
-                     self.nomhk.convert('TS2_HOUSING_N_T'))
+                     self.nomhk.convert('TS2_HOUSING_N_T')[hk_mask])
         l1a.set_dset('/engineering_data/temp_radiator',
-                     self.nomhk.convert('TS3_RADIATOR_N_T'))
+                     self.nomhk.convert('TS3_RADIATOR_N_T')[hk_mask])
 
-    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio,
+                      sci_mask: np.ndarray) -> None:
         """Fill datasets in group '/science_data'."""
-        if self.science.tlm is None:
+        if np.sum(sci_mask) == 0:
             return
 
-        img_sz = [img.size for img in self.images]
+        img_list = [img for ii, img in enumerate(self.science.images)
+                    if sci_mask[ii]]
+        img_sz = [img.size for img in img_list]
         if len(np.unique(img_sz)) != 1:
             images = np.zeros((len(img_sz), np.max(img_sz)), dtype='u2')
-            for ii, img in enumerate(self.images):
+            for ii, img in enumerate(img_list):
                 images[ii, :len(img)] = img
         else:
-            images = np.vstack(self.images)
+            images = np.vstack(img_list)
         l1a.set_dset('/science_data/detector_images', images)
-        l1a.set_dset('/science_data/detector_telemetry', self.science.tlm)
+        l1a.set_dset('/science_data/detector_telemetry',
+                     self.science.tlm[sci_mask])
 
     def _fill_image_attrs(self: SPXtlm, l1a: L1Aio,
-                          lv0_format: str) -> None:
+                          lv0_format: str, sci_mask: np.ndarray) -> None:
         """Fill datasets in group '/image_attributes'."""
-        if self.science.tlm is None:
+        if np.sum(sci_mask) == 0:
             return
 
         l1a.set_dset('/image_attributes/icu_time_sec',
-                     self.sci_tstamp['tai_sec'])
+                     self.science.tstamp['tai_sec'][sci_mask])
         # modify attribute units for non-DSB products
         if lv0_format != 'dsb':
             # timestamp of 2020-01-01T00:00:00+00:00
@@ -870,21 +830,22 @@ class SPXtlm:
             l1a.set_attr('units', 'seconds since 1970-01-01 00:00:00',
                          ds_name='/image_attributes/icu_time_sec')
         l1a.set_dset('/image_attributes/icu_time_subsec',
-                     self.sci_tstamp['sub_sec'])
+                     self.science.tstamp['sub_sec'][sci_mask])
         ref_date = self.reference_date
         l1a.set_dset('/image_attributes/image_time',
                      [(x - ref_date).total_seconds()
-                      for x in self.sci_tstamp['dt']])
+                      for x in self.science.tstamp['dt'][sci_mask]])
         l1a.set_dset('/image_attributes/image_ID',
-                     np.bitwise_and(self.sci_hdr['sequence'], 0x3fff))
+                     np.bitwise_and(self.science.hdr['sequence'][sci_mask],
+                                    0x3fff))
         l1a.set_dset('/image_attributes/binning_table',
-                     self.science.binning_table())
+                     self.science.binning_table()[sci_mask])
         l1a.set_dset('/image_attributes/digital_offset',
-                     self.science.digital_offset())
+                     self.science.digital_offset()[sci_mask])
         l1a.set_dset('/image_attributes/exposure_time',
-                     self.science.exposure_time() / 1000)
+                     self.science.exposure_time()[sci_mask] / 1000)
         l1a.set_dset('/image_attributes/nr_coadditions',
-                     self.science.tlm['REG_NCOADDFRAMES'])
+                     self.science.tlm['REG_NCOADDFRAMES'][sci_mask])
 
     @staticmethod
     def units(key: str) -> str:

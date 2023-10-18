@@ -26,8 +26,6 @@ from .lib.tlm_utils import convert_hk
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from netCDF4 import Dataset
-
 
 # - global parameters -------------------
 module_logger = logging.getLogger('pyspex.l1a_io')
@@ -62,9 +60,9 @@ def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
         if cmv_outputmode != 1:
             raise KeyError('Science mode with REG_CMV_OUTPUTMODE != 1')
         bin_tbl_start = img_hk['REG_BINNING_TABLE_START']
-        indx0 = (img_hk['REG_FULL_FRAME'] != 2).nonzero()[0]
+        indx0 = np.nonzero(img_hk['REG_FULL_FRAME'] != 2)[0]
         if indx0.size > 0:
-            indx2 = (img_hk['REG_FULL_FRAME'] == 2).nonzero()[0]
+            indx2 = np.nonzero(img_hk['REG_FULL_FRAME'] == 2)[0]
             bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
         res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
         return res & 0xFF
@@ -143,7 +141,6 @@ class L1Aio:
                  dims: dict, compression: bool = False) -> None:
         """Initialize access to a SPEXone Level-1 product."""
         self.product: Path = Path(product) if isinstance(product, str) else product
-        self.fid: Dataset | None = None
 
         # initialize private class-attributes
         self.__epoch = ref_date
@@ -349,7 +346,7 @@ class L1Aio:
         if allow_empty:
             indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -362,9 +359,9 @@ class L1Aio:
             res.append(self.dset_stored[key])
         res = np.array(res)
         if allow_empty:
-            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
