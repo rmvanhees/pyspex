@@ -7,7 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""`SPXtlm` can read telemetry house-keeping data from SPEXone."""
+"""`SPXtlm`, class to read/access PACE/SPEXone telemetry data."""
 from __future__ import annotations
 
 __all__ = ['SPXtlm']
@@ -28,7 +28,7 @@ from .l1a_io import L1Aio
 from .lib import pyspex_version
 from .lib.ccsds_hdr import CCSDShdr
 from .lib.leap_sec import get_leap_seconds
-from .lib.tlm_utils import UNITS_DICT, convert_hk
+from .lib.tlm_utils import convert_hk
 from .lib.tmtc_def import tmtc_dtype
 from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 
@@ -74,7 +74,7 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     """
     # read PACE navigation data from HKT files.
     xds_nav = read_hkt_nav(hkt_list)
-    # add PACE navigation data to existing Level-1A product.
+    # add PACE navigation data to existing level-1A product.
     xds_nav.to_netcdf(l1a_file, group='navigation_data', mode='a')
     # check time coverage of navigation data.
     return check_coverage_nav(l1a_file, xds_nav)
@@ -102,25 +102,40 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
 
 # - class SCItlm ----------------------------
 class HKtlm:
-    """Class to handle SPEXone NomHK data."""
+    """Class to handle SPEXone housekeeping telemetry packets."""
 
     def __init__(self: HKtlm) -> None:
+        """Initialize HKtlm object."""
         self.hdr: np.ndarray | None = None
         self.tlm: np.ndarray | None = None
         self.tstamp: list[dt.datetime, ...] | list = []
         self.events: list[np.ndarray, ...] | list = []
 
+    def init_attrs(self: HKtlm) -> None:
+        """Initialize class attributes."""
+        self.hdr = None
+        self.tlm = None
+        self.tstamp = []
+        self.events = []
+
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple,
                       epoch: dt.datetime) -> None:
-        """Return dictionary with NomHk telemetry data."""
+        """Extract data from SPEXone level-0 housekeeping telemetry packets.
+
+        Parameters
+        ----------
+        ccsds_hk :  tuple[np.ndarray, ...]
+           SPEXone level-0 housekeeping telemetry packets
+        epoch :  dt.datetime
+           Epoch of the telemetry packets (1958 or 1970)
+        """
+        self.init_attrs()
         if not ccsds_hk:
             return
 
         self.hdr = np.empty(len(ccsds_hk),
                             dtype=ccsds_hk[0]['hdr'].dtype)
         self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
-        self.tstamp = []
-        self.events = []
         ii = 0
         for buf in ccsds_hk:
             ccsds_hdr = CCSDShdr(buf['hdr'][0])
@@ -135,8 +150,8 @@ class HKtlm:
             self.hdr[ii] = buf['hdr']
             self.tlm[ii] = buf['hk']
             self.tstamp.append(epoch + dt.timedelta(
-                seconds=int(buf['hdr']['tai_sec']),
-                microseconds=subsec2musec(buf['hdr']['sub_sec'])))
+                seconds=int(buf['hdr']['tai_sec'][0]),
+                microseconds=subsec2musec(buf['hdr']['sub_sec'][0])))
             ii += 1
 
         self.hdr = self.hdr[:ii]
@@ -156,8 +171,16 @@ class HKtlm:
 
     def extract_l1a_hk(self: HKtlm,
                        fid: h5py.File, mps_id: int | None) -> None:
-        """..."""
-        self.hdr = None
+        """Extract data from SPEXone level-1a housekeeping telemetry packets.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           File pointer to a SPEXone level-1a product
+        mps_id : int, optional
+           Select data performed with MPS equals 'mps_id'
+        """
+        self.init_attrs()
 
         # pylint: disable=no-member
         dset = fid['/engineering_data/NomHK_telemetry']
@@ -165,7 +188,6 @@ class HKtlm:
             else dset.fields('MPS_ID')[:] == mps_id
         self.tlm = dset[mask]
 
-        self.tstamp = []
         dset = fid['/engineering_data/HK_tlm_time']
         ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
         epoch = dt.datetime.fromisoformat(ref_date)
@@ -194,17 +216,34 @@ class HKtlm:
 
 # - class SCItlm ----------------------------
 class SCItlm:
-    """..."""
+    """Class to handle SPEXone Science-telemetry packets."""
 
     def __init__(self: SCItlm) -> None:
+        """Initialize SCItlm object."""
         self.hdr: np.ndarray | None = None
         self.tlm: np.ndarray | None = None
         self.tstamp: np.ndarray | None = None
-        self.images: tuple[np.ndarray, ...] | () = ()
+        self.images: tuple[np.ndarray, ...] | tuple[()] = ()
+
+    def init_attrs(self: SCItlm) -> None:
+        """Initialize class attributes."""
+        self.hdr = None
+        self.tlm = None
+        self.tstamp = None
+        self.images = ()
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple,
                        epoch: dt.datetime) -> None:
-        """Extract Science telemetry data."""
+        """Extract SPEXone level-0 Science-telemetry data.
+
+        Parameters
+        ----------
+        ccsds_sci :  tuple[np.ndarray, ...]
+           SPEXone level-0 Science-telemetry packets
+        epoch :  dt.datetime
+           Epoch of the telemetry packets (1958 or 1970)
+        """
+        self.init_attrs()
         if not ccsds_sci:
             return
 
@@ -237,7 +276,6 @@ class SCItlm:
         self.hdr = np.empty(n_frames, dtype=hdr_dtype)
         self.tlm = np.empty(n_frames, dtype=hk_dtype)
         self.tstamp = np.empty(n_frames, dtype=TSTAMP_TYPE)
-        self.images = ()
 
         # extract data from ccsds_sci
         ii = 0
@@ -273,10 +311,17 @@ class SCItlm:
 
     def extract_l1a_sci(self: SCItlm, fid: h5py.File,
                         mps_id: int | None) -> None:
-        """..."""
+        """Extract data from SPEXone level-1a Science-telemetry packets.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           File pointer to a SPEXone level-1a product
+        mps_id : int, optional
+           Select data performed with MPS equals 'mps_id'
+        """
         # pylint: disable=no-member
-        # no header data
-        self.hdr = None
+        self.init_attrs()
 
         # read science telemetry
         dset = fid['/science_data/detector_telemetry']
@@ -380,15 +425,42 @@ class SPXtlm:
                 mps_id: int | None = None) -> None
      - get_selection(mode: str) -> dict
      - gen_l1a(config: dataclass, mode: str) -> None
-     - units(key: str) -> str
+
+
+    Examples
+    --------
+    Read data from SPEXone level-0 products
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_l0(list_l0_products, tlm_type='hk')
+    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
+    >>> spx.nomhk.events
+    # return detector images
+    >>> spx.from_l0(list_l0_products, tlm_type='sci')
+    >>> spx.science.images
+
+    Read data from a SPEXone level-1a product
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_l1a(l1a_product, tlm_type='sci', mps_is=47)
+    >>> spx.science.images
+
+    Read data from a PACE-HKT product
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_hkt(hkt_product)
+    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
+    >>> spx.nomhk.events
     """
 
     def __init__(self: SPXtlm) -> None:
-        """Initialize class SPXtlm."""
+        """Initialize SPXtlm object."""
         self.logger = logging.getLogger(__name__)
         self.file_list: list | None = None
         self._coverage: tuple[dt.datetime, dt.datetime] | None = None
-        self.events = None
         self.nomhk = HKtlm()
         self.science = SCItlm()
 
@@ -436,7 +508,7 @@ class SPXtlm:
         ----------
         flnames :  Path | list[Path]
            sorted list of PACE_HKT filenames (netCDF4 format)
-        instrument :  {'spx', 'sc', 'oci', 'harp'}, optional
+        instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
@@ -449,6 +521,7 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
+        self.set_coverage(None)
         ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
         for name in flnames:
             hkt = HKTio(name)
@@ -470,7 +543,7 @@ class SPXtlm:
     def from_lv0(self: SPXtlm, flnames: Path | list[Path], *,
                  file_format: str, tlm_type: str | None = None,
                  debug: bool = False, dump: bool = False) -> None:
-        """Read telemetry data from SPEXone Level-0 product(s).
+        """Read telemetry data from SPEXone level-0 product(s).
 
         Parameters
         ----------
@@ -478,9 +551,9 @@ class SPXtlm:
            sorted list of CCSDS filenames
         file_format : {'raw', 'st3', 'dsb'}
            type of CCSDS data
-        tlm_type :  {'hk', 'sci', 'all'}, optional
-           select type of telemetry packages.
-           Note that we allways read the complete Level-0 products.
+        tlm_type :  {'hk', 'sci', 'all'}, default='all'
+           select type of telemetry packages
+           Note that we allways read the complete level-0 products.
         debug : bool, default=False
            run in debug mode, read only packages heades
         dump :  bool, default=False
@@ -515,6 +588,7 @@ class SPXtlm:
 
         # collect Science telemetry data
         tstamp = None
+        self.set_coverage(None)
         if tlm_type != 'hk':
             self.science.extract_l0_sci(ccsds_sci, epoch)
             _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
@@ -537,13 +611,13 @@ class SPXtlm:
     def from_l1a(self: SPXtlm, flname: Path, *,
                  tlm_type: str | None = None,
                  mps_id: int | None = None) -> None:
-        """Read telemetry data from SPEXone Level-1A product.
+        """Read telemetry data from SPEXone level-1A product.
 
         Parameters
         ----------
         flname :  Path
-           name of one SPEXone Level-1A product
-        tlm_type :  {'hk', 'sci', 'all'}, optional
+           name of one SPEXone level-1A product
+        tlm_type :  {'hk', 'sci', 'all'}, default='all'
            select type of telemetry packages
         mps_id :  int, optional
            select on MPS ID
@@ -555,6 +629,7 @@ class SPXtlm:
 
         tstamp = None
         self.file_list = [flname]
+        self.set_coverage(None)
         with h5py.File(flname) as fid:
             # collect Science telemetry data
             if tlm_type != 'hk':
@@ -563,7 +638,8 @@ class SPXtlm:
                 if np.count_nonzero(_mm):
                     tstamp = self.science.tstamp['dt'][_mm]
                     ii = int(np.nonzero(_mm)[0][-1])
-                    intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                    intg = dt.timedelta(
+                        milliseconds=self.science.frame_period(ii))
                     self.set_coverage((tstamp[0], tstamp[-1] + intg))
 
             # collected NomHk telemetry data
@@ -580,7 +656,7 @@ class SPXtlm:
 
         Parameters
         ----------
-        mode :  {'full', 'binned', 'all'}
+        mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
 
         Returns
@@ -643,19 +719,19 @@ class SPXtlm:
                 }
 
     def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
-        """Return filename of Level-1A product.
+        """Return filename of level-1A product.
 
         Parameters
         ----------
         config :  dataclass
            Settings for the L0->l1A processing
-        mode :  {'all', 'full', 'binned'}
+        mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
 
         Returns
         -------
         Path
-           Filename of Level-1A product.
+           Filename of level-1A product.
 
         Notes
         -----
@@ -714,13 +790,13 @@ class SPXtlm:
                 f'SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc')
 
     def gen_l1a(self: SPXtlm, config: dataclass, mode: str) -> None:
-        """Generate a SPEXone Level-1A product.
+        """Generate a SPEXone level-1A product.
 
         Parameters
         ----------
         config :  dataclass
-           Settings for the L0->l1A processing
-        mode :  {'all', 'full', 'binned'}
+           Settings for the L0->L1A processing
+        mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
         """
         selection = self.get_selection(mode)
@@ -757,7 +833,7 @@ class SPXtlm:
             l1a.set_attr('time_coverage_end',
                          coverage[1].isoformat(timespec='milliseconds'))
             l1a.set_attr('input_files', [x.name for x in config.l0_list])
-            self.logger.debug('(1) initialized Level-1A product')
+            self.logger.debug('(1) initialized level-1A product')
 
             self._fill_engineering(l1a, selection['hk_mask'])
             self.logger.debug('(2) added engineering data')
@@ -855,18 +931,3 @@ class SPXtlm:
                      self.science.exposure_time()[sci_mask] / 1000)
         l1a.set_dset('/image_attributes/nr_coadditions',
                      self.science.tlm['REG_NCOADDFRAMES'][sci_mask])
-
-    @staticmethod
-    def units(key: str) -> str:
-        """Obtain units of converted telemetry parameter.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-
-        Returns
-        -------
-        str
-        """
-        return UNITS_DICT.get(key, '1')

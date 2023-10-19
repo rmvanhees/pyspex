@@ -7,7 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Contains the class `L1Aio` to write PACE/SPEXone data in Level-1a format."""
+"""Contains the class `L1Aio` to write PACE/SPEXone data in level-1A format."""
 
 from __future__ import annotations
 
@@ -99,12 +99,12 @@ def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
 
 # - class L1Aio -------------------------
 class L1Aio:
-    """Class to create SPEXone Level-1A products.
+    """Class to create SPEXone level-1A products.
 
     Parameters
     ----------
     product :  str
-       Name of the SPEXone Level-1 product
+       Name of the SPEXone level-1A product
     ref_date :  datetime.datetime
        Date of the first detector image
     dims :  dict
@@ -139,13 +139,13 @@ class L1Aio:
 
     def __init__(self: L1Aio, product: Path | str, ref_date: datetime,
                  dims: dict, compression: bool = False) -> None:
-        """Initialize access to a SPEXone Level-1 product."""
+        """Initialize access to a SPEXone level-1A product."""
         self.product: Path = Path(product) if isinstance(product, str) else product
 
         # initialize private class-attributes
         self.__epoch = ref_date
 
-        # initialize Level-1 product
+        # initialize level-1A product
         self.fid = init_l1a(product, ref_date, dims, compression)
         for key in self.dset_stored:
             self.dset_stored[key] = 0
@@ -278,10 +278,10 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not in Level-1 product')
+                raise KeyError(f'dataset {name} not in level-1A product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not in Level-1 product')
+                raise KeyError(f'dataset {name} not in level-1A product')
 
         return self.fid[name][:]
 
@@ -291,7 +291,7 @@ class L1Aio:
         Parameters
         ----------
         name : str
-           Name of Level-1 dataset
+           Name of level-1A dataset
         value : scalar or array_like
            Value or values to be written
         """
@@ -300,17 +300,17 @@ class L1Aio:
         var_name = str(PurePosixPath(name).name)
         if grp_name != '.':
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not in Level-1 product')
+                raise KeyError(f'dataset {name} not in level-1A product')
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not in Level-1 product')
+                raise KeyError(f'dataset {name} not in level-1A product')
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # -------------------------
     def fill_global_attrs(self: L1Aio, inflight: bool = False) -> None:
-        """Define global attributes in the SPEXone Level-1 products.
+        """Define global attributes in the SPEXone level-1A products.
 
         Parameters
         ----------
@@ -331,7 +331,7 @@ class L1Aio:
         ----------
         allow_empty :  bool, default=False
         """
-        warn_str = ('SPEX Level-1A format check [WARNING]:'
+        warn_str = ('SPEX level-1A format check [WARNING]:'
                     ' size of variable "{:s}" is wrong, only {:d} elements')
 
         # check image datasets
