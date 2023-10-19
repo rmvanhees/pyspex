@@ -403,6 +403,25 @@ class SCItlm:
 
         return buff + 70
 
+    def convert(self: SCItlm, key: str) -> np.ndarray:
+        """Convert telemetry parameter to physical units.
+
+        Parameters
+        ----------
+        key :  str
+           Name of telemetry parameter
+
+        Returns
+        -------
+        np.ndarray
+        """
+        if key.upper() not in self.tlm.dtype.names:
+            raise KeyError(f'Parameter: {key.upper()} not found'
+                           f' in {self.tlm.dtype.names}')
+
+        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        return convert_hk(key.upper(), raw_data)
+
 
 # - class SPXtlm ----------------------------
 class SPXtlm:
