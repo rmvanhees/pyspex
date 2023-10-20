@@ -63,6 +63,7 @@ def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
     return 100 * int(sub_sec / 65536 * 10000)
 
+
 def mask2slice(mask: npt.NDArray[bool]) -> (None | slice | tuple
                                             | npt.NDArray[bool]):
     """Try to slice (faster), instead of boolean indexing (slow)."""
@@ -78,7 +79,6 @@ def mask2slice(mask: npt.NDArray[bool]) -> (None | slice | tuple
 
     # perform boolean indexing
     return mask
-
 
 
 def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
@@ -680,20 +680,24 @@ class SPXtlm:
             # collect Science telemetry data
             if tlm_type != 'hk':
                 self.science.extract_l1a_sci(fid, mps_id)
-                _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
-                if np.any(_mm):
-                    tstamp = self.science.tstamp['dt'][_mm]
-                    ii = int(np.nonzero(_mm)[0][-1])
-                    intg = dt.timedelta(
-                        milliseconds=self.science.frame_period(ii))
-                    self.set_coverage((tstamp[0], tstamp[-1] + intg))
+                if self.science.tstamp is not None:
+                    _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
+                    if np.any(_mm):
+                        tstamp = self.science.tstamp['dt'][_mm]
+                        ii = int(np.nonzero(_mm)[0][-1])
+                        intg = dt.timedelta(
+                            milliseconds=self.science.frame_period(ii))
+                        self.set_coverage((tstamp[0], tstamp[-1] + intg))
 
             # collected NomHk telemetry data
             if tlm_type != 'sci':
                 dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
                 self.nomhk.extract_l1a_hk(fid, mps_id)
-                if tstamp is None:
-                    tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                if tstamp is not None:
+                    return
+
+                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                if tstamp:
                     self.set_coverage(
                         (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
