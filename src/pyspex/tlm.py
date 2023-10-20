@@ -35,6 +35,8 @@ from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 if TYPE_CHECKING:
     from dataclasses import dataclass
 
+    import numpy.typing as npt
+
 # - global parameters -----------------------
 module_logger = logging.getLogger('pyspex.tlm')
 
@@ -60,6 +62,23 @@ FULLFRAME_BYTES = 2 * DET_CONSTS['dimFullFrame']
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
     return 100 * int(sub_sec / 65536 * 10000)
+
+def mask2slice(mask: npt.NDArray[bool]) -> (None | slice | tuple
+                                            | npt.NDArray[bool]):
+    """Try to slice (faster), instead of boolean indexing (slow)."""
+    if np.all(~mask):
+        return None
+    if np.all(mask):
+        return np.s_[:]                       # read everything
+
+    indx = np.nonzero(mask)[0]
+    if np.all(np.diff(indx) == 1):
+        # perform start-stop indexing
+        return np.s_[indx[0]:indx[-1]+1]
+
+    # perform boolean indexing
+    return mask
+
 
 
 def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
@@ -184,14 +203,18 @@ class HKtlm:
 
         # pylint: disable=no-member
         dset = fid['/engineering_data/NomHK_telemetry']
-        mask = np.s_[:] if mps_id is None \
-            else dset.fields('MPS_ID')[:] == mps_id
-        self.tlm = dset[mask]
+        if mps_id is None:
+            data_sel = np.s_[:]
+        else:
+            data_sel = mask2slice(dset.fields('MPS_ID')[:] == mps_id)
+            if data_sel is None:
+                return
+        self.tlm = dset[data_sel]
 
         dset = fid['/engineering_data/HK_tlm_time']
         ref_date = dset.attrs['units'].decode()[14:] + '+00:00'
         epoch = dt.datetime.fromisoformat(ref_date)
-        for sec in dset[mask]:
+        for sec in dset[data_sel]:
             self.tstamp.append(epoch + dt.timedelta(seconds=sec))
 
     def convert(self: HKtlm, key: str) -> np.ndarray:
@@ -325,13 +348,17 @@ class SCItlm:
 
         # read science telemetry
         dset = fid['/science_data/detector_telemetry']
-        mask = np.s_[:] if mps_id is None \
-            else dset.fields('MPS_ID')[:] == mps_id
-        self.tlm = fid['/science_data/detector_telemetry'][mask]
+        if mps_id is None:
+            data_sel = np.s_[:]
+        else:
+            data_sel = mask2slice(dset.fields('MPS_ID')[:] == mps_id)
+            if data_sel is None:
+                return
+        self.tlm = fid['/science_data/detector_telemetry'][data_sel]
 
         # determine time-stamps
         dset = fid['/image_attributes/icu_time_sec']
-        seconds = dset[mask]
+        seconds = dset[data_sel]
         try:
             _ = dset.attrs['units'].index(b'1958')
         except ValueError:
@@ -339,7 +366,7 @@ class SCItlm:
         else:
             epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
             epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
-        subsec = fid['/image_attributes/icu_time_subsec'][mask]
+        subsec = fid['/image_attributes/icu_time_subsec'][data_sel]
 
         _dt = []
         for ii, sec in enumerate(seconds):
@@ -354,7 +381,7 @@ class SCItlm:
         self.tstamp['dt'] = _dt
 
         # read image data
-        self.images = fid['/science_data/detector_images'][mask, :]
+        self.images = fid['/science_data/detector_images'][data_sel, :]
 
     def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
         """Return exposure time [ms]."""
@@ -611,7 +638,7 @@ class SPXtlm:
         if tlm_type != 'hk':
             self.science.extract_l0_sci(ccsds_sci, epoch)
             _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
-            if np.count_nonzero(_mm):
+            if np.any(_mm):
                 tstamp = self.science.tstamp['dt'][_mm]
                 ii = int(np.nonzero(_mm)[0][-1])
                 intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
@@ -654,7 +681,7 @@ class SPXtlm:
             if tlm_type != 'hk':
                 self.science.extract_l1a_sci(fid, mps_id)
                 _mm = self.science.tstamp['tai_sec'] > TSTAMP_MIN
-                if np.count_nonzero(_mm):
+                if np.any(_mm):
                     tstamp = self.science.tstamp['dt'][_mm]
                     ii = int(np.nonzero(_mm)[0][-1])
                     intg = dt.timedelta(
@@ -827,7 +854,7 @@ class SPXtlm:
         if np.sum(selection['sci_mask']) > 0:
             _mm = (selection['sci_mask']
                    & self.science.tstamp['tai_sec'] > TSTAMP_MIN)
-            if np.count_nonzero(_mm):
+            if np.any(_mm):
                 tstamp = self.science.tstamp['dt'][_mm]
                 ii = int(np.nonzero(_mm)[0][-1])
                 intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
