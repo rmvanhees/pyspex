@@ -1749,9 +1749,9 @@ class L1Aio:
             res.append(self.dset_stored[key])
         res = np.array(res)
         if allow_empty:
-            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -1764,9 +1764,9 @@ class L1Aio:
             res.append(self.dset_stored[key])
         res = np.array(res)
         if allow_empty:
-            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -2692,10 +2692,10 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
 
     def msg_332(val: np.ndarray) -> str:
-        return(f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
-               f" {bin(val['TcRejectCode'][0])}"
-               f" {val['RejectParameter1'][0]:s}"
-               f" {val['RejectParameter2'][0]:s}")
+        return (f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+                f" {bin(val['TcRejectCode'][0])}"
+                f" {val['RejectParameter1'][0]:s}"
+                f" {val['RejectParameter2'][0]:s}")
 
     def msg_333(val: np.ndarray) -> str:
         return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
@@ -2839,7 +2839,7 @@ def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
         ii += 1
 
     # These values are originally stored in little-endian, but
-    # Numpy does not accepts a mix of little & big-endian values
+    # Numpy does not accept a mix of little & big-endian values
     # in a structured array.
     tlm['HTR1_CALCPVAL'][:] = tlm['HTR1_CALCPVAL'].byteswap()
     tlm['HTR2_CALCPVAL'][:] = tlm['HTR2_CALCPVAL'].byteswap()

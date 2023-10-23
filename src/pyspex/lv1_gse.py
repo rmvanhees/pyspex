@@ -116,7 +116,7 @@ class LV1gse:
         """Check consistency of OGSE/EGSE information during measurement."""
         for key, fmt in egse_data.dtype.fields.items():
             if fmt[0] == np.uint8:
-                res_sanity = (egse_data[key] == egse_data[key][0]).all()
+                res_sanity = np.all(egse_data[key] == egse_data[key][0])
                 if not res_sanity:
                     print(f'[WARNING]: {key}={egse_data[key]}')
 
