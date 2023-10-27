@@ -69,12 +69,16 @@ where = ["src"]
 [tool.setuptools_scm]
 
 [tool.ruff]
+line-length = 88
+target-version = "py38"
+
 select = [
+  "F",   # pyflakes
   "D",   # pydocstyle
   "E",   # pycodestyle
   "W",   # pycodestyle
-  "F",   # pyflakes
   "I",   # isort
+  "N",   # pep8-naming
   "UP",  # pyupgrade
   "ANN", # flake8-annotations
   "B",   # flake8-bugbear
@@ -84,10 +88,7 @@ select = [
   "TCH", # flake8-type-checking
   "NPY", # NumPy-specific rules
 ]
-# ignore = ["D205"]
+ignore = ["Q000", "Q003"]
 
 [tool.ruff.pydocstyle]
 convention = "pep257"
-
-[tool.ruff.flake8-quotes]
-inline-quotes = "single"

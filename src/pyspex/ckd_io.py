@@ -15,7 +15,7 @@ References
 """
 from __future__ import annotations
 
-__all__ = ['CKDio']
+__all__ = ["CKDio"]
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -58,9 +58,9 @@ class CKDio:
         self.verbose = verbose
 
         # open access to CKD product
-        self.fid = h5py.File(ckd_file, 'r')
-        if 'processor_configuration' not in self.fid:
-            raise RuntimeError('SPEXone CKD product corrupted?')
+        self.fid = h5py.File(ckd_file, "r")
+        if "processor_configuration" not in self.fid:
+            raise RuntimeError("SPEXone CKD product corrupted?")
 
     def __enter__(self: CKDio) -> CKDio:
         """Initiate the context manager."""
@@ -80,7 +80,7 @@ class CKDio:
     def processor_version(self: CKDio) -> str:
         """Return the version of the `spexone_cal` program."""
         # pylint: disable=no-member
-        return self.fid.attrs['processor_version'].decode()
+        return self.fid.attrs["processor_version"].decode()
 
     def date_created(self: CKDio, compact: bool = False) -> str:
         """Return creation date of the CKD product.
@@ -91,10 +91,10 @@ class CKDio:
            return date in iso-format if not compact else return 'YYYYmmddHHMMSS'
         """
         # pylint: disable=no-member
-        date_str = self.fid.attrs['date_created'].decode()
-        date_t = datetime.strptime(date_str, '%Y %B %d %a %Z%z %H:%M:%S')
+        date_str = self.fid.attrs["date_created"].decode()
+        date_t = datetime.strptime(date_str, "%Y %B %d %a %Z%z %H:%M:%S")
         if compact:
-            return date_t.astimezone(tz=timezone.utc).strftime('%Y%m%d%H%M%S')
+            return date_t.astimezone(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
 
         return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
 
@@ -102,7 +102,7 @@ class CKDio:
     def git_commit(self: CKDio) -> str:
         """Return git hash of repository `spexone_cal`, used to generate the CKD."""
         # pylint: disable=no-member
-        return self.fid.attrs['git_commit'].decode()
+        return self.fid.attrs["git_commit"].decode()
 
     def dark(self: CKDio) -> xr.Dataset | None:
         """Read Dark CKD.
@@ -113,17 +113,17 @@ class CKDio:
            parameters of the SPEXone Dark CKD
         """
         try:
-            gid = self.fid['DARK']
+            gid = self.fid["DARK"]
         except KeyError:
             return None
         res = ()
-        if 'dark_offset' in gid:
-            res += (h5_to_xr(gid['dark_offset']),)
+        if "dark_offset" in gid:
+            res += (h5_to_xr(gid["dark_offset"]),)
         else:
-            res += (h5_to_xr(gid['offset_long']),)
-            res += (h5_to_xr(gid['offset_short']),)
-        res += (h5_to_xr(gid['dark_current']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+            res += (h5_to_xr(gid["offset_long"]),)
+            res += (h5_to_xr(gid["offset_short"]),)
+        res += (h5_to_xr(gid["dark_current"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")
 
     def noise(self: CKDio) -> xr.Dataset | None:
         """Read Noise CKD.
@@ -134,13 +134,13 @@ class CKDio:
            parameters of the SPEXone Noise CKD
         """
         try:
-            gid = self.fid['NOISE']
+            gid = self.fid["NOISE"]
         except KeyError:
             return None
         res = ()
-        res += (h5_to_xr(gid['g']),)
-        res += (h5_to_xr(gid['n']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+        res += (h5_to_xr(gid["g"]),)
+        res += (h5_to_xr(gid["n"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")
 
     def nlin(self: CKDio) -> xr.Dataset | None:
         """Read non-linearity CKD.
@@ -151,36 +151,36 @@ class CKDio:
            parameters of the SPEXone non-linearity CKD
         """
         try:
-            gid = self.fid['NON_LINEARITY']
-            sigmoidal = 'A' in gid
+            gid = self.fid["NON_LINEARITY"]
+            sigmoidal = "A" in gid
         except KeyError:
             return None
 
         res = ()
         if sigmoidal:
-            res += (h5_to_xr(gid['A']),)
-            res += (h5_to_xr(gid['B']),)
-            res += (h5_to_xr(gid['C']),)
-            if '/DEBUG/NON_LINEARITY' in self.fid:
-                gid = self.fid['/DEBUG/NON_LINEARITY']
-                res += (h5_to_xr(gid['f1']),)
-                res += (h5_to_xr(gid['f2']),)
-                res += (h5_to_xr(gid['c']),)
-                res += (h5_to_xr(gid['r0']),)
-                res += (h5_to_xr(gid['r1']),)
-                res += (h5_to_xr(gid['r2']),)
-                res += (h5_to_xr(gid['r3']),)
-                res += (h5_to_xr(gid['r4']),)
-                res += (h5_to_xr(gid['m0']),)
+            res += (h5_to_xr(gid["A"]),)
+            res += (h5_to_xr(gid["B"]),)
+            res += (h5_to_xr(gid["C"]),)
+            if "/DEBUG/NON_LINEARITY" in self.fid:
+                gid = self.fid["/DEBUG/NON_LINEARITY"]
+                res += (h5_to_xr(gid["f1"]),)
+                res += (h5_to_xr(gid["f2"]),)
+                res += (h5_to_xr(gid["c"]),)
+                res += (h5_to_xr(gid["r0"]),)
+                res += (h5_to_xr(gid["r1"]),)
+                res += (h5_to_xr(gid["r2"]),)
+                res += (h5_to_xr(gid["r3"]),)
+                res += (h5_to_xr(gid["r4"]),)
+                res += (h5_to_xr(gid["m0"]),)
                 # res += (h5_to_xr(gid['m1']),)
                 # res += (h5_to_xr(gid['m2']),)
         else:
-            res += (h5_to_xr(gid['nonlin_order']),)
-            res += (h5_to_xr(gid['nonlin_knots']),)
-            res += (h5_to_xr(gid['nonlin_exptimes']),)
-            res += (h5_to_xr(gid['nonlin_signal_scale']),)
-            res += (h5_to_xr(gid['nonlin_fit']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+            res += (h5_to_xr(gid["nonlin_order"]),)
+            res += (h5_to_xr(gid["nonlin_knots"]),)
+            res += (h5_to_xr(gid["nonlin_exptimes"]),)
+            res += (h5_to_xr(gid["nonlin_signal_scale"]),)
+            res += (h5_to_xr(gid["nonlin_fit"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")
 
     def prnu(self: CKDio) -> xr.DataArray | None:
         """Read PRNU CKD.
@@ -191,10 +191,10 @@ class CKDio:
            parameters of the SPEXone PRNU CKD
         """
         try:
-            gid = self.fid['PRNU']
+            gid = self.fid["PRNU"]
         except KeyError:
             return None
-        return h5_to_xr(gid['prnu'])
+        return h5_to_xr(gid["prnu"])
 
     def fov(self: CKDio) -> xr.Dataset | None:
         """Read field-of-view CKD.
@@ -205,15 +205,15 @@ class CKDio:
            parameters of the SPEXone field-of-view CKD
         """
         try:
-            gid = self.fid['FIELD_OF_VIEW']
+            gid = self.fid["FIELD_OF_VIEW"]
         except KeyError:
             return None
         res = ()
-        res += (h5_to_xr(gid['fov_nfov_vp']),)
-        res += (h5_to_xr(gid['fov_ifov_start_vp']),)
-        res += (h5_to_xr(gid['fov_act_angles']),)
-        res += (h5_to_xr(gid['fov_ispat']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+        res += (h5_to_xr(gid["fov_nfov_vp"]),)
+        res += (h5_to_xr(gid["fov_ifov_start_vp"]),)
+        res += (h5_to_xr(gid["fov_act_angles"]),)
+        res += (h5_to_xr(gid["fov_ispat"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")
 
     def wavelength(self: CKDio) -> xr.Dataset | None:
         """Read Wavelength CKD.
@@ -224,16 +224,16 @@ class CKDio:
            parameters of the SPEXone Wavelength CKD
         """
         try:
-            gid = self.fid['WAVELENGTH']
+            gid = self.fid["WAVELENGTH"]
         except KeyError:
             return None
         res = ()
         # Before radiometric calibration S and P have separate wavelength grids
-        res += (h5_to_xr(gid['wave_full']),)
+        res += (h5_to_xr(gid["wave_full"]),)
         # After radiometric calibration S and P are interpolated to a common
         # wavelength grid.
-        res += (h5_to_xr(gid['wave_common']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+        res += (h5_to_xr(gid["wave_common"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")
 
     def radiometric(self: CKDio) -> xr.DataArray | None:
         """Read Radiometric CKD.
@@ -244,10 +244,10 @@ class CKDio:
            parameters of the SPEXone Radiometric CKD
         """
         try:
-            gid = self.fid['RADIOMETRIC']
+            gid = self.fid["RADIOMETRIC"]
         except KeyError:
             return None
-        return h5_to_xr(gid['rad_spectra'])
+        return h5_to_xr(gid["rad_spectra"])
 
     def polarimetric(self: CKDio) -> xr.Dataset | None:
         """Read polarimetric CKD.
@@ -258,11 +258,11 @@ class CKDio:
            parameters of the SPEXone polarimetric CKD
         """
         try:
-            gid = self.fid['POLARIMETRIC']
+            gid = self.fid["POLARIMETRIC"]
         except KeyError:
             return None
         res = ()
-        res += (h5_to_xr(gid['pol_m_q']),)
-        res += (h5_to_xr(gid['pol_m_u']),)
-        res += (h5_to_xr(gid['pol_m_t']),)
-        return xr.merge(res, combine_attrs='drop_conflicts')
+        res += (h5_to_xr(gid["pol_m_q"]),)
+        res += (h5_to_xr(gid["pol_m_u"]),)
+        res += (h5_to_xr(gid["pol_m_t"]),)
+        return xr.merge(res, combine_attrs="drop_conflicts")

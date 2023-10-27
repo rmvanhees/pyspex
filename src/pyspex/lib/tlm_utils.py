@@ -10,7 +10,7 @@
 """Contains helper functions for the class `SPXtlm`."""
 from __future__ import annotations
 
-__all__ = ['UNITS_DICT', 'convert_hk']
+__all__ = ["UNITS_DICT", "convert_hk"]
 
 from enum import Enum
 
@@ -18,56 +18,58 @@ import numpy as np
 from numpy import ma
 
 # This dictionary is only valid when raw counts are converted to physical units
-UNITS_DICT = {'ADC1_GAIN': 'Volt',
-              'ADC1_OFFSET': 'Volt',
-              'ADC1_REF': 'Volt',
-              'ADC1_T': 'K',
-              'ADC1_VCC': 'Volt',
-              'ADC2_GAIN': 'Volt',
-              'ADC2_OFFSET': 'Volt',
-              'ADC2_REF': 'Volt',
-              'ADC2_T': 'K',
-              'ADC2_VCC': 'Volt',
-              'DEM_I': 'mA',
-              'DEM_T': 'K',
-              'DEM_V': 'Volt',
-              'HTR1_DUTYCYCL': '%',
-              'HTR1_I': 'mA',
-              'HTR2_DUTYCYCL': '%',
-              'HTR2_I': 'mA',
-              'HTR3_DUTYCYCL': '%',
-              'HTR3_I': 'mA',
-              'HTR4_DUTYCYCL': '%',
-              'HTR4_I': 'mA',
-              'HTRGRP1_V': 'Volt',
-              'HTRGRP2_V': 'Volt',
-              'ICU_1P2V_I': 'mA',
-              'ICU_1P2V_V': 'Volt',
-              'ICU_3P3V_I': 'mA',
-              'ICU_3P3V_V': 'Volt',
-              'ICU_4P0V_I': 'mA',
-              'ICU_4P0V_V': 'Volt',
-              'ICU_4V_T': 'K',
-              'ICU_5P0V_I': 'mA',
-              'ICU_5P0V_V': 'Volt',
-              'ICU_5V_T': 'K',
-              'ICU_DIGV_T': 'K',
-              'ICU_HG1_T': 'K',
-              'ICU_HG2_T': 'K',
-              'ICU_MCU_T': 'K',
-              'ICU_MID_T': 'K',
-              'LED1_ANODE_V': 'Volt',
-              'LED1_CATH_V': 'Volt',
-              'LED1_I': 'mA',
-              'LED2_ANODE_V': 'Volt',
-              'LED2_CATH_V': 'Volt',
-              'LED2_I': 'mA',
-              'TS1_DEM_N_T': 'K',
-              'TS2_HOUSING_N_T': 'K',
-              'TS3_RADIATOR_N_T': 'K',
-              'TS4_DEM_R_T': 'K',
-              'TS5_HOUSING_R_T': 'K',
-              'TS6_RADIATOR_R_T': 'K'}
+UNITS_DICT = {
+    "ADC1_GAIN": "Volt",
+    "ADC1_OFFSET": "Volt",
+    "ADC1_REF": "Volt",
+    "ADC1_T": "K",
+    "ADC1_VCC": "Volt",
+    "ADC2_GAIN": "Volt",
+    "ADC2_OFFSET": "Volt",
+    "ADC2_REF": "Volt",
+    "ADC2_T": "K",
+    "ADC2_VCC": "Volt",
+    "DEM_I": "mA",
+    "DEM_T": "K",
+    "DEM_V": "Volt",
+    "HTR1_DUTYCYCL": "%",
+    "HTR1_I": "mA",
+    "HTR2_DUTYCYCL": "%",
+    "HTR2_I": "mA",
+    "HTR3_DUTYCYCL": "%",
+    "HTR3_I": "mA",
+    "HTR4_DUTYCYCL": "%",
+    "HTR4_I": "mA",
+    "HTRGRP1_V": "Volt",
+    "HTRGRP2_V": "Volt",
+    "ICU_1P2V_I": "mA",
+    "ICU_1P2V_V": "Volt",
+    "ICU_3P3V_I": "mA",
+    "ICU_3P3V_V": "Volt",
+    "ICU_4P0V_I": "mA",
+    "ICU_4P0V_V": "Volt",
+    "ICU_4V_T": "K",
+    "ICU_5P0V_I": "mA",
+    "ICU_5P0V_V": "Volt",
+    "ICU_5V_T": "K",
+    "ICU_DIGV_T": "K",
+    "ICU_HG1_T": "K",
+    "ICU_HG2_T": "K",
+    "ICU_MCU_T": "K",
+    "ICU_MID_T": "K",
+    "LED1_ANODE_V": "Volt",
+    "LED1_CATH_V": "Volt",
+    "LED1_I": "mA",
+    "LED2_ANODE_V": "Volt",
+    "LED2_CATH_V": "Volt",
+    "LED2_I": "mA",
+    "TS1_DEM_N_T": "K",
+    "TS2_HOUSING_N_T": "K",
+    "TS3_RADIATOR_N_T": "K",
+    "TS4_DEM_R_T": "K",
+    "TS5_HOUSING_R_T": "K",
+    "TS6_RADIATOR_R_T": "K",
+}
 
 
 # - helper functions ------------------------
@@ -94,10 +96,12 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
     """
     coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
-    buff = (coefficients[0]
-            + coefficients[1] / buff
-            - coefficients[2] * buff ** 4
-            + (coefficients[3] - coefficients[4] * ma.log(buff)) * buff ** 5)
+    buff = (
+        coefficients[0]
+        + coefficients[1] / buff
+        - coefficients[2] * buff**4
+        + (coefficients[3] - coefficients[4] * ma.log(buff)) * buff**5
+    )
     buff[raw_data == 0] = np.nan
     return buff.data
 
@@ -249,48 +253,50 @@ class WriteProt(Enum):
 # - exported functions ----------------------
 def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
     """Convert a DemHK or NomHK parameter to physical units."""
-    conv_dict = {'DEM_T': exp_spex_det_t,
-                 'TS1_DEM_N_T': exp_spex_thermistor,
-                 'TS2_HOUSING_N_T': exp_spex_thermistor,
-                 'TS3_RADIATOR_N_T': exp_spex_thermistor,
-                 'TS4_DEM_R_T': exp_spex_thermistor,
-                 'TS5_HOUSING_R_T': exp_spex_thermistor,
-                 'TS6_RADIATOR_R_T': exp_spex_thermistor,
-                 'ADC1_GAIN': poly_spex_adc_gain,
-                 'ADC2_GAIN': poly_spex_adc_gain,
-                 'ADC1_OFFSET': poly_spex_adc_offset,
-                 'ADC2_OFFSET': poly_spex_adc_offset,
-                 'ADC1_T': poly_spex_adc_t,
-                 'ADC2_T': poly_spex_adc_t,
-                 'ADC1_REF': poly_spex_adc_vcc,
-                 'ADC1_VCC': poly_spex_adc_vcc,
-                 'ADC2_REF': poly_spex_adc_vcc,
-                 'ADC2_VCC': poly_spex_adc_vcc,
-                 'DEM_I': poly_spex_dem_i,
-                 'HTR1_DUTYCYCL': poly_spex_dutycycle,
-                 'HTR2_DUTYCYCL': poly_spex_dutycycle,
-                 'HTR3_DUTYCYCL': poly_spex_dutycycle,
-                 'HTR4_DUTYCYCL': poly_spex_dutycycle,
-                 'HTRGRP1_V': poly_spex_htr_v,
-                 'HTRGRP2_V': poly_spex_htr_v,
-                 'ICU_4V_T': poly_spex_icuhk_internaltemp,
-                 'ICU_5V_T': poly_spex_icuhk_internaltemp,
-                 'ICU_DIGV_T': poly_spex_icuhk_internaltemp,
-                 'ICU_HG1_T': poly_spex_icuhk_internaltemp,
-                 'ICU_HG2_T': poly_spex_icuhk_internaltemp,
-                 'ICU_MCU_T': poly_spex_icuhk_internaltemp,
-                 'ICU_MID_T': poly_spex_icuhk_internaltemp,
-                 'DEM_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_1P2V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_3P3V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_4P0V_V': poly_spex_icuhk_internaltemp2,
-                 'ICU_5P0V_V': poly_spex_icuhk_internaltemp2,
-                 'LED1_ANODE_V': poly_spex_led_anode_v,
-                 'LED2_ANODE_V': poly_spex_led_anode_v,
-                 'LED1_CATH_V': poly_spex_led_cath_v,
-                 'LED2_CATH_V': poly_spex_led_cath_v,
-                 'LED1_I': poly_spex_led_i,
-                 'LED2_I': poly_spex_led_i}
+    conv_dict = {
+        "DEM_T": exp_spex_det_t,
+        "TS1_DEM_N_T": exp_spex_thermistor,
+        "TS2_HOUSING_N_T": exp_spex_thermistor,
+        "TS3_RADIATOR_N_T": exp_spex_thermistor,
+        "TS4_DEM_R_T": exp_spex_thermistor,
+        "TS5_HOUSING_R_T": exp_spex_thermistor,
+        "TS6_RADIATOR_R_T": exp_spex_thermistor,
+        "ADC1_GAIN": poly_spex_adc_gain,
+        "ADC2_GAIN": poly_spex_adc_gain,
+        "ADC1_OFFSET": poly_spex_adc_offset,
+        "ADC2_OFFSET": poly_spex_adc_offset,
+        "ADC1_T": poly_spex_adc_t,
+        "ADC2_T": poly_spex_adc_t,
+        "ADC1_REF": poly_spex_adc_vcc,
+        "ADC1_VCC": poly_spex_adc_vcc,
+        "ADC2_REF": poly_spex_adc_vcc,
+        "ADC2_VCC": poly_spex_adc_vcc,
+        "DEM_I": poly_spex_dem_i,
+        "HTR1_DUTYCYCL": poly_spex_dutycycle,
+        "HTR2_DUTYCYCL": poly_spex_dutycycle,
+        "HTR3_DUTYCYCL": poly_spex_dutycycle,
+        "HTR4_DUTYCYCL": poly_spex_dutycycle,
+        "HTRGRP1_V": poly_spex_htr_v,
+        "HTRGRP2_V": poly_spex_htr_v,
+        "ICU_4V_T": poly_spex_icuhk_internaltemp,
+        "ICU_5V_T": poly_spex_icuhk_internaltemp,
+        "ICU_DIGV_T": poly_spex_icuhk_internaltemp,
+        "ICU_HG1_T": poly_spex_icuhk_internaltemp,
+        "ICU_HG2_T": poly_spex_icuhk_internaltemp,
+        "ICU_MCU_T": poly_spex_icuhk_internaltemp,
+        "ICU_MID_T": poly_spex_icuhk_internaltemp,
+        "DEM_V": poly_spex_icuhk_internaltemp2,
+        "ICU_1P2V_V": poly_spex_icuhk_internaltemp2,
+        "ICU_3P3V_V": poly_spex_icuhk_internaltemp2,
+        "ICU_4P0V_V": poly_spex_icuhk_internaltemp2,
+        "ICU_5P0V_V": poly_spex_icuhk_internaltemp2,
+        "LED1_ANODE_V": poly_spex_led_anode_v,
+        "LED2_ANODE_V": poly_spex_led_anode_v,
+        "LED1_CATH_V": poly_spex_led_cath_v,
+        "LED2_CATH_V": poly_spex_led_cath_v,
+        "LED1_I": poly_spex_led_i,
+        "LED2_I": poly_spex_led_i,
+    }
 
     func = conv_dict.get(key, None)
     if func is not None:

@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ['L1Aio']
+__all__ = ["L1Aio"]
 
 import logging
 from pathlib import Path, PurePosixPath
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 # - global parameters -------------------
-module_logger = logging.getLogger('pyspex.l1a_io')
+module_logger = logging.getLogger("pyspex.l1a_io")
 
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
@@ -37,42 +37,42 @@ ONE_DAY = 24 * 60 * 60
 # - local functions ---------------------
 def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
     """Return binning table identifier (zero for full-frame images)."""
-    if 'REG_FULL_FRAME' not in img_hk.dtype.names:
-        module_logger.warning('can not determine binning table identifier')
-        return np.full(len(img_hk), -1, dtype='i1')
+    if "REG_FULL_FRAME" not in img_hk.dtype.names:
+        module_logger.warning("can not determine binning table identifier")
+        return np.full(len(img_hk), -1, dtype="i1")
 
-    full_frame = np.unique(img_hk['REG_FULL_FRAME'])
+    full_frame = np.unique(img_hk["REG_FULL_FRAME"])
     if len(full_frame) > 1:
-        module_logger.warning('value of REG_FULL_FRAME not unique')
-    full_frame = img_hk['REG_FULL_FRAME'][-1]
+        module_logger.warning("value of REG_FULL_FRAME not unique")
+    full_frame = img_hk["REG_FULL_FRAME"][-1]
 
-    cmv_outputmode = np.unique(img_hk['REG_CMV_OUTPUTMODE'])
+    cmv_outputmode = np.unique(img_hk["REG_CMV_OUTPUTMODE"])
     if len(cmv_outputmode) > 1:
-        module_logger.warning('value of REG_CMV_OUTPUTMODE not unique')
-    cmv_outputmode = img_hk['REG_CMV_OUTPUTMODE'][-1]
+        module_logger.warning("value of REG_CMV_OUTPUTMODE not unique")
+    cmv_outputmode = img_hk["REG_CMV_OUTPUTMODE"][-1]
 
     if full_frame == 1:
         if cmv_outputmode != 3:
-            raise KeyError('Diagnostic mode with REG_CMV_OUTPUTMODE != 3')
-        return np.zeros(len(img_hk), dtype='i1')
+            raise KeyError("Diagnostic mode with REG_CMV_OUTPUTMODE != 3")
+        return np.zeros(len(img_hk), dtype="i1")
 
     if full_frame == 2:
         if cmv_outputmode != 1:
-            raise KeyError('Science mode with REG_CMV_OUTPUTMODE != 1')
-        bin_tbl_start = img_hk['REG_BINNING_TABLE_START']
-        indx0 = np.nonzero(img_hk['REG_FULL_FRAME'] != 2)[0]
+            raise KeyError("Science mode with REG_CMV_OUTPUTMODE != 1")
+        bin_tbl_start = img_hk["REG_BINNING_TABLE_START"]
+        indx0 = np.nonzero(img_hk["REG_FULL_FRAME"] != 2)[0]
         if indx0.size > 0:
-            indx2 = np.nonzero(img_hk['REG_FULL_FRAME'] == 2)[0]
+            indx2 = np.nonzero(img_hk["REG_FULL_FRAME"] == 2)[0]
             bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
         res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
         return res & 0xFF
 
-    raise KeyError('REG_FULL_FRAME not equal to 1 or 2')
+    raise KeyError("REG_FULL_FRAME not equal to 1 or 2")
 
 
 def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
     """Return digital offset including ADC offset [count]."""
-    buff = img_hk['DET_OFFSET'].astype('i4')
+    buff = img_hk["DET_OFFSET"].astype("i4")
     if np.isscalar(buff):
         if buff >= 8192:
             buff -= 16384
@@ -85,16 +85,16 @@ def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
 def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
     """Return exposure time in seconds [float]."""
     # need first bit of address 121
-    reg_pgagainfactor = img_hk['DET_BLACKCOL'] & 0x1
-    reg_pgagain = img_hk['DET_PGAGAIN']
-    exp_time = (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
+    reg_pgagainfactor = img_hk["DET_BLACKCOL"] & 0x1
+    reg_pgagain = img_hk["DET_PGAGAIN"]
+    exp_time = (1 + 0.2 * reg_pgagain) * 2**reg_pgagainfactor
 
     return MCP_TO_SEC * exp_time
 
 
 def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
     """Return number of coadditions."""
-    return img_hk['REG_NCOADDFRAMES']
+    return img_hk["REG_NCOADDFRAMES"]
 
 
 # - class L1Aio -------------------------
@@ -119,26 +119,31 @@ class L1Aio:
     """
 
     dset_stored = {
-        '/science_data/detector_images': 0,
-        '/science_data/detector_telemetry': 0,
-        '/image_attributes/binning_table': 0,
-        '/image_attributes/digital_offset': 0,
-        '/image_attributes/nr_coadditions': 0,
-        '/image_attributes/exposure_time': 0,
-        '/image_attributes/icu_time_sec': 0,
-        '/image_attributes/icu_time_subsec': 0,
-        '/image_attributes/image_time': 0,
-        '/image_attributes/image_ID': 0,
-        '/engineering_data/NomHK_telemetry': 0,
+        "/science_data/detector_images": 0,
+        "/science_data/detector_telemetry": 0,
+        "/image_attributes/binning_table": 0,
+        "/image_attributes/digital_offset": 0,
+        "/image_attributes/nr_coadditions": 0,
+        "/image_attributes/exposure_time": 0,
+        "/image_attributes/icu_time_sec": 0,
+        "/image_attributes/icu_time_subsec": 0,
+        "/image_attributes/image_time": 0,
+        "/image_attributes/image_ID": 0,
+        "/engineering_data/NomHK_telemetry": 0,
         # '/engineering_data/DemHK_telemetry': 0,
-        '/engineering_data/temp_detector': 0,
-        '/engineering_data/temp_housing': 0,
-        '/engineering_data/temp_radiator': 0,
-        '/engineering_data/HK_tlm_time': 0
+        "/engineering_data/temp_detector": 0,
+        "/engineering_data/temp_housing": 0,
+        "/engineering_data/temp_radiator": 0,
+        "/engineering_data/HK_tlm_time": 0,
     }
 
-    def __init__(self: L1Aio, product: Path | str, ref_date: datetime,
-                 dims: dict, compression: bool = False) -> None:
+    def __init__(
+        self: L1Aio,
+        product: Path | str,
+        ref_date: datetime,
+        dims: dict,
+        compression: bool = False,
+    ) -> None:
         """Initialize access to a SPEXone level-1A product."""
         self.product: Path = Path(product) if isinstance(product, str) else product
 
@@ -153,7 +158,7 @@ class L1Aio:
     def __iter__(self: L1Aio) -> None:
         """Allow iteration."""
         for attr in sorted(self.__dict__):
-            if not attr.startswith('__'):
+            if not attr.startswith("__"):
                 yield attr
 
     def __enter__(self: L1Aio) -> L1Aio:
@@ -171,7 +176,7 @@ class L1Aio:
             return
 
         # check if at least one dataset is updated
-        if self.fid.dimensions['number_of_images'].size == 0:
+        if self.fid.dimensions["number_of_images"].size == 0:
             self.fid.close()
             self.fid = None
             return
@@ -212,18 +217,21 @@ class L1Aio:
         if ds_name is None:
             res = self.fid.getncattr(name)
         else:
-            if ds_name not in self.fid.groups \
-               and ds_name not in self.fid.variables:
+            if ds_name not in self.fid.groups and ds_name not in self.fid.variables:
                 return None
             res = self.fid[ds_name].getncattr(name)
 
         if isinstance(res, bytes):
-            return res.decode('ascii')
+            return res.decode("ascii")
 
         return res
 
-    def set_attr(self: L1Aio, name: str, value: Any,           # noqa: ANN401
-                 ds_name: str | None = None) -> None:
+    def set_attr(
+        self: L1Aio,
+        name: str,
+        value: Any,  # noqa: ANN401
+        ds_name: str | None = None,
+    ) -> None:
         """Write data to an attribute.
 
         Global or attached to a group or variable.
@@ -246,14 +254,18 @@ class L1Aio:
         else:
             grp_name = str(PurePosixPath(ds_name).parent)
             var_name = str(PurePosixPath(ds_name).name)
-            if grp_name != '.':
-                if var_name not in self.fid[grp_name].groups \
-                   and var_name not in self.fid[grp_name].variables:
-                    raise KeyError(f'ds_name {ds_name} not in product')
+            if grp_name != ".":
+                if (
+                    var_name not in self.fid[grp_name].groups
+                    and var_name not in self.fid[grp_name].variables
+                ):
+                    raise KeyError(f"ds_name {ds_name} not in product")
             else:
-                if var_name not in self.fid.groups \
-                   and var_name not in self.fid.variables:
-                    raise KeyError(f'ds_name {ds_name} not in product')
+                if (
+                    var_name not in self.fid.groups
+                    and var_name not in self.fid.variables
+                ):
+                    raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.string_(value))
@@ -276,16 +288,16 @@ class L1Aio:
         """
         grp_name = str(PurePosixPath(name).parent)
         var_name = str(PurePosixPath(name).name)
-        if grp_name != '.':
+        if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not in level-1A product')
+                raise KeyError(f"dataset {name} not in level-1A product")
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not in level-1A product')
+                raise KeyError(f"dataset {name} not in level-1A product")
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: Any) -> None:   # noqa: ANN401
+    def set_dset(self: L1Aio, name: str, value: Any) -> None:  # noqa: ANN401
         """Write data to a netCDF4 variable.
 
         Parameters
@@ -298,12 +310,12 @@ class L1Aio:
         value = np.asarray(value)
         grp_name = str(PurePosixPath(name).parent)
         var_name = str(PurePosixPath(name).name)
-        if grp_name != '.':
+        if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f'dataset {name} not in level-1A product')
+                raise KeyError(f"dataset {name} not in level-1A product")
         else:
             if var_name not in self.fid.variables:
-                raise KeyError(f'dataset {name} not in level-1A product')
+                raise KeyError(f"dataset {name} not in level-1A product")
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
@@ -318,7 +330,7 @@ class L1Aio:
            Measurements performed on-ground or inflight
         """
         dict_attrs = attrs_def(inflight)
-        dict_attrs['product_name'] = self.product.name
+        dict_attrs["product_name"] = self.product.name
         for key, value in dict_attrs.items():
             if value is not None:
                 self.fid.setncattr(key, value)
@@ -331,15 +343,19 @@ class L1Aio:
         ----------
         allow_empty :  bool, default=False
         """
-        warn_str = ('SPEX level-1A format check [WARNING]:'
-                    ' size of variable "{:s}" is wrong, only {:d} elements')
+        warn_str = (
+            "SPEX level-1A format check [WARNING]:"
+            ' size of variable "{:s}" is wrong, only {:d} elements'
+        )
 
         # check image datasets
-        dim_sz = self.get_dim('number_of_images')
+        dim_sz = self.get_dim("number_of_images")
         res = []
-        key_list = [x for x in self.dset_stored
-                    if (x.startswith('/science_data')
-                        or x.startswith('/image_attributes'))]
+        key_list = [
+            x
+            for x in self.dset_stored
+            if (x.startswith("/science_data") or x.startswith("/image_attributes"))
+        ]
         for key in key_list:
             res.append(self.dset_stored[key])
         res = np.array(res)
@@ -351,9 +367,8 @@ class L1Aio:
             print(warn_str.format(key_list[ii], res[ii]))
 
         # check house-keeping datasets
-        dim_sz = self.get_dim('hk_packets')
-        key_list = [x for x in self.dset_stored
-                    if x.startswith('/engineering_data')]
+        dim_sz = self.get_dim("hk_packets")
+        key_list = [x for x in self.dset_stored if x.startswith("/engineering_data")]
         res = []
         for key in key_list:
             res.append(self.dset_stored[key])
@@ -366,8 +381,9 @@ class L1Aio:
             print(warn_str.format(key_list[ii], res[ii]))
 
     # ---------- PUBLIC FUNCTIONS ----------
-    def fill_science(self: L1Aio, img_data: np.ndarray, img_hk: np.ndarray,
-                     img_id: np.ndarray) -> None:
+    def fill_science(
+        self: L1Aio, img_data: np.ndarray, img_hk: np.ndarray, img_id: np.ndarray
+    ) -> None:
         """Write Science data and housekeeping telemetry (Science).
 
         Parameters
@@ -390,17 +406,13 @@ class L1Aio:
         if len(img_hk) == 0:
             return
 
-        self.set_dset('/science_data/detector_images', img_data)
-        self.set_dset('/science_data/detector_telemetry', img_hk)
-        self.set_dset('/image_attributes/image_ID', img_id)
-        self.set_dset('/image_attributes/binning_table',
-                      _binning_table_(img_hk))
-        self.set_dset('/image_attributes/digital_offset',
-                      _digital_offset_(img_hk))
-        self.set_dset('/image_attributes/exposure_time',
-                      _exposure_time_(img_hk))
-        self.set_dset('/image_attributes/nr_coadditions',
-                      _nr_coadditions_(img_hk))
+        self.set_dset("/science_data/detector_images", img_data)
+        self.set_dset("/science_data/detector_telemetry", img_hk)
+        self.set_dset("/image_attributes/image_ID", img_id)
+        self.set_dset("/image_attributes/binning_table", _binning_table_(img_hk))
+        self.set_dset("/image_attributes/digital_offset", _digital_offset_(img_hk))
+        self.set_dset("/image_attributes/exposure_time", _exposure_time_(img_hk))
+        self.set_dset("/image_attributes/nr_coadditions", _nr_coadditions_(img_hk))
 
     def fill_nomhk(self: L1Aio, nomhk_data: np.ndarray) -> None:
         """Write nominal house-keeping telemetry packets (NomHK).
@@ -420,28 +432,34 @@ class L1Aio:
         if len(nomhk_data) == 0:
             return
 
-        self.set_dset('/engineering_data/NomHK_telemetry', nomhk_data)
+        self.set_dset("/engineering_data/NomHK_telemetry", nomhk_data)
 
-        if np.all(nomhk_data['TS1_DEM_N_T'] == 0):
-            self.set_dset('/engineering_data/temp_detector',
-                          np.full(nomhk_data.size, 273))
+        if np.all(nomhk_data["TS1_DEM_N_T"] == 0):
+            self.set_dset(
+                "/engineering_data/temp_detector", np.full(nomhk_data.size, 273)
+            )
         else:
-            self.set_dset('/engineering_data/temp_detector',
-                          convert_hk('TS1_DEM_N_T',
-                                     nomhk_data['TS1_DEM_N_T']))
+            self.set_dset(
+                "/engineering_data/temp_detector",
+                convert_hk("TS1_DEM_N_T", nomhk_data["TS1_DEM_N_T"]),
+            )
 
-        if np.all(nomhk_data['TS2_HOUSING_N_T'] == 0):
-            self.set_dset('/engineering_data/temp_housing',
-                          np.full(nomhk_data.size, 293))
+        if np.all(nomhk_data["TS2_HOUSING_N_T"] == 0):
+            self.set_dset(
+                "/engineering_data/temp_housing", np.full(nomhk_data.size, 293)
+            )
         else:
-            self.set_dset('/engineering_data/temp_housing',
-                          convert_hk('TS2_HOUSING_N_T',
-                                     nomhk_data['TS2_HOUSING_N_T']))
+            self.set_dset(
+                "/engineering_data/temp_housing",
+                convert_hk("TS2_HOUSING_N_T", nomhk_data["TS2_HOUSING_N_T"]),
+            )
 
-        if np.all(nomhk_data['TS3_RADIATOR_N_T'] == 0):
-            self.set_dset('/engineering_data/temp_radiator',
-                          np.full(nomhk_data.size, 294))
+        if np.all(nomhk_data["TS3_RADIATOR_N_T"] == 0):
+            self.set_dset(
+                "/engineering_data/temp_radiator", np.full(nomhk_data.size, 294)
+            )
         else:
-            self.set_dset('/engineering_data/temp_radiator',
-                          convert_hk('TS3_RADIATOR_N_T',
-                                     nomhk_data['TS3_RADIATOR_N_T']))
+            self.set_dset(
+                "/engineering_data/temp_radiator",
+                convert_hk("TS3_RADIATOR_N_T", nomhk_data["TS3_RADIATOR_N_T"]),
+            )

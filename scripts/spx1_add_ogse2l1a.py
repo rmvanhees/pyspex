@@ -35,8 +35,8 @@ from pyspex.ogse_helios import helios_spectrum
 from pyspex.ogse_laser import read_gse_excel
 
 # - global parameters ------------------------------
-DB_REF_DIODE = 'ogse_db_ref_diode.nc'
-DB_WAV_MON = 'ogse_db_wave_mon.nc'
+DB_REF_DIODE = "ogse_db_ref_diode.nc"
+DB_WAV_MON = "ogse_db_wave_mon.nc"
 
 
 # - local functions --------------------------------
@@ -47,17 +47,23 @@ def create_ogse_db(args: argparse.Namespace) -> None:
         xds = read_ref_diode(args.ogse_dir, args.ref_diode, args.verbose)
 
         # create new database for reference-diode data
-        xds.to_netcdf(args.ogse_dir / DB_REF_DIODE,
-                      mode='w', format='NETCDF4',
-                      group='/gse_data/ReferenceDiode')
+        xds.to_netcdf(
+            args.ogse_dir / DB_REF_DIODE,
+            mode="w",
+            format="NETCDF4",
+            group="/gse_data/ReferenceDiode",
+        )
 
     if args.wav_mon:
         # read reference-diode data
         xds = read_wav_mon(args.ogse_dir, args.wav_mon, args.verbose)
         # create new database for reference-diode data
-        xds.to_netcdf(args.ogse_dir / DB_WAV_MON,
-                      mode='w', format='NETCDF4',
-                      group='/gse_data/WaveMonitor')
+        xds.to_netcdf(
+            args.ogse_dir / DB_WAV_MON,
+            mode="w",
+            format="NETCDF4",
+            group="/gse_data/WaveMonitor",
+        )
 
 
 def write_ogse(args: argparse.Namespace) -> None:
@@ -70,26 +76,24 @@ def write_ogse(args: argparse.Namespace) -> None:
 
     if args.helios:
         xds = helios_spectrum()
-        xds.to_netcdf(args.l1a_file, mode='a',
-                      group='/gse_data/ReferenceSpectrum')
+        xds.to_netcdf(args.l1a_file, mode="a", group="/gse_data/ReferenceSpectrum")
 
     if args.grande:
         xds = gsfc_polarizer()
-        xds.to_netcdf(args.l1a_file, mode='a',
-                      group='/gse_data/SpectralDolP')
+        xds.to_netcdf(args.l1a_file, mode="a", group="/gse_data/SpectralDolP")
         for n_lamps in (1, 2, 3, 5, 9):
-            if args.l1a_file.name.find(f'-L{n_lamps:1d}_') > 0:
+            if args.l1a_file.name.find(f"-L{n_lamps:1d}_") > 0:
                 xds = grande_spectrum(n_lamps)
-                xds.to_netcdf(args.l1a_file, mode='a',
-                              group='/gse_data/ReferenceSpectrum')
+                xds.to_netcdf(
+                    args.l1a_file, mode="a", group="/gse_data/ReferenceSpectrum"
+                )
                 break
 
     if args.opo_laser:
-        target_cwl = args.l1a_file.stem.split('_')[2].split('-')[-1]
+        target_cwl = args.l1a_file.stem.split("_")[2].split("-")[-1]
         xds = read_gse_excel(args.ogse_dir, target_cwl)
         if xds is not None:
-            xds.to_netcdf(args.l1a_file, mode='a',
-                          group='/gse_data/OPO_laser')
+            xds.to_netcdf(args.l1a_file, mode="a", group="/gse_data/OPO_laser")
 
 
 # - main function ----------------------------------
@@ -97,35 +101,49 @@ def main() -> None:
     """Add OGSE data to an existing SPEXone L1A product."""
     # parse command-line parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--verbose', action='store_true', help='be verbose')
-    parser.add_argument('--ogse_dir', default='Logs', type=Path,
-                        help='directory with OGSE data')
-    subparsers = parser.add_subparsers(help='sub-command help')
-    parser_db = subparsers.add_parser('create_db',
-                                      help='create new OGSE database')
-    parser_db.add_argument('--ref_diode', nargs='*', default=[],
-                           help='names of reference-diode files')
-    parser_db.add_argument('--wav_mon', nargs='*', default=[],
-                           help='names of Avantes wavelength-monitor files')
+    parser.add_argument("--verbose", action="store_true", help="be verbose")
+    parser.add_argument(
+        "--ogse_dir", default="Logs", type=Path, help="directory with OGSE data"
+    )
+    subparsers = parser.add_subparsers(help="sub-command help")
+    parser_db = subparsers.add_parser("create_db", help="create new OGSE database")
+    parser_db.add_argument(
+        "--ref_diode", nargs="*", default=[], help="names of reference-diode files"
+    )
+    parser_db.add_argument(
+        "--wav_mon",
+        nargs="*",
+        default=[],
+        help="names of Avantes wavelength-monitor files",
+    )
     parser_db.set_defaults(func=create_ogse_db)
 
-    parser_wr = subparsers.add_parser('add',
-                                      help=('add OGSE information to a'
-                                            ' SPEXone Level-1A product'))
-    parser_wr.add_argument('--ref_diode', action='store_true',
-                           help='add reference-diode data from OGSE database')
-    parser_wr.add_argument('--avantes', action='store_true',
-                           help=('add Avantes wavelength monitoring'
-                                 '  from OGSE database'))
+    parser_wr = subparsers.add_parser(
+        "add", help=("add OGSE information to a" " SPEXone Level-1A product")
+    )
+    parser_wr.add_argument(
+        "--ref_diode",
+        action="store_true",
+        help="add reference-diode data from OGSE database",
+    )
+    parser_wr.add_argument(
+        "--avantes",
+        action="store_true",
+        help=("add Avantes wavelength monitoring" "  from OGSE database"),
+    )
     group_wr = parser_wr.add_mutually_exclusive_group()
-    group_wr.add_argument('--helios', action='store_true',
-                          help='add Helios reference spectrum')
-    group_wr.add_argument('--grande', action='store_true',
-                          help='add Grande reference spectrum')
-    parser_wr.add_argument('--opo_laser', action='store_true',
-                           help='add wavelength of OPO laser')
-    parser_wr.add_argument('l1a_file', default=None, type=Path,
-                           help='SPEXone L1A product')
+    group_wr.add_argument(
+        "--helios", action="store_true", help="add Helios reference spectrum"
+    )
+    group_wr.add_argument(
+        "--grande", action="store_true", help="add Grande reference spectrum"
+    )
+    parser_wr.add_argument(
+        "--opo_laser", action="store_true", help="add wavelength of OPO laser"
+    )
+    parser_wr.add_argument(
+        "l1a_file", default=None, type=Path, help="SPEXone L1A product"
+    )
     parser_wr.set_defaults(func=write_ogse)
     args = parser.parse_args()
     if args.verbose:
@@ -136,5 +154,5 @@ def main() -> None:
 
 
 # --------------------------------------------------
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

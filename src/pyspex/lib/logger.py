@@ -11,7 +11,7 @@
 """Provide function to start the logger for spx1_monitor."""
 from __future__ import annotations
 
-__all__ = ['start_logger']
+__all__ = ["start_logger"]
 
 from importlib.resources import files
 from logging.config import dictConfig
@@ -21,14 +21,14 @@ import yaml
 
 def start_logger() -> None:
     """Initialize logger for pyspex."""
-    yaml_fl = files('pyspex.data').joinpath('logger_setup.yaml')
+    yaml_fl = files("pyspex.data").joinpath("logger_setup.yaml")
     if not yaml_fl.is_file():
-        raise FileNotFoundError(f'{yaml_fl} not found')
+        raise FileNotFoundError(f"{yaml_fl} not found")
 
-    with yaml_fl.open('r', encoding='ascii') as fid:
+    with yaml_fl.open("r", encoding="ascii") as fid:
         try:
             config_data = yaml.safe_load(fid)
         except yaml.YAMLError as exc:
-            raise RuntimeError('failed to read YAML file') from exc
+            raise RuntimeError("failed to read YAML file") from exc
 
     dictConfig(config_data)

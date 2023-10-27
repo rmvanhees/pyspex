@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ['argparse_gen_l1a']
+__all__ = ["argparse_gen_l1a"]
 
 import argparse
 import logging
@@ -128,79 +128,79 @@ class Config:
     dump: bool = False
     verbose: int = logging.NOTSET
     compression: bool = False
-    outdir: Path = Path('.').resolve()
-    outfile: str = ''
+    outdir: Path = Path(".").resolve()
+    outfile: str = ""
     file_version: int = 1
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
-    l0_format: str = ''
+    l0_format: str = ""
     l0_list: list[Path] = field(default_factory=list)
 
 
 def __commandline_settings() -> Config:
     """Parse command-line parameters."""
+
     class NumericLevel(argparse.Action):
         """Store verbosity level of the logger as a numeric value."""
 
-        def __call__(self: NumericLevel,
-                     parser_local: argparse.ArgumentParser,
-                     namespace: argparse.Namespace,
-                     values: str,
-                     option_string: str | None = None) -> None:
+        def __call__(
+            self: NumericLevel,
+            parser_local: argparse.ArgumentParser,
+            namespace: argparse.Namespace,
+            values: str,
+            option_string: str | None = None,
+        ) -> None:
             numeric_level = getattr(logging, values.upper(), None)
             setattr(namespace, self.dest, numeric_level)
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description='Generate PACE level-1A product from SPEXone level-0 data.',
-        epilog=EPILOG_HELP)
+        description="Generate PACE level-1A product from SPEXone level-0 data.",
+        epilog=EPILOG_HELP,
+    )
     parser.add_argument(
-        '-v', '--version',
-        action='version',
-        version='%(prog)s v' + pyspex_version())
+        "-v", "--version", action="version", version="%(prog)s v" + pyspex_version()
+    )
     parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='be extra verbose, no output files generated')
+        "--debug",
+        action="store_true",
+        help="be extra verbose, no output files generated",
+    )
     parser.add_argument(
-        '--dump',
-        action='store_true',
-        help='dump CCSDS packet headers in ASCII')
+        "--dump", action="store_true", help="dump CCSDS packet headers in ASCII"
+    )
     parser.add_argument(
-        '--verbose',
-        nargs='?',
-        const='info',
+        "--verbose",
+        nargs="?",
+        const="info",
         default=logging.WARNING,
         action=NumericLevel,
-        choices=('debug', 'info', 'warning', 'error'),
-        help='set verbosity level, default is "warning"')
+        choices=("debug", "info", "warning", "error"),
+        help='set verbosity level, default is "warning"',
+    )
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
-        '--eclipse',
-        action='store_true',
+        "--eclipse",
+        action="store_true",
         default=None,
-        help='assume that measurements are perfomed in eclipse')
+        help="assume that measurements are perfomed in eclipse",
+    )
     group.add_argument(
-        '--no_eclipse',
-        dest='eclipse',
-        action='store_false',
-        help='assume that measurements are not perfomed in eclipse')
+        "--no_eclipse",
+        dest="eclipse",
+        action="store_false",
+        help="assume that measurements are not perfomed in eclipse",
+    )
     parser.add_argument(
-        '--outdir',
+        "--outdir",
         type=Path,
         default=None,
-        help='directory to store the generated level-1A product(s)')
+        help="directory to store the generated level-1A product(s)",
+    )
     # group = parser.add_mutually_exclusive_group(required=True)
-    parser.add_argument(
-        '--yaml',
-        type=Path,
-        default=None,
-        help=ARG_YAML_HELP)
-    parser.add_argument(
-        'lv0_list',
-        nargs='*',
-        help=ARG_INPUT_HELP)
+    parser.add_argument("--yaml", type=Path, default=None, help=ARG_YAML_HELP)
+    parser.add_argument("lv0_list", nargs="*", help=ARG_INPUT_HELP)
     args = parser.parse_args()
 
     config = Config()
@@ -219,7 +219,7 @@ def __commandline_settings() -> Config:
     elif args.lv0_list:
         config.l0_list = [Path(x) for x in args.lv0_list]
     else:
-        parser.error('You should provide a YAML file or names of L0 products')
+        parser.error("You should provide a YAML file or names of L0 products")
 
     return config
 
@@ -227,35 +227,35 @@ def __commandline_settings() -> Config:
 # pylint: disable=too-many-branches
 def __yaml_settings(config: dataclass) -> dataclass:
     """Read YAML configuration file."""
-    with open(config.yaml_fl, encoding='ascii') as fid:
+    with open(config.yaml_fl, encoding="ascii") as fid:
         config_yaml = yaml.safe_load(fid)
 
-    if 'outdir' in config_yaml and config_yaml['outdir'] is not None:
-        config.outdir = Path(config_yaml['outdir'])
-    if 'outfile' in config_yaml and config_yaml['outfile']:
-        config.outfile = config_yaml['outfile']
-    if 'compression' in config_yaml and config_yaml['compression']:
+    if "outdir" in config_yaml and config_yaml["outdir"] is not None:
+        config.outdir = Path(config_yaml["outdir"])
+    if "outfile" in config_yaml and config_yaml["outfile"]:
+        config.outfile = config_yaml["outfile"]
+    if "compression" in config_yaml and config_yaml["compression"]:
         config.compression = True
-    if 'file_version' in config_yaml and config_yaml['file_version'] != 1:
-        config.file_version = config_yaml['file_version']
-    if 'eclipse' in config_yaml and config_yaml['eclipse'] is not None:
-        config.eclipse = config_yaml['eclipse']
-    if 'hkt_list' in config_yaml and config_yaml['hkt_list']:
-        if isinstance(config_yaml['hkt_list'], list):
-            config.hkt_list = [Path(x) for x in config_yaml['hkt_list']]
+    if "file_version" in config_yaml and config_yaml["file_version"] != 1:
+        config.file_version = config_yaml["file_version"]
+    if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
+        config.eclipse = config_yaml["eclipse"]
+    if "hkt_list" in config_yaml and config_yaml["hkt_list"]:
+        if isinstance(config_yaml["hkt_list"], list):
+            config.hkt_list = [Path(x) for x in config_yaml["hkt_list"]]
         else:
-            mypath = Path(config_yaml['hkt_list'])
+            mypath = Path(config_yaml["hkt_list"])
             if mypath.is_dir():
-                config.hkt_list = sorted(Path(mypath).glob('*'))
+                config.hkt_list = sorted(Path(mypath).glob("*"))
             else:
                 config.hkt_list = sorted(Path(mypath.parent).glob(mypath.name))
-    if 'l0_list' in config_yaml and config_yaml['l0_list']:
-        if isinstance(config_yaml['l0_list'], list):
-            config.l0_list = [Path(x) for x in config_yaml['l0_list']]
+    if "l0_list" in config_yaml and config_yaml["l0_list"]:
+        if isinstance(config_yaml["l0_list"], list):
+            config.l0_list = [Path(x) for x in config_yaml["l0_list"]]
         else:
-            mypath = Path(config_yaml['l0_list'])
+            mypath = Path(config_yaml["l0_list"])
             if mypath.is_dir():
-                config.l0_list = sorted(Path(mypath).glob('*'))
+                config.l0_list = sorted(Path(mypath).glob("*"))
             else:
                 config.l0_list = sorted(Path(mypath.parent).glob(mypath.name))
 

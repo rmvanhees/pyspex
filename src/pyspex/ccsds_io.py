@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ['CCSDSio', 'img_sec_of_day', 'hk_sec_of_day']
+__all__ = ["CCSDSio", "img_sec_of_day", "hk_sec_of_day"]
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -46,32 +46,33 @@ FULLFRAME_BYTES = 2 * 2048 * 2048
 #                   (32 bits): seconds (1-1-1970 UTC)
 #                   (16 bits): sub-seconds (1/2 ** 16)
 
-HDR_DTYPE = np.dtype([
-    ('type', '>u2'),
-    ('sequence', '>u2'),
-    ('length', '>u2'),
-    ('tai_sec', '>u4'),
-    ('sub_sec', '>u2')
-])
+HDR_DTYPE = np.dtype(
+    [
+        ("type", ">u2"),
+        ("sequence", ">u2"),
+        ("length", ">u2"),
+        ("tai_sec", ">u4"),
+        ("sub_sec", ">u2"),
+    ]
+)
 
-TIME_DTYPE = np.dtype([
-    ('tai_sec', '>u4'),
-    ('sub_sec', '>u2')
-])
+TIME_DTYPE = np.dtype([("tai_sec", ">u4"), ("sub_sec", ">u2")])
 
 SCIHK_DTYPE = tmtc_dtype(0x350)
 
 # - Error messages ------------------------
 MSG_SKIP_FRAME = "[WARNING]: rejected a frame because it's incomplete"
-MSG_INVALID_APID = \
-    '[WARNING]: found one or more telemetry packages with an invalid APID'
-MSG_CORRUPT_APID = 'corrupted segments - detected APID 1 after <> 2'
-MSG_CORRUPT_FRAME = 'corrupted segments - previous frame not closed'
+MSG_INVALID_APID = (
+    "[WARNING]: found one or more telemetry packages with an invalid APID"
+)
+MSG_CORRUPT_APID = "corrupted segments - detected APID 1 after <> 2"
+MSG_CORRUPT_FRAME = "corrupted segments - previous frame not closed"
 
 
 # - functions -----------------------------
-def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
-                   img_hk: np.ndarray) -> tuple[datetime, float | Any]:
+def img_sec_of_day(
+    img_sec: np.ndarray, img_subsec: np.ndarray, img_hk: np.ndarray
+) -> tuple[datetime, float | Any]:
     """
     Convert Image CCSDS timestamp to seconds after midnight.
 
@@ -92,9 +93,9 @@ def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
-    ref_day = datetime(year=tstamp0.year,
-                       month=tstamp0.month,
-                       day=tstamp0.day, tzinfo=timezone.utc)
+    ref_day = datetime(
+        year=tstamp0.year, month=tstamp0.month, day=tstamp0.day, tzinfo=timezone.utc
+    )
     # seconds since midnight
     offs_sec = (ref_day - epoch).total_seconds()
 
@@ -103,19 +104,20 @@ def img_sec_of_day(img_sec: np.ndarray, img_subsec: np.ndarray,
     #  [full-frame] COADDD + 2  (no typo, this is valid for the later MPS's)
     #  [binned] 2 * COADD + 1   (always valid)
     offs_msec = 0
-    if img_hk['ICUSWVER'][0] > 0x123:
+    if img_hk["ICUSWVER"][0] > 0x123:
         imro = np.empty(img_hk.size, dtype=float)
-        _mm = img_hk['IMRLEN'] == FULLFRAME_BYTES
-        imro[_mm] = img_hk['REG_NCOADDFRAMES'][_mm] + 2
-        imro[~_mm] = 2 * img_hk['REG_NCOADDFRAMES'][~_mm] + 1
-        offs_msec = img_hk['FTI'] * (imro + 1) / 10
+        _mm = img_hk["IMRLEN"] == FULLFRAME_BYTES
+        imro[_mm] = img_hk["REG_NCOADDFRAMES"][_mm] + 2
+        imro[~_mm] = 2 * img_hk["REG_NCOADDFRAMES"][~_mm] + 1
+        offs_msec = img_hk["FTI"] * (imro + 1) / 10
 
     # return seconds since midnight
     return ref_day, img_sec - offs_sec + img_subsec / 65536 - offs_msec / 1000
 
 
-def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
-                  ref_day: datetime | None = None) -> np.ndarray:
+def hk_sec_of_day(
+    ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray, ref_day: datetime | None = None
+) -> np.ndarray:
     """
     Convert CCSDS timestamp to seconds after midnight.
 
@@ -135,9 +137,9 @@ def hk_sec_of_day(ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray,
     epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     if ref_day is None:
         tstamp0 = epoch + timedelta(seconds=int(ccsds_sec[0]))
-        ref_day = datetime(year=tstamp0.year,
-                           month=tstamp0.month,
-                           day=tstamp0.day, tzinfo=timezone.utc)
+        ref_day = datetime(
+            year=tstamp0.year, month=tstamp0.month, day=tstamp0.day, tzinfo=timezone.utc
+        )
     offs_sec = (ref_day - epoch).total_seconds()
 
     # return seconds since midnight
@@ -204,7 +206,7 @@ class CCSDSio:
     def __iter__(self: CCSDSio) -> None:
         """Allow iteration."""
         for attr in sorted(self.__dict__):
-            if not attr.startswith('__'):
+            if not attr.startswith("__"):
                 yield attr
 
     def __enter__(self: CCSDSio) -> CCSDSio:
@@ -231,7 +233,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return (self.__hdr['type'] >> 13) & 0x7
+        return (self.__hdr["type"] >> 13) & 0x7
 
     @property
     def type_indicator(self: CCSDSio) -> int | None:
@@ -239,7 +241,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return (self.__hdr['type'] >> 12) & 0x1
+        return (self.__hdr["type"] >> 12) & 0x1
 
     @property
     def secnd_hdr_flag(self: CCSDSio) -> bool | None:
@@ -247,7 +249,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return (self.__hdr['type'] >> 11) & 0x1
+        return (self.__hdr["type"] >> 11) & 0x1
 
     @property
     def ap_id(self: CCSDSio) -> int | None:
@@ -255,7 +257,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return self.__hdr['type'] & 0x7FF
+        return self.__hdr["type"] & 0x7FF
 
     @property
     def grouping_flag(self: CCSDSio) -> int | None:
@@ -272,7 +274,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return (self.__hdr['sequence'] >> 14) & 0x3
+        return (self.__hdr["sequence"] >> 14) & 0x3
 
     @property
     def sequence_count(self: CCSDSio) -> int | None:
@@ -280,7 +282,7 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return self.__hdr['sequence'] & 0x3FFF
+        return self.__hdr["sequence"] & 0x3FFF
 
     @property
     def packet_length(self: CCSDSio) -> int | None:
@@ -291,18 +293,18 @@ class CCSDSio:
         if self.__hdr is None:
             return None
 
-        return self.__hdr['length']
+        return self.__hdr["length"]
 
     # ---------- define empty telemetry packet ----------
     def open_next_file(self: CCSDSio) -> None:
         """Open next file from file_list."""
         flname = next(self.file_list)
         if not Path(flname).is_file():
-            raise FileNotFoundError(f'{flname} does not exist')
+            raise FileNotFoundError(f"{flname} does not exist")
 
         self.close()
         # pylint: disable=consider-using-with
-        self.fp = open(flname, 'rb')      # noqa: SIM115
+        self.fp = open(flname, "rb")  # noqa: SIM115
 
     @staticmethod
     def fix_dem_hk24(dem_hk: np.ndarray) -> np.ndarray:
@@ -320,8 +322,14 @@ class CCSDSio:
         numpy.ndarray
            SPEXone DEM housekeeping packages
         """
-        for key in ['DET_EXPTIME', 'DET_EXPSTEP',
-                    'DET_KP1', 'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2']:
+        for key in [
+            "DET_EXPTIME",
+            "DET_EXPSTEP",
+            "DET_KP1",
+            "DET_KP2",
+            "DET_EXPTIME2",
+            "DET_EXPSTEP2",
+        ]:
             dem_hk[key] = dem_hk[key] >> 8
 
         return dem_hk
@@ -346,23 +354,41 @@ class CCSDSio:
         numpy.ndarray
            SPEXone Science telemetry packages
         """
-        if np.all(sci_hk['ICUSWVER'] < 0x129):
-            key = 'REG_BINNING_TABLE_START'
-            sci_hk[key] = np.ndarray(shape=sci_hk.shape,
-                                     dtype='<u4',
-                                     buffer=sci_hk[key])
+        if np.all(sci_hk["ICUSWVER"] < 0x129):
+            key = "REG_BINNING_TABLE_START"
+            sci_hk[key] = np.ndarray(
+                shape=sci_hk.shape, dtype="<u4", buffer=sci_hk[key]
+            )
 
-        sci_hk['DET_ILVDS'] = sci_hk['DET_CHENA'] & 0xf
+        sci_hk["DET_ILVDS"] = sci_hk["DET_CHENA"] & 0xF
 
-        for key in ['TS1_DEM_N_T', 'TS2_HOUSING_N_T', 'TS3_RADIATOR_N_T',
-                    'TS4_DEM_R_T', 'TS5_HOUSING_R_T', 'TS6_RADIATOR_R_T',
-                    'LED1_ANODE_V', 'LED1_CATH_V', 'LED1_I',
-                    'LED2_ANODE_V', 'LED2_CATH_V', 'LED2_I',
-                    'ADC1_VCC', 'ADC1_REF', 'ADC1_T',
-                    'ADC2_VCC', 'ADC2_REF', 'ADC2_T',
-                    'DET_EXPTIME', 'DET_EXPSTEP', 'DET_KP1',
-                    'DET_KP2', 'DET_EXPTIME2', 'DET_EXPSTEP2',
-                    'DET_CHENA']:
+        for key in [
+            "TS1_DEM_N_T",
+            "TS2_HOUSING_N_T",
+            "TS3_RADIATOR_N_T",
+            "TS4_DEM_R_T",
+            "TS5_HOUSING_R_T",
+            "TS6_RADIATOR_R_T",
+            "LED1_ANODE_V",
+            "LED1_CATH_V",
+            "LED1_I",
+            "LED2_ANODE_V",
+            "LED2_CATH_V",
+            "LED2_I",
+            "ADC1_VCC",
+            "ADC1_REF",
+            "ADC1_T",
+            "ADC2_VCC",
+            "ADC2_REF",
+            "ADC2_T",
+            "DET_EXPTIME",
+            "DET_EXPSTEP",
+            "DET_KP1",
+            "DET_KP2",
+            "DET_EXPTIME2",
+            "DET_EXPSTEP2",
+            "DET_CHENA",
+        ]:
             sci_hk[key] = sci_hk[key] >> 8
 
         return sci_hk
@@ -381,25 +407,32 @@ class CCSDSio:
            SPEXone Science telemetry packages
         """
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
-        packet = np.empty(1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('science_hk', SCIHK_DTYPE),
-            ('icu_time', TIME_DTYPE),
-            ('image_data', 'O')]))
-        packet['packet_header'] = hdr
+        packet = np.empty(
+            1,
+            dtype=np.dtype(
+                [
+                    ("packet_header", HDR_DTYPE),
+                    ("science_hk", SCIHK_DTYPE),
+                    ("icu_time", TIME_DTYPE),
+                    ("image_data", "O"),
+                ]
+            ),
+        )
+        packet["packet_header"] = hdr
 
         # first segment or unsegmented data packet provides Science_HK
         if self.grouping_flag in (1, 3):
-            packet['science_hk'] = self.fix_sci_hk24(
-                np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE))
+            packet["science_hk"] = self.fix_sci_hk24(
+                np.fromfile(self.fp, count=1, dtype=SCIHK_DTYPE)
+            )
             num_bytes -= SCIHK_DTYPE.itemsize
-            packet['icu_time'] = np.fromfile(self.fp, count=1,
-                                             dtype=TIME_DTYPE)
+            packet["icu_time"] = np.fromfile(self.fp, count=1, dtype=TIME_DTYPE)
             num_bytes -= TIME_DTYPE.itemsize
 
         # read detector image data
-        packet['image_data'][0] = np.fromfile(self.fp, dtype='>u2',
-                                              count=num_bytes // 2)
+        packet["image_data"][0] = np.fromfile(
+            self.fp, dtype=">u2", count=num_bytes // 2
+        )
         return packet
 
     def __rd_nomhk(self: CCSDSio, hdr: np.ndarray) -> np.ndarray:
@@ -415,12 +448,14 @@ class CCSDSio:
         numpy.ndarray
            SPEXone Nominal housekeeping packages
         """
-        packet = np.empty(1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('nominal_hk', tmtc_dtype(0x320))]))
-        packet['packet_header'] = hdr
-        packet['nominal_hk'] = np.fromfile(self.fp, count=1,
-                                           dtype=tmtc_dtype(0x320))
+        packet = np.empty(
+            1,
+            dtype=np.dtype(
+                [("packet_header", HDR_DTYPE), ("nominal_hk", tmtc_dtype(0x320))]
+            ),
+        )
+        packet["packet_header"] = hdr
+        packet["nominal_hk"] = np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x320))
         return packet
 
     def __rd_demhk(self: CCSDSio, hdr: np.ndarray) -> np.ndarray:
@@ -436,65 +471,106 @@ class CCSDSio:
         numpy.ndarray
            SPEXone detector housekeeping packages
         """
-        packet = np.empty(1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('detector_hk', tmtc_dtype(0x322))]))
-        packet['packet_header'] = hdr
-        packet['detector_hk'] = self.fix_dem_hk24(
-            np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322)))
+        packet = np.empty(
+            1,
+            dtype=np.dtype(
+                [("packet_header", HDR_DTYPE), ("detector_hk", tmtc_dtype(0x322))]
+            ),
+        )
+        packet["packet_header"] = hdr
+        packet["detector_hk"] = self.fix_dem_hk24(
+            np.fromfile(self.fp, count=1, dtype=tmtc_dtype(0x322))
+        )
         return packet
 
     def __rd_tc_accept(self: CCSDSio, _: np.ndarray) -> np.ndarray:
         """Read/dump TcAccept packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
-        packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('TcPacketId', '>u2'),
-            ('TcSeqControl', '>u2')]))
-        print('[TcAccept]: ', self, packet['TcPacketId'][0],
-              packet['TcSeqControl'][0])
+        packet = np.fromfile(
+            self.fp,
+            count=1,
+            dtype=np.dtype(
+                [
+                    ("packet_header", HDR_DTYPE),
+                    ("TcPacketId", ">u2"),
+                    ("TcSeqControl", ">u2"),
+                ]
+            ),
+        )
+        print("[TcAccept]: ", self, packet["TcPacketId"][0], packet["TcSeqControl"][0])
         return packet
 
     def __rd_tc_execute(self: CCSDSio, _: np.ndarray) -> np.ndarray:
         """Read/dump TcExecute packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
-        packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('TcPacketId', '>u2'),
-            ('TcSeqControl', '>u2')]))
-        print('[TcExecute]:', self, packet['TcPacketId'][0],
-              packet['TcSeqControl'][0])
+        packet = np.fromfile(
+            self.fp,
+            count=1,
+            dtype=np.dtype(
+                [
+                    ("packet_header", HDR_DTYPE),
+                    ("TcPacketId", ">u2"),
+                    ("TcSeqControl", ">u2"),
+                ]
+            ),
+        )
+        print("[TcExecute]:", self, packet["TcPacketId"][0], packet["TcSeqControl"][0])
         return packet
 
     def __rd_tc_fail(self: CCSDSio, _: np.ndarray) -> np.ndarray:
         """Read/dump TcFail packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
-        packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('TcPacketId', '>u2'),
-            ('TcSeqControl', '>u2'),
-            ('TcFailCode', '>u2'),
-            ('FailParameter1', '>u2'),
-            ('FailParameter2', '>u2')]))
-        print('[TcFail]:   ', self, packet['TcPacketId'][0],
-              packet['TcSeqControl'][0], bin(packet['TcFailCode'][0]),
-              packet['FailParameter1'][0], packet['FailParameter2'][0]
-              )
+        packet = np.fromfile(
+            self.fp,
+            count=1,
+            dtype=np.dtype(
+                [
+                    ("packet_header", HDR_DTYPE),
+                    ("TcPacketId", ">u2"),
+                    ("TcSeqControl", ">u2"),
+                    ("TcFailCode", ">u2"),
+                    ("FailParameter1", ">u2"),
+                    ("FailParameter2", ">u2"),
+                ]
+            ),
+        )
+        print(
+            "[TcFail]:   ",
+            self,
+            packet["TcPacketId"][0],
+            packet["TcSeqControl"][0],
+            bin(packet["TcFailCode"][0]),
+            packet["FailParameter1"][0],
+            packet["FailParameter2"][0],
+        )
         return packet
 
     def __rd_tc_reject(self: CCSDSio, _: np.ndarray) -> np.ndarray:
         """Read/dump TcReject packet."""
         self.fp.seek(-1 * HDR_DTYPE.itemsize, 1)
-        packet = np.fromfile(self.fp, count=1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('TcPacketId', '>u2'),
-            ('TcSeqControl', '>u2'),
-            ('TcRejectCode', '>u2'),
-            ('RejectParameter1', '>u2'),
-            ('RejectParameter2', '>u2')]))
-        print('[TcReject]: ', self, packet['TcPacketId'][0],
-              packet['TcSeqControl'][0], bin(packet['TcRejectCode'][0]),
-              packet['RejectParameter1'][0], packet['RejectParameter2'][0])
+        packet = np.fromfile(
+            self.fp,
+            count=1,
+            dtype=np.dtype(
+                [
+                    ("packet_header", HDR_DTYPE),
+                    ("TcPacketId", ">u2"),
+                    ("TcSeqControl", ">u2"),
+                    ("TcRejectCode", ">u2"),
+                    ("RejectParameter1", ">u2"),
+                    ("RejectParameter2", ">u2"),
+                ]
+            ),
+        )
+        print(
+            "[TcReject]: ",
+            self,
+            packet["TcPacketId"][0],
+            packet["TcSeqControl"][0],
+            bin(packet["TcRejectCode"][0]),
+            packet["RejectParameter1"][0],
+            packet["RejectParameter2"][0],
+        )
         return packet
 
     def __rd_other(self: CCSDSio, hdr: np.ndarray) -> np.ndarray | None:
@@ -505,11 +581,14 @@ class CCSDSio:
             self.fp.seek(num_bytes, 1)
             return None
 
-        packet = np.empty(1, dtype=np.dtype([
-            ('packet_header', HDR_DTYPE),
-            ('raw_data', 'u1', num_bytes)]))
-        packet['packet_header'] = hdr
-        packet['raw_data'] = np.fromfile(self.fp, count=num_bytes, dtype='u1')
+        packet = np.empty(
+            1,
+            dtype=np.dtype(
+                [("packet_header", HDR_DTYPE), ("raw_data", "u1", num_bytes)]
+            ),
+        )
+        packet["packet_header"] = hdr
+        packet["raw_data"] = np.fromfile(self.fp, count=num_bytes, dtype="u1")
         return packet
 
     def read_packet(self: CCSDSio) -> np.ndarray | None:
@@ -541,13 +620,15 @@ class CCSDSio:
         self.__hdr = hdr[0]
 
         # read telemetry packet
-        rd_func = {0x350: self.__rd_science,
-                   0x320: self.__rd_nomhk,
-                   0x322: self.__rd_demhk,
-                   0x331: self.__rd_tc_accept,
-                   0x332: self.__rd_tc_reject,
-                   0x333: self.__rd_tc_execute,
-                   0x334: self.__rd_tc_fail}.get(self.ap_id, self.__rd_other)
+        rd_func = {
+            0x350: self.__rd_science,
+            0x320: self.__rd_nomhk,
+            0x322: self.__rd_demhk,
+            0x331: self.__rd_tc_accept,
+            0x332: self.__rd_tc_reject,
+            0x333: self.__rd_tc_execute,
+            0x334: self.__rd_tc_fail,
+        }.get(self.ap_id, self.__rd_other)
         return rd_func(hdr)
 
     @staticmethod
@@ -568,10 +649,10 @@ class CCSDSio:
         """
         packets = ()
         for packet in packets_in:
-            if 'packet_header' not in packet.dtype.names:
+            if "packet_header" not in packet.dtype.names:
                 continue
 
-            if (packet['packet_header']['type'] & 0x7FF) == ap_id:
+            if (packet["packet_header"]["type"] & 0x7FF) == ap_id:
                 packets += (packet,)
 
         return packets
@@ -596,16 +677,16 @@ class CCSDSio:
 
         # check if grouping_flag of first segment equals 1
         #   else reject all segments with grouping_flag != 1
-        self.__hdr = packets[0]['packet_header']
+        self.__hdr = packets[0]["packet_header"]
         if self.grouping_flag != 1:
             ii = 0
             for packet in packets:
-                self.__hdr = packet['packet_header']
+                self.__hdr = packet["packet_header"]
                 if self.grouping_flag == 1:
                     break
                 ii += 1
 
-            print(f'[WARNING]: first frame incomplete - skipped {ii} segments')
+            print(f"[WARNING]: first frame incomplete - skipped {ii} segments")
             packets = packets[ii:]
             if not packets:
                 return ()
@@ -613,16 +694,16 @@ class CCSDSio:
         # check if grouping_flag of last segment equals 2
         #   else reject all segments after the last segment
         #   with grouping_flag == 2
-        self.__hdr = packets[-1]['packet_header']
+        self.__hdr = packets[-1]["packet_header"]
         if self.grouping_flag != 2:
             ii = 0
             for packet in packets:
-                self.__hdr = packet['packet_header']
+                self.__hdr = packet["packet_header"]
                 if self.grouping_flag == 2:
                     break
                 ii += 1
 
-            print(f'[WARNING]: last frame incomplete - rejected {ii} segments')
+            print(f"[WARNING]: last frame incomplete - rejected {ii} segments")
             packets = packets[:-ii]
             if not packets:
                 return ()
@@ -631,45 +712,49 @@ class CCSDSio:
         offs = 0
         prev_grp_flag = 2
         for packet in packets:
-            grouping_flag = (packet['packet_header']['sequence'] >> 14) & 0x3
+            grouping_flag = (packet["packet_header"]["sequence"] >> 14) & 0x3
             # print(prev_grp_flag, grouping_flag, len(res), offs,
             #      packet['image_data'].size)
             # handle segmented data
-            if grouping_flag == 1:       # first segment
+            if grouping_flag == 1:  # first segment
                 # group_flag of previous package should be 2
                 if prev_grp_flag != 2:
-                    if packet['image_data'].size in (3853, 7853):
+                    if packet["image_data"].size in (3853, 7853):
                         print(MSG_SKIP_FRAME)
                         prev_grp_flag = 2
                         offs = 0
                     else:
                         raise RuntimeError(MSG_CORRUPT_APID)
 
-                img_size = packet['science_hk']['IMRLEN'] // 2
-                rec_buff = np.empty(1, dtype=np.dtype([
-                    ('packet_header', HDR_DTYPE),
-                    ('science_hk', SCIHK_DTYPE),
-                    ('icu_time', TIME_DTYPE),
-                    ('image_data', 'O')]))[0]
-                img_buff = np.empty(img_size, dtype='u2')
+                img_size = packet["science_hk"]["IMRLEN"] // 2
+                rec_buff = np.empty(
+                    1,
+                    dtype=np.dtype(
+                        [
+                            ("packet_header", HDR_DTYPE),
+                            ("science_hk", SCIHK_DTYPE),
+                            ("icu_time", TIME_DTYPE),
+                            ("image_data", "O"),
+                        ]
+                    ),
+                )[0]
+                img_buff = np.empty(img_size, dtype="u2")
 
-                rec_buff['packet_header'] = packet['packet_header']
-                rec_buff['science_hk'] = packet['science_hk']
-                rec_buff['icu_time'] = packet['icu_time']
-                img_buff[offs:offs + packet['image_data'].size] = \
-                    packet['image_data']
-                offs += packet['image_data'].size
-            else:                        # continuation or last segment
+                rec_buff["packet_header"] = packet["packet_header"]
+                rec_buff["science_hk"] = packet["science_hk"]
+                rec_buff["icu_time"] = packet["icu_time"]
+                img_buff[offs : offs + packet["image_data"].size] = packet["image_data"]
+                offs += packet["image_data"].size
+            else:  # continuation or last segment
                 # group_flag of previous package should be 0 or 1
                 if prev_grp_flag == 2:
                     raise RuntimeError(MSG_CORRUPT_FRAME)
 
-                img_buff[offs:offs + packet['image_data'].size] = \
-                    packet['image_data']
-                offs += packet['image_data'].size
+                img_buff[offs : offs + packet["image_data"].size] = packet["image_data"]
+                offs += packet["image_data"].size
                 if grouping_flag == 2:
                     if offs == img_size:
-                        rec_buff['image_data'] = img_buff
+                        rec_buff["image_data"] = img_buff
                         res += (rec_buff,)
                     else:
                         print(MSG_SKIP_FRAME)

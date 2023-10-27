@@ -16,7 +16,7 @@ The source for the latest version of tai-utc.dat is the US Naval Observatory:
 """
 from __future__ import annotations
 
-__all__ = ['get_leap_seconds']
+__all__ = ["get_leap_seconds"]
 
 import datetime as dt
 from importlib.resources import files
@@ -32,18 +32,19 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     Requires the file tai-utc.dat.
     """
     # determine location of the file 'tai-utc.dat'
-    ocvarroot = environ['OCVARROOT'] if 'OCVARROOT' in environ else None
+    ocvarroot = environ["OCVARROOT"] if "OCVARROOT" in environ else None
     if ocvarroot is None:
-        taiutc = files('pyspex.data').joinpath('tai-utc.dat')
+        taiutc = files("pyspex.data").joinpath("tai-utc.dat")
     else:
-        taiutc = Path(ocvarroot) / 'common' / 'tai-utc.dat'
+        taiutc = Path(ocvarroot) / "common" / "tai-utc.dat"
 
-    epochsecs = (dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
-                 - dt.datetime(1970, 1, 1,
-                               tzinfo=dt.timezone.utc)).total_seconds()
+    epochsecs = (
+        dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
+        - dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+    ).total_seconds()
     taidt = dt.datetime.fromtimestamp(taitime + epochsecs)
     leapsec: float = 0
-    with taiutc.open('r', encoding='ascii') as fp:
+    with taiutc.open("r", encoding="ascii") as fp:
         for line in fp:
             rec = line.rstrip().split(None, 7)
             if julian.from_jd(float(rec[4])) < taidt:

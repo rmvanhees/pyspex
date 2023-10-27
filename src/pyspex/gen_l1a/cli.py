@@ -32,9 +32,9 @@ def main() -> int:
 
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
-    logging.getLogger().setLevel(config.verbose)   # first, set the root logger
-    logger = logging.getLogger('pyspex.gen_l1a')   # then initiate a descendant
-    logger.debug('%s', config)
+    logging.getLogger().setLevel(config.verbose)  # first, set the root logger
+    logger = logging.getLogger("pyspex.gen_l1a")  # then initiate a descendant
+    logger.debug("%s", config)
 
     # check input files (SEPXone level-0)
     try:
@@ -43,7 +43,7 @@ def main() -> int:
         logger.fatal('File "%s" not found on system.', exc)
         return 110
     except TypeError as exc:
-        logger.fatal('%s', exc)
+        logger.fatal("%s", exc)
         return 121
 
     # read level 0 data
@@ -52,13 +52,15 @@ def main() -> int:
     # the file is neglected.
     tlm = None
     with warnings.catch_warnings(record=True) as wrec_list:
-        warnings.simplefilter('always', category=CorruptPacketWarning)
+        warnings.simplefilter("always", category=CorruptPacketWarning)
         try:
             tlm = SPXtlm()
-            tlm.from_lv0(config.l0_list,
-                         file_format=config.l0_format,
-                         debug=config.debug,
-                         dump=config.dump)
+            tlm.from_lv0(
+                config.l0_list,
+                file_format=config.l0_format,
+                debug=config.debug,
+                dump=config.dump,
+            )
         except FileNotFoundError as exc:
             logger.fatal('FileNotFoundError exception raised for "%s".', exc)
             error_code = 110
@@ -67,8 +69,7 @@ def main() -> int:
             error_code = 121
 
         for wrec in wrec_list:
-            logger.warning('CorruptPacketWarning raised with "%s".',
-                           str(wrec.message))
+            logger.warning('CorruptPacketWarning raised with "%s".', str(wrec.message))
             warn_code = 122
 
     if error_code != 0 or config.debug or config.dump:
@@ -79,12 +80,12 @@ def main() -> int:
         config.outdir.mkdir(mode=0o755, parents=True)
     try:
         if config.eclipse is None:
-            tlm.gen_l1a(config, 'all')
+            tlm.gen_l1a(config, "all")
         elif config.eclipse:
-            tlm.gen_l1a(config, 'binned')
-            tlm.gen_l1a(config, 'full')
+            tlm.gen_l1a(config, "binned")
+            tlm.gen_l1a(config, "full")
         else:
-            tlm.gen_l1a(config, 'binned')
+            tlm.gen_l1a(config, "binned")
     except (KeyError, RuntimeError) as exc:
         logger.fatal('RuntimeError with "%s"', exc)
         error_code = 131
@@ -99,5 +100,5 @@ def main() -> int:
     return warn_code if error_code == 0 else error_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

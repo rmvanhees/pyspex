@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ['BinningTables']
+__all__ = ["BinningTables"]
 
 from datetime import datetime, timezone
 from os import environ
@@ -85,18 +85,19 @@ class BinningTables:
     def __init__(self: BinningTables, ckd_dir: str | None = None) -> None:
         """Initialize class attributes."""
         if ckd_dir is None:
-            self.ckd_dir = Path('/nfs/SPEXone/share/ckd')
+            self.ckd_dir = Path("/nfs/SPEXone/share/ckd")
             if not self.ckd_dir.is_dir():
-                self.ckd_dir = Path(environ.get('CKD_DIR', '.'))
+                self.ckd_dir = Path(environ.get("CKD_DIR", "."))
         else:
             self.ckd_dir = Path(ckd_dir)
         if not self.ckd_dir.is_dir():
-            raise FileNotFoundError('directory with SPEXone CKD does not exist')
+            raise FileNotFoundError("directory with SPEXone CKD does not exist")
 
         self.ckd_file = None
 
-    def create_if_needed(self: BinningTables, validity_start: str,
-                         release: int = 1) -> None:
+    def create_if_needed(
+        self: BinningTables, validity_start: str, release: int = 1
+    ) -> None:
         """Initialize CKD file for binning tables if not exist.
 
         Parameters
@@ -106,26 +107,25 @@ class BinningTables:
         release :  int, default=1
            Release number, start at 1
         """
-        self.ckd_file = f'SPX1_CKD_BIN_TBL_{validity_start}_{release:03d}.nc'
+        self.ckd_file = f"SPX1_CKD_BIN_TBL_{validity_start}_{release:03d}.nc"
 
         if (self.ckd_dir / self.ckd_file).is_file():
             return
 
         # initialize netCDF file with binning tables
-        with Dataset(self.ckd_dir / self.ckd_file, 'w') as fid:
-            fid.title = 'SPEXone Level-1 binning-tables'
-            fid.Conventions = 'CF-1.6'
-            fid.project = 'PACE Project'
-            fid.instrument = 'SPEXone'
-            fid.institution = 'SRON Netherlands Institute for Space Research'
+        with Dataset(self.ckd_dir / self.ckd_file, "w") as fid:
+            fid.title = "SPEXone Level-1 binning-tables"
+            fid.Conventions = "CF-1.6"
+            fid.project = "PACE Project"
+            fid.instrument = "SPEXone"
+            fid.institution = "SRON Netherlands Institute for Space Research"
             fid.processing_version = pyspex_version()
-            fid.validity_start = validity_start + '+00:00'
+            fid.validity_start = validity_start + "+00:00"
             fid.release_number = np.uint16(release)
-            fid.date_created = datetime.now(timezone.utc).isoformat(
-                timespec='seconds')
+            fid.date_created = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-            fid.createDimension('row', 1024)
-            fid.createDimension('column', 1024)
+            fid.createDimension("row", 1024)
+            fid.createDimension("column", 1024)
 
     def search(self: BinningTables, coverage_start: str | None = None) -> None:
         """Search CKD file with binning tables.
@@ -140,9 +140,9 @@ class BinningTables:
         FileNotFoundError
            No CKD with binning tables found
         """
-        ckd_files = list(Path(self.ckd_dir).glob('SPX1_CKD_BIN_TBL_*.nc'))
+        ckd_files = list(Path(self.ckd_dir).glob("SPX1_CKD_BIN_TBL_*.nc"))
         if not ckd_files:
-            raise FileNotFoundError('No CKD with binning tables found')
+            raise FileNotFoundError("No CKD with binning tables found")
         ckd_files = [x.name for x in ckd_files]
 
         # use the latest version of the binning-table CKD
@@ -153,16 +153,21 @@ class BinningTables:
         # use binning-table CKD based on coverage_start
         coverage_date = datetime.fromisoformat(coverage_start)
         for ckd_fl in sorted(ckd_files, reverse=True):
-            validity_date = datetime.strptime(ckd_fl.split('_')[4] + '+00:00',
-                                              '%Y%m%dT%H%M%S%z')
+            validity_date = datetime.strptime(
+                ckd_fl.split("_")[4] + "+00:00", "%Y%m%dT%H%M%S%z"
+            )
             if validity_date < coverage_date:
                 self.ckd_file = ckd_fl
                 break
         else:
-            raise FileNotFoundError('No valid CKD with binning tables found')
+            raise FileNotFoundError("No valid CKD with binning tables found")
 
-    def add_table(self: BinningTables, table_id: int, lineskip_arr: np.ndarray,
-                  binning_table: np.ndarray) -> None:
+    def add_table(
+        self: BinningTables,
+        table_id: int,
+        lineskip_arr: np.ndarray,
+        binning_table: np.ndarray,
+    ) -> None:
         """Add a binning table definition to existing file.
 
         Parameters
@@ -174,45 +179,51 @@ class BinningTables:
         binning_table :  ndarray
            Binning table definition
         """
-        index, count = np.unique(binning_table[lineskip_arr == 1, :],
-                                 return_counts=True)
+        index, count = np.unique(
+            binning_table[lineskip_arr == 1, :], return_counts=True
+        )
 
-        with Dataset(self.ckd_dir / self.ckd_file, 'r+') as fid:
-            gid = fid.createGroup(f'/Table_{table_id:03d}')
+        with Dataset(self.ckd_dir / self.ckd_file, "r+") as fid:
+            gid = fid.createGroup(f"/Table_{table_id:03d}")
             gid.tabel_id = table_id
-            gid.REG_BINNING_TABLE_START = hex(0x80000000
-                                              + 0x400000 * (table_id - 1))
+            gid.REG_BINNING_TABLE_START = hex(0x80000000 + 0x400000 * (table_id - 1))
             gid.enabled_lines = np.uint16(lineskip_arr.sum())
-            gid.flex_binned_pixels = np.uint32(index.max()+1)
-            gid.date_created = datetime.now(timezone.utc).isoformat(
-                timespec='seconds')
+            gid.flex_binned_pixels = np.uint32(index.max() + 1)
+            gid.date_created = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-            dset = gid.createVariable('binning_table', 'u4', ('row', 'column'),
-                                      fill_value=FILL_VALUE,
-                                      chunksizes=(128, 128),
-                                      zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'binning table'
+            dset = gid.createVariable(
+                "binning_table",
+                "u4",
+                ("row", "column"),
+                fill_value=FILL_VALUE,
+                chunksizes=(128, 128),
+                zlib=True,
+                complevel=1,
+                shuffle=True,
+            )
+            dset.long_name = "binning table"
             dset.valid_min = np.uint32(0)
             dset.valid_max = np.uint32(index.max())
             dset[:] = binning_table
 
-            dset = gid.createVariable('lineskip_arr', 'u1', ('row',),
-                                      zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'lineskip array'
+            dset = gid.createVariable(
+                "lineskip_arr", "u1", ("row",), zlib=True, complevel=1, shuffle=True
+            )
+            dset.long_name = "lineskip array"
             dset.valid_min = np.uint8(0)
             dset.valid_max = np.uint8(1)
             dset[:] = lineskip_arr
 
-            gid.createDimension('bins', count.size)
-            dset = gid.createVariable('count_table', 'u2', ('bins',),
-                                      zlib=True, complevel=1, shuffle=True)
-            dset.long_name = 'number of aggregated pixel readings'
+            gid.createDimension("bins", count.size)
+            dset = gid.createVariable(
+                "count_table", "u2", ("bins",), zlib=True, complevel=1, shuffle=True
+            )
+            dset.long_name = "number of aggregated pixel readings"
             dset.valid_min = np.uint16(0)
             dset.valid_max = np.uint16(count.max())
-            dset[:] = count.astype('u2')
+            dset[:] = count.astype("u2")
 
-    def unbin(self: BinningTables, table_id: int,
-              img_binned: np.ndarray) -> np.ndarray:
+    def unbin(self: BinningTables, table_id: int, img_binned: np.ndarray) -> np.ndarray:
         """Return unbinned detector data.
 
         Parameters
@@ -227,17 +238,18 @@ class BinningTables:
         np.ndarray
            unbinned image data (no interpolation).
         """
-        with Dataset(self.ckd_dir / self.ckd_file, 'r') as fid:
-            if f'Table_{table_id:03d}' not in fid.groups:
-                raise KeyError(f'Table_{table_id:03d} not defined')
-            gid = fid[f'Table_{table_id:03d}']
-            binning_table = gid.variables['binning_table'][:]
-            lineskip_arr = gid.variables['lineskip_arr'][:]
-            count_table = gid.variables['count_table'][:]
+        with Dataset(self.ckd_dir / self.ckd_file, "r") as fid:
+            if f"Table_{table_id:03d}" not in fid.groups:
+                raise KeyError(f"Table_{table_id:03d} not defined")
+            gid = fid[f"Table_{table_id:03d}"]
+            binning_table = gid.variables["binning_table"][:]
+            lineskip_arr = gid.variables["lineskip_arr"][:]
+            count_table = gid.variables["count_table"][:]
 
         revert = np.full(binning_table.shape, np.nan)
         table = binning_table[lineskip_arr == 1, :].reshape(-1)
-        revert[lineskip_arr == 1, :] = \
-            (img_binned / count_table)[table].reshape(-1, 1024)
+        revert[lineskip_arr == 1, :] = (img_binned / count_table)[table].reshape(
+            -1, 1024
+        )
 
         return revert
