@@ -85,7 +85,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.4"
+    return "1.4.5-rc"
 
 
 # --------------------------------------------------
@@ -190,7 +190,7 @@ Environment:
 # pylint: disable=too-many-instance-attributes
 @dataclass()
 class Config:
-    """Initiate class to hold settings for L0->L1A processing."""
+    """Initiate class to hold settings for L0->L1a processing."""
 
     debug: bool = False
     dump: bool = False
@@ -350,117 +350,84 @@ def argparse_gen_l1a() -> dataclass:
 
 
 # --------------------------------------------------
-# from pyspex.lib.check_input_files import check_input_files
+# from pyspex.lib.attrs_def import attrs_def
 # --------------------------------------------------
-def check_input_files(config: dataclass) -> dataclass:
-    """Check SPEXone level-0 files on existence and format.
+def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
+    """Define global attributes of a SPEXone Level-1A product.
 
     Parameters
     ----------
-    config :  dataclass
+    inflight : bool, default=True
+       Flag for in-flight or on-ground products
+    origin : str
+       Product origin: 'SRON' or 'NASA'
 
     Returns
     -------
-    dataclass
-       fields 'l0_format' {'raw', 'st3', 'dsb'} and 'l0_list' are updated.
-
-    Raises
-    ------
-    FileNotFoundError
-       If files are not found on the system.
-    TypeError
-       If determined file type differs from value supplied by user.
+    dict
+       Global attributes for a Level-1A product
     """
-    file_list = config.l0_list
-    if file_list[0].suffix == ".H":
-        if not file_list[0].is_file():
-            raise FileNotFoundError(file_list[0])
-        data_dir = file_list[0].parent
-        file_stem = file_list[0].stem
-        file_list = (
-            sorted(data_dir.glob(file_stem + ".[0-9]"))
-            + sorted(data_dir.glob(file_stem + ".?[0-9]"))
-            + sorted(data_dir.glob(file_stem + "_hk.[0-9]"))
-        )
-        if not file_list:
-            raise FileNotFoundError(file_stem + ".[0-9]")
+    if origin is None:
+        origin = "NASA" if inflight else "SRON"
 
-        config.l0_format = "raw"
-        config.l0_list = file_list
-    elif file_list[0].suffix == ".ST3":
-        if not file_list[0].is_file():
-            raise FileNotFoundError(file_list[0])
-        config.l0_format = "st3"
-        config.l0_list = [file_list[0]]
-    elif file_list[0].suffix == ".spx":
-        file_list_out = []
-        for flname in file_list:
-            if not flname.is_file():
-                raise FileNotFoundError(flname)
-
-            if flname.suffix == ".spx":
-                file_list_out.append(flname)
-
-        if not file_list_out:
-            raise FileNotFoundError(file_list)
-        config.l0_format = "dsb"
-        config.l0_list = file_list_out
-    else:
-        raise TypeError("Input files not recognized as SPEXone level-0 data")
-
-    return config
-
-
-# --------------------------------------------------
-# from pyspex.lib.logger import start_logger
-#
-# Remarks:
-# - Logger config data is hard-coded
-# --------------------------------------------------
-def start_logger() -> None:
-    """Initialize logger for pyspex."""
-    config_data = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "standard": {
-                "format": (
-                    "[%(asctime)s] {%(name)s:%(lineno)d} %(levelname)s" " - %(message)s"
-                ),
-                "datefmt": "%H:%M:%S",
-            }
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "level": "DEBUG",
-                "formatter": "standard",
-                "stream": "ext://sys.stdout",
-            },
-            "file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "level": "DEBUG",
-                "formatter": "standard",
-                "filename": "/tmp/warnings.log",
-                "maxBytes": 10485760,
-                "backupCount": 10,
-                "encoding": "utf8",
-            },
-        },
-        "root": {"level": "WARNING", "handlers": ["console", "file"]},
-        "pyspex": {
-            "level": "WARNING",
-            "handlers": ["console", "file"],
-            "propagate": True,
-        },
-        "pyspex.gen_l1a": {
-            "level": "WARNING",
-            "handlers": ["console", "file"],
-            "propagate": True,
-        },
+    res = {
+        "title": "PACE SPEXone Level-1A data",
+        "platform": "PACE",
+        "instrument": "SPEXone",
+        "institution": (
+            "NASA Goddard Space Flight Center," " Ocean Biology Processing Group"
+        ),
+        "license": (
+            "http://science.nasa.gov/earth-science/"
+            "earth-science-data/data-information-policy/"
+        ),
+        "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
+        "keyword_vocabulary": (
+            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
+        ),
+        "stdname_vocabulary": (
+            "NetCDF Climate and Forecast (CF)" " Metadata Convention"
+        ),
+        "standard_name_vocabulary": "CF Standard Name Table v79",
+        "conventions": "CF-1.8 ACDD-1.3",
+        "identifier_product_doi_authority": "http://dx.doi.org/",
+        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
+        "creator_name": "NASA/GSFC",
+        "creator_email": "data@oceancolor.gsfc.nasa.gov",
+        "creator_url": "http://oceancolor.gsfc.nasa.gov",
+        "project": "PACE Project",
+        "publisher_name": "NASA/GSFC",
+        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
+        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
+        "processing_level": "L1A",
+        "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
+        "cdl_version_date": "2021-09-10",
+        "product_name": None,
+        "processing_version": "V1.0",
+        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="milliseconds"
+        ),
+        "software_name": "SPEXone L0-L1A processor",
+        "software_url": "https://github.com/rmvanhees/pyspex",
+        "software_version": pyspex_version(),
+        "history": "spx1_level01a.py",
+        "start_direction": "Ascending" if inflight else None,
+        "end_direction": "Ascending" if inflight else None,
+        "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
+        "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
     }
 
-    dictConfig(config_data)
+    if origin == "SRON":
+        res["title"] = "SPEXone Level-1A data"
+        res["institution"] = "SRON Netherlands Institute for Space Research"
+        res["creator_name"] = "SRON/Earth"
+        res["creator_email"] = "SPEXone-MPC@sron.nl"
+        res["creator_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
+        res["publisher_name"] = "SRON/Earth"
+        res["publisher_email"] = "SPEXone-MPC@sron.nl"
+        res["publisher_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
+
+    return res
 
 
 # --------------------------------------------------
@@ -480,7 +447,7 @@ class CCSDShdr:
 
         Parameters
         ----------
-        hdr :  np.array, optional
+        hdr :  np.ndarray, optional
            CCSDS primary and secondary headers
         """
         self.__dtype = None
@@ -866,7 +833,7 @@ class CCSDShdr:
     @property
     def data_dtype(self: CCSDShdr) -> np.dtype:
         """Return numpy data-type of CCSDS User Data."""
-        method = getattr(self, f"_tm_{self.apid}_", None)
+        method = getattr(self, f"_tm_{self.apid:d}_", None)
         return None if method is None else method()
 
     def tstamp(self: CCSDShdr, epoch: dt.datetime) -> dt.datetime:
@@ -945,470 +912,65 @@ class CCSDShdr:
 
 
 # --------------------------------------------------
-# from pyspex.hkt_io import HKTio, check_coverage_nav, read_hkt_nav
+# from pyspex.lib.check_input_files import check_input_files
 # --------------------------------------------------
-class CoverageFlag(IntFlag):
-    """Define flags for coverage_quality (navigation_data)."""
-
-    GOOD = 0
-    MISSING_SAMPLES = auto()
-    TOO_SHORT_EXTENDS = auto()
-    NO_EXTEND_AT_START = auto()
-    NO_EXTEND_AT_END = auto()
-
-
-# - high-level r/w functions ------------
-def read_hkt_nav(hkt_list: list[Path, ...]) -> xr.Dataset:
-    """Read navigation data from one or more HKT products.
+def check_input_files(config: dataclass) -> dataclass:
+    """Check SPEXone level-0 files on existence and format.
 
     Parameters
     ----------
-    hkt_list : list[Path, ...]
-       list of PACE-HKT products collocated with SPEXone measurements
+    config :  dataclass
 
     Returns
     -------
-    xr.Dataset
-       xarray dataset with PACE navigation data
+    dataclass
+       fields 'l0_format' {'raw', 'st3', 'dsb'} and 'l0_list' are updated.
+
+    Raises
+    ------
+    FileNotFoundError
+       If files are not found on the system.
+    TypeError
+       If determined file type differs from value supplied by user.
     """
-    dim_dict = {"att_": "att_time", "orb_": "orb_time", "tilt": "tilt_time"}
-
-    # concatenate DataArrays with navigation data
-    res = {}
-    rdate = None
-    for name in sorted(hkt_list):
-        hkt = HKTio(name)
-        nav = hkt.navigation()
-        if not res:
-            rdate = hkt.reference_date
-            res = nav.copy()
-            continue
-
-        dtime = None
-        if rdate != hkt.reference_date:
-            dtime = hkt.reference_date - rdate
-
-        for key1, value in nav.items():
-            if not value:
-                continue
-
-            hdim = dim_dict.get(key1, None)
-            if dtime is None:
-                res[key1] = xr.concat((res[key1], value), dim=hdim)
-            else:
-                parm = key1 + "_time" if key1[-1] != "_" else key1 + "time"
-                val_new = value.assign_coords(
-                    {parm: value[parm] + dtime.total_seconds()}
-                )
-                res[key1] = xr.concat((res[key1], val_new), dim=hdim)
-
-    # make sure that the data is sorted and unique
-    dsets = ()
-    for key, coord in dim_dict.items():
-        if not res[key]:
-            continue
-
-        res[key] = res[key].sortby(coord)
-        res[key] = res[key].drop_duplicates(dim=coord)
-        dsets += (res[key],)
-
-    # create Dataset from DataArrays
-    xds_nav = xr.merge(dsets, combine_attrs="drop_conflicts")
-
-    # remove confusing attributes from Dataset
-    key_list = list(xds_nav.attrs)
-    for key in key_list:
-        del xds_nav.attrs[key]
-
-    # add attribute 'reference_date'
-    return xds_nav.assign_attrs({"reference_date": rdate.isoformat()})
-
-
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> bool:
-    """Check time coverage of navigation data.
-
-    Parameters
-    ----------
-    l1a_file :  Path
-       name of the SPEXone level-1A product
-    xds_nav :  xr.Dataset
-       xarray dataset with PACE navigation data
-    """
-    coverage_quality = CoverageFlag.GOOD
-    # obtain the reference date of the navigation data
-    ref_date = dt.datetime.fromisoformat(xds_nav.attrs["reference_date"])
-
-    # obtain time_coverage_range from the Level-1A product
-    with h5py.File(l1a_file) as fid:
-        # pylint: disable=no-member
-        # Note timezone 'Z' is only accepted by Python 3.11+
-        val = fid.attrs["time_coverage_start"].decode()
-        coverage_start = dt.datetime.fromisoformat(val.replace("Z", "+00:00"))
-        val = fid.attrs["time_coverage_end"].decode()
-        coverage_end = dt.datetime.fromisoformat(val.replace("Z", "+00:00"))
-    module_logger.debug("SPEXone time-coverage: %s - %s", coverage_start, coverage_end)
-
-    # check at the start of the data
-    sec_of_day = float(xds_nav["att_time"].values[0])
-    att_coverage_start = ref_date + dt.timedelta(seconds=sec_of_day)
-    module_logger.debug("PACE-HKT time-coverage-start: %s", att_coverage_start)
-    if coverage_start - att_coverage_start < dt.timedelta(0):
-        coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
-        module_logger.error(
-            "time coverage of navigation data starts" ' after "time_coverage_start"'
+    file_list = config.l0_list
+    if file_list[0].suffix == ".H":
+        if not file_list[0].is_file():
+            raise FileNotFoundError(file_list[0])
+        data_dir = file_list[0].parent
+        file_stem = file_list[0].stem
+        file_list = (
+            sorted(data_dir.glob(file_stem + ".[0-9]"))
+            + sorted(data_dir.glob(file_stem + ".?[0-9]"))
+            + sorted(data_dir.glob(file_stem + "_hk.[0-9]"))
         )
-    if coverage_start - att_coverage_start < TIMEDELTA_MIN:
-        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-        module_logger.warning(
-            "time coverage of navigation data starts after"
-            ' "time_coverage_start - %s"',
-            TIMEDELTA_MIN,
-        )
+        if not file_list:
+            raise FileNotFoundError(file_stem + ".[0-9]")
 
-    # check at the end of the data
-    sec_of_day = float(xds_nav["att_time"].values[-1])
-    att_coverage_end = ref_date + dt.timedelta(seconds=sec_of_day)
-    module_logger.debug("PACE-HKT time-coverage-end: %s", att_coverage_end)
-    if att_coverage_end - coverage_end < dt.timedelta(0):
-        coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
-        module_logger.error(
-            "time coverage of navigation data ends" ' before "time_coverage_end"'
-        )
-    if att_coverage_end - coverage_end < TIMEDELTA_MIN:
-        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-        module_logger.warning(
-            "time coverage of navigation data ends before" ' "time_coverage_end + %s"',
-            TIMEDELTA_MIN,
-        )
+        config.l0_format = "raw"
+        config.l0_list = file_list
+    elif file_list[0].suffix == ".ST3":
+        if not file_list[0].is_file():
+            raise FileNotFoundError(file_list[0])
+        config.l0_format = "st3"
+        config.l0_list = [file_list[0]]
+    elif file_list[0].suffix == ".spx":
+        file_list_out = []
+        for flname in file_list:
+            if not flname.is_file():
+                raise FileNotFoundError(flname)
 
-    # check for completeness
-    dtime = (att_coverage_end - att_coverage_start).total_seconds()
-    dim_expected = round(dtime / np.median(np.diff(xds_nav["att_time"])))
-    module_logger.debug(
-        "expected navigation samples %d found %d",
-        len(xds_nav["att_time"]),
-        dim_expected,
-    )
-    if len(xds_nav["att_time"]) / dim_expected < 0.95:
-        coverage_quality |= CoverageFlag.MISSING_SAMPLES
-        module_logger.warning("navigation data poorly sampled")
+            if flname.suffix == ".spx":
+                file_list_out.append(flname)
 
-    # add coverage flag and attributes to Level-1A product
-    with Dataset(l1a_file, "a") as fid:
-        gid = fid["/navigation_data"]
-        gid.time_coverage_start = att_coverage_start.isoformat(timespec="milliseconds")
-        gid.time_coverage_end = att_coverage_end.isoformat(timespec="milliseconds")
-        dset = gid.createVariable("coverage_quality", "u1", fill_value=255)
-        dset[:] = coverage_quality
-        dset.long_name = "coverage quality of navigation data"
-        dset.standard_name = "status_flag"
-        dset.valid_range = np.array([0, 15], dtype="u2")
-        dset.flag_values = np.array([0, 1, 2, 4, 8], dtype="u2")
-        dset.flag_meanings = (
-            "good missing-samples too_short_extends"
-            " no_extend_at_start no_extend_at_end"
-        )
+        if not file_list_out:
+            raise FileNotFoundError(file_list)
+        config.l0_format = "dsb"
+        config.l0_list = file_list_out
+    else:
+        raise TypeError("Input files not recognized as SPEXone level-0 data")
 
-    # generate warning if time-coverage of navigation data is too short
-    if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
-        return False
-
-    return True
-
-
-# - class HKTio -------------------------
-class HKTio:
-    """Class to read housekeeping and navigation data from PACE-HKT products.
-
-    Parameters
-    ----------
-    filename : Path
-        name of the PACE HKT product
-
-    Notes
-    -----
-    This class has the following methods::
-
-     - reference_date -> datetime
-     - set_reference_date()
-     - coverage() -> tuple[datetime, datetime]
-     - housekeeping(instrument: str) -> tuple[np.ndarray, ...]
-     - navigation() -> dict
-    """
-
-    def __init__(self: HKTio, filename: Path) -> None:
-        """Initialize access to a PACE HKT product."""
-        self._coverage = None
-        self._reference_date = None
-        self.filename = filename
-        if not self.filename.is_file():
-            raise FileNotFoundError(f"file {filename} not found")
-        self.set_reference_date()
-
-    # ---------- PUBLIC FUNCTIONS ----------
-    @property
-    def reference_date(self: HKTio) -> dt.datetime:
-        """Return reference date of all time_of_day variables."""
-        return self._reference_date
-
-    def set_reference_date(self: HKTio) -> None:
-        """Set reference date of current PACE HKT product."""
-        ref_date = None
-        with h5py.File(self.filename) as fid:
-            grp = fid["navigation_data"]
-            if "att_time" in grp and "units" in grp["att_time"].attrs:
-                # pylint: disable=no-member
-                words = grp["att_time"].attrs["units"].decode().split(" ")
-                if len(words) > 2:
-                    # Note timezone 'Z' is only accepted by Python 3.11+
-                    ref_date = dt.datetime.fromisoformat(words[2] + "T00:00:00+00:00")
-
-        if ref_date is None:
-            coverage = self.coverage()
-            ref_date = dt.datetime.combine(
-                coverage[0].date(), dt.time(0), tzinfo=dt.timezone.utc
-            )
-
-        self._reference_date = ref_date
-
-    def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
-        """Return data coverage."""
-        one_day = dt.timedelta(days=1)
-        with h5py.File(self.filename) as fid:
-            # pylint: disable=no-member
-            val = fid.attrs["time_coverage_start"].decode()
-            coverage_start = dt.datetime.fromisoformat(val)
-            val = fid.attrs["time_coverage_end"].decode()
-            coverage_end = dt.datetime.fromisoformat(val)
-
-        if abs(coverage_end - coverage_start) < one_day:
-            return coverage_start, coverage_end
-
-        # Oeps, now we have to check the timestamps of the measurement data
-        hk_dset_names = (
-            "HARP2_HKT_packets",
-            "OCI_HKT_packets",
-            "SPEXone_HKT_packets",
-            "SC_HKT_packets",
-        )
-
-        tstamp_mn_list = []
-        tstamp_mx_list = []
-        with h5py.File(self.filename) as fid:
-            for ds_set in hk_dset_names:
-                dt_list = ()
-                if ds_set not in fid["housekeeping_data"]:
-                    continue
-
-                res = fid["housekeeping_data"][ds_set][:]
-                for packet in res:
-                    try:
-                        ccsds_hdr = CCSDShdr()
-                        ccsds_hdr.read("raw", packet)
-                    except ValueError as exc:
-                        module_logger.warning('CCSDS header read error with "%s"', exc)
-                        break
-
-                    val = ccsds_hdr.tstamp(EPOCH)
-                    if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
-                        dt_list += (val,)
-
-                if not dt_list:
-                    continue
-
-                dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
-                ii = dt_arr.size // 2
-                leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
-                dt_arr -= dt.timedelta(seconds=leap_sec)
-                mn_val = min(dt_arr)
-                mx_val = max(dt_arr)
-                if mx_val - mn_val > one_day:
-                    indx_close_to_mn = (dt_arr - mn_val) <= one_day
-                    indx_close_to_mx = (mx_val - dt_arr) <= one_day
-                    module_logger.warning(
-                        "coverage_range: %s[%d] - %s[%d]",
-                        mn_val,
-                        np.sum(indx_close_to_mn),
-                        mx_val,
-                        np.sum(indx_close_to_mx),
-                    )
-                    if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
-                        mx_val = max(dt_arr[indx_close_to_mn])
-                    else:
-                        mn_val = min(dt_arr[indx_close_to_mx])
-
-                tstamp_mn_list.append(mn_val)
-                tstamp_mx_list.append(mx_val)
-
-        if len(tstamp_mn_list) == 1:
-            return tstamp_mn_list[0], tstamp_mx_list[0]
-
-        return min(*tstamp_mn_list), max(*tstamp_mx_list)
-
-    def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray, ...]:
-        """Get housekeeping telemetry data.
-
-        Parameters
-        ----------
-        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
-           name of PACE instrument: 'harp': HARP2, 'oci': OCI,
-           'sc': spacecraft, 'spx': SPEXone.
-
-        Notes
-        -----
-        Current implementation only works for SPEXone.
-        """
-        ds_set = {
-            "spx": "SPEXone_HKT_packets",
-            "sc": "SC_HKT_packets",
-            "oci": "OCI_HKT_packets",
-            "harp": "HARP2_HKT_packets",
-        }.get(instrument)
-
-        with h5py.File(self.filename) as fid:
-            if ds_set not in fid["housekeeping_data"]:
-                return ()
-            res = fid["housekeeping_data"][ds_set][:]
-
-        ccsds_hk = ()
-        for packet in res:
-            try:
-                ccsds_hdr = CCSDShdr()
-                ccsds_hdr.read("raw", packet)
-            except ValueError as exc:
-                module_logger.warning('CCSDS header read error with "%s"', exc)
-                break
-
-            try:
-                dtype_apid = ccsds_hdr.data_dtype
-            except ValueError:
-                print(
-                    f"APID: 0x{ccsds_hdr.apid:x};"
-                    f" Packet Length: {ccsds_hdr.packet_size:d}"
-                )
-                dtype_apid = None
-
-            if dtype_apid is not None:  # all valid APIDs
-                buff = np.frombuffer(packet, count=1, offset=0, dtype=dtype_apid)
-                ccsds_hk += (buff,)
-            else:
-                module_logger.warning(
-                    "package with APID 0x%x and length %d is not implemented",
-                    ccsds_hdr.apid,
-                    ccsds_hdr.packet_size,
-                )
-
-        return ccsds_hk
-
-    def navigation(self: HKTio) -> dict:
-        """Get navigation data."""
-        res = {"att_": (), "orb_": (), "tilt": ()}
-        with h5py.File(self.filename) as fid:
-            gid = fid["navigation_data"]
-            for key in gid:
-                if key.startswith("att_"):
-                    res["att_"] += (h5_to_xr(gid[key]),)
-                elif key.startswith("orb_"):
-                    res["orb_"] += (h5_to_xr(gid[key]),)
-                elif key.startswith("tilt"):
-                    res["tilt"] += (h5_to_xr(gid[key]),)
-                else:
-                    module_logger.warning("fail to find dataset %s", key)
-
-        # repair the dimensions
-        xds1 = xr.merge(res["att_"], combine_attrs="drop_conflicts")
-        xds1 = xds1.set_coords(["att_time"])
-        xds1 = xds1.swap_dims({"att_records": "att_time"})
-        xds2 = xr.merge(res["orb_"], combine_attrs="drop_conflicts")
-        xds2 = xds2.set_coords(["orb_time"])
-        xds2 = xds2.swap_dims({"orb_records": "orb_time"})
-        xds3 = ()
-        if res["tilt"]:
-            xds3 = xr.merge(res["tilt"], combine_attrs="drop_conflicts")
-            xds3 = xds3.set_coords(["tilt_time"])
-            xds3 = xds3.swap_dims({"tilt_records": "tilt_time"})
-        return {"att_": xds1, "orb_": xds2, "tilt": xds3}
-
-
-# --------------------------------------------------
-# from pyspex.lib.attrs_def import attrs_def
-# --------------------------------------------------
-def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
-    """Define global attributes of a SPEXone Level-1A product.
-
-    Parameters
-    ----------
-    inflight : bool, default=True
-       Flag for in-flight or on-ground products
-    origin : str
-       Product origin: 'SRON' or 'NASA'
-
-    Returns
-    -------
-    dict
-       Global attributes for a Level-1A product
-    """
-    if origin is None:
-        origin = "NASA" if inflight else "SRON"
-
-    res = {
-        "title": "PACE SPEXone Level-1A data",
-        "platform": "PACE",
-        "instrument": "SPEXone",
-        "institution": (
-            "NASA Goddard Space Flight Center," " Ocean Biology Processing Group"
-        ),
-        "license": (
-            "http://science.nasa.gov/earth-science/"
-            "earth-science-data/data-information-policy/"
-        ),
-        "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
-        "keyword_vocabulary": (
-            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
-        ),
-        "stdname_vocabulary": (
-            "NetCDF Climate and Forecast (CF)" " Metadata Convention"
-        ),
-        "standard_name_vocabulary": "CF Standard Name Table v79",
-        "conventions": "CF-1.8 ACDD-1.3",
-        "identifier_product_doi_authority": "http://dx.doi.org/",
-        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
-        "creator_name": "NASA/GSFC",
-        "creator_email": "data@oceancolor.gsfc.nasa.gov",
-        "creator_url": "http://oceancolor.gsfc.nasa.gov",
-        "project": "PACE Project",
-        "publisher_name": "NASA/GSFC",
-        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
-        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
-        "processing_level": "L1A",
-        "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
-        "cdl_version_date": "2021-09-10",
-        "product_name": None,
-        "processing_version": "V1.0",
-        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
-            timespec="milliseconds"
-        ),
-        "software_name": "SPEXone L0-L1A processor",
-        "software_url": "https://github.com/rmvanhees/pyspex",
-        "software_version": pyspex_version(),
-        "history": "l1agen_spex.py",
-        "start_direction": "Ascending" if inflight else None,
-        "end_direction": "Ascending" if inflight else None,
-        "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
-        "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
-    }
-
-    if origin == "SRON":
-        res["title"] = "SPEXone Level-1A data"
-        res["institution"] = "SRON Netherlands Institute for Space Research"
-        res["creator_name"] = "SRON/Earth"
-        res["creator_email"] = "SPEXone-MPC@sron.nl"
-        res["creator_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
-        res["publisher_name"] = "SRON/Earth"
-        res["publisher_email"] = "SPEXone-MPC@sron.nl"
-        res["publisher_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
-
-    return res
+    return config
 
 
 # --------------------------------------------------
@@ -1427,14 +989,14 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
 
     Examples
     --------
-    Update the attributes of variable 'time'::
+    Update the attributes of variable 'time':
 
-    >> ref_date = dt.datetime(2022, 3, 21)
-    >> dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
-    >>                            fill_value=-32767)
-    >> dset.long_name = "image time"
-    >> dset.description = "Integration start time in seconds of day."
-    >> attrs_sec_per_day(dset, ref_date)
+      ref_date = dt.datetime(2022, 3, 21)
+      dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
+                                fill_value=-32767)
+      dset.long_name = "image time"
+      dset.description = "Integration start time in seconds of day."
+      attrs_sec_per_day(dset, ref_date)
 
     In CDL the variable `time` will be defined as::
 
@@ -1650,317 +1212,10 @@ def init_l1a(
 
 
 # --------------------------------------------------
-# from pyspex.l1a_io import L1Aio
-#
-# Remarks:
-# - replaced import datetime
-# - removed local functions:
-#   * _binning_table_()
-#   * _digital_offset_()
-#   * _exposure_time_()
-#   * _nr_coadditions_()
-# - removed obsoleted L1Aio methods:
-#   * fill_science()
-#   * fill_nomhk()
-# --------------------------------------------------
-# - class L1Aio -------------------------
-class L1Aio:
-    """Class to create SPEXone Level-1A products.
-
-    Parameters
-    ----------
-    product :  str
-       Name of the SPEXone Level-1 product
-    ref_date :  dt.datetime
-       Date of the first detector image
-    dims :  dict
-       Dimensions of the datasets, default values::
-
-          number_of_images : None     # number of image frames
-          samples_per_image : 184000  # depends on binning table
-          hk_packets : None           # number of HK tlm-packets
-
-    compression : bool, default=False
-       Use compression on dataset /science_data/detector_images
-    """
-
-    dset_stored = {
-        "/science_data/detector_images": 0,
-        "/science_data/detector_telemetry": 0,
-        "/image_attributes/binning_table": 0,
-        "/image_attributes/digital_offset": 0,
-        "/image_attributes/nr_coadditions": 0,
-        "/image_attributes/exposure_time": 0,
-        "/image_attributes/icu_time_sec": 0,
-        "/image_attributes/icu_time_subsec": 0,
-        "/image_attributes/image_time": 0,
-        "/image_attributes/image_ID": 0,
-        "/engineering_data/NomHK_telemetry": 0,
-        # '/engineering_data/DemHK_telemetry': 0,
-        "/engineering_data/temp_detector": 0,
-        "/engineering_data/temp_housing": 0,
-        "/engineering_data/temp_radiator": 0,
-        "/engineering_data/HK_tlm_time": 0,
-    }
-
-    def __init__(
-        self: L1Aio,
-        product: Path | str,
-        ref_date: dt.datetime,
-        dims: dict,
-        compression: bool = False,
-    ) -> None:
-        """Initialize access to a SPEXone Level-1 product."""
-        self.product: Path = Path(product) if isinstance(product, str) else product
-        self.fid = None
-
-        # initialize private class-attributes
-        self.__epoch = ref_date
-
-        # initialize Level-1 product
-        self.fid = init_l1a(product, ref_date, dims, compression)
-        for key in self.dset_stored:
-            self.dset_stored[key] = 0
-
-    def __iter__(self: L1Aio) -> None:
-        """Allow iteration."""
-        for attr in sorted(self.__dict__):
-            if not attr.startswith("__"):
-                yield attr
-
-    def __enter__(self: L1Aio) -> L1Aio:
-        """Initiate the context manager."""
-        return self
-
-    def __exit__(self: L1Aio, *args: str) -> bool:
-        """Exit the context manager."""
-        self.close()
-        return False  # any exception is raised by the with statement.
-
-    def close(self: L1Aio) -> None:
-        """Close product and check if required datasets are filled with data."""
-        if self.fid is None:
-            return
-
-        # check if at least one dataset is updated
-        if self.fid.dimensions["number_of_images"].size == 0:
-            self.fid.close()
-            self.fid = None
-            return
-
-        # check of all required dataset their sizes
-        self.check_stored(allow_empty=True)
-        self.fid.close()
-        self.fid = None
-
-    # ---------- PUBLIC FUNCTIONS ----------
-    @property
-    def epoch(self: L1Aio) -> dt.datetime:
-        """Provide epoch for SPEXone."""
-        return self.__epoch
-
-    def get_dim(self: L1Aio, name: str) -> int:
-        """Get size of a netCDF4 dimension."""
-        return self.fid.dimensions[name].size
-
-    # ----- ATTRIBUTES --------------------
-    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> str | None:
-        """Read data of an attribute.
-
-        Global or attached to a group or variable.
-
-        Parameters
-        ----------
-        name : str
-           name of the attribute
-        ds_name : str, default=None
-           name of dataset to which the attribute is attached
-
-        Returns
-        -------
-        scalar or array_like
-           value of attribute 'name', global or attached to dataset 'ds_name'
-        """
-        if ds_name is None:
-            res = self.fid.getncattr(name)
-        else:
-            if ds_name not in self.fid.groups and ds_name not in self.fid.variables:
-                return None
-            res = self.fid[ds_name].getncattr(name)
-
-        if isinstance(res, bytes):
-            return res.decode("ascii")
-
-        return res
-
-    def set_attr(
-        self: L1Aio,
-        name: str,
-        value: Any,  # noqa: ANN401
-        ds_name: str | None = None,
-    ) -> None:
-        """Write data to an attribute.
-
-        Global or attached to a group or variable.
-
-        Parameters
-        ----------
-        name : string
-           name of the attribute
-        value : scalar, array_like
-           value or values to be written
-        ds_name : str, default=None
-           name of group or dataset to which the attribute is attached
-           **Use group name without starting '/'**
-        """
-        if ds_name is None:
-            if isinstance(value, str):
-                self.fid.setncattr(name, np.string_(value))
-            else:
-                self.fid.setncattr(name, value)
-        else:
-            grp_name = str(PurePosixPath(ds_name).parent)
-            var_name = str(PurePosixPath(ds_name).name)
-            if grp_name != ".":
-                if (
-                    var_name not in self.fid[grp_name].groups
-                    and var_name not in self.fid[grp_name].variables
-                ):
-                    raise KeyError(f"ds_name {ds_name} not in product")
-            else:
-                if (
-                    var_name not in self.fid.groups
-                    and var_name not in self.fid.variables
-                ):
-                    raise KeyError(f"ds_name {ds_name} not in product")
-
-            if isinstance(value, str):
-                self.fid[ds_name].setncattr(name, np.string_(value))
-            else:
-                self.fid[ds_name].setncattr(name, value)
-
-    # ----- VARIABLES --------------------
-    def get_dset(self: L1Aio, name: str) -> None:
-        """Read data of a netCDF4 variable.
-
-        Parameters
-        ----------
-        name : str
-           name of dataset
-
-        Returns
-        -------
-        scalar or array_like
-           value of dataset 'name'
-        """
-        grp_name = str(PurePosixPath(name).parent)
-        var_name = str(PurePosixPath(name).name)
-        if grp_name != ".":
-            if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f"dataset {name} not in Level-1 product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in Level-1 product")
-
-        return self.fid[name][:]
-
-    def set_dset(self: L1Aio, name: str, value: Any) -> None:  # noqa: ANN401
-        """Write data to a netCDF4 variable.
-
-        Parameters
-        ----------
-        name : str
-           Name of Level-1 dataset
-        value : scalar or array_like
-           Value or values to be written
-        """
-        value = np.asarray(value)
-        grp_name = str(PurePosixPath(name).parent)
-        var_name = str(PurePosixPath(name).name)
-        if grp_name != ".":
-            if var_name not in self.fid[grp_name].variables:
-                raise KeyError(f"dataset {name} not in Level-1 product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in Level-1 product")
-
-        self.fid[name][...] = value
-        self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
-
-    # -------------------------
-    def fill_global_attrs(
-        self: L1Aio, bin_size: str | None = None, inflight: bool = False
-    ) -> None:
-        """Define global attributes in the SPEXone Level-1 products.
-
-        Parameters
-        ----------
-        bin_size :  str, default=None
-           Size of the nadir footprint (cross-track), include unit: e.g. '5km'
-        inflight :  bool, default=False
-           Measurements performed on-ground or inflight
-        """
-        dict_attrs = attrs_def(inflight)
-        dict_attrs["product_name"] = self.product.name
-        if bin_size is not None:
-            dict_attrs["bin_size_at_nadir"] = bin_size
-
-        for key, value in dict_attrs.items():
-            if value is not None:
-                self.fid.setncattr(key, value)
-
-    # - L1A specific functions ------------------------
-    def check_stored(self: L1Aio, allow_empty: bool = False) -> None:
-        """Check variables with the same first dimension have equal sizes.
-
-        Parameters
-        ----------
-        allow_empty :  bool, default=False
-        """
-        warn_str = (
-            "SPEX Level-1A format check [WARNING]:"
-            ' size of variable "{:s}" is wrong, only {:d} elements'
-        )
-
-        # check image datasets
-        dim_sz = self.get_dim("number_of_images")
-        res = []
-        key_list = [
-            x
-            for x in self.dset_stored
-            if (x.startswith("/science_data") or x.startswith("/image_attributes"))
-        ]
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        if allow_empty:
-            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
-        else:
-            indx = np.nonzero(res != dim_sz)[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-        # check house-keeping datasets
-        dim_sz = self.get_dim("hk_packets")
-        key_list = [x for x in self.dset_stored if x.startswith("/engineering_data")]
-        res = []
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
-        if allow_empty:
-            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
-        else:
-            indx = np.nonzero(res != dim_sz)[0]
-        for ii in indx:
-            print(warn_str.format(key_list[ii], res[ii]))
-
-
-# --------------------------------------------------
 # from pyspex.lib.leap_sec import get_leap_seconds
 #
 # Remarks:
 # - removed use of importlib.resources
-# - replaced import datetime
 # --------------------------------------------------
 def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     """Return the number of elapsed leap seconds given a TAI time in seconds.
@@ -1988,66 +1243,63 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
 
 
 # --------------------------------------------------
-# from pyspex.lib.tlm_utils import UNITS_DICT, convert_hk
+# from pyspex.lib.logger import start_logger
 #
 # Remarks:
-# - removed all Enum classes (not needed)
+# - Logger config data is hard-coded
 # --------------------------------------------------
-# This dictionary is only valid when raw counts are converted to physical units
-UNITS_DICT = {
-    "ADC1_GAIN": "Volt",
-    "ADC1_OFFSET": "Volt",
-    "ADC1_REF": "Volt",
-    "ADC1_T": "K",
-    "ADC1_VCC": "Volt",
-    "ADC2_GAIN": "Volt",
-    "ADC2_OFFSET": "Volt",
-    "ADC2_REF": "Volt",
-    "ADC2_T": "K",
-    "ADC2_VCC": "Volt",
-    "DEM_I": "mA",
-    "DEM_T": "K",
-    "DEM_V": "Volt",
-    "HTR1_DUTYCYCL": "%",
-    "HTR1_I": "mA",
-    "HTR2_DUTYCYCL": "%",
-    "HTR2_I": "mA",
-    "HTR3_DUTYCYCL": "%",
-    "HTR3_I": "mA",
-    "HTR4_DUTYCYCL": "%",
-    "HTR4_I": "mA",
-    "HTRGRP1_V": "Volt",
-    "HTRGRP2_V": "Volt",
-    "ICU_1P2V_I": "mA",
-    "ICU_1P2V_V": "Volt",
-    "ICU_3P3V_I": "mA",
-    "ICU_3P3V_V": "Volt",
-    "ICU_4P0V_I": "mA",
-    "ICU_4P0V_V": "Volt",
-    "ICU_4V_T": "K",
-    "ICU_5P0V_I": "mA",
-    "ICU_5P0V_V": "Volt",
-    "ICU_5V_T": "K",
-    "ICU_DIGV_T": "K",
-    "ICU_HG1_T": "K",
-    "ICU_HG2_T": "K",
-    "ICU_MCU_T": "K",
-    "ICU_MID_T": "K",
-    "LED1_ANODE_V": "Volt",
-    "LED1_CATH_V": "Volt",
-    "LED1_I": "mA",
-    "LED2_ANODE_V": "Volt",
-    "LED2_CATH_V": "Volt",
-    "LED2_I": "mA",
-    "TS1_DEM_N_T": "K",
-    "TS2_HOUSING_N_T": "K",
-    "TS3_RADIATOR_N_T": "K",
-    "TS4_DEM_R_T": "K",
-    "TS5_HOUSING_R_T": "K",
-    "TS6_RADIATOR_R_T": "K",
-}
+def start_logger() -> None:
+    """Initialize logger for pyspex."""
+    config_data = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "standard": {
+                "format": (
+                    "[%(asctime)s] {%(name)s:%(lineno)d} %(levelname)s" " - %(message)s"
+                ),
+                "datefmt": "%H:%M:%S",
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "level": "DEBUG",
+                "formatter": "standard",
+                "stream": "ext://sys.stdout",
+            },
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "level": "DEBUG",
+                "formatter": "standard",
+                "filename": "/tmp/warnings.log",
+                "maxBytes": 10485760,
+                "backupCount": 10,
+                "encoding": "utf8",
+            },
+        },
+        "root": {"level": "WARNING", "handlers": ["console", "file"]},
+        "pyspex": {
+            "level": "WARNING",
+            "handlers": ["console", "file"],
+            "propagate": True,
+        },
+        "pyspex.gen_l1a": {
+            "level": "WARNING",
+            "handlers": ["console", "file"],
+            "propagate": True,
+        },
+    }
+
+    dictConfig(config_data)
 
 
+# --------------------------------------------------
+# from pyspex.lib.tlm_utils import convert_hk
+#
+# Remarks:
+# - removed all Enum classes and UNIT_DICTS (not needed)
+# --------------------------------------------------
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
     """Convert Detector Temperature Sensor to [K]."""
@@ -2232,7 +1484,7 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
 # from pyspex.lib.tmtc_def import tmtc_dtype
 # --------------------------------------------------
 def __tmtc_def(apid: int) -> list:
-    """Return list of tuples with the definition os SPEXone telemetry packets.
+    """Return a list of tuples with the definition os SPEXone telemetry packets.
 
     Parameters
     ----------
@@ -2390,7 +1642,7 @@ def __tmtc_def(apid: int) -> list:
             ("DET_REG124", "u1"),  # 276   0x0120
             ("DET_REG125", "u1"),  # 277   0x0121
             ("DET_T", ">u2"),  # 278   0x0122
-            ("FTI", ">u2"),  # 280   0x0124  (100 usec)
+            ("FTI", ">u2"),  # 280   0x0124  (100 musec)
             ("IMDMODE", "u1"),  # 282   0x0126
             ("dummy_03", "u1"),  # 283   0x0127
             ("IMRLEN", ">u4"),  # 284   0x0128
@@ -2683,7 +1935,7 @@ def tmtc_dtype(apid: int) -> np.dtype:
     Returns
     -------
     numpy.dtype
-       Definition of Spexone telemetry packet.
+       Definition of SPEXone telemetry packet.
 
     Examples
     --------
@@ -2696,8 +1948,107 @@ def tmtc_dtype(apid: int) -> np.dtype:
 
 
 # --------------------------------------------------
-# from pyspex.lv0_lib import dump_hkt, dump_science, read_lv0_data
+# from pyspex.lv0_lib import CorruptPacketWarning
 # --------------------------------------------------
+class CorruptPacketWarning(UserWarning):
+    """Creating a custom warning."""
+
+
+# --------------------------------------------------
+# from .lv0_lib import dump_hkt, dump_science, read_lv0_data
+# --------------------------------------------------
+def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
+    """Dump header info of the SPEXone housekeeping telemetry packets."""
+
+    def msg_320(val: np.ndarray) -> str:
+        return f" {val['ICUSWVER']:8x} {val['MPS_ID']:6d}"
+
+    def msg_331(val: np.ndarray) -> str:
+        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+
+    def msg_332(val: np.ndarray) -> str:
+        return (
+            f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+            f" {bin(val['TcRejectCode'][0])}"
+            f" {val['RejectParameter1'][0]:s}"
+            f" {val['RejectParameter2'][0]:s}"
+        )
+
+    def msg_333(val: np.ndarray) -> str:
+        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+
+    def msg_334(val: np.ndarray) -> str:
+        return (
+            f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+            f" {bin(val['TcFailCode'][0])}"
+            f" {val['FailParameter1'][0]:s}"
+            f" {val['FailParameter2'][0]:s}"
+        )
+
+    def msg_335(val: np.ndarray) -> str:
+        return (
+            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}" f" {bin(val['Event_Sev'][0])}"
+        )
+
+    with Path(flname).open("w", encoding="ascii") as fp:
+        fp.write(
+            "APID Grouping Counter Length     TAI_SEC    SUB_SEC"
+            " ICUSWVER MPS_ID TcSeqControl TcErrorCode\n"
+        )
+        for buf in ccsds_hk:
+            ccsds_hdr = CCSDShdr(buf["hdr"][0])
+            msg = (
+                f"{ccsds_hdr.apid:4x} {ccsds_hdr.grouping_flag:8d}"
+                f" {ccsds_hdr.sequence:7d} {ccsds_hdr.packet_size:6d}"
+                f" {ccsds_hdr.tai_sec:11d} {ccsds_hdr.sub_sec:10d}"
+            )
+
+            if ccsds_hdr.apid == 0x320:
+                msg_320(buf["hk"][0])
+            else:
+                method = {
+                    0x331: msg_331,
+                    0x332: msg_332,
+                    0x333: msg_333,
+                    0x334: msg_334,
+                    0x335: msg_335,
+                }.get(ccsds_hdr.apid, None)
+                msg += "" if method is None else method(buf)
+            fp.write(msg + "\n")
+
+
+def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
+    """Dump telemetry header info (Science)."""
+    with Path(flname).open("w", encoding="ascii") as fp:
+        fp.write(
+            "APID Grouping Counter Length"
+            " ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n"
+        )
+        for segment in ccsds_sci:
+            ccsds_hdr = CCSDShdr(segment["hdr"][0])
+            if ccsds_hdr.grouping_flag == 1:
+                nom_hk = segment["hk"]
+                icu_tm = segment["icu_tm"]
+                fp.write(
+                    f"{ccsds_hdr.apid:4x}"
+                    f" {ccsds_hdr.grouping_flag:8d}"
+                    f" {ccsds_hdr.sequence:7d}"
+                    f" {ccsds_hdr.packet_size:6d}"
+                    f" {nom_hk['ICUSWVER'][0]:8x}"
+                    f" {nom_hk['MPS_ID'][0]:6d}"
+                    f" {nom_hk['IMRLEN'][0]:7d}"
+                    f" {icu_tm['tai_sec'][0]:11d}"
+                    f" {icu_tm['sub_sec'][0]:10d}\n"
+                )
+            else:
+                fp.write(
+                    f"{ccsds_hdr.apid:4x}"
+                    f" {ccsds_hdr.grouping_flag:8d}"
+                    f" {ccsds_hdr.sequence:7d}"
+                    f" {ccsds_hdr.packet_size:6d}\n"
+                )
+
+
 def _cfe_header_(flname: Path) -> np.ndarray:
     """Read cFE file header (only for file_format='dsb')."""
     # define numpy data-type to read the cFE file-header
@@ -2766,11 +2117,6 @@ def _fix_hk24_(sci_hk: np.ndarray) -> np.ndarray:
         res[key] = sci_hk[key] >> 8
 
     return res
-
-
-# - main function ----------------------------------
-class CorruptPacketWarning(UserWarning):
-    """Creating a custom warning."""
 
 
 def read_lv0_data(
@@ -2844,6 +2190,7 @@ def read_lv0_data(
                     )
                     if not 0x320 <= ccsds_hdr.apid <= 0x350:
                         break
+
                     offs += hdr_dtype.itemsize + ccsds_hdr.packet_size - 5
                     continue
 
@@ -2907,285 +2254,727 @@ def read_lv0_data(
     return ccsds_sci, ccsds_hk
 
 
-def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
-    """Dump header info of the SPEXone housekeeping telemetry packets."""
+# --------------------------------------------------
+# from .l1a_io import L1Aio
+#
+# Remarks:
+# - removed local functions:
+#   * _binning_table_()
+#   * _digital_offset_()
+#   * _exposure_time_()
+#   * _nr_coadditions_()
+# - removed obsoleted L1Aio methods:
+#   * fill_science()
+#   * fill_nomhk()
+# --------------------------------------------------
+class L1Aio:
+    """Class to create SPEXone level-1A products.
 
-    def msg_320(val: np.ndarray) -> str:
-        return f" {val['ICUSWVER']:8x} {val['MPS_ID']:6d}"
+    Parameters
+    ----------
+    product :  str
+       Name of the SPEXone level-1A product
+    ref_date :  dt.datetime
+       Date of the first detector image
+    dims :  dict
+       Dimensions of the datasets, default values::
 
-    def msg_331(val: np.ndarray) -> str:
-        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+          number_of_images : None     # number of image frames
+          samples_per_image : 184000  # depends on binning table
+          hk_packets : None           # number of HK tlm-packets
 
-    def msg_332(val: np.ndarray) -> str:
-        return (
-            f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
-            f" {bin(val['TcRejectCode'][0])}"
-            f" {val['RejectParameter1'][0]:s}"
-            f" {val['RejectParameter2'][0]:s}"
+    compression : bool, default=False
+       Use compression on dataset /science_data/detector_images
+    """
+
+    dset_stored = {
+        "/science_data/detector_images": 0,
+        "/science_data/detector_telemetry": 0,
+        "/image_attributes/binning_table": 0,
+        "/image_attributes/digital_offset": 0,
+        "/image_attributes/nr_coadditions": 0,
+        "/image_attributes/exposure_time": 0,
+        "/image_attributes/icu_time_sec": 0,
+        "/image_attributes/icu_time_subsec": 0,
+        "/image_attributes/image_time": 0,
+        "/image_attributes/image_ID": 0,
+        "/engineering_data/NomHK_telemetry": 0,
+        # '/engineering_data/DemHK_telemetry': 0,
+        "/engineering_data/temp_detector": 0,
+        "/engineering_data/temp_housing": 0,
+        "/engineering_data/temp_radiator": 0,
+        "/engineering_data/HK_tlm_time": 0,
+    }
+
+    def __init__(
+        self: L1Aio,
+        product: Path | str,
+        ref_date: dt.datetime,
+        dims: dict,
+        compression: bool = False,
+    ) -> None:
+        """Initialize access to a SPEXone level-1A product."""
+        self.product: Path = Path(product) if isinstance(product, str) else product
+
+        # initialize private class-attributes
+        self.__epoch = ref_date
+
+        # initialize level-1A product
+        self.fid = init_l1a(product, ref_date, dims, compression)
+        for key in self.dset_stored:
+            self.dset_stored[key] = 0
+
+    def __iter__(self: L1Aio) -> None:
+        """Allow iteration."""
+        for attr in sorted(self.__dict__):
+            if not attr.startswith("__"):
+                yield attr
+
+    def __enter__(self: L1Aio) -> L1Aio:
+        """Initiate the context manager."""
+        return self
+
+    def __exit__(self: L1Aio, *args: str) -> bool:
+        """Exit the context manager."""
+        self.close()
+        return False  # any exception is raised by the with statement.
+
+    def close(self: L1Aio) -> None:
+        """Close product and check if required datasets are filled with data."""
+        if self.fid is None:
+            return
+
+        # check if at least one dataset is updated
+        if self.fid.dimensions["number_of_images"].size == 0:
+            self.fid.close()
+            self.fid = None
+            return
+
+        # check of all required dataset their sizes
+        self.check_stored(allow_empty=True)
+        self.fid.close()
+        self.fid = None
+
+    # ---------- PUBLIC FUNCTIONS ----------
+    @property
+    def epoch(self: L1Aio) -> dt.datetime:
+        """Provide epoch for SPEXone."""
+        return self.__epoch
+
+    def get_dim(self: L1Aio, name: str) -> int:
+        """Get size of a netCDF4 dimension."""
+        return self.fid.dimensions[name].size
+
+    # ----- ATTRIBUTES --------------------
+    def get_attr(self: L1Aio, name: str, ds_name: str | None = None) -> str | None:
+        """Read data of an attribute.
+
+        Global or attached to a group or variable.
+
+        Parameters
+        ----------
+        name : str
+           name of the attribute
+        ds_name : str, default=None
+           name of dataset to which the attribute is attached
+
+        Returns
+        -------
+        scalar or array_like
+           value of attribute 'name', global or attached to dataset 'ds_name'
+        """
+        if ds_name is None:
+            res = self.fid.getncattr(name)
+        else:
+            if ds_name not in self.fid.groups and ds_name not in self.fid.variables:
+                return None
+            res = self.fid[ds_name].getncattr(name)
+
+        if isinstance(res, bytes):
+            return res.decode("ascii")
+
+        return res
+
+    def set_attr(
+        self: L1Aio,
+        name: str,
+        value: Any,  # noqa: ANN401
+        ds_name: str | None = None,
+    ) -> None:
+        """Write data to an attribute.
+
+        Global or attached to a group or variable.
+
+        Parameters
+        ----------
+        name : string
+           name of the attribute
+        value : scalar, array_like
+           value or values to be written
+        ds_name : str, default=None
+           name of group or dataset to which the attribute is attached
+           **Use group name without starting '/'**
+        """
+        if ds_name is None:
+            if isinstance(value, str):
+                self.fid.setncattr(name, np.string_(value))
+            else:
+                self.fid.setncattr(name, value)
+        else:
+            grp_name = str(PurePosixPath(ds_name).parent)
+            var_name = str(PurePosixPath(ds_name).name)
+            if grp_name != ".":
+                if (
+                    var_name not in self.fid[grp_name].groups
+                    and var_name not in self.fid[grp_name].variables
+                ):
+                    raise KeyError(f"ds_name {ds_name} not in product")
+            else:
+                if (
+                    var_name not in self.fid.groups
+                    and var_name not in self.fid.variables
+                ):
+                    raise KeyError(f"ds_name {ds_name} not in product")
+
+            if isinstance(value, str):
+                self.fid[ds_name].setncattr(name, np.string_(value))
+            else:
+                self.fid[ds_name].setncattr(name, value)
+
+    # ----- VARIABLES --------------------
+    def get_dset(self: L1Aio, name: str) -> None:
+        """Read data of a netCDF4 variable.
+
+        Parameters
+        ----------
+        name : str
+           name of dataset
+
+        Returns
+        -------
+        scalar or array_like
+           value of dataset 'name'
+        """
+        grp_name = str(PurePosixPath(name).parent)
+        var_name = str(PurePosixPath(name).name)
+        if grp_name != ".":
+            if var_name not in self.fid[grp_name].variables:
+                raise KeyError(f"dataset {name} not in level-1A product")
+        else:
+            if var_name not in self.fid.variables:
+                raise KeyError(f"dataset {name} not in level-1A product")
+
+        return self.fid[name][:]
+
+    def set_dset(self: L1Aio, name: str, value: Any) -> None:  # noqa: ANN401
+        """Write data to a netCDF4 variable.
+
+        Parameters
+        ----------
+        name : str
+           Name of level-1A dataset
+        value : scalar or array_like
+           Value or values to be written
+        """
+        value = np.asarray(value)
+        grp_name = str(PurePosixPath(name).parent)
+        var_name = str(PurePosixPath(name).name)
+        if grp_name != ".":
+            if var_name not in self.fid[grp_name].variables:
+                raise KeyError(f"dataset {name} not in level-1A product")
+        else:
+            if var_name not in self.fid.variables:
+                raise KeyError(f"dataset {name} not in level-1A product")
+
+        self.fid[name][...] = value
+        self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
+
+    # -------------------------
+    def fill_global_attrs(self: L1Aio, inflight: bool = False) -> None:
+        """Define global attributes in the SPEXone level-1A products.
+
+        Parameters
+        ----------
+        inflight :  bool, default=False
+           Measurements performed on-ground or inflight
+        """
+        dict_attrs = attrs_def(inflight)
+        dict_attrs["product_name"] = self.product.name
+        for key, value in dict_attrs.items():
+            if value is not None:
+                self.fid.setncattr(key, value)
+
+    # - L1A specific functions ------------------------
+    def check_stored(self: L1Aio, allow_empty: bool = False) -> None:
+        """Check variables with the same first dimension have equal sizes.
+
+        Parameters
+        ----------
+        allow_empty :  bool, default=False
+        """
+        warn_str = (
+            "SPEX level-1A format check [WARNING]:"
+            ' size of variable "{:s}" is wrong, only {:d} elements'
         )
 
-    def msg_333(val: np.ndarray) -> str:
-        return f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
+        # check image datasets
+        dim_sz = self.get_dim("number_of_images")
+        res = []
+        key_list = [
+            x
+            for x in self.dset_stored
+            if (x.startswith("/science_data") or x.startswith("/image_attributes"))
+        ]
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        if allow_empty:
+            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
+        else:
+            indx = np.nonzero(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
 
-    def msg_334(val: np.ndarray) -> str:
-        return (
-            f" {-1:8x} {-1:6d} {val['TcSeqControl'][0]:12d}"
-            f" {bin(val['TcFailCode'][0])}"
-            f" {val['FailParameter1'][0]:s}"
-            f" {val['FailParameter2'][0]:s}"
+        # check house-keeping datasets
+        dim_sz = self.get_dim("hk_packets")
+        key_list = [x for x in self.dset_stored if x.startswith("/engineering_data")]
+        res = []
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
+        if allow_empty:
+            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
+        else:
+            indx = np.nonzero(res != dim_sz)[0]
+        for ii in indx:
+            print(warn_str.format(key_list[ii], res[ii]))
+
+
+# --------------------------------------------------
+# from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
+# --------------------------------------------------
+class CoverageFlag(IntFlag):
+    """Define flags for coverage_quality (navigation_data)."""
+
+    GOOD = 0
+    MISSING_SAMPLES = auto()
+    TOO_SHORT_EXTENDS = auto()
+    NO_EXTEND_AT_START = auto()
+    NO_EXTEND_AT_END = auto()
+
+
+# - high-level r/w functions ------------
+def read_hkt_nav(hkt_list: tuple[Path, ...]) -> xr.Dataset:
+    """Read navigation data from one or more HKT products.
+
+    Parameters
+    ----------
+    hkt_list : tuple[Path, ...]
+       listing of PACE-HKT products collocated with SPEXone measurements
+
+    Returns
+    -------
+    xr.Dataset
+       xarray dataset with PACE navigation data
+    """
+    dim_dict = {"att_": "att_time", "orb_": "orb_time", "tilt": "tilt_time"}
+
+    # concatenate DataArrays with navigation data
+    res = {}
+    rdate = None
+    for name in sorted(hkt_list):
+        hkt = HKTio(name)
+        nav = hkt.navigation()
+        if not res:
+            rdate = hkt.reference_date
+            res = nav.copy()
+            continue
+
+        dtime = None
+        if rdate != hkt.reference_date:
+            dtime = hkt.reference_date - rdate
+
+        for key1, value in nav.items():
+            if not value:
+                continue
+
+            hdim = dim_dict.get(key1, None)
+            if dtime is None:
+                res[key1] = xr.concat((res[key1], value), dim=hdim)
+            else:
+                parm = key1 + "_time" if key1[-1] != "_" else key1 + "time"
+                val_new = value.assign_coords(
+                    {parm: value[parm] + dtime.total_seconds()}
+                )
+                res[key1] = xr.concat((res[key1], val_new), dim=hdim)
+
+    # make sure that the data is sorted and unique
+    dsets = ()
+    for key, coord in dim_dict.items():
+        if not res[key]:
+            continue
+
+        res[key] = res[key].sortby(coord)
+        res[key] = res[key].drop_duplicates(dim=coord)
+        dsets += (res[key],)
+
+    # create Dataset from DataArrays
+    xds_nav = xr.merge(dsets, combine_attrs="drop_conflicts")
+
+    # remove confusing attributes from Dataset
+    key_list = list(xds_nav.attrs)
+    for key in key_list:
+        del xds_nav.attrs[key]
+
+    # add attribute 'reference_date'
+    return xds_nav.assign_attrs({"reference_date": rdate.isoformat()})
+
+
+def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> bool:
+    """Check time coverage of navigation data.
+
+    Parameters
+    ----------
+    l1a_file :  Path
+       name of the SPEXone level-1A product
+    xds_nav :  xr.Dataset
+       xarray dataset with PACE navigation data
+    """
+    coverage_quality = CoverageFlag.GOOD
+    # obtain the reference date of the navigation data
+    ref_date = dt.datetime.fromisoformat(xds_nav.attrs["reference_date"])
+
+    # obtain time_coverage_range from the Level-1A product
+    with h5py.File(l1a_file) as fid:
+        # pylint: disable=no-member
+        val = fid.attrs["time_coverage_start"].decode()
+        coverage_start = dt.datetime.fromisoformat(val)
+        val = fid.attrs["time_coverage_end"].decode()
+        coverage_end = dt.datetime.fromisoformat(val)
+    module_logger.debug("SPEXone time-coverage: %s - %s", coverage_start, coverage_end)
+
+    # check at the start of the data
+    sec_of_day = xds_nav["att_time"].values[0]
+    att_coverage_start = ref_date + dt.timedelta(seconds=float(sec_of_day))
+    module_logger.debug("PACE-HKT time-coverage-start: %s", att_coverage_start)
+    if coverage_start - att_coverage_start < dt.timedelta(0):
+        coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
+        module_logger.error(
+            "time coverage of navigation data starts after 'time_coverage_start'"
+        )
+    if coverage_start - att_coverage_start < TIMEDELTA_MIN:
+        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
+        module_logger.warning(
+            "time coverage of navigation data starts after 'time_coverage_start - %s'",
+            TIMEDELTA_MIN,
         )
 
-    def msg_335(val: np.ndarray) -> str:
-        return (
-            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}" f" {bin(val['Event_Sev'][0])}"
+    # check at the end of the data
+    sec_of_day = xds_nav["att_time"].values[-1]
+    att_coverage_end = ref_date + dt.timedelta(seconds=float(sec_of_day))
+    module_logger.debug("PACE-HKT time-coverage-end: %s", att_coverage_end)
+    if att_coverage_end - coverage_end < dt.timedelta(0):
+        coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
+        module_logger.error(
+            "time coverage of navigation data ends before 'time_coverage_end'"
+        )
+    if att_coverage_end - coverage_end < TIMEDELTA_MIN:
+        coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
+        module_logger.warning(
+            "time coverage of navigation data ends before 'time_coverage_end + %s'",
+            TIMEDELTA_MIN,
         )
 
-    with Path(flname).open("w", encoding="ascii") as fp:
-        fp.write(
-            "APID Grouping Counter Length     TAI_SEC    SUB_SEC"
-            " ICUSWVER MPS_ID TcSeqControl TcErrorCode\n"
+    # check for completeness
+    dtime = (att_coverage_end - att_coverage_start).total_seconds()
+    dim_expected = round(dtime / np.median(np.diff(xds_nav["att_time"])))
+    module_logger.debug(
+        "expected navigation samples %d found %d",
+        len(xds_nav["att_time"]),
+        dim_expected,
+    )
+    if len(xds_nav["att_time"]) / dim_expected < 0.95:
+        coverage_quality |= CoverageFlag.MISSING_SAMPLES
+        module_logger.warning("navigation data poorly sampled")
+
+    # add coverage flag and attributes to Level-1A product
+    with Dataset(l1a_file, "a") as fid:
+        gid = fid["/navigation_data"]
+        gid.time_coverage_start = att_coverage_start.isoformat(timespec="milliseconds")
+        gid.time_coverage_end = att_coverage_end.isoformat(timespec="milliseconds")
+        dset = gid.createVariable("coverage_quality", "u1", fill_value=255)
+        dset[:] = coverage_quality
+        dset.long_name = "coverage quality of navigation data"
+        dset.standard_name = "status_flag"
+        dset.valid_range = np.array([0, 15], dtype="u2")
+        dset.flag_values = np.array([0, 1, 2, 4, 8], dtype="u2")
+        dset.flag_meanings = (
+            "good missing-samples too_short_extends no_extend_at_start no_extend_at_end"
         )
-        for buf in ccsds_hk:
-            ccsds_hdr = CCSDShdr(buf["hdr"][0])
-            msg = (
-                f"{ccsds_hdr.apid:4x} {ccsds_hdr.grouping_flag:8d}"
-                f" {ccsds_hdr.sequence:7d} {ccsds_hdr.packet_size:6d}"
-                f" {ccsds_hdr.tai_sec:11d} {ccsds_hdr.sub_sec:10d}"
+
+    # generate warning if time-coverage of navigation data is too short
+    if coverage_quality & CoverageFlag.TOO_SHORT_EXTENDS:
+        return False
+
+    return True
+
+
+# - class HKTio -------------------------
+class HKTio:
+    """Class to read housekeeping and navigation data from PACE-HKT products.
+
+    Parameters
+    ----------
+    filename : Path
+        name of the PACE HKT product
+
+    Notes
+    -----
+    This class has the following methods::
+
+     - reference_date -> datetime
+     - set_reference_date()
+     - coverage() -> tuple[datetime, datetime]
+     - housekeeping(instrument: str) -> tuple[np.ndarray, ...]
+     - navigation() -> dict
+    """
+
+    def __init__(self: HKTio, filename: Path) -> None:
+        """Initialize access to a PACE HKT product."""
+        self._coverage = None
+        self._reference_date = None
+        self.filename = filename
+        if not self.filename.is_file():
+            raise FileNotFoundError(f"file {filename} not found")
+        self.set_reference_date()
+
+    # ---------- PUBLIC FUNCTIONS ----------
+    @property
+    def reference_date(self: HKTio) -> dt.datetime:
+        """Return reference date of all time_of_day variables."""
+        return self._reference_date
+
+    def set_reference_date(self: HKTio) -> None:
+        """Set reference date of current PACE HKT product."""
+        ref_date = None
+        with h5py.File(self.filename) as fid:
+            grp = fid["navigation_data"]
+            if "att_time" in grp and "units" in grp["att_time"].attrs:
+                # pylint: disable=no-member
+                words = grp["att_time"].attrs["units"].decode().split(" ")
+                if len(words) > 2:
+                    # Note timezone 'Z' is only accepted by Python 3.11+
+                    ref_date = dt.datetime.fromisoformat(words[2] + "T00:00:00+00:00")
+
+        if ref_date is None:
+            coverage = self.coverage()
+            ref_date = dt.datetime.combine(
+                coverage[0].date(), dt.time(0), tzinfo=dt.timezone.utc
             )
 
-            if ccsds_hdr.apid == 0x320:
-                msg_320(buf["hk"][0])
-            else:
-                method = {
-                    0x331: msg_331,
-                    0x332: msg_332,
-                    0x333: msg_333,
-                    0x334: msg_334,
-                    0x335: msg_335,
-                }.get(ccsds_hdr.apid, None)
-                msg += "" if method is None else method(buf)
-                fp.write(msg + "\n")
+        self._reference_date = ref_date
 
+    def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
+        """Return data coverage."""
+        one_day = dt.timedelta(days=1)
+        with h5py.File(self.filename) as fid:
+            # pylint: disable=no-member
+            # Note timezone 'Z' is only accepted by Python 3.11+
+            val = fid.attrs["time_coverage_start"].decode()
+            coverage_start = dt.datetime.fromisoformat(val.replace("Z", "+00:00"))
+            val = fid.attrs["time_coverage_end"].decode()
+            coverage_end = dt.datetime.fromisoformat(val.replace("Z", "+00:00"))
 
-def dump_science(flname: str, ccsds_sci: tuple[np.ndarray, ...]) -> None:
-    """Dump telemetry header info (Science)."""
-    with Path(flname).open("w", encoding="ascii") as fp:
-        fp.write(
-            "APID Grouping Counter Length"
-            " ICUSWVER MPS_ID  IMRLEN     ICU_SEC ICU_SUBSEC\n"
+        if abs(coverage_end - coverage_start) < one_day:
+            return coverage_start, coverage_end
+
+        # Oeps, now we have to check the timestamps of the measurement data
+        hk_dset_names = (
+            "HARP2_HKT_packets",
+            "OCI_HKT_packets",
+            "SPEXone_HKT_packets",
+            "SC_HKT_packets",
         )
-        for segment in ccsds_sci:
-            ccsds_hdr = CCSDShdr(segment["hdr"][0])
-            if ccsds_hdr.grouping_flag == 1:
-                nom_hk = segment["hk"]
-                icu_tm = segment["icu_tm"]
-                fp.write(
-                    f"{ccsds_hdr.apid:4x}"
-                    f" {ccsds_hdr.grouping_flag:8d}"
-                    f" {ccsds_hdr.sequence:7d}"
-                    f" {ccsds_hdr.packet_size:6d}"
-                    f" {nom_hk['ICUSWVER'][0]:8x}"
-                    f" {nom_hk['MPS_ID'][0]:6d}"
-                    f" {nom_hk['IMRLEN'][0]:7d}"
-                    f" {icu_tm['tai_sec'][0]:11d}"
-                    f" {icu_tm['sub_sec'][0]:10d}\n"
+
+        tstamp_mn_list = []
+        tstamp_mx_list = []
+        with h5py.File(self.filename) as fid:
+            for ds_set in hk_dset_names:
+                dt_list = ()
+                if ds_set not in fid["housekeeping_data"]:
+                    continue
+
+                res = fid["housekeeping_data"][ds_set][:]
+                for packet in res:
+                    try:
+                        ccsds_hdr = CCSDShdr()
+                        ccsds_hdr.read("raw", packet)
+                    except ValueError as exc:
+                        module_logger.warning('CCSDS header read error with "%s"', exc)
+                        break
+
+                    val = ccsds_hdr.tstamp(EPOCH)
+                    if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
+                        dt_list += (val,)
+
+                if not dt_list:
+                    continue
+
+                dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
+                ii = dt_arr.size // 2
+                leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
+                dt_arr -= dt.timedelta(seconds=leap_sec)
+                mn_val = min(dt_arr)
+                mx_val = max(dt_arr)
+                if mx_val - mn_val > one_day:
+                    indx_close_to_mn = (dt_arr - mn_val) <= one_day
+                    indx_close_to_mx = (mx_val - dt_arr) <= one_day
+                    module_logger.warning(
+                        "coverage_range: %s[%d] - %s[%d]",
+                        mn_val,
+                        np.sum(indx_close_to_mn),
+                        mx_val,
+                        np.sum(indx_close_to_mx),
+                    )
+                    if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                        mx_val = max(dt_arr[indx_close_to_mn])
+                    else:
+                        mn_val = min(dt_arr[indx_close_to_mx])
+
+                tstamp_mn_list.append(mn_val)
+                tstamp_mx_list.append(mx_val)
+
+        if len(tstamp_mn_list) == 1:
+            return tstamp_mn_list[0], tstamp_mx_list[0]
+
+        return min(*tstamp_mn_list), max(*tstamp_mx_list)
+
+    def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray, ...]:
+        """Get housekeeping telemetry data.
+
+        Parameters
+        ----------
+        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
+           name of PACE instrument: 'harp': HARP2, 'oci': OCI,
+           'sc': spacecraft, 'spx': SPEXone.
+
+        Notes
+        -----
+        Current implementation only works for SPEXone.
+        """
+        ds_set = {
+            "spx": "SPEXone_HKT_packets",
+            "sc": "SC_HKT_packets",
+            "oci": "OCI_HKT_packets",
+            "harp": "HARP2_HKT_packets",
+        }.get(instrument)
+
+        with h5py.File(self.filename) as fid:
+            if ds_set not in fid["housekeeping_data"]:
+                return ()
+            res = fid["housekeeping_data"][ds_set][:]
+
+        ccsds_hk = ()
+        for packet in res:
+            try:
+                ccsds_hdr = CCSDShdr()
+                ccsds_hdr.read("raw", packet)
+            except ValueError as exc:
+                module_logger.warning('CCSDS header read error with "%s"', exc)
+                break
+
+            try:
+                dtype_apid = ccsds_hdr.data_dtype
+            except ValueError:
+                print(
+                    f"APID: 0x{ccsds_hdr.apid:x};"
+                    f" Packet Length: {ccsds_hdr.packet_size:d}"
                 )
+                dtype_apid = None
+
+            if dtype_apid is not None:  # all valid APIDs
+                buff = np.frombuffer(packet, count=1, offset=0, dtype=dtype_apid)
+                ccsds_hk += (buff,)
             else:
-                fp.write(
-                    f"{ccsds_hdr.apid:4x}"
-                    f" {ccsds_hdr.grouping_flag:8d}"
-                    f" {ccsds_hdr.sequence:7d}"
-                    f" {ccsds_hdr.packet_size:6d}\n"
+                module_logger.warning(
+                    "package with APID 0x%x and length %d is not implemented",
+                    ccsds_hdr.apid,
+                    ccsds_hdr.packet_size,
                 )
+
+        return ccsds_hk
+
+    def navigation(self: HKTio) -> dict:
+        """Get navigation data."""
+        res = {"att_": (), "orb_": (), "tilt": ()}
+        with h5py.File(self.filename) as fid:
+            gid = fid["navigation_data"]
+            for key in gid:
+                if key.startswith("att_"):
+                    res["att_"] += (h5_to_xr(gid[key]),)
+                elif key.startswith("orb_"):
+                    res["orb_"] += (h5_to_xr(gid[key]),)
+                elif key.startswith("tilt"):
+                    res["tilt"] += (h5_to_xr(gid[key]),)
+                else:
+                    module_logger.warning("fail to find dataset %s", key)
+
+        # repair the dimensions
+        xds1 = xr.merge(res["att_"], combine_attrs="drop_conflicts")
+        xds1 = xds1.set_coords(["att_time"])
+        xds1 = xds1.swap_dims({"att_records": "att_time"})
+        xds2 = xr.merge(res["orb_"], combine_attrs="drop_conflicts")
+        xds2 = xds2.set_coords(["orb_time"])
+        xds2 = xds2.swap_dims({"orb_records": "orb_time"})
+        xds3 = ()
+        if res["tilt"]:
+            xds3 = xr.merge(res["tilt"], combine_attrs="drop_conflicts")
+            xds3 = xds3.set_coords(["tilt_time"])
+            xds3 = xds3.swap_dims({"tilt_records": "tilt_time"})
+        return {"att_": xds1, "orb_": xds2, "tilt": xds3}
 
 
 # --------------------------------------------------
-# from pyspex.tlm import SPXtlm, extract_l0_hk, extract_l0_sci
+# from pyspex.tlm import SPXtlm
+#
+# Remarks:
+# - Option 'githash' not available for pyspex_version()
 # --------------------------------------------------
 # - helper functions ------------------------
-def __exposure_time(science: np.ndarray) -> np.ndarray:
-    """Return exposure time [ms]."""
-    return 129e-4 * (0.43 * science["DET_FOTLEN"] + science["DET_EXPTIME"])
-
-
-def __frame_period(science: np.ndarray) -> np.ndarray:
-    """Return frame period of detector measurement [ms]."""
-    n_science = 1 if isinstance(science, np.void) else len(science)
-    n_coad = science["REG_NCOADDFRAMES"]
-    # binning mode
-    if science["REG_FULL_FRAME"] == 2:
-        return np.full(n_science, n_coad * DET_CONSTS["FTI_science"])
-
-    # full-frame mode
-    return n_coad * np.clip(
-        DET_CONSTS["FTI_margin"]
-        + DET_CONSTS["overheadTime"]
-        + __exposure_time(science),
-        a_min=DET_CONSTS["FTI_diagnostic"],
-        a_max=None,
-    )
-
-
-def __readout_offset(science: np.ndarray) -> float:
-    """Return offset wrt start-of-integration [ms]."""
-    n_coad = science["REG_NCOADDFRAMES"]
-    n_frm = n_coad + 3 if science["IMRLEN"] == FULLFRAME_BYTES else 2 * n_coad + 2
-
-    return n_frm * __frame_period(science)[0]
-
-
-def __binning_table(science: np.ndarray) -> np.ndarray:
-    """Return binning table identifier (zero for full-frame images)."""
-    bin_tbl = np.zeros(len(science), dtype="i1")
-    _mm = science["IMRLEN"] == FULLFRAME_BYTES
-    if np.sum(_mm) == len(science):
-        return bin_tbl
-
-    bin_tbl_start = science["REG_BINNING_TABLE_START"]
-    bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
-    return bin_tbl
-
-
-def __digital_offset(science: np.ndarray) -> np.ndarray:
-    """Return digital offset including ADC offset [count]."""
-    buff = science["DET_OFFSET"].astype("i4")
-    buff[buff >= 8192] -= 16384
-
-    return buff + 70
-
-
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
     return 100 * int(sub_sec / 65536 * 10000)
 
 
-def extract_l0_hk(ccsds_hk: tuple, epoch: dt.datetime) -> dict | None:
-    """Return dictionary with NomHk telemetry data."""
-    if not ccsds_hk:
+def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
+    """Try to slice (faster), instead of boolean indexing (slow)."""
+    if np.all(~mask):
         return None
+    if np.all(mask):
+        return np.s_[:]  # read everything
 
-    hdr = np.empty(len(ccsds_hk), dtype=ccsds_hk[0]["hdr"].dtype)
-    tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
-    tstamp = []
-    ii = 0
-    for buf in ccsds_hk:
-        hdr[ii] = buf["hdr"]
-        ccsds_hdr = CCSDShdr(buf["hdr"][0])
-        if ccsds_hdr.apid != 0x320 or buf["hdr"]["tai_sec"] < len(ccsds_hk):
-            continue
+    indx = np.nonzero(mask)[0]
+    if np.all(np.diff(indx) == 1):
+        # perform start-stop indexing
+        return np.s_[indx[0] : indx[-1] + 1]
 
-        tlm[ii] = buf["hk"]
-        tstamp.append(
-            epoch
-            + dt.timedelta(
-                seconds=int(buf["hdr"]["tai_sec"][0]),
-                microseconds=subsec2musec(buf["hdr"]["sub_sec"][0]),
-            )
-        )
-        ii += 1
-
-    # These values are originally stored in little-endian, but
-    # Numpy does not accept a mix of little & big-endian values
-    # in a structured array.
-    tlm["HTR1_CALCPVAL"][:] = tlm["HTR1_CALCPVAL"].byteswap()
-    tlm["HTR2_CALCPVAL"][:] = tlm["HTR2_CALCPVAL"].byteswap()
-    tlm["HTR3_CALCPVAL"][:] = tlm["HTR3_CALCPVAL"].byteswap()
-    tlm["HTR4_CALCPVAL"][:] = tlm["HTR4_CALCPVAL"].byteswap()
-    tlm["HTR1_CALCIVAL"][:] = tlm["HTR1_CALCIVAL"].byteswap()
-    tlm["HTR2_CALCIVAL"][:] = tlm["HTR2_CALCIVAL"].byteswap()
-    tlm["HTR3_CALCIVAL"][:] = tlm["HTR3_CALCIVAL"].byteswap()
-    tlm["HTR4_CALCIVAL"][:] = tlm["HTR4_CALCIVAL"].byteswap()
-
-    return {"hdr": hdr[:ii], "tlm": tlm[:ii], "tstamp": np.array(tstamp)}
+    # perform boolean indexing
+    return mask
 
 
-def extract_l0_sci(ccsds_sci: tuple, epoch: dt.datetime) -> dict | None:
-    """Return dictionary with Science telemetry data."""
-    if not ccsds_sci:
-        return None
-
-    n_frames = 0
-    hdr_dtype = None
-    hk_dtype = None
-    found_start_first = False
-    for buf in ccsds_sci:
-        ccsds_hdr = CCSDShdr(buf["hdr"][0])
-        if ccsds_hdr.grouping_flag == 1:
-            found_start_first = True
-            if n_frames == 0:
-                hdr_dtype = buf["hdr"].dtype
-                hk_dtype = buf["hk"].dtype
-                continue
-
-        if not found_start_first:
-            continue
-
-        if ccsds_hdr.grouping_flag == 2:
-            found_start_first = False
-            n_frames += 1
-
-    # do we have any complete detector images (Note ccsds_sci not empty!)?
-    if n_frames == 0:
-        module_logger.warning("no valid Science package found")
-        return None
-
-    # allocate memory
-    hdr_arr = np.empty(n_frames, dtype=hdr_dtype)
-    tlm_arr = np.empty(n_frames, dtype=hk_dtype)
-    tstamp = np.empty(n_frames, dtype=TSTAMP_TYPE)
-    images = ()
-
-    # extract data from ccsds_sci
-    ii = 0
-    img = None
-    found_start_first = False
-    for buf in ccsds_sci:
-        ccsds_hdr = CCSDShdr(buf["hdr"][0])
-        if ccsds_hdr.grouping_flag == 1:
-            found_start_first = True
-            hdr_arr[ii] = buf["hdr"]
-            tlm_arr[ii] = buf["hk"]
-            tstamp[ii] = (
-                buf["icu_tm"]["tai_sec"][0],
-                buf["icu_tm"]["sub_sec"][0],
-                epoch
-                + dt.timedelta(
-                    seconds=int(buf["icu_tm"]["tai_sec"][0]),
-                    microseconds=subsec2musec(buf["icu_tm"]["sub_sec"][0]),
-                ),
-            )
-            img = (buf["frame"][0],)
-            continue
-
-        if not found_start_first:
-            continue
-
-        if ccsds_hdr.grouping_flag == 0:
-            img += (buf["frame"][0],)
-        elif ccsds_hdr.grouping_flag == 2:
-            found_start_first = False
-            img += (buf["frame"][0],)
-            images += (np.concatenate(img),)
-            ii += 1
-            if ii == n_frames:
-                break
-
-    return {"hdr": hdr_arr, "tlm": tlm_arr, "tstamp": tstamp, "images": images}
-
-
-def add_hkt_navigation(l1a_file: Path, hkt_list: list[Path]) -> int:
+def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     """Add PACE navigation information from PACE_HKT products.
 
     Parameters
     ----------
     l1a_file :  Path
        name of an existing L1A product.
-    hkt_list :  list[Path]
+    hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
     """
     # read PACE navigation data from HKT files.
     xds_nav = read_hkt_nav(hkt_list)
-    # add PACE navigation data to existing Level-1A product.
+    # add PACE navigation data to existing level-1A product.
     xds_nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
     # check time coverage of navigation data.
     return check_coverage_nav(l1a_file, xds_nav)
@@ -3217,6 +3006,354 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
         )
 
 
+# - class SCItlm ----------------------------
+class HKtlm:
+    """Class to handle SPEXone housekeeping telemetry packets."""
+
+    def __init__(self: HKtlm) -> None:
+        """Initialize HKtlm object."""
+        self.hdr: np.ndarray | None = None
+        self.tlm: np.ndarray | None = None
+        self.tstamp: list[dt.datetime, ...] | list = []
+        self.events: list[np.ndarray, ...] | list = []
+
+    def init_attrs(self: HKtlm) -> None:
+        """Initialize class attributes."""
+        self.hdr = None
+        self.tlm = None
+        self.tstamp = []
+        self.events = []
+
+    def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
+        """Extract data from SPEXone level-0 housekeeping telemetry packets.
+
+        Parameters
+        ----------
+        ccsds_hk :  tuple[np.ndarray, ...]
+           SPEXone level-0 housekeeping telemetry packets
+        epoch :  dt.datetime
+           Epoch of the telemetry packets (1958 or 1970)
+        """
+        self.init_attrs()
+        if not ccsds_hk:
+            return
+
+        self.hdr = np.empty(len(ccsds_hk), dtype=ccsds_hk[0]["hdr"].dtype)
+        self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
+        ii = 0
+        for buf in ccsds_hk:
+            ccsds_hdr = CCSDShdr(buf["hdr"][0])
+
+            # Catch TcAccept, TcReject, TcExecute, TcFail and EventRp as events
+            if ccsds_hdr.apid != 0x320 or buf["hdr"]["tai_sec"] < len(ccsds_hk):
+                if 0x331 <= ccsds_hdr.apid <= 0x335:
+                    self.events.append(buf)
+                continue
+
+            self.hdr[ii] = buf["hdr"]
+            self.tlm[ii] = buf["hk"]
+            self.tstamp.append(
+                epoch
+                + dt.timedelta(
+                    seconds=int(buf["hdr"]["tai_sec"][0]),
+                    microseconds=subsec2musec(buf["hdr"]["sub_sec"][0]),
+                )
+            )
+            ii += 1
+
+        self.hdr = self.hdr[:ii]
+        self.tlm = self.tlm[:ii]
+
+        # These values are originally stored in little-endian, but
+        # Numpy does not accept a mix of little & big-endian values
+        # in a structured array.
+        self.tlm["HTR1_CALCPVAL"][:] = self.tlm["HTR1_CALCPVAL"].byteswap()
+        self.tlm["HTR2_CALCPVAL"][:] = self.tlm["HTR2_CALCPVAL"].byteswap()
+        self.tlm["HTR3_CALCPVAL"][:] = self.tlm["HTR3_CALCPVAL"].byteswap()
+        self.tlm["HTR4_CALCPVAL"][:] = self.tlm["HTR4_CALCPVAL"].byteswap()
+        self.tlm["HTR1_CALCIVAL"][:] = self.tlm["HTR1_CALCIVAL"].byteswap()
+        self.tlm["HTR2_CALCIVAL"][:] = self.tlm["HTR2_CALCIVAL"].byteswap()
+        self.tlm["HTR3_CALCIVAL"][:] = self.tlm["HTR3_CALCIVAL"].byteswap()
+        self.tlm["HTR4_CALCIVAL"][:] = self.tlm["HTR4_CALCIVAL"].byteswap()
+
+    def extract_l1a_hk(self: HKtlm, fid: h5py.File, mps_id: int | None) -> None:
+        """Extract data from SPEXone level-1a housekeeping telemetry packets.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           File pointer to a SPEXone level-1a product
+        mps_id : int, optional
+           Select data performed with MPS equals 'mps_id'
+        """
+        self.init_attrs()
+
+        # pylint: disable=no-member
+        dset = fid["/engineering_data/NomHK_telemetry"]
+        if mps_id is None:
+            data_sel = np.s_[:]
+        else:
+            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
+            if data_sel is None:
+                return
+        self.tlm = dset[data_sel]
+
+        dset = fid["/engineering_data/HK_tlm_time"]
+        ref_date = dset.attrs["units"].decode()[14:] + "+00:00"
+        epoch = dt.datetime.fromisoformat(ref_date)
+        for sec in dset[data_sel]:
+            self.tstamp.append(epoch + dt.timedelta(seconds=sec))
+
+    def convert(self: HKtlm, key: str) -> np.ndarray:
+        """Convert telemetry parameter to physical units.
+
+        Parameters
+        ----------
+        key :  str
+           Name of telemetry parameter
+
+        Returns
+        -------
+        np.ndarray
+        """
+        if key.upper() not in self.tlm.dtype.names:
+            raise KeyError(
+                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
+            )
+
+        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        return convert_hk(key.upper(), raw_data)
+
+
+# - class SCItlm ----------------------------
+class SCItlm:
+    """Class to handle SPEXone Science-telemetry packets."""
+
+    def __init__(self: SCItlm) -> None:
+        """Initialize SCItlm object."""
+        self.hdr: np.ndarray | None = None
+        self.tlm: np.ndarray | None = None
+        self.tstamp: np.ndarray | None = None
+        self.images: tuple[np.ndarray, ...] | tuple[()] = ()
+
+    def init_attrs(self: SCItlm) -> None:
+        """Initialize class attributes."""
+        self.hdr = None
+        self.tlm = None
+        self.tstamp = None
+        self.images = ()
+
+    def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> None:
+        """Extract SPEXone level-0 Science-telemetry data.
+
+        Parameters
+        ----------
+        ccsds_sci :  tuple[np.ndarray, ...]
+           SPEXone level-0 Science-telemetry packets
+        epoch :  dt.datetime
+           Epoch of the telemetry packets (1958 or 1970)
+        """
+        self.init_attrs()
+        if not ccsds_sci:
+            return
+
+        n_frames = 0
+        hdr_dtype = None
+        hk_dtype = None
+        found_start_first = False
+        for buf in ccsds_sci:
+            ccsds_hdr = CCSDShdr(buf["hdr"][0])
+            if ccsds_hdr.grouping_flag == 1:
+                found_start_first = True
+                if n_frames == 0:
+                    hdr_dtype = buf["hdr"].dtype
+                    hk_dtype = buf["hk"].dtype
+                    continue
+
+            if not found_start_first:
+                continue
+
+            if ccsds_hdr.grouping_flag == 2:
+                found_start_first = False
+                n_frames += 1
+
+        # do we have any complete detector images (Note ccsds_sci not empty!)?
+        if n_frames == 0:
+            module_logger.warning("no valid Science package found")
+            return
+
+        # allocate memory
+        self.hdr = np.empty(n_frames, dtype=hdr_dtype)
+        self.tlm = np.empty(n_frames, dtype=hk_dtype)
+        self.tstamp = np.empty(n_frames, dtype=TSTAMP_TYPE)
+
+        # extract data from ccsds_sci
+        ii = 0
+        img = None
+        found_start_first = False
+        for buf in ccsds_sci:
+            ccsds_hdr = CCSDShdr(buf["hdr"][0])
+            if ccsds_hdr.grouping_flag == 1:
+                found_start_first = True
+                self.hdr[ii] = buf["hdr"]
+                self.tlm[ii] = buf["hk"]
+                self.tstamp[ii] = (
+                    buf["icu_tm"]["tai_sec"][0],
+                    buf["icu_tm"]["sub_sec"][0],
+                    epoch
+                    + dt.timedelta(
+                        seconds=int(buf["icu_tm"]["tai_sec"][0]),
+                        microseconds=subsec2musec(buf["icu_tm"]["sub_sec"][0]),
+                    ),
+                )
+                img = (buf["frame"][0],)
+                continue
+
+            if not found_start_first:
+                continue
+
+            if ccsds_hdr.grouping_flag == 0:
+                img += (buf["frame"][0],)
+            elif ccsds_hdr.grouping_flag == 2:
+                found_start_first = False
+                img += (buf["frame"][0],)
+                self.images += (np.concatenate(img),)
+                ii += 1
+                if ii == n_frames:
+                    break
+
+    def extract_l1a_sci(self: SCItlm, fid: h5py.File, mps_id: int | None) -> None:
+        """Extract data from SPEXone level-1a Science-telemetry packets.
+
+        Parameters
+        ----------
+        fid :  h5py.File
+           File pointer to a SPEXone level-1a product
+        mps_id : int, optional
+           Select data performed with MPS equals 'mps_id'
+        """
+        # pylint: disable=no-member
+        self.init_attrs()
+
+        # read science telemetry
+        dset = fid["/science_data/detector_telemetry"]
+        if mps_id is None:
+            data_sel = np.s_[:]
+        else:
+            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
+            if data_sel is None:
+                return
+        self.tlm = fid["/science_data/detector_telemetry"][data_sel]
+
+        # determine time-stamps
+        dset = fid["/image_attributes/icu_time_sec"]
+        seconds = dset[data_sel]
+        try:
+            _ = dset.attrs["units"].index(b"1958")
+        except ValueError:
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+        else:
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
+        subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
+
+        _dt = []
+        for ii, sec in enumerate(seconds):
+            msec_offs = self.readout_offset(ii)
+            _dt.append(
+                epoch
+                + dt.timedelta(
+                    seconds=int(sec),
+                    milliseconds=-msec_offs,
+                    microseconds=subsec2musec(subsec[ii]),
+                )
+            )
+
+        self.tstamp = np.empty(len(seconds), dtype=TSTAMP_TYPE)
+        self.tstamp["tai_sec"] = seconds
+        self.tstamp["sub_sec"] = subsec
+        self.tstamp["dt"] = _dt
+
+        # read image data
+        self.images = fid["/science_data/detector_images"][data_sel, :]
+
+    def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
+        """Return exposure time [ms]."""
+        if indx is None:
+            indx = np.s_[:]
+        return 129e-4 * (
+            0.43 * self.tlm["DET_FOTLEN"][indx] + self.tlm["DET_EXPTIME"][indx]
+        )
+
+    def frame_period(self: SCItlm, indx: int) -> float:
+        """Return frame period of detector measurement [ms]."""
+        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
+        # binning mode
+        if self.tlm["REG_FULL_FRAME"][indx] == 2:
+            return float(n_coad * DET_CONSTS["FTI_science"])
+
+        # full-frame mode
+        return float(
+            n_coad
+            * np.clip(
+                DET_CONSTS["FTI_margin"]
+                + DET_CONSTS["overheadTime"]
+                + self.exposure_time(indx),
+                a_min=DET_CONSTS["FTI_diagnostic"],
+                a_max=None,
+            )
+        )
+
+    def readout_offset(self: SCItlm, indx: int) -> float:
+        """Return offset wrt start-of-integration [ms]."""
+        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
+        n_frm = (
+            n_coad + 3
+            if self.tlm["IMRLEN"][indx] == FULLFRAME_BYTES
+            else 2 * n_coad + 2
+        )
+
+        return n_frm * self.frame_period(indx)
+
+    def binning_table(self: SCItlm) -> np.ndarray:
+        """Return binning table identifier (zero for full-frame images)."""
+        bin_tbl = np.zeros(len(self.tlm), dtype="i1")
+        _mm = self.tlm["IMRLEN"] == FULLFRAME_BYTES
+        if np.sum(_mm) == len(self.tlm):
+            return bin_tbl
+
+        bin_tbl_start = self.tlm["REG_BINNING_TABLE_START"]
+        bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
+        return bin_tbl
+
+    def digital_offset(self: SCItlm) -> np.ndarray:
+        """Return digital offset including ADC offset [count]."""
+        buff = self.tlm["DET_OFFSET"].astype("i4")
+        buff[buff >= 8192] -= 16384
+
+        return buff + 70
+
+    def convert(self: SCItlm, key: str) -> np.ndarray:
+        """Convert telemetry parameter to physical units.
+
+        Parameters
+        ----------
+        key :  str
+           Name of telemetry parameter
+
+        Returns
+        -------
+        np.ndarray
+        """
+        if key.upper() not in self.tlm.dtype.names:
+            raise KeyError(
+                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
+            )
+
+        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        return convert_hk(key.upper(), raw_data)
+
+
 # - class SPXtlm ----------------------------
 class SPXtlm:
     """Access/convert parameters of SPEXone Science telemetry data.
@@ -3226,13 +3363,6 @@ class SPXtlm:
     This class has the following methods::
 
      - set_coverage(coverage: tuple[datetime, datetime] | None) -> None
-     - hk_hdr() -> np.ndarray | None
-     - hk_tlm() -> np.ndarray | None
-     - hk_tstamp() -> np.ndarray | None
-     - sci_hdr() -> np.ndarray | None
-     - sci_tlm() -> np.ndarray | None
-     - sci_tstamp() -> np.ndarray | None
-     - images() -> tuple | None
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
@@ -3241,21 +3371,48 @@ class SPXtlm:
      - from_lv0(flnames: Path | list[Path], *,
                 file_format: str, tlm_type: str | None = None,
                 debug: bool = False, dump: bool = False) -> None
-     - from_l1a(flname: Path, *, tlm_type: str | None = None) -> None
-     - set_selection(mode: str) -> None
+     - from_l1a(flname: Path, *, tlm_type: str | None = None,
+                mps_id: int | None = None) -> None
+     - get_selection(mode: str) -> dict
      - gen_l1a(config: dataclass, mode: str) -> None
-     - convert(key: str, tm_type: str = 'both') -> np.ndarray
-     - units(key: str) -> str
+
+
+    Examples
+    --------
+    Read data from SPEXone level-0 products
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_l0(list_l0_products, tlm_type='hk')
+    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
+    >>> spx.nomhk.events
+    # return detector images
+    >>> spx.from_l0(list_l0_products, tlm_type='sci')
+    >>> spx.science.images
+
+    Read data from a SPEXone level-1a product
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_l1a(l1a_product, tlm_type='sci', mps_is=47)
+    >>> spx.science.images
+
+    Read data from a PACE-HKT product
+
+    >>> from pyspex.tlm import SPXtlm
+    >>> spx = SPXtlm()
+    >>> spx.from_hkt(hkt_product)
+    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
+    >>> spx.nomhk.events
     """
 
     def __init__(self: SPXtlm) -> None:
-        """Initialize class SPXtlm."""
+        """Initialize SPXtlm object."""
         self.logger = logging.getLogger(__name__)
         self.file_list: list | None = None
         self._coverage: tuple[dt.datetime, dt.datetime] | None = None
-        self._hk = None
-        self._sci = None
-        self._selection = None
+        self.nomhk = HKtlm()
+        self.science = SCItlm()
 
     def set_coverage(
         self: SPXtlm, coverage: tuple[dt.datetime, dt.datetime] | None
@@ -3272,122 +3429,30 @@ class SPXtlm:
             )
 
     @property
-    def hk_hdr(self: SPXtlm) -> np.ndarray | None:
-        """Return CCSDS header data of telemetry packages @1Hz."""
-        if self._hk is None:
-            return None
-
-        if self._selection is None or self._selection:
-            return self._hk["hdr"]
-        return self._hk["hdr"][self._selection["hk_mask"]]
-
-    @property
-    def hk_tlm(self: SPXtlm) -> np.ndarray | None:
-        """Return telemetry packages @1Hz."""
-        if self._hk is None:
-            return None
-
-        if self._selection is None:
-            return self._hk["tlm"]
-        return self._hk["tlm"][self._selection["hk_mask"]]
-
-    @property
-    def hk_tstamp(self: SPXtlm) -> np.ndarray | None:
-        """Return timestamps of telemetry packages @1Hz."""
-        if self._hk is None:
-            return None
-
-        if self._selection is None:
-            return self._hk["tstamp"]
-        return self._hk["tstamp"][self._selection["hk_mask"]]
-
-    @property
-    def sci_hdr(self: SPXtlm) -> np.ndarray | None:
-        """Return CCSDS header data of Science telemetry packages."""
-        if self._sci is None:
-            return None
-
-        if self._selection is None:
-            return self._sci["hdr"]
-        return self._sci["hdr"][self._selection["sci_mask"]]
-
-    @property
-    def sci_tlm(self: SPXtlm) -> np.ndarray | None:
-        """Return Science telemetry packages."""
-        if self._sci is None:
-            return None
-
-        if self._selection is None:
-            return self._sci["tlm"]
-        return self._sci["tlm"][self._selection["sci_mask"]]
-
-    @property
-    def sci_tstamp(self: SPXtlm) -> np.ndarray | None:
-        """Return timestamps of Science telemetry packages."""
-        if self._sci is None:
-            return None
-
-        if self._selection is None:
-            return self._sci["tstamp"]
-        return self._sci["tstamp"][self._selection["sci_mask"]]
-
-    @property
-    def images(self: SPXtlm) -> tuple[np.ndarray, ...] | None:
-        """Return image-frames of Science telemetry packages."""
-        if self._sci is None or "images" not in self._sci:
-            return None
-
-        if self._selection is None:
-            return self._sci["images"]
-
-        images = ()
-        for ii, img in enumerate(self._sci["images"]):
-            if self._selection["sci_mask"][ii]:
-                images += (img,)
-        return images
-
-    def __get_valid_tstamps(self: SPXtlm) -> np.ndarray | None:
-        """Return valid timestamps from Science or NomHk packages."""
-        if self.sci_tstamp is None or np.all(self.sci_tstamp["tai_sec"] < TSTAMP_MIN):
-            indx = self.hk_tstamp > dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
-            return self.hk_tstamp[indx] if indx.size > 0 else None
-
-        indx = np.where(self.sci_tstamp["tai_sec"] > TSTAMP_MIN)[0]
-        return self.sci_tstamp["dt"][indx] if indx.size > 0 else None
-
-    @property
     def reference_date(self: SPXtlm) -> dt.datetime:
         """Return date of reference day (tzone aware)."""
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
+        if self._coverage is None:
             raise ValueError("no valid timestamps found")
 
-        return dt.datetime.combine(tstamp[0].date(), dt.time(0), tstamp[0].tzinfo)
-
-    @property
-    def time_coverage_start(self: SPXtlm) -> dt.datetime:
-        """Return a string for the time_coverage_start."""
-        if self._coverage is not None:
-            return self._coverage[0]
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
-            raise ValueError("no valid timestamps found")
-
-        return tstamp[0]
-
-    @property
-    def time_coverage_end(self: SPXtlm) -> dt.datetime:
-        """Return a string for the time_coverage_end."""
-        if self._coverage is not None:
-            return self._coverage[1]
-        tstamp = self.__get_valid_tstamps()
-        if tstamp is None:
-            raise ValueError("no valid timestamps found")
-
-        frame_period = (
-            __frame_period(self.sci_tlm[-1:])[0] if self.sci_tlm is not None else 1.0
+        return dt.datetime.combine(
+            self._coverage[0].date(), dt.time(0), dt.timezone.utc
         )
-        return tstamp[-1] + dt.timedelta(milliseconds=frame_period)
+
+    @property
+    def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
+        """Return time_coverage_start."""
+        if self._coverage is None:
+            return None
+
+        return self._coverage[0]
+
+    @property
+    def time_coverage_end(self: SPXtlm) -> dt.datetime | None:
+        """Return time_coverage_end."""
+        if self._coverage is None:
+            return None
+
+        return self._coverage[1]
 
     def from_hkt(
         self: SPXtlm,
@@ -3396,13 +3461,13 @@ class SPXtlm:
         instrument: str | None = None,
         dump: bool = False,
     ) -> None:
-        """Read telemetry data from a PACE HKT product.
+        """Read telemetry data from PACE HKT product(s).
 
         Parameters
         ----------
         flnames :  Path | list[Path]
-           list of PACE_HKT filenames (netCDF4 format)
-        instrument :  {'spx', 'sc', 'oci', 'harp'}, optional
+           sorted list of PACE_HKT filenames (netCDF4 format)
+        instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
@@ -3415,7 +3480,8 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
-        ccsds_hk: tuple[np.ndarray] | tuple = ()
+        self.set_coverage(None)
+        ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
         for name in flnames:
             hkt = HKTio(name)
             self.set_coverage(hkt.coverage())
@@ -3431,7 +3497,7 @@ class SPXtlm:
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
-        self._hk = extract_l0_hk(ccsds_hk, epoch)
+        self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
     def from_lv0(
         self: SPXtlm,
@@ -3442,17 +3508,17 @@ class SPXtlm:
         debug: bool = False,
         dump: bool = False,
     ) -> None:
-        """Read telemetry data from SPEXone Level-0 product.
+        """Read telemetry data from SPEXone level-0 product(s).
 
         Parameters
         ----------
         flnames :  Path | list[Path]
-           list of CCSDS filenames
+           sorted list of CCSDS filenames
         file_format : {'raw', 'st3', 'dsb'}
            type of CCSDS data
-        tlm_type :  {'hk', 'sci', 'all'}, optional
-           select type of telemetry packages.
-           Note that we allways read the complete Level-0 producs.
+        tlm_type :  {'hk', 'sci', 'all'}, default='all'
+           select type of telemetry packages
+           Note that we allways read the complete level-0 products.
         debug : bool, default=False
            run in debug mode, read only packages heades
         dump :  bool, default=False
@@ -3469,8 +3535,6 @@ class SPXtlm:
             raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
 
         self.file_list = flnames
-        self._hk = None
-        self._sci = None
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
@@ -3488,99 +3552,105 @@ class SPXtlm:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
         # collect Science telemetry data
+        tstamp = None
+        self.set_coverage(None)
         if tlm_type != "hk":
-            self._sci = extract_l0_sci(ccsds_sci, epoch)
+            self.science.extract_l0_sci(ccsds_sci, epoch)
+            _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
+            if np.any(_mm):
+                tstamp = self.science.tstamp["dt"][_mm]
+                ii = int(np.nonzero(_mm)[0][-1])
+                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                self.set_coverage((tstamp[0], tstamp[-1] + intg))
         del ccsds_sci
 
-        # collected NomHk telemetry data
+        # collected NomHK telemetry data
         if tlm_type != "sci":
-            self._hk = extract_l0_hk(ccsds_hk, epoch)
+            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+            self.nomhk.extract_l0_hk(ccsds_hk, epoch)
+            if tstamp is None:
+                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
-    def from_l1a(self: SPXtlm, flname: Path, *, tlm_type: str | None = None) -> None:
-        """Read telemetry data from SPEXone Level-1A product.
+    def from_l1a(
+        self: SPXtlm,
+        flname: Path,
+        *,
+        tlm_type: str | None = None,
+        mps_id: int | None = None,
+    ) -> None:
+        """Read telemetry data from SPEXone level-1A product.
 
         Parameters
         ----------
         flname :  Path
-           name of one SPEXone Level-1A product
-        tlm_type :  {'hk', 'sci', 'all'}, optional
+           name of one SPEXone level-1A product
+        tlm_type :  {'hk', 'sci', 'all'}, default='all'
            select type of telemetry packages
+        mps_id :  int, optional
+           select on MPS ID
         """
         if tlm_type is None:
             tlm_type = "all"
         elif tlm_type not in ["hk", "sci", "all"]:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
+        tstamp = None
         self.file_list = [flname]
-        self._hk = None
-        self._sci = None
+        self.set_coverage(None)
         with h5py.File(flname) as fid:
+            # collect Science telemetry data
             if tlm_type != "hk":
-                dset = fid["/image_attributes/icu_time_sec"]
-                seconds = dset[:]
-                try:
-                    # pylint: disable=no-member
-                    _ = dset.attrs["units"].index(b"1958")
-                except ValueError:
-                    epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
-                else:
-                    epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
-                    epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
+                self.science.extract_l1a_sci(fid, mps_id)
+                if self.science.tstamp is not None:
+                    _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
+                    if np.any(_mm):
+                        tstamp = self.science.tstamp["dt"][_mm]
+                        ii = int(np.nonzero(_mm)[0][-1])
+                        intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                        self.set_coverage((tstamp[0], tstamp[-1] + intg))
 
-                subsec = fid["/image_attributes/icu_time_subsec"][:]
-                self._sci = {
-                    "tlm": fid["/science_data/detector_telemetry"][:],
-                    "images": fid["/science_data/detector_images"][:],
-                    "tstamp": np.empty(len(seconds), dtype=TSTAMP_TYPE),
-                }
-                self._sci["tstamp"]["tai_sec"] = seconds
-                self._sci["tstamp"]["sub_sec"] = subsec
-                _dt = []
-                for ii, sec in enumerate(seconds):
-                    _dt.append(
-                        epoch
-                        + dt.timedelta(
-                            seconds=int(sec),
-                            milliseconds=-__readout_offset(self._sci["tlm"][0]),
-                            microseconds=subsec2musec(subsec[ii]),
-                        )
-                    )
-                self._sci["tstamp"]["dt"] = _dt
-
+            # collected NomHk telemetry data
             if tlm_type != "sci":
-                self._hk = {
-                    "tlm": fid["/engineering_data/NomHK_telemetry"][:],
-                    "tstamp": [],
-                }
-                dset = fid["/engineering_data/HK_tlm_time"]
-                # pylint: disable=no-member
-                ref_date = dset.attrs["units"].decode()[14:] + "+00:00"
-                epoch = dt.datetime.fromisoformat(ref_date)
-                for sec in dset[:]:
-                    self._hk["tstamp"].append(epoch + dt.timedelta(seconds=sec))
+                dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+                self.nomhk.extract_l1a_hk(fid, mps_id)
+                if tstamp is not None:
+                    return
 
-    def set_selection(self: SPXtlm, mode: str) -> None:
-        """Obtain image and housekeeping dimensions.
+                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                if tstamp:
+                    self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
+
+    def get_selection(self: SPXtlm, mode: str) -> dict | None:
+        """Obtain image and housekeeping dimensions given data-mode.
 
         Parameters
         ----------
-        mode :  {'full', 'binned', 'all'}
+        mode :  {'all', 'binned', 'full'}
+           Select Science packages with full-frame images or binned images
+
+        Returns
+        -------
+        dict {'sci_mask': np.ndarray | [],
+              'hk_mask': np.ndarray,
+              'dims': {'number_of_images': int,
+                       'samples_per_image': int,
+                       'hk_packets': int}
+        }
         """
-        self._selection = None
         if mode == "full":
-            sci_mask = (
-                []
-                if self.sci_tlm is None
-                else self.sci_tlm["IMRLEN"] == FULLFRAME_BYTES
-            )
-            if np.sum(sci_mask) == 0:
-                return
+            if (
+                self.science.tlm is None
+                or np.sum(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
+            ):
+                return None
 
-            mps_list = np.unique(self.sci_tlm["MPS_ID"][sci_mask])
+            sci_mask = self.science.tlm["IMRLEN"] == FULLFRAME_BYTES
+            mps_list = np.unique(self.science.tlm["MPS_ID"][sci_mask])
             self.logger.debug("unique Diagnostic MPS: %s", mps_list)
-            hk_mask = np.in1d(self.hk_tlm["MPS_ID"], mps_list)
+            hk_mask = np.in1d(self.nomhk.tlm["MPS_ID"], mps_list)
 
-            self._selection = {
+            return {
                 "sci_mask": sci_mask,
                 "hk_mask": hk_mask,
                 "dims": {
@@ -3589,60 +3659,61 @@ class SPXtlm:
                     "hk_packets": np.sum(hk_mask),
                 },
             }
-            return
 
         if mode == "binned":
-            sci_mask = (
-                [] if self.sci_tlm is None else self.sci_tlm["IMRLEN"] < FULLFRAME_BYTES
-            )
-            if np.sum(sci_mask) == 0:
-                return
+            if (
+                self.science.tlm is None
+                or np.sum(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
+            ):
+                return None
 
-            mps_list = np.unique(self.sci_tlm["MPS_ID"][sci_mask])
+            sci_mask = self.science.tlm["IMRLEN"] < FULLFRAME_BYTES
+            mps_list = np.unique(self.science.tlm["MPS_ID"][sci_mask])
             self.logger.debug("unique Science MPS: %s", mps_list)
-            hk_mask = np.in1d(self.hk_tlm["MPS_ID"], mps_list)
-            self._selection = {
+            hk_mask = np.in1d(self.nomhk.tlm["MPS_ID"], mps_list)
+            return {
                 "sci_mask": sci_mask,
                 "hk_mask": hk_mask,
                 "dims": {
                     "number_of_images": np.sum(sci_mask),
                     "samples_per_image": np.max(
-                        [len(self.images[ii]) for ii in sci_mask.nonzero()[0]]
+                        [self.science.images[ii].size for ii in sci_mask.nonzero()[0]]
                     ),
                     "hk_packets": np.sum(hk_mask),
                 },
             }
-            return
 
-        if mode == "all":
-            nr_hk = 0 if self.hk_hdr is None else len(self.hk_hdr)
-            nr_sci = 0 if self.sci_hdr is None else len(self.sci_hdr)
-            self._selection = {
-                "hk_mask": np.full(nr_hk, True),
-                "sci_mask": np.full(nr_sci, True),
-                "dims": {
-                    "number_of_images": nr_sci,
-                    "samples_per_image": DET_CONSTS["dimRow"]
+        # mode == 'all':
+        nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
+        nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
+        return {
+            "hk_mask": np.full(nr_hk, True),
+            "sci_mask": np.full(nr_sci, True),
+            "dims": {
+                "number_of_images": nr_sci,
+                "samples_per_image": (
+                    DET_CONSTS["dimRow"]
                     if nr_sci == 0
-                    else np.max([len(x) for x in self.images]),
-                    "hk_packets": nr_hk,
-                },
-            }
+                    else np.max([x.size for x in self.science.images])
+                ),
+                "hk_packets": nr_hk,
+            },
+        }
 
     def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
-        """Return filename of Level-1A product.
+        """Return filename of level-1A product.
 
         Parameters
         ----------
         config :  dataclass
-           Settings for the L0->l1A processing.
-        mode :  {'all', 'full', 'binned'}
-           Select Science packages with full-frame image or binned images
+           Settings for the L0->l1A processing
+        mode :  {'all', 'binned', 'full'}
+           Select Science packages with full-frame images or binned images
 
         Returns
         -------
         Path
-           Filename of Level-1A product.
+           Filename of level-1A product.
 
         Notes
         -----
@@ -3669,6 +3740,7 @@ class SPXtlm:
         if config.outfile:
             return config.outdir / config.outfile
 
+        # +++++ in-flight product-name convention +++++
         if config.l0_format != "raw":
             if config.eclipse is None:
                 subtype = "_OCAL"
@@ -3687,7 +3759,7 @@ class SPXtlm:
                 f'.L1A{prod_ver}.nc'
             )
 
-        # OCAL product name
+        # +++++ OCAL product-name convention +++++
         # determine measurement identifier
         msm_id = config.l0_list[0].stem
         try:
@@ -3699,38 +3771,61 @@ class SPXtlm:
         else:
             msm_id = msm_id[:-22] + new_date
 
-        return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_V{pyspex_version()}.nc"
+        return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version()}.nc"
 
     def gen_l1a(self: SPXtlm, config: dataclass, mode: str) -> None:
-        """Generate a SPEXone Level-1A product."""
-        self.set_selection(mode)
-        if self._selection is None:
+        """Generate a SPEXone level-1A product.
+
+        Parameters
+        ----------
+        config :  dataclass
+           Settings for the L0->L1A processing
+        mode :  {'all', 'binned', 'full'}
+           Select Science packages with full-frame images or binned images
+        """
+        selection = self.get_selection(mode)
+        if selection is None:
             return
+
+        # set time-coverage range
+        coverage = None
+        if np.sum(selection["sci_mask"]) > 0:
+            _mm = selection["sci_mask"] & self.science.tstamp["tai_sec"] > TSTAMP_MIN
+            if np.any(_mm):
+                tstamp = self.science.tstamp["dt"][_mm]
+                ii = int(np.nonzero(_mm)[0][-1])
+                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                coverage = (tstamp[0], tstamp[-1] + intg)
+
+        if coverage is None:
+            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+            tstamp = [
+                self.nomhk.tstamp[ii] for ii in np.nonzero(selection["hk_mask"])[0]
+            ]
+            tstamp = [x for x in tstamp if x > dt_min]
+            coverage = (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1))
 
         l1a_file = self.l1a_file(config, mode)
         ref_date = self.reference_date
         with L1Aio(
-            l1a_file, ref_date, self._selection["dims"], compression=config.compression
+            l1a_file, ref_date, selection["dims"], compression=config.compression
         ) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != "raw")
-            if self.hk_tlm is not None:
-                l1a.set_attr("icu_sw_version", f'0x{self.hk_tlm["ICUSWVER"][0]:x}')
+            l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
             l1a.set_attr(
-                "time_coverage_start",
-                self.time_coverage_start.isoformat(timespec="milliseconds"),
+                "time_coverage_start", coverage[0].isoformat(timespec="milliseconds")
             )
             l1a.set_attr(
-                "time_coverage_end",
-                self.time_coverage_end.isoformat(timespec="milliseconds"),
+                "time_coverage_end", coverage[1].isoformat(timespec="milliseconds")
             )
             l1a.set_attr("input_files", [x.name for x in config.l0_list])
-            self.logger.debug("(1) initialized Level-1A product")
+            self.logger.debug("(1) initialized level-1A product")
 
-            self._fill_engineering(l1a)
+            self._fill_engineering(l1a, selection["hk_mask"])
             self.logger.debug("(2) added engineering data")
-            self._fill_science(l1a)
+            self._fill_science(l1a, selection["sci_mask"])
             self.logger.debug("(3) added science data")
-            self._fill_image_attrs(l1a, config.l0_format)
+            self._fill_image_attrs(l1a, config.l0_format, selection["sci_mask"])
             self.logger.debug("(4) added image attributes")
 
         # add processor_configuration
@@ -3747,49 +3842,60 @@ class SPXtlm:
 
         self.logger.info("successfully generated: %s", l1a_file.name)
 
-    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
+    def _fill_engineering(self: SPXtlm, l1a: L1Aio, hk_mask: np.ndarray) -> None:
         """Fill datasets in group '/engineering_data'."""
-        if self.hk_tlm is None:
+        if np.sum(hk_mask) == 0:
             return
-        l1a.set_dset("/engineering_data/NomHK_telemetry", self.hk_tlm)
+
+        l1a.set_dset("/engineering_data/NomHK_telemetry", self.nomhk.tlm[hk_mask])
         ref_date = self.reference_date
         l1a.set_dset(
             "/engineering_data/HK_tlm_time",
-            [(x - ref_date).total_seconds() for x in self.hk_tstamp],
+            [
+                (x - ref_date).total_seconds()
+                for ii, x in enumerate(self.nomhk.tstamp)
+                if hk_mask[ii]
+            ],
         )
         l1a.set_dset(
-            "/engineering_data/temp_detector", self.convert("TS1_DEM_N_T", tm_type="hk")
+            "/engineering_data/temp_detector",
+            self.nomhk.convert("TS1_DEM_N_T")[hk_mask],
         )
         l1a.set_dset(
             "/engineering_data/temp_housing",
-            self.convert("TS2_HOUSING_N_T", tm_type="hk"),
+            self.nomhk.convert("TS2_HOUSING_N_T")[hk_mask],
         )
         l1a.set_dset(
             "/engineering_data/temp_radiator",
-            self.convert("TS3_RADIATOR_N_T", tm_type="hk"),
+            self.nomhk.convert("TS3_RADIATOR_N_T")[hk_mask],
         )
 
-    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio, sci_mask: np.ndarray) -> None:
         """Fill datasets in group '/science_data'."""
-        if self.sci_tlm is None:
+        if np.sum(sci_mask) == 0:
             return
 
-        img_sz = [img.size for img in self.images]
+        img_list = [img for ii, img in enumerate(self.science.images) if sci_mask[ii]]
+        img_sz = [img.size for img in img_list]
         if len(np.unique(img_sz)) != 1:
             images = np.zeros((len(img_sz), np.max(img_sz)), dtype="u2")
-            for ii, img in enumerate(self.images):
+            for ii, img in enumerate(img_list):
                 images[ii, : len(img)] = img
         else:
-            images = np.vstack(self.images)
+            images = np.vstack(img_list)
         l1a.set_dset("/science_data/detector_images", images)
-        l1a.set_dset("/science_data/detector_telemetry", self.sci_tlm)
+        l1a.set_dset("/science_data/detector_telemetry", self.science.tlm[sci_mask])
 
-    def _fill_image_attrs(self: SPXtlm, l1a: L1Aio, lv0_format: str) -> None:
+    def _fill_image_attrs(
+        self: SPXtlm, l1a: L1Aio, lv0_format: str, sci_mask: np.ndarray
+    ) -> None:
         """Fill datasets in group '/image_attributes'."""
-        if self.sci_tlm is None:
+        if np.sum(sci_mask) == 0:
             return
 
-        l1a.set_dset("/image_attributes/icu_time_sec", self.sci_tstamp["tai_sec"])
+        l1a.set_dset(
+            "/image_attributes/icu_time_sec", self.science.tstamp["tai_sec"][sci_mask]
+        )
         # modify attribute units for non-DSB products
         if lv0_format != "dsb":
             # timestamp of 2020-01-01T00:00:00+00:00
@@ -3809,67 +3915,36 @@ class SPXtlm:
                 "seconds since 1970-01-01 00:00:00",
                 ds_name="/image_attributes/icu_time_sec",
             )
-        l1a.set_dset("/image_attributes/icu_time_subsec", self.sci_tstamp["sub_sec"])
+        l1a.set_dset(
+            "/image_attributes/icu_time_subsec",
+            self.science.tstamp["sub_sec"][sci_mask],
+        )
         ref_date = self.reference_date
         l1a.set_dset(
             "/image_attributes/image_time",
-            [(x - ref_date).total_seconds() for x in self.sci_tstamp["dt"]],
+            [
+                (x - ref_date).total_seconds()
+                for x in self.science.tstamp["dt"][sci_mask]
+            ],
         )
         l1a.set_dset(
             "/image_attributes/image_ID",
-            np.bitwise_and(self.sci_hdr["sequence"], 0x3FFF),
-        )
-        l1a.set_dset("/image_attributes/binning_table", __binning_table(self.sci_tlm))
-        l1a.set_dset("/image_attributes/digital_offset", __digital_offset(self.sci_tlm))
-        l1a.set_dset(
-            "/image_attributes/exposure_time", __exposure_time(self.sci_tlm) / 1000
+            np.bitwise_and(self.science.hdr["sequence"][sci_mask], 0x3FFF),
         )
         l1a.set_dset(
-            "/image_attributes/nr_coadditions", self.sci_tlm["REG_NCOADDFRAMES"]
+            "/image_attributes/binning_table", self.science.binning_table()[sci_mask]
         )
-
-    def convert(self: SPXtlm, key: str, tm_type: str = "both") -> np.ndarray:
-        """Convert telemetry parameter to physical units.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-        tm_type :  {'hk', 'sci', 'both'}, default 'both'
-           Default is to check if key is present in sci_tlm else hk_tlm
-
-        Returns
-        -------
-        np.ndarray
-        """
-        if tm_type == "hk":
-            tlm = self.hk_tlm
-        elif tm_type == "sci":
-            tlm = self.sci_tlm
-        else:
-            tlm = self.sci_tlm if self.sci_tlm is not None else self.hk_tlm
-        if key.upper() not in tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {key.upper()} not found" f" in {tlm.dtype.names}"
-            )
-
-        raw_data = np.array([x[key.upper()] for x in tlm])
-        return convert_hk(key.upper(), raw_data)
-
-    @staticmethod
-    def units(key: str) -> str:
-        """Obtain units of converted telemetry parameter.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-
-        Returns
-        -------
-        str
-        """
-        return UNITS_DICT.get(key, "1")
+        l1a.set_dset(
+            "/image_attributes/digital_offset", self.science.digital_offset()[sci_mask]
+        )
+        l1a.set_dset(
+            "/image_attributes/exposure_time",
+            self.science.exposure_time()[sci_mask] / 1000,
+        )
+        l1a.set_dset(
+            "/image_attributes/nr_coadditions",
+            self.science.tlm["REG_NCOADDFRAMES"][sci_mask],
+        )
 
 
 # --------------------------------------------------
@@ -3887,7 +3962,7 @@ def main() -> int:
     # parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
     logging.getLogger().setLevel(config.verbose)  # first, set the root logger
-    logger = logging.getLogger("l1agen_spex.py")  # then initiate a descendant
+    logger = logging.getLogger("pyspex.gen_l1a")  # then initiate a descendant
     logger.debug("%s", config)
 
     # check input files (SEPXone level-0)
@@ -3948,7 +4023,7 @@ def main() -> int:
         error_code = 132
     except Exception as exc:
         # raise RuntimeError from exc
-        logger.error('Unexpected exception occurred with "%s".', exc)
+        logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 
     return warn_code if error_code == 0 else error_code
