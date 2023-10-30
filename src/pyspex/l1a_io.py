@@ -24,7 +24,7 @@ from .lib.l1a_def import init_l1a
 from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    import datetime as dt
 
 
 # - global parameters -------------------
@@ -105,7 +105,7 @@ class L1Aio:
     ----------
     product :  str
        Name of the SPEXone level-1A product
-    ref_date :  datetime.datetime
+    ref_date :  dt.datetime
        Date of the first detector image
     dims :  dict
        Dimensions of the datasets, default values::
@@ -140,7 +140,7 @@ class L1Aio:
     def __init__(
         self: L1Aio,
         product: Path | str,
-        ref_date: datetime,
+        ref_date: dt.datetime,
         dims: dict,
         compression: bool = False,
     ) -> None:
@@ -188,7 +188,7 @@ class L1Aio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     @property
-    def epoch(self: L1Aio) -> datetime:
+    def epoch(self: L1Aio) -> dt.datetime:
         """Provide epoch for SPEXone."""
         return self.__epoch
 

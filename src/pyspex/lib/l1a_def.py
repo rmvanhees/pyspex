@@ -23,14 +23,14 @@ from netCDF4 import Dataset, Variable
 from .tmtc_def import tmtc_dtype
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
 
 # - global parameters ------------------------------
 ORBIT_DURATION = 5904  # seconds
 
 
 # - local functions --------------------------------
-def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
+def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
     """
     Add CF attributes to a dataset holding 'seconds of day'.
 
@@ -38,14 +38,14 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     ----------
     dset : Variable
        NetCDF4 variable containing a timestamp as seconds since reference date
-    ref_date : datetime.datetime
+    ref_date : dt.datetime
        Reference date
 
     Examples
     --------
     Update the attributes of variable 'time':
 
-      ref_date = datetime.datetime(2022, 3, 21)
+      ref_date = dt.datetime(2022, 3, 21)
       dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                 fill_value=-32767)
       dset.long_name = "image time"
@@ -76,7 +76,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: datetime.datetime) -> None:
     dset.valid_max = 86400 + ORBIT_DURATION
 
 
-def image_attributes(rootgrp: Dataset, ref_date: datetime.datetime) -> None:
+def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     """Define group /image_attributes and its datasets."""
     sgrp = rootgrp.createGroup("/image_attributes")
     dset = sgrp.createVariable("icu_time_sec", "u4", ("number_of_images",))
@@ -171,7 +171,7 @@ def science_data(
     dset.comment = "A subset of MPS and housekeeping parameters."
 
 
-def engineering_data(rootgrp: Dataset, ref_date: datetime.datetime) -> None:
+def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     """Define group /engineering_data and its datasets."""
     sgrp = rootgrp.createGroup("/engineering_data")
     dset = sgrp.createVariable("HK_tlm_time", "f8", ("hk_packets",), fill_value=-32767)
@@ -208,7 +208,7 @@ def engineering_data(rootgrp: Dataset, ref_date: datetime.datetime) -> None:
 
 # - main function ----------------------------------
 def init_l1a(
-    l1a_flname: str, ref_date: datetime.datetime, dims: dict, compression: bool = False
+    l1a_flname: str, ref_date: dt.datetime, dims: dict, compression: bool = False
 ) -> Dataset:
     """
     Create an empty SPEXone Level-1A product (on-ground or in-flight).
@@ -217,7 +217,7 @@ def init_l1a(
     ----------
     l1a_flname : str
        Name of L1A product
-    ref_date :  datetime.datetime
+    ref_date :  dt.datetime
        Date of the first detector image
     dims :  dict
        Provide length of the Level-1A dimensions. Default values::
