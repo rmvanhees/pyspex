@@ -394,6 +394,24 @@ class SCItlm:
         # read image data
         self.images = fid["/science_data/detector_images"][data_sel, :]
 
+    def adc_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
+        """Return ADC gain [Volt]."""
+        if indx is None:
+            indx = np.s_[:]
+        return self.tlm['DET_ADCGAIN'][indx]
+
+    def pga_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
+        """Return PGA gain [Volt]."""
+        if indx is None:
+            indx = np.s_[:]
+
+        # need first bit of address 121
+        reg_pgagainfactor = self.tlm['DET_BLACKCOL'][indx] & 0x1
+
+        reg_pgagain = self.tlm['DET_PGAGAIN'][indx]
+
+        return ((1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor)
+
     def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
         """Return exposure time [ms]."""
         if indx is None:
@@ -435,7 +453,7 @@ class SCItlm:
     def binning_table(self: SCItlm) -> np.ndarray:
         """Return binning table identifier (zero for full-frame images)."""
         bin_tbl = np.zeros(len(self.tlm), dtype="i1")
-        _mm = self.tlm["IMRLEN"] == FULLFRAME_BYTES
+        _mm = (self.tlm["IMRLEN"] == FULLFRAME_BYTES) | (self.tlm["IMRLEN"] == 0)
         if np.sum(_mm) == len(self.tlm):
             return bin_tbl
 
