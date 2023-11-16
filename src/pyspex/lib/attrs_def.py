@@ -70,7 +70,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
         "cdl_version_date": "2021-09-10",
         "product_name": None,
-        "processing_version": "V1.0",
+        "processor_version": "1.0",
         "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
             timespec="milliseconds"
         ),
