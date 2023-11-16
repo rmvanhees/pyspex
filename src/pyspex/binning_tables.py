@@ -127,12 +127,12 @@ class BinningTables:
             fid.createDimension("row", 1024)
             fid.createDimension("column", 1024)
 
-    def search(self: BinningTables, coverage_start: str | None = None) -> None:
+    def search(self: BinningTables, coverage_start: datetime | None = None) -> None:
         """Search CKD file with binning tables.
 
         Parameters
         ----------
-        coverage_start : str, default=None
+        coverage_start : datetime, default=None
            time_coverage_start or start of the measurement (UTC)
 
         Raises
@@ -151,12 +151,9 @@ class BinningTables:
             return
 
         # use binning-table CKD based on coverage_start
-        coverage_date = datetime.fromisoformat(coverage_start)
         for ckd_fl in sorted(ckd_files, reverse=True):
-            validity_date = datetime.strptime(
-                ckd_fl.split("_")[4] + "+00:00", "%Y%m%dT%H%M%S%z"
-            )
-            if validity_date < coverage_date:
+            validity_date = datetime.fromisoformat(ckd_fl.split("_")[4] + "+00:00")
+            if validity_date < coverage_start:
                 self.ckd_file = ckd_fl
                 break
         else:
