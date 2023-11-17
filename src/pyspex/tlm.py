@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -26,10 +26,9 @@ from netCDF4 import Dataset
 from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
 from .l1a_io import L1Aio
 from .lib import pyspex_version
-from .lib.ccsds_hdr import CCSDShdr
+from .lib.hk_tlm import HKtlm
 from .lib.leap_sec import get_leap_seconds
-from .lib.tlm_utils import convert_hk
-from .lib.tmtc_def import tmtc_dtype
+from .lib.sci_tlm import DET_CONSTS, SCItlm
 from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 
 if TYPE_CHECKING:
@@ -40,45 +39,11 @@ if TYPE_CHECKING:
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.tlm")
 
-TSTAMP_MIN = 1561939200  # 2019-07-01T00:00:00+00:00
-TSTAMP_TYPE = np.dtype([("tai_sec", int), ("sub_sec", int), ("dt", "O")])
-
-DET_CONSTS = {
-    "dimRow": 2048,
-    "dimColumn": 2048,
-    "dimFullFrame": 2048 * 2048,
-    "DEM_frequency": 10,  # [MHz]
-    "FTI_science": 1000 / 15,  # [ms]
-    "FTI_diagnostic": 240.0,  # [ms]
-    "FTI_margin": 212.4,  # [ms]
-    "overheadTime": 0.4644,  # [ms]
-    "FOT_length": 20,
-}
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
+TSTAMP_MIN = 1561939200  # 2019-07-01T00:00:00+00:00
 
 
 # - helper functions ------------------------
-def subsec2musec(sub_sec: int) -> int:
-    """Return subsec as microseconds."""
-    return 100 * int(sub_sec / 65536 * 10000)
-
-
-def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
-    """Try to slice (faster), instead of boolean indexing (slow)."""
-    if np.all(~mask):
-        return None
-    if np.all(mask):
-        return np.s_[:]  # read everything
-
-    indx = np.nonzero(mask)[0]
-    if np.all(np.diff(indx) == 1):
-        # perform start-stop indexing
-        return np.s_[indx[0] : indx[-1] + 1]
-
-    # perform boolean indexing
-    return mask
-
-
 def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     """Add PACE navigation information from PACE_HKT products.
 
@@ -123,372 +88,6 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
         )
 
 
-# - class SCItlm ----------------------------
-class HKtlm:
-    """Class to handle SPEXone housekeeping telemetry packets."""
-
-    def __init__(self: HKtlm) -> None:
-        """Initialize HKtlm object."""
-        self.hdr: np.ndarray | None = None
-        self.tlm: np.ndarray | None = None
-        self.tstamp: list[dt.datetime, ...] | list = []
-        self.events: list[np.ndarray, ...] | list = []
-
-    def init_attrs(self: HKtlm) -> None:
-        """Initialize class attributes."""
-        self.hdr = None
-        self.tlm = None
-        self.tstamp = []
-        self.events = []
-
-    def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
-        """Extract data from SPEXone level-0 housekeeping telemetry packets.
-
-        Parameters
-        ----------
-        ccsds_hk :  tuple[np.ndarray, ...]
-           SPEXone level-0 housekeeping telemetry packets
-        epoch :  dt.datetime
-           Epoch of the telemetry packets (1958 or 1970)
-        """
-        self.init_attrs()
-        if not ccsds_hk:
-            return
-
-        self.hdr = np.empty(len(ccsds_hk), dtype=ccsds_hk[0]["hdr"].dtype)
-        self.tlm = np.empty(len(ccsds_hk), dtype=tmtc_dtype(0x320))
-        ii = 0
-        for buf in ccsds_hk:
-            ccsds_hdr = CCSDShdr(buf["hdr"][0])
-
-            # Catch TcAccept, TcReject, TcExecute, TcFail and EventRp as events
-            if ccsds_hdr.apid != 0x320 or buf["hdr"]["tai_sec"] < len(ccsds_hk):
-                if 0x331 <= ccsds_hdr.apid <= 0x335:
-                    self.events.append(buf)
-                continue
-
-            self.hdr[ii] = buf["hdr"]
-            self.tlm[ii] = buf["hk"]
-            self.tstamp.append(
-                epoch
-                + dt.timedelta(
-                    seconds=int(buf["hdr"]["tai_sec"][0]),
-                    microseconds=subsec2musec(buf["hdr"]["sub_sec"][0]),
-                )
-            )
-            ii += 1
-
-        self.hdr = self.hdr[:ii]
-        self.tlm = self.tlm[:ii]
-
-        # These values are originally stored in little-endian, but
-        # Numpy does not accept a mix of little & big-endian values
-        # in a structured array.
-        self.tlm["HTR1_CALCPVAL"][:] = self.tlm["HTR1_CALCPVAL"].byteswap()
-        self.tlm["HTR2_CALCPVAL"][:] = self.tlm["HTR2_CALCPVAL"].byteswap()
-        self.tlm["HTR3_CALCPVAL"][:] = self.tlm["HTR3_CALCPVAL"].byteswap()
-        self.tlm["HTR4_CALCPVAL"][:] = self.tlm["HTR4_CALCPVAL"].byteswap()
-        self.tlm["HTR1_CALCIVAL"][:] = self.tlm["HTR1_CALCIVAL"].byteswap()
-        self.tlm["HTR2_CALCIVAL"][:] = self.tlm["HTR2_CALCIVAL"].byteswap()
-        self.tlm["HTR3_CALCIVAL"][:] = self.tlm["HTR3_CALCIVAL"].byteswap()
-        self.tlm["HTR4_CALCIVAL"][:] = self.tlm["HTR4_CALCIVAL"].byteswap()
-
-    def extract_l1a_hk(self: HKtlm, fid: h5py.File, mps_id: int | None) -> None:
-        """Extract data from SPEXone level-1a housekeeping telemetry packets.
-
-        Parameters
-        ----------
-        fid :  h5py.File
-           File pointer to a SPEXone level-1a product
-        mps_id : int, optional
-           Select data performed with MPS equals 'mps_id'
-        """
-        self.init_attrs()
-
-        # pylint: disable=no-member
-        dset = fid["/engineering_data/NomHK_telemetry"]
-        if mps_id is None:
-            data_sel = np.s_[:]
-        else:
-            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
-            if data_sel is None:
-                return
-        self.tlm = dset[data_sel]
-
-        dset = fid["/engineering_data/HK_tlm_time"]
-        ref_date = dset.attrs["units"].decode()[14:] + "+00:00"
-        epoch = dt.datetime.fromisoformat(ref_date)
-        for sec in dset[data_sel]:
-            self.tstamp.append(epoch + dt.timedelta(seconds=sec))
-
-    def convert(self: HKtlm, key: str) -> np.ndarray:
-        """Convert telemetry parameter to physical units.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-
-        Returns
-        -------
-        np.ndarray
-        """
-        if key.upper() not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
-            )
-
-        raw_data = np.array([x[key.upper()] for x in self.tlm])
-        return convert_hk(key.upper(), raw_data)
-
-
-# - class SCItlm ----------------------------
-class SCItlm:
-    """Class to handle SPEXone Science-telemetry packets."""
-
-    def __init__(self: SCItlm) -> None:
-        """Initialize SCItlm object."""
-        self.hdr: np.ndarray | None = None
-        self.tlm: np.ndarray | None = None
-        self.tstamp: np.ndarray | None = None
-        self.images: tuple[np.ndarray, ...] | tuple[()] = ()
-
-    def init_attrs(self: SCItlm) -> None:
-        """Initialize class attributes."""
-        self.hdr = None
-        self.tlm = None
-        self.tstamp = None
-        self.images = ()
-
-    def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> None:
-        """Extract SPEXone level-0 Science-telemetry data.
-
-        Parameters
-        ----------
-        ccsds_sci :  tuple[np.ndarray, ...]
-           SPEXone level-0 Science-telemetry packets
-        epoch :  dt.datetime
-           Epoch of the telemetry packets (1958 or 1970)
-        """
-        self.init_attrs()
-        if not ccsds_sci:
-            return
-
-        n_frames = 0
-        hdr_dtype = None
-        hk_dtype = None
-        found_start_first = False
-        for buf in ccsds_sci:
-            ccsds_hdr = CCSDShdr(buf["hdr"][0])
-            if ccsds_hdr.grouping_flag == 1:
-                found_start_first = True
-                if n_frames == 0:
-                    hdr_dtype = buf["hdr"].dtype
-                    hk_dtype = buf["hk"].dtype
-                    continue
-
-            if not found_start_first:
-                continue
-
-            if ccsds_hdr.grouping_flag == 2:
-                found_start_first = False
-                n_frames += 1
-
-        # do we have any complete detector images (Note ccsds_sci not empty!)?
-        if n_frames == 0:
-            module_logger.warning("no valid Science package found")
-            return
-
-        # allocate memory
-        self.hdr = np.empty(n_frames, dtype=hdr_dtype)
-        self.tlm = np.empty(n_frames, dtype=hk_dtype)
-        self.tstamp = np.empty(n_frames, dtype=TSTAMP_TYPE)
-
-        # extract data from ccsds_sci
-        ii = 0
-        img = None
-        found_start_first = False
-        for buf in ccsds_sci:
-            ccsds_hdr = CCSDShdr(buf["hdr"][0])
-            if ccsds_hdr.grouping_flag == 1:
-                found_start_first = True
-                self.hdr[ii] = buf["hdr"]
-                self.tlm[ii] = buf["hk"]
-                self.tstamp[ii] = (
-                    buf["icu_tm"]["tai_sec"][0],
-                    buf["icu_tm"]["sub_sec"][0],
-                    epoch
-                    + dt.timedelta(
-                        seconds=int(buf["icu_tm"]["tai_sec"][0]),
-                        microseconds=subsec2musec(buf["icu_tm"]["sub_sec"][0]),
-                    ),
-                )
-                img = (buf["frame"][0],)
-                continue
-
-            if not found_start_first:
-                continue
-
-            if ccsds_hdr.grouping_flag == 0:
-                img += (buf["frame"][0],)
-            elif ccsds_hdr.grouping_flag == 2:
-                found_start_first = False
-                img += (buf["frame"][0],)
-                self.images += (np.concatenate(img),)
-                ii += 1
-                if ii == n_frames:
-                    break
-
-    def extract_l1a_sci(self: SCItlm, fid: h5py.File, mps_id: int | None) -> None:
-        """Extract data from SPEXone level-1a Science-telemetry packets.
-
-        Parameters
-        ----------
-        fid :  h5py.File
-           File pointer to a SPEXone level-1a product
-        mps_id : int, optional
-           Select data performed with MPS equals 'mps_id'
-        """
-        # pylint: disable=no-member
-        self.init_attrs()
-
-        # read science telemetry
-        dset = fid["/science_data/detector_telemetry"]
-        if mps_id is None:
-            data_sel = np.s_[:]
-        else:
-            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
-            if data_sel is None:
-                return
-        self.tlm = fid["/science_data/detector_telemetry"][data_sel]
-
-        # determine time-stamps
-        dset = fid["/image_attributes/icu_time_sec"]
-        seconds = dset[data_sel]
-        try:
-            _ = dset.attrs["units"].index(b"1958")
-        except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
-        else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
-            epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
-        subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
-
-        _dt = []
-        for ii, sec in enumerate(seconds):
-            msec_offs = self.readout_offset(ii)
-            _dt.append(
-                epoch
-                + dt.timedelta(
-                    seconds=int(sec),
-                    milliseconds=-msec_offs,
-                    microseconds=subsec2musec(subsec[ii]),
-                )
-            )
-
-        self.tstamp = np.empty(len(seconds), dtype=TSTAMP_TYPE)
-        self.tstamp["tai_sec"] = seconds
-        self.tstamp["sub_sec"] = subsec
-        self.tstamp["dt"] = _dt
-
-        # read image data
-        self.images = fid["/science_data/detector_images"][data_sel, :]
-
-    def adc_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
-        """Return ADC gain [Volt]."""
-        if indx is None:
-            indx = np.s_[:]
-        return self.tlm['DET_ADCGAIN'][indx]
-
-    def pga_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
-        """Return PGA gain [Volt]."""
-        if indx is None:
-            indx = np.s_[:]
-
-        # need first bit of address 121
-        reg_pgagainfactor = self.tlm['DET_BLACKCOL'][indx] & 0x1
-
-        reg_pgagain = self.tlm['DET_PGAGAIN'][indx]
-
-        return ((1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor)
-
-    def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
-        """Return exposure time [ms]."""
-        if indx is None:
-            indx = np.s_[:]
-        return 129e-4 * (
-            0.43 * self.tlm["DET_FOTLEN"][indx] + self.tlm["DET_EXPTIME"][indx]
-        )
-
-    def frame_period(self: SCItlm, indx: int) -> float:
-        """Return frame period of detector measurement [ms]."""
-        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
-        # binning mode
-        if self.tlm["REG_FULL_FRAME"][indx] == 2:
-            return float(n_coad * DET_CONSTS["FTI_science"])
-
-        # full-frame mode
-        return float(
-            n_coad
-            * np.clip(
-                DET_CONSTS["FTI_margin"]
-                + DET_CONSTS["overheadTime"]
-                + self.exposure_time(indx),
-                a_min=DET_CONSTS["FTI_diagnostic"],
-                a_max=None,
-            )
-        )
-
-    def readout_offset(self: SCItlm, indx: int) -> float:
-        """Return offset wrt start-of-integration [ms]."""
-        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
-        n_frm = (
-            n_coad + 3
-            if self.tlm["IMRLEN"][indx] == FULLFRAME_BYTES
-            else 2 * n_coad + 2
-        )
-
-        return n_frm * self.frame_period(indx)
-
-    def binning_table(self: SCItlm) -> np.ndarray:
-        """Return binning table identifier (zero for full-frame images)."""
-        bin_tbl = np.zeros(len(self.tlm), dtype="i1")
-        _mm = (self.tlm["IMRLEN"] == FULLFRAME_BYTES) | (self.tlm["IMRLEN"] == 0)
-        if np.sum(_mm) == len(self.tlm):
-            return bin_tbl
-
-        bin_tbl_start = self.tlm["REG_BINNING_TABLE_START"]
-        bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
-        return bin_tbl
-
-    def digital_offset(self: SCItlm) -> np.ndarray:
-        """Return digital offset including ADC offset [count]."""
-        buff = self.tlm["DET_OFFSET"].astype("i4")
-        buff[buff >= 8192] -= 16384
-
-        return buff + 70
-
-    def convert(self: SCItlm, key: str) -> np.ndarray:
-        """Convert telemetry parameter to physical units.
-
-        Parameters
-        ----------
-        key :  str
-           Name of telemetry parameter
-
-        Returns
-        -------
-        np.ndarray
-        """
-        if key.upper() not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
-            )
-
-        raw_data = np.array([x[key.upper()] for x in self.tlm])
-        return convert_hk(key.upper(), raw_data)
-
-
 # - class SPXtlm ----------------------------
 class SPXtlm:
     """Access/convert parameters of SPEXone Science telemetry data.
@@ -508,7 +107,6 @@ class SPXtlm:
                 debug: bool = False, dump: bool = False) -> None
      - from_l1a(flname: Path, *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - get_selection(mode: str) -> dict
      - gen_l1a(config: dataclass, mode: str) -> None
 
 
@@ -756,13 +354,13 @@ class SPXtlm:
                 if tstamp:
                     self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
-    def get_selection(self: SPXtlm, mode: str) -> dict | None:
+    def __select_msm_mode(self: SPXtlm, mode: str | None) -> dict | None:
         """Obtain image and housekeeping dimensions given data-mode.
 
         Parameters
         ----------
-        mode :  {'all', 'binned', 'full'}
-           Select Science packages with full-frame images or binned images
+        mode :  {'binned', 'full'} | None, default=None
+           Select image data in binned mode or full-frame mode, or no selection
 
         Returns
         -------
@@ -773,6 +371,23 @@ class SPXtlm:
                        'hk_packets': int}
         }
         """
+        if mode is None:
+            nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
+            nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
+            return {
+                "hk_mask": np.full(nr_hk, True),
+                "sci_mask": np.full(nr_sci, True),
+                "dims": {
+                    "number_of_images": nr_sci,
+                    "samples_per_image": (
+                        DET_CONSTS["dimRow"]
+                        if nr_sci == 0
+                        else np.max([x.size for x in self.science.images])
+                    ),
+                    "hk_packets": nr_hk,
+                },
+            }
+
         if mode == "full":
             if (
                 self.science.tlm is None
@@ -817,32 +432,16 @@ class SPXtlm:
                     "hk_packets": np.sum(hk_mask),
                 },
             }
+        raise KeyError("mode should be 'binned', 'full' or None")
 
-        # mode == 'all':
-        nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
-        nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
-        return {
-            "hk_mask": np.full(nr_hk, True),
-            "sci_mask": np.full(nr_sci, True),
-            "dims": {
-                "number_of_images": nr_sci,
-                "samples_per_image": (
-                    DET_CONSTS["dimRow"]
-                    if nr_sci == 0
-                    else np.max([x.size for x in self.science.images])
-                ),
-                "hk_packets": nr_hk,
-            },
-        }
-
-    def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
+    def l1a_file(self: SPXtlm, config: dataclass, mode: str | None = None) -> Path:
         """Return filename of level-1A product.
 
         Parameters
         ----------
         config :  dataclass
            Settings for the L0->l1A processing
-        mode :  {'all', 'binned', 'full'}
+        mode :  {'binned', 'full'} | None, default=None
            Select Science packages with full-frame images or binned images
 
         Returns
@@ -920,7 +519,7 @@ class SPXtlm:
         mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
         """
-        selection = self.get_selection(mode)
+        selection = self.__select_msm_mode(mode)
         if selection is None:
             return
 
