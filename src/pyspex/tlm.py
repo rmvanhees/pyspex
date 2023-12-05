@@ -284,10 +284,10 @@ class SPXtlm:
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
-        # collect Science telemetry data
         tstamp = None
         self.set_coverage(None)
-        if tlm_type != "hk":
+        if ccsds_sci and tlm_type != "hk":
+            # collect Science telemetry data
             self.science.extract_l0_sci(ccsds_sci, epoch)
             _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
             if np.any(_mm):
@@ -295,10 +295,8 @@ class SPXtlm:
                 ii = int(np.nonzero(_mm)[0][-1])
                 intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
                 self.set_coverage((tstamp[0], tstamp[-1] + intg))
-        del ccsds_sci
-
-        # collected NomHK telemetry data
-        if tlm_type != "sci":
+        else:
+            # collected NomHK telemetry data
             dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
             if tstamp is None:
