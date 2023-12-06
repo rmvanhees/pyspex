@@ -34,8 +34,6 @@ from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 if TYPE_CHECKING:
     from dataclasses import dataclass
 
-    import numpy.typing as npt
-
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.tlm")
 
@@ -266,13 +264,26 @@ class SPXtlm:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
         if file_format not in ["raw", "st3", "dsb"]:
             raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
-
         self.file_list = flnames
+
+        # read telemetry data
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
+
+        # perform ASCII dump
         if dump:
-            dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
-            dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
+            if ccsds_hk:
+                dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
+            if ccsds_sci:
+                dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
+
+        # exit when debugging or only an ASCII data-dump is requested
         if debug or dump:
+            return
+
+        # exit when Science data is requested and no Science data is available
+        #   or when housekeeping is requested and no housekeeping data is available
+        if (not ccsds_sci and tlm_type == "sci") or (not ccsds_hk and tlm_type == "hk"):
+            self.logger.info(f"Asked for tlm_type={tlm_type}, but none found")
             return
 
         # set epoch
@@ -295,8 +306,9 @@ class SPXtlm:
                 ii = int(np.nonzero(_mm)[0][-1])
                 intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
                 self.set_coverage((tstamp[0], tstamp[-1] + intg))
-        else:
-            # collected NomHK telemetry data
+
+        # collected NomHK telemetry data
+        if tlm_type != "sci":
             dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
             if tstamp is None:
@@ -352,12 +364,12 @@ class SPXtlm:
                 if tstamp:
                     self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
-    def __select_msm_mode(self: SPXtlm, mode: str | None) -> dict | None:
+    def __select_msm_mode(self: SPXtlm, mode: str) -> dict | None:
         """Obtain image and housekeeping dimensions given data-mode.
 
         Parameters
         ----------
-        mode :  {'binned', 'full'} | None, default=None
+        mode :  {'all', 'binned', 'full'}
            Select image data in binned mode or full-frame mode, or no selection
 
         Returns
@@ -369,7 +381,7 @@ class SPXtlm:
                        'hk_packets': int}
         }
         """
-        if mode is None:
+        if mode == "all":
             nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
             nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
             return {
@@ -430,7 +442,7 @@ class SPXtlm:
                     "hk_packets": np.sum(hk_mask),
                 },
             }
-        raise KeyError("mode should be 'binned', 'full' or None")
+        raise KeyError("mode should be 'binned', 'full' or 'all'")
 
     def l1a_file(self: SPXtlm, config: dataclass, mode: str | None = None) -> Path:
         """Return filename of level-1A product.

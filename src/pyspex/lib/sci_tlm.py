@@ -68,6 +68,7 @@ def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bo
     # perform boolean indexing
     return mask
 
+
 # - class SCItlm ----------------------------
 class SCItlm:
     """Class to handle SPEXone Science-telemetry packets."""
@@ -224,7 +225,7 @@ class SCItlm:
         """Return ADC gain [Volt]."""
         if indx is None:
             indx = np.s_[:]
-        return self.tlm['DET_ADCGAIN'][indx]
+        return self.tlm["DET_ADCGAIN"][indx]
 
     def pga_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
         """Return PGA gain [Volt]."""
@@ -232,11 +233,11 @@ class SCItlm:
             indx = np.s_[:]
 
         # need first bit of address 121
-        reg_pgagainfactor = self.tlm['DET_BLACKCOL'][indx] & 0x1
+        reg_pgagainfactor = self.tlm["DET_BLACKCOL"][indx] & 0x1
 
-        reg_pgagain = self.tlm['DET_PGAGAIN'][indx]
+        reg_pgagain = self.tlm["DET_PGAGAIN"][indx]
 
-        return (1 + 0.2 * reg_pgagain) * 2 ** reg_pgagainfactor
+        return (1 + 0.2 * reg_pgagain) * 2**reg_pgagainfactor
 
     def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
         """Return exposure time [ms]."""
