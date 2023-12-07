@@ -84,12 +84,9 @@ def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
 
 def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
     """Return exposure time in seconds [float]."""
-    # need first bit of address 121
-    reg_pgagainfactor = img_hk["DET_BLACKCOL"] & 0x1
-    reg_pgagain = img_hk["DET_PGAGAIN"]
-    exp_time = (1 + 0.2 * reg_pgagain) * 2**reg_pgagainfactor
-
-    return MCP_TO_SEC * exp_time
+    return 129e-4 * (
+        0.43 * img_hk["DET_FOTLEN"][:] + img_hk["DET_EXPTIME"][:]
+    )
 
 
 def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
