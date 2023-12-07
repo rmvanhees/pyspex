@@ -268,6 +268,33 @@ class HKTio:
 
         self._reference_date = ref_date
 
+    def read_hk_dset(self: HKTio, instrument: str) -> np.ndarray | None:
+        """Return housekeeping data of a given instrument."""
+        with h5py.File(self.filename) as fid:
+            gid = fid["housekeeping_data"]
+            if instrument == "spx":
+                ds_name = (
+                    "SPEX_HKT_packets"
+                    if "SPEX_HKT_packets" in gid
+                    else "SPEXone_HKT_packets"
+                )
+            elif instrument == "sc":
+                ds_name = "SC_HKT_packets"
+            elif instrument == "oci":
+                ds_name = "OCI_HKT_packets"
+            elif instrument == "harp":
+                ds_name = (
+                    "HARP_HKT_packets"
+                    if "HARP_HKT_packets" in gid
+                    else "HARP2_HKT_packets"
+                )
+            else:
+                raise KeyError("data of unknown instrument requested")
+
+            res = gid[ds_name][:] if ds_name in gid else None
+
+        return res
+
     def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
         """Return data coverage."""
         one_day = dt.timedelta(days=1)
@@ -283,22 +310,17 @@ class HKTio:
             return coverage_start, coverage_end
 
         # Oeps, now we have to check the timestamps of the measurement data
-        hk_dset_names = (
-            "HARP2_HKT_packets",
-            "OCI_HKT_packets",
-            "SPEXone_HKT_packets",
-            "SC_HKT_packets",
-        )
+        instr_list = ["harp", "oci", "sc", "spx"]
 
+        dt_list = []
         tstamp_mn_list = []
         tstamp_mx_list = []
         with h5py.File(self.filename) as fid:
-            for ds_set in hk_dset_names:
-                dt_list = ()
-                if ds_set not in fid["housekeeping_data"]:
+            for instrument in instr_list:
+                res = self.read_hk_dset(instrument)
+                if res is None:
                     continue
 
-                res = fid["housekeeping_data"][ds_set][:]
                 for packet in res:
                     try:
                         ccsds_hdr = CCSDShdr()
@@ -356,17 +378,9 @@ class HKTio:
         -----
         Current implementation only works for SPEXone.
         """
-        ds_set = {
-            "spx": "SPEXone_HKT_packets",
-            "sc": "SC_HKT_packets",
-            "oci": "OCI_HKT_packets",
-            "harp": "HARP2_HKT_packets",
-        }.get(instrument)
-
-        with h5py.File(self.filename) as fid:
-            if ds_set not in fid["housekeeping_data"]:
-                return ()
-            res = fid["housekeeping_data"][ds_set][:]
+        res = self.read_hk_dset(instrument)
+        if res is None:
+            return ()
 
         ccsds_hk = ()
         for packet in res:
