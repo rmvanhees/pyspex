@@ -270,11 +270,10 @@ class SPXtlm:
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
 
         # perform ASCII dump
-        if dump:
-            if ccsds_hk:
-                dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
-            if ccsds_sci:
-                dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
+        if dump and ccsds_hk:
+            dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
+        if dump and ccsds_sci:
+            dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
 
         # exit when debugging or only an ASCII data-dump is requested
         if debug or dump:
@@ -283,7 +282,7 @@ class SPXtlm:
         # exit when Science data is requested and no Science data is available
         #   or when housekeeping is requested and no housekeeping data is available
         if (not ccsds_sci and tlm_type == "sci") or (not ccsds_hk and tlm_type == "hk"):
-            self.logger.info(f"Asked for tlm_type={tlm_type}, but none found")
+            self.logger.info("Asked for tlm_type=%s, but none found", tlm_type)
             return
 
         # set epoch
@@ -297,7 +296,7 @@ class SPXtlm:
 
         tstamp = None
         self.set_coverage(None)
-        if ccsds_sci and tlm_type != "hk":
+        if tlm_type != "hk" and ccsds_sci:
             # collect Science telemetry data
             self.science.extract_l0_sci(ccsds_sci, epoch)
             _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
@@ -308,7 +307,7 @@ class SPXtlm:
                 self.set_coverage((tstamp[0], tstamp[-1] + intg))
 
         # collected NomHK telemetry data
-        if tlm_type != "sci":
+        if tlm_type != "sci" and ccsds_hk:
             dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
             if tstamp is None:

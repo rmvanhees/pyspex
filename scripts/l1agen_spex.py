@@ -81,11 +81,11 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # from pyspex.version import pyspex_version
 #
 # Remarks:
-# - Use hardcoded version
+# - Use hardcoded version (git hash: 6345207)
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.5-rc"
+    return "1.4.5"
 
 
 # --------------------------------------------------
@@ -2774,6 +2774,33 @@ class HKTio:
 
         self._reference_date = ref_date
 
+    def read_hk_dset(self: HKTio, instrument: str) -> np.ndarray | None:
+        """Return housekeeping data of a given instrument."""
+        with h5py.File(self.filename) as fid:
+            gid = fid["housekeeping_data"]
+            if instrument == "spx":
+                ds_name = (
+                    "SPEX_HKT_packets"
+                    if "SPEX_HKT_packets" in gid
+                    else "SPEXone_HKT_packets"
+                )
+            elif instrument == "sc":
+                ds_name = "SC_HKT_packets"
+            elif instrument == "oci":
+                ds_name = "OCI_HKT_packets"
+            elif instrument == "harp":
+                ds_name = (
+                    "HARP_HKT_packets"
+                    if "HARP_HKT_packets" in gid
+                    else "HARP2_HKT_packets"
+                )
+            else:
+                raise KeyError("data of unknown instrument requested")
+
+            res = gid[ds_name][:] if ds_name in gid else None
+
+        return res
+
     def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
         """Return data coverage."""
         one_day = dt.timedelta(days=1)
@@ -2788,23 +2815,18 @@ class HKTio:
         if abs(coverage_end - coverage_start) < one_day:
             return coverage_start, coverage_end
 
-        # Oeps, now we have to check the timestamps of the measurement data
-        hk_dset_names = (
-            "HARP2_HKT_packets",
-            "OCI_HKT_packets",
-            "SPEXone_HKT_packets",
-            "SC_HKT_packets",
-        )
+        # Oeps, now we have to check the timestamps of the different instruments
+        instr_list = ["harp", "oci", "sc", "spx"]
 
+        dt_list = []
         tstamp_mn_list = []
         tstamp_mx_list = []
         with h5py.File(self.filename) as fid:
-            for ds_set in hk_dset_names:
-                dt_list = ()
-                if ds_set not in fid["housekeeping_data"]:
+            for instrument in instr_list:
+                res = self.read_hk_dset(instrument)
+                if res is None:
                     continue
 
-                res = fid["housekeeping_data"][ds_set][:]
                 for packet in res:
                     try:
                         ccsds_hdr = CCSDShdr()
@@ -2862,17 +2884,9 @@ class HKTio:
         -----
         Current implementation only works for SPEXone.
         """
-        ds_set = {
-            "spx": "SPEXone_HKT_packets",
-            "sc": "SC_HKT_packets",
-            "oci": "OCI_HKT_packets",
-            "harp": "HARP2_HKT_packets",
-        }.get(instrument)
-
-        with h5py.File(self.filename) as fid:
-            if ds_set not in fid["housekeeping_data"]:
-                return ()
-            res = fid["housekeeping_data"][ds_set][:]
+        res = self.read_hk_dset(instrument)
+        if res is None:
+            return ()
 
         ccsds_hk = ()
         for packet in res:
@@ -3373,7 +3387,6 @@ class SPXtlm:
                 debug: bool = False, dump: bool = False) -> None
      - from_l1a(flname: Path, *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - get_selection(mode: str) -> dict
      - gen_l1a(config: dataclass, mode: str) -> None
 
 
@@ -3533,13 +3546,24 @@ class SPXtlm:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
         if file_format not in ["raw", "st3", "dsb"]:
             raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
-
         self.file_list = flnames
+
+        # read telemetry data
         ccsds_sci, ccsds_hk = read_lv0_data(flnames, file_format, debug=debug)
         if dump:
-            dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
-            dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
+            if ccsds_hk:
+                dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
+            if ccsds_sci:
+                dump_science(flnames[0].stem + "_sci.dump", ccsds_sci)
+
+        # exit when debugging or only an ASCII data-dump is requested
         if debug or dump:
+            return
+
+        # exit when Science data is requested and no Science data is available
+        #   or when housekeeping is requested and no housekeeping data is available
+        if (not ccsds_sci and tlm_type == "sci") or (not ccsds_hk and tlm_type == "hk"):
+            self.logger.info("Asked for tlm_type=%s, but none found", tlm_type)
             return
 
         # set epoch
@@ -3551,10 +3575,10 @@ class SPXtlm:
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
-        # collect Science telemetry data
         tstamp = None
         self.set_coverage(None)
-        if tlm_type != "hk":
+        if tlm_type != "hk" and ccsds_sci:
+            # collect Science telemetry data
             self.science.extract_l0_sci(ccsds_sci, epoch)
             _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
             if np.any(_mm):
@@ -3562,10 +3586,9 @@ class SPXtlm:
                 ii = int(np.nonzero(_mm)[0][-1])
                 intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
                 self.set_coverage((tstamp[0], tstamp[-1] + intg))
-        del ccsds_sci
 
         # collected NomHK telemetry data
-        if tlm_type != "sci":
+        if tlm_type != "sci" and ccsds_hk:
             dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
             if tstamp is None:
@@ -3621,13 +3644,13 @@ class SPXtlm:
                 if tstamp:
                     self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
-    def get_selection(self: SPXtlm, mode: str) -> dict | None:
+    def __select_msm_mode(self: SPXtlm, mode: str) -> dict | None:
         """Obtain image and housekeeping dimensions given data-mode.
 
         Parameters
         ----------
         mode :  {'all', 'binned', 'full'}
-           Select Science packages with full-frame images or binned images
+           Select image data in binned mode or full-frame mode, or no selection
 
         Returns
         -------
@@ -3638,6 +3661,23 @@ class SPXtlm:
                        'hk_packets': int}
         }
         """
+        if mode == "all":
+            nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
+            nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
+            return {
+                "hk_mask": np.full(nr_hk, True),
+                "sci_mask": np.full(nr_sci, True),
+                "dims": {
+                    "number_of_images": nr_sci,
+                    "samples_per_image": (
+                        DET_CONSTS["dimRow"]
+                        if nr_sci == 0
+                        else np.max([x.size for x in self.science.images])
+                    ),
+                    "hk_packets": nr_hk,
+                },
+            }
+
         if mode == "full":
             if (
                 self.science.tlm is None
@@ -3682,23 +3722,7 @@ class SPXtlm:
                     "hk_packets": np.sum(hk_mask),
                 },
             }
-
-        # mode == 'all':
-        nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
-        nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
-        return {
-            "hk_mask": np.full(nr_hk, True),
-            "sci_mask": np.full(nr_sci, True),
-            "dims": {
-                "number_of_images": nr_sci,
-                "samples_per_image": (
-                    DET_CONSTS["dimRow"]
-                    if nr_sci == 0
-                    else np.max([x.size for x in self.science.images])
-                ),
-                "hk_packets": nr_hk,
-            },
-        }
+        raise KeyError("mode should be 'binned', 'full' or 'all'")
 
     def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
         """Return filename of level-1A product.
@@ -3783,7 +3807,7 @@ class SPXtlm:
         mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
         """
-        selection = self.get_selection(mode)
+        selection = self.__select_msm_mode(mode)
         if selection is None:
             return
 
