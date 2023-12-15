@@ -87,7 +87,7 @@ class SCItlm:
         self.tstamp = None
         self.images = ()
 
-    def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> None:
+    def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
 
         Parameters
@@ -96,10 +96,15 @@ class SCItlm:
            SPEXone level-0 Science-telemetry packets
         epoch :  dt.datetime
            Epoch of the telemetry packets (1958 or 1970)
+
+        Returns
+        -------
+        int
+            number of detector frames
         """
         self.init_attrs()
         if not ccsds_sci:
-            return
+            return 0
 
         n_frames = 0
         hdr_dtype = None
@@ -123,8 +128,7 @@ class SCItlm:
 
         # do we have any complete detector images (Note ccsds_sci not empty!)?
         if n_frames == 0:
-            module_logger.warning("no valid Science package found")
-            return
+            return 0
 
         # allocate memory
         self.hdr = np.empty(n_frames, dtype=hdr_dtype)
@@ -165,6 +169,8 @@ class SCItlm:
                 ii += 1
                 if ii == n_frames:
                     break
+
+        return n_frames
 
     def extract_l1a_sci(self: SCItlm, fid: h5py.File, mps_id: int | None) -> None:
         """Extract data from SPEXone level-1a Science-telemetry packets.

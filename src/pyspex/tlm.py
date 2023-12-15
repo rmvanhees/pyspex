@@ -38,7 +38,8 @@ if TYPE_CHECKING:
 module_logger = logging.getLogger("pyspex.tlm")
 
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
-TSTAMP_MIN = 1561939200  # 2019-07-01T00:00:00+00:00
+DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+TSTAMP_MIN = int(DATE_MIN.timestamp())
 
 
 # - helper functions ------------------------
@@ -296,10 +297,13 @@ class SPXtlm:
 
         tstamp = None
         self.set_coverage(None)
-        if tlm_type != "hk" and ccsds_sci:
+        if tlm_type != "hk":
+            _mm = []
             # collect Science telemetry data
-            self.science.extract_l0_sci(ccsds_sci, epoch)
-            _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
+            if self.science.extract_l0_sci(ccsds_sci, epoch) > 0:
+                _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
+            else:
+                self.logger.info("no valid Science package found")
             if np.any(_mm):
                 tstamp = self.science.tstamp["dt"][_mm]
                 ii = int(np.nonzero(_mm)[0][-1])
@@ -308,10 +312,9 @@ class SPXtlm:
 
         # collected NomHK telemetry data
         if tlm_type != "sci" and ccsds_hk:
-            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
             if tstamp is None:
-                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                tstamp = [x for x in self.nomhk.tstamp if x > DATE_MIN]
                 self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
     def from_l1a(
@@ -354,12 +357,11 @@ class SPXtlm:
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
-                dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
                 self.nomhk.extract_l1a_hk(fid, mps_id)
                 if tstamp is not None:
                     return
 
-                tstamp = [x for x in self.nomhk.tstamp if x > dt_min]
+                tstamp = [x for x in self.nomhk.tstamp if x > DATE_MIN]
                 if tstamp:
                     self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
 
@@ -543,11 +545,10 @@ class SPXtlm:
                 coverage = (tstamp[0], tstamp[-1] + intg)
 
         if coverage is None:
-            dt_min = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
             tstamp = [
                 self.nomhk.tstamp[ii] for ii in np.nonzero(selection["hk_mask"])[0]
             ]
-            tstamp = [x for x in tstamp if x > dt_min]
+            tstamp = [x for x in tstamp if x > DATE_MIN]
             coverage = (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1))
 
         l1a_file = self.l1a_file(config, mode)
