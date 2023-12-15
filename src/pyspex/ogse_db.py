@@ -260,6 +260,8 @@ def read_date_stats() -> tuple:
     """Read output of program 'date' executed at freckle (ITOS) and shogun (SRON)."""
     if Path("/array/slot1F/spex_one/OCAL/date_stats").is_dir():
         data_dir = Path("/array/slot2B/spex_ocal/ambient/date_stats")
+    elif Path("./date_stats").is_dir():
+        data_dir = Path("./date_stats")
     else:
         data_dir = Path("/nfs/SPEXone/ocal/ambient/date_stats")
     flname = data_dir / "cmp_date_egse_itos2.txt"

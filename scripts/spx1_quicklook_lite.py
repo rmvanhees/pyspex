@@ -18,9 +18,9 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+from moniplot.draw_image import DrawImage
 from moniplot.lib.fig_info import FIGinfo
 from moniplot.mon_plot import MONplot
-from moniplot.tol_colors import tol_cmap
 from pyspex.binning_tables import BinningTables
 
 
@@ -97,9 +97,8 @@ def main() -> None:
             data_dir.mkdir(mode=0o755)
 
         # open plot object
-        plot = MONplot((data_dir / flname.name).with_suffix(".pdf"))
-        plot.set_institute("SRON")
-        plot.set_cmap(tol_cmap("rainbow_WhBr"))
+        report = MONplot((data_dir / flname.name).with_suffix(".pdf"))
+        report.set_institute("SRON")
 
         # which images are requested?
         n_img = images.shape[0]
@@ -146,10 +145,13 @@ def main() -> None:
                 suptitle = f"frame [table_id={table_id[ii]}]: {ii}"
             else:
                 suptitle = f"frame: {ii}"
-            plot.draw_signal(img2d, fig_info=figinfo, title=suptitle)
+            # plot.set_cmap(tol_cmap("rainbow_WhBr"))
+            plot = DrawImage(img2d)
+            fig, axx = plot.subplots()
+            plot.draw(axx, fig_info=figinfo, title=suptitle)
 
         # close plot object
-        plot.close()
+        report.close()
 
 
 # --------------------------------------------------

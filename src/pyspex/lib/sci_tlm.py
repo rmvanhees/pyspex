@@ -127,6 +127,7 @@ class SCItlm:
                 n_frames += 1
 
         # do we have any complete detector images (Note ccsds_sci not empty!)?
+        # print(f"n_frames: {n_frames}")
         if n_frames == 0:
             return 0
 
