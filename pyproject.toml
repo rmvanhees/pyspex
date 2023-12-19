@@ -30,6 +30,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Atmospheric Science",
 ]
 dynamic = [
@@ -70,7 +71,7 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py311"
 
 select = [
   "F",   # pyflakes
