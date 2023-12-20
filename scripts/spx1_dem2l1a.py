@@ -19,7 +19,7 @@ References
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import h5py
@@ -31,7 +31,7 @@ from pyspex.lv1_gse import LV1gse
 from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
-DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 # - local functions --------------------------------

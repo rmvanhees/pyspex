@@ -17,7 +17,7 @@ from __future__ import annotations
 
 __all__ = ["CKDio"]
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import h5py
@@ -94,9 +94,9 @@ class CKDio:
         date_str = self.fid.attrs["date_created"].decode()
         date_t = datetime.strptime(date_str, "%Y %B %d %a %Z%z %H:%M:%S")
         if compact:
-            return date_t.astimezone(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
+            return date_t.astimezone(tz=UTC).strftime("%Y%m%d%H%M%S")
 
-        return date_t.astimezone(tz=timezone.utc).isoformat()[:-6]
+        return date_t.astimezone(tz=UTC).isoformat()[:-6]
 
     @property
     def git_commit(self: CKDio) -> str:

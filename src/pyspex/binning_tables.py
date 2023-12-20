@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ["BinningTables"]
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from os import environ
 from pathlib import Path
 
@@ -122,7 +122,7 @@ class BinningTables:
             fid.processing_version = pyspex_version()
             fid.validity_start = validity_start + "+00:00"
             fid.release_number = np.uint16(release)
-            fid.date_created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            fid.date_created = datetime.now(UTC).isoformat(timespec="seconds")
 
             fid.createDimension("row", 1024)
             fid.createDimension("column", 1024)
@@ -186,7 +186,7 @@ class BinningTables:
             gid.REG_BINNING_TABLE_START = hex(0x80000000 + 0x400000 * (table_id - 1))
             gid.enabled_lines = np.uint16(lineskip_arr.sum())
             gid.flex_binned_pixels = np.uint32(index.max() + 1)
-            gid.date_created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            gid.date_created = datetime.now(UTC).isoformat(timespec="seconds")
 
             dset = gid.createVariable(
                 "binning_table",

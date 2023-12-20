@@ -23,7 +23,7 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from .hkt_io import HKTio, check_coverage_nav, read_hkt_nav
+from .hkt_io import HKTio, check_coverage_nav, copy_hkt_nav
 from .l1a_io import L1Aio
 from .lib import pyspex_version
 from .lib.hk_tlm import HKtlm
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 module_logger = logging.getLogger("pyspex.tlm")
 
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
-DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.UTC)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
 
 
@@ -53,12 +53,11 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
     """
-    # read PACE navigation data from HKT files.
-    xds_nav = read_hkt_nav(hkt_list)
-    # add PACE navigation data to existing level-1A product.
-    xds_nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
+    # read PACE navigation data from HKT files
+    # and add PACE navigation data to existing level-1A product
+    copy_hkt_nav(hkt_list, l1a_file)
     # check time coverage of navigation data.
-    return check_coverage_nav(l1a_file, xds_nav)
+    return check_coverage_nav(l1a_file)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
@@ -166,9 +165,7 @@ class SPXtlm:
         if self._coverage is None:
             raise ValueError("no valid timestamps found")
 
-        return dt.datetime.combine(
-            self._coverage[0].date(), dt.time(0), dt.timezone.utc
-        )
+        return dt.datetime.combine(self._coverage[0].date(), dt.time(0), dt.UTC)
 
     @property
     def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
@@ -225,7 +222,7 @@ class SPXtlm:
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
 
-        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
@@ -288,12 +285,12 @@ class SPXtlm:
 
         # set epoch
         if file_format == "dsb":
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]["hdr"]["tai_sec"][0])
             epoch -= dt.timedelta(seconds=leap_sec)
         else:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
         tstamp = None
         self.set_coverage(None)

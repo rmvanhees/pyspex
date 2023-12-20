@@ -71,9 +71,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "cdl_version_date": "2021-09-10",
         "product_name": None,
         "processor_version": "1.0",
-        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
-            timespec="milliseconds"
-        ),
+        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
         "software_name": "SPEXone L0-L1A processor",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),

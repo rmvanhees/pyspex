@@ -202,9 +202,9 @@ class SCItlm:
         try:
             _ = dset.attrs["units"].index(b"1958")
         except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
         else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
             epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
         subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
 

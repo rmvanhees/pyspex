@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ["DEMio", "img_sec_of_day"]
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -145,10 +145,10 @@ def img_sec_of_day(
         reference day: datetime, sec_of_day: numpy.ndarray
     """
     # determine for the first timestamp the offset with last midnight [seconds]
-    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
     tstamp0 = epoch + timedelta(seconds=int(img_sec[0]))
     ref_day = datetime(
-        year=tstamp0.year, month=tstamp0.month, day=tstamp0.day, tzinfo=timezone.utc
+        year=tstamp0.year, month=tstamp0.month, day=tstamp0.day, tzinfo=UTC
     )
     # seconds since midnight
     offs_sec = (ref_day - epoch).total_seconds()

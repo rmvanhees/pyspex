@@ -13,14 +13,14 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import h5py
 import numpy as np
 from pyspex.l1a_io import L1Aio
 
-DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 # --------------------------------------------------

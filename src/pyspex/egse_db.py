@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ["create_egse_db", "add_egse_data"]
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -315,7 +315,7 @@ def create_egse_db(args: argparse.Namespace) -> None:
 
     with Dataset(args.egse_dir / DB_EGSE, "w", format="NETCDF4") as fid:
         fid.input_files = [Path(x).name for x in args.file_list]
-        fid.creation_date = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        fid.creation_date = datetime.now(UTC).isoformat(timespec="seconds")
 
         _ = fid.createEnumType(
             "u1",

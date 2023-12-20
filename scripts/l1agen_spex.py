@@ -39,29 +39,24 @@ import xarray as xr
 import yaml
 
 # pylint: disable=no-name-in-module
-from moniplot.image_to_xarray import h5_to_xr
 from netCDF4 import Dataset, Variable
 from numpy import ma
 
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.l1agen_spex")
 
-EPOCH = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+EPOCH = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 ORBIT_DURATION = 5904  # seconds
 
-DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
+DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.UTC)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
 TSTAMP_TYPE = np.dtype([("tai_sec", int), ("sub_sec", int), ("dt", "O")])
 
-# expect the navigation data to extend at least 10 seconds
-# w.r.t. time_coverage_start and time_coverage_end.
-TIMEDELTA_MIN = dt.timedelta(seconds=10)
-
 # valid data coverage range
-VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
-VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.timezone.utc)
+VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
+VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.UTC)
 
 # define detector constants/settings of the SPEXone instrument
 DET_CONSTS = {
@@ -405,9 +400,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "cdl_version_date": "2021-09-10",
         "product_name": None,
         "processing_version": "V1.0",
-        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
-            timespec="milliseconds"
-        ),
+        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
         "software_name": "SPEXone L0-L1A processor",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),
@@ -992,7 +985,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
     --------
     Update the attributes of variable 'time':
 
-      ref_date = dt.datetime(2022, 3, 21)
+      ref_date = dt.datetime(2022, 3, 21, tzinfo=dt.timezone.utc)
       dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                 fill_value=-32767)
       dset.long_name = "image time"
@@ -1165,7 +1158,7 @@ def init_l1a(
     l1a_flname : str
        Name of L1A product
     ref_date :  dt.datetime
-       Date of the first detector image
+       Date of the first detector image (UTC)
     dims :  dict
        Provide length of the Level-1A dimensions. Default values::
 
@@ -1225,19 +1218,19 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     US Naval Observatory: https://maia.usno.navy.mil/ser7/tai-utc.dat
     """
     # determine location of the file 'tai-utc.dat'
-    ocvarroot = environ["OCVARROOT"] if "OCVARROOT" in environ else "."
-    taiutc = Path(ocvarroot) / "common" / "tai-utc.dat"
+    if "OCVARROOT" not in environ:
+        raise ValueError("Environment variable OCVARROOT not set")
+    ocvar_dir = Path(environ["OCVARROOT"])
+    if (ocvar_dir / "common").is_dir():
+        ocvar_dir /= "common"
 
-    epochsecs = (
-        dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
-        - dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
-    ).total_seconds()
-    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.timezone.utc)
+    epochsecs = dt.datetime(epochyear, 1, 1, tzinfo=dt.UTC).timestamp()
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.UTC)
     leapsec: float = 0
-    with taiutc.open("r", encoding="ascii") as fp:
+    with (ocvar_dir / "tai-utc.dat").open("r", encoding="ascii") as fp:
         for line in fp:
             rec = line.rstrip().split(None, 7)
-            if julian.from_jd(float(rec[4])) < taidt:
+            if julian.from_jd(float(rec[4])).replace(tzinfo=dt.UTC) < taidt:
                 leapsec = float(rec[6])
 
     return leapsec
@@ -2276,7 +2269,7 @@ class L1Aio:
     product :  str
        Name of the SPEXone level-1A product
     ref_date :  dt.datetime
-       Date of the first detector image
+       Date of the first detector image (UTC)
     dims :  dict
        Dimensions of the datasets, default values::
 
@@ -2565,144 +2558,114 @@ class CoverageFlag(IntFlag):
 
 
 # - high-level r/w functions ------------
-def read_hkt_nav(hkt_list: tuple[Path, ...]) -> xr.Dataset:
-    """Read navigation data from one or more HKT products.
+def copy_hkt_nav(hkt_list: tuple[Path, ...], l1a_file: Path) -> None:
+    """Read/copy navigation data from one or more HKT products.
 
     Parameters
     ----------
     hkt_list : tuple[Path, ...]
        listing of PACE-HKT products collocated with SPEXone measurements
-
-    Returns
-    -------
-    xr.Dataset
-       xarray dataset with PACE navigation data
+    l1a_file :  Path
+       name of the SPEXone level-1A product
     """
-    dim_dict = {"att_": "att_time", "orb_": "orb_time", "tilt": "tilt_time"}
+    nav = None
+    for hkt_file in sorted(hkt_list):
+        if nav is None:
+            nav = xr.open_dataset(hkt_file, group="navigation_data")
+        else:
+            res = ()
+            buff = xr.open_dataset(hkt_file, group="navigation_data")
+            for key, xarr in buff.data_vars.items():
+                res += (xr.concat((nav[key], buff[key]), dim=xarr.dims[0]),)
+            nav = xr.merge(res, combine_attrs="drop_conflicts")
 
-    # concatenate DataArrays with navigation data
-    res = {}
-    rdate = None
-    for name in sorted(hkt_list):
-        hkt = HKTio(name)
-        nav = hkt.navigation()
-        if not res:
-            rdate = hkt.reference_date
-            res = nav.copy()
-            continue
+    # fix coordinates
+    if "att_time" in nav.data_vars:
+        nav = nav.rename({"att_records": "att_time"}).set_coords(["att_time"])
+    if "orb_time" in nav.data_vars:
+        nav = nav.rename({"orb_records": "orb_time"}).set_coords(["orb_time"])
+    if "tilt_time" in nav.data_vars:
+        nav = nav.rename({"tilt_records": "tilt_time"}).set_coords(["tilt_time"])
+    # clean-up Dataset attributes
+    for key in list(nav.attrs):
+        del nav.attrs[key]
 
-        dtime = None
-        if rdate != hkt.reference_date:
-            dtime = hkt.reference_date - rdate
-
-        for key1, value in nav.items():
-            if not value:
-                continue
-
-            hdim = dim_dict.get(key1, None)
-            if dtime is None:
-                res[key1] = xr.concat((res[key1], value), dim=hdim)
-            else:
-                parm = key1 + "_time" if key1[-1] != "_" else key1 + "time"
-                val_new = value.assign_coords(
-                    {parm: value[parm] + dtime.total_seconds()}
-                )
-                res[key1] = xr.concat((res[key1], val_new), dim=hdim)
-
-    # make sure that the data is sorted and unique
-    dsets = ()
-    for key, coord in dim_dict.items():
-        if not res[key]:
-            continue
-
-        res[key] = res[key].sortby(coord)
-        res[key] = res[key].drop_duplicates(dim=coord)
-        dsets += (res[key],)
-
-    # create Dataset from DataArrays
-    xds_nav = xr.merge(dsets, combine_attrs="drop_conflicts")
-
-    # remove confusing attributes from Dataset
-    key_list = list(xds_nav.attrs)
-    for key in key_list:
-        del xds_nav.attrs[key]
-
-    # add attribute 'reference_date'
-    return xds_nav.assign_attrs({"reference_date": rdate.isoformat()})
+    # add PACE navigation data to existing level-1A product.
+    nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
+    nav.close()
 
 
-def check_coverage_nav(l1a_file: Path, xds_nav: xr.Dataset) -> bool:
+def check_coverage_nav(l1a_file: Path) -> bool:
     """Check time coverage of navigation data.
 
     Parameters
     ----------
     l1a_file :  Path
        name of the SPEXone level-1A product
-    xds_nav :  xr.Dataset
-       xarray dataset with PACE navigation data
     """
     coverage_quality = CoverageFlag.GOOD
-    # obtain the reference date of the navigation data
-    ref_date = dt.datetime.fromisoformat(xds_nav.attrs["reference_date"])
 
     # obtain time_coverage_range from the Level-1A product
-    with h5py.File(l1a_file) as fid:
-        # pylint: disable=no-member
-        val = fid.attrs["time_coverage_start"].decode()
-        coverage_start = dt.datetime.fromisoformat(val)
-        val = fid.attrs["time_coverage_end"].decode()
-        coverage_end = dt.datetime.fromisoformat(val)
-    module_logger.debug("SPEXone time-coverage: %s - %s", coverage_start, coverage_end)
+    xds_l1a = xr.open_dataset(
+        l1a_file,
+        group="image_attributes",
+        drop_variables=("icu_time_sec", "icu_time_subsec"),
+    )
+    module_logger.debug(
+        "SPEXone measurement time-coverage: %s - %s",
+        xds_l1a["image_time"].values[0],
+        xds_l1a["image_time"].values[-1],
+    )
+
+    xds_nav = xr.open_dataset(l1a_file, group="navigation_data")
+    module_logger.debug(
+        "SPEXone navigation time-coverage: %s - %s",
+        xds_nav["att_time"].values[0],
+        xds_nav["att_time"].values[-1],
+    )
+    time_coverage_start = str(xds_nav["att_time"].values[0])[:23]
+    time_coverage_end = str(xds_nav["att_time"].values[-1])[:23]
 
     # check at the start of the data
-    sec_of_day = xds_nav["att_time"].values[0]
-    att_coverage_start = ref_date + dt.timedelta(seconds=float(sec_of_day))
-    module_logger.debug("PACE-HKT time-coverage-start: %s", att_coverage_start)
-    if coverage_start - att_coverage_start < dt.timedelta(0):
+    if xds_l1a["image_time"].values[0] < xds_nav["att_time"].values[0]:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         module_logger.error(
             "time coverage of navigation data starts after 'time_coverage_start'"
         )
-    if coverage_start - att_coverage_start < TIMEDELTA_MIN:
+
+    diff_coverage = xds_l1a["image_time"].values[0] - xds_nav["att_time"].values[0]
+    if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
             "time coverage of navigation data starts after 'time_coverage_start - %s'",
-            TIMEDELTA_MIN,
+            np.timedelta64(10, "s"),
         )
 
     # check at the end of the data
-    sec_of_day = xds_nav["att_time"].values[-1]
-    att_coverage_end = ref_date + dt.timedelta(seconds=float(sec_of_day))
-    module_logger.debug("PACE-HKT time-coverage-end: %s", att_coverage_end)
-    if att_coverage_end - coverage_end < dt.timedelta(0):
+    if xds_l1a["image_time"].values[-1] > xds_nav["att_time"].values[-1]:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         module_logger.error(
             "time coverage of navigation data ends before 'time_coverage_end'"
         )
-    if att_coverage_end - coverage_end < TIMEDELTA_MIN:
+
+    diff_coverage = xds_nav["att_time"].values[-1] - xds_l1a["image_time"].values[-1]
+    if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
             "time coverage of navigation data ends before 'time_coverage_end + %s'",
-            TIMEDELTA_MIN,
+            np.timedelta64(10, "s"),
         )
 
-    # check for completeness
-    dtime = (att_coverage_end - att_coverage_start).total_seconds()
-    dim_expected = round(dtime / np.median(np.diff(xds_nav["att_time"])))
-    module_logger.debug(
-        "expected navigation samples %d found %d",
-        len(xds_nav["att_time"]),
-        dim_expected,
-    )
-    if len(xds_nav["att_time"]) / dim_expected < 0.95:
-        coverage_quality |= CoverageFlag.MISSING_SAMPLES
-        module_logger.warning("navigation data poorly sampled")
+    # ToDo: check for completeness
+    # close interface
+    xds_l1a.close()
+    xds_nav.close()
 
     # add coverage flag and attributes to Level-1A product
     with Dataset(l1a_file, "a") as fid:
         gid = fid["/navigation_data"]
-        gid.time_coverage_start = att_coverage_start.isoformat(timespec="milliseconds")
-        gid.time_coverage_end = att_coverage_end.isoformat(timespec="milliseconds")
+        gid.time_coverage_start = time_coverage_start
+        gid.time_coverage_end = time_coverage_end
         dset = gid.createVariable("coverage_quality", "u1", fill_value=255)
         dset[:] = coverage_quality
         dset.long_name = "coverage quality of navigation data"
@@ -2770,7 +2733,7 @@ class HKTio:
         if ref_date is None:
             coverage = self.coverage()
             ref_date = dt.datetime.combine(
-                coverage[0].date(), dt.time(0), tzinfo=dt.timezone.utc
+                coverage[0].date(), dt.time(0), tzinfo=dt.UTC
             )
 
         self._reference_date = ref_date
@@ -2919,35 +2882,6 @@ class HKTio:
 
         return ccsds_hk
 
-    def navigation(self: HKTio) -> dict:
-        """Get navigation data."""
-        res = {"att_": (), "orb_": (), "tilt": ()}
-        with h5py.File(self.filename) as fid:
-            gid = fid["navigation_data"]
-            for key in gid:
-                if key.startswith("att_"):
-                    res["att_"] += (h5_to_xr(gid[key]),)
-                elif key.startswith("orb_"):
-                    res["orb_"] += (h5_to_xr(gid[key]),)
-                elif key.startswith("tilt"):
-                    res["tilt"] += (h5_to_xr(gid[key]),)
-                else:
-                    module_logger.warning("fail to find dataset %s", key)
-
-        # repair the dimensions
-        xds1 = xr.merge(res["att_"], combine_attrs="drop_conflicts")
-        xds1 = xds1.set_coords(["att_time"])
-        xds1 = xds1.swap_dims({"att_records": "att_time"})
-        xds2 = xr.merge(res["orb_"], combine_attrs="drop_conflicts")
-        xds2 = xds2.set_coords(["orb_time"])
-        xds2 = xds2.swap_dims({"orb_records": "orb_time"})
-        xds3 = ()
-        if res["tilt"]:
-            xds3 = xr.merge(res["tilt"], combine_attrs="drop_conflicts")
-            xds3 = xds3.set_coords(["tilt_time"])
-            xds3 = xds3.swap_dims({"tilt_records": "tilt_time"})
-        return {"att_": xds1, "orb_": xds2, "tilt": xds3}
-
 
 # --------------------------------------------------
 # from pyspex.tlm import SPXtlm
@@ -2987,12 +2921,12 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
     hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
     """
-    # read PACE navigation data from HKT files.
-    xds_nav = read_hkt_nav(hkt_list)
-    # add PACE navigation data to existing level-1A product.
-    xds_nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
+    # read PACE navigation data from HKT files
+    # and add PACE navigation data to existing level-1A product
+    copy_hkt_nav(hkt_list, l1a_file)
+
     # check time coverage of navigation data.
-    return check_coverage_nav(l1a_file, xds_nav)
+    return check_coverage_nav(l1a_file)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
@@ -3272,9 +3206,9 @@ class SCItlm:
         try:
             _ = dset.attrs["units"].index(b"1958")
         except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
         else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
             epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
         subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
 
@@ -3454,9 +3388,7 @@ class SPXtlm:
         if self._coverage is None:
             raise ValueError("no valid timestamps found")
 
-        return dt.datetime.combine(
-            self._coverage[0].date(), dt.time(0), dt.timezone.utc
-        )
+        return dt.datetime.combine(self._coverage[0].date(), dt.time(0), dt.UTC)
 
     @property
     def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
@@ -3513,7 +3445,7 @@ class SPXtlm:
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
 
-        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
@@ -3575,12 +3507,12 @@ class SPXtlm:
 
         # set epoch
         if file_format == "dsb":
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]["hdr"]["tai_sec"][0])
             epoch -= dt.timedelta(seconds=leap_sec)
         else:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
         tstamp = None
         self.set_coverage(None)

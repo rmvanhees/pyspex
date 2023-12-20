@@ -45,7 +45,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
     --------
     Update the attributes of variable 'time':
 
-      ref_date = dt.datetime(2022, 3, 21)
+      ref_date = dt.datetime(2022, 3, 21, tzinfo=dt.timezone.utc)
       dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                 fill_value=-32767)
       dset.long_name = "image time"
@@ -218,7 +218,7 @@ def init_l1a(
     l1a_flname : str
        Name of L1A product
     ref_date :  dt.datetime
-       Date of the first detector image
+       Date of the first detector image (UTC)
     dims :  dict
        Provide length of the Level-1A dimensions. Default values::
 

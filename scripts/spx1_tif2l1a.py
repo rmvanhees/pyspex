@@ -17,7 +17,7 @@ Environment::
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from os import environ
 from pathlib import Path
 
@@ -31,7 +31,7 @@ from pyspex.tif_io import TIFio
 from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
-EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 # - local functions --------------------------------
@@ -257,7 +257,7 @@ def main() -> None:
     sci_hk["REG_NCOADDFRAMES"] = int(hdr["Co-additions"])
 
     # Generate L1A product
-    ref_date = datetime.combine(utc_start.date(), time(0), timezone.utc)
+    ref_date = datetime.combine(utc_start.date(), time(0), UTC)
     with L1Aio(prod_name, dims=dims, ref_date=ref_date) as l1a:
         # write image data, detector telemetry and image attributes
         l1a.fill_science(images.reshape(n_images, -1), sci_hk, np.arange(n_images))

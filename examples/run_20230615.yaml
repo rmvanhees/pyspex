@@ -1,3 +1,4 @@
+processing_version: "v0.9"
 outdir: L1A
 l0_list:
 - /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001086.spx

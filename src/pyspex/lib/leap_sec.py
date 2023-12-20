@@ -38,16 +38,13 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     else:
         taiutc = Path(ocvarroot) / "common" / "tai-utc.dat"
 
-    epochsecs = (
-        dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc)
-        - dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
-    ).total_seconds()
-    taidt = dt.datetime.fromtimestamp(taitime + epochsecs)
+    epochsecs = dt.datetime(epochyear, 1, 1, tzinfo=dt.UTC).timestamp()
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.UTC)
     leapsec: float = 0
     with taiutc.open("r", encoding="ascii") as fp:
         for line in fp:
             rec = line.rstrip().split(None, 7)
-            if julian.from_jd(float(rec[4])) < taidt:
+            if julian.from_jd(float(rec[4])).replace(tzinfo=dt.UTC) < taidt:
                 leapsec = float(rec[6])
 
     return leapsec
