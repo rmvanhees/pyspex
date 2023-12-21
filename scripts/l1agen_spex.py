@@ -15,6 +15,8 @@ Intended for operational processing of SPEXone data at NASA Goddard Space
 
 Notes
 -----
+- Although pyspex is using features from Python v3.11+, the code of this module
+  should run fine with Python v3.8 and the modules listed in requirements-3.8.txt.
 - Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 """
 from __future__ import annotations
@@ -45,18 +47,18 @@ from numpy import ma
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.l1agen_spex")
 
-EPOCH = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+EPOCH = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
 MCP_TO_SEC = 1e-7
 ONE_DAY = 24 * 60 * 60
 ORBIT_DURATION = 5904  # seconds
 
-DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.UTC)
+DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
 TSTAMP_TYPE = np.dtype([("tai_sec", int), ("sub_sec", int), ("dt", "O")])
 
 # valid data coverage range
-VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
-VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.UTC)
+VALID_COVERAGE_MIN = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
+VALID_COVERAGE_MAX = dt.datetime(2035, 1, 1, tzinfo=dt.timezone.utc)
 
 # define detector constants/settings of the SPEXone instrument
 DET_CONSTS = {
@@ -81,7 +83,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.6"
+    return "1.4.7"
 
 
 # --------------------------------------------------
@@ -195,6 +197,7 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
+    processing_version: str = ""
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
@@ -302,6 +305,8 @@ def __yaml_settings(config: dataclass) -> dataclass:
         config.compression = True
     if "file_version" in config_yaml and config_yaml["file_version"] != 1:
         config.file_version = config_yaml["file_version"]
+    if "processing_version" in config_yaml and config_yaml["processing_version"] != "":
+        config.processing_version = config_yaml["processing_version"]
     if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
         config.eclipse = config_yaml["eclipse"]
     if "hkt_list" in config_yaml and config_yaml["hkt_list"]:
@@ -395,12 +400,14 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "publisher_name": "NASA/GSFC",
         "publisher_email": "data@oceancolor.gsfc.nasa.gov",
         "publisher_url": "http://oceancolor.gsfc.nasa.gov",
-        "processing_level": "L1A",
         "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
         "cdl_version_date": "2021-09-10",
         "product_name": None,
-        "processing_version": "V1.0",
-        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
+        "processing_level": "L1A",
+        "processing_version": "",
+        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="milliseconds"
+        ),
         "software_name": "SPEXone L0-L1A processor",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),
@@ -1224,13 +1231,13 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     if (ocvar_dir / "common").is_dir():
         ocvar_dir /= "common"
 
-    epochsecs = dt.datetime(epochyear, 1, 1, tzinfo=dt.UTC).timestamp()
-    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.UTC)
+    epochsecs = dt.datetime(epochyear, 1, 1, tzinfo=dt.timezone.utc).timestamp()
+    taidt = dt.datetime.fromtimestamp(taitime + epochsecs, dt.timezone.utc)
     leapsec: float = 0
     with (ocvar_dir / "tai-utc.dat").open("r", encoding="ascii") as fp:
         for line in fp:
             rec = line.rstrip().split(None, 7)
-            if julian.from_jd(float(rec[4])).replace(tzinfo=dt.UTC) < taidt:
+            if julian.from_jd(float(rec[4])).replace(tzinfo=dt.timezone.utc) < taidt:
                 leapsec = float(rec[6])
 
     return leapsec
@@ -2733,7 +2740,7 @@ class HKTio:
         if ref_date is None:
             coverage = self.coverage()
             ref_date = dt.datetime.combine(
-                coverage[0].date(), dt.time(0), tzinfo=dt.UTC
+                coverage[0].date(), dt.time(0), tzinfo=dt.timezone.utc
             )
 
         self._reference_date = ref_date
@@ -3206,9 +3213,9 @@ class SCItlm:
         try:
             _ = dset.attrs["units"].index(b"1958")
         except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
         else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
             epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
         subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
 
@@ -3388,7 +3395,9 @@ class SPXtlm:
         if self._coverage is None:
             raise ValueError("no valid timestamps found")
 
-        return dt.datetime.combine(self._coverage[0].date(), dt.time(0), dt.UTC)
+        return dt.datetime.combine(
+            self._coverage[0].date(), dt.time(0), dt.timezone.utc
+        )
 
     @property
     def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
@@ -3445,7 +3454,7 @@ class SPXtlm:
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
 
-        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
@@ -3507,12 +3516,12 @@ class SPXtlm:
 
         # set epoch
         if file_format == "dsb":
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
             ii = len(ccsds_hk) // 2
             leap_sec = get_leap_seconds(ccsds_hk[ii]["hdr"]["tai_sec"][0])
             epoch -= dt.timedelta(seconds=leap_sec)
         else:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
+            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
         tstamp = None
         self.set_coverage(None)
@@ -3774,6 +3783,7 @@ class SPXtlm:
             l1a_file, ref_date, selection["dims"], compression=config.compression
         ) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != "raw")
+            l1a.set_attr("processing_version", config.processing_version)
             l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
             l1a.set_attr(
                 "time_coverage_start", coverage[0].isoformat(timespec="milliseconds")
