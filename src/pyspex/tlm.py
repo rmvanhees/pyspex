@@ -554,6 +554,8 @@ class SPXtlm:
             l1a_file, ref_date, selection["dims"], compression=config.compression
         ) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != "raw")
+            if config.processing_version:
+                l1a.set_attr("processing_version", config.processing_version)
             l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
             l1a.set_attr(
                 "time_coverage_start", coverage[0].isoformat(timespec="milliseconds")
