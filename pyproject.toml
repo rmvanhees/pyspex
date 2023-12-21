@@ -91,5 +91,8 @@ select = [
 ]
 ignore = ["Q000", "Q003"]
 
+[tool.ruff.per-file-ignores]
+"scripts/l1agen_spex.py" = ["UP017"]
+
 [tool.ruff.pydocstyle]
 convention = "pep257"
