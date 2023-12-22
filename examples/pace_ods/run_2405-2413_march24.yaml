@@ -1,0 +1,72 @@
+processing_version: "v0.9"
+outdir: L1A
+l0_list:
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002405.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002406.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002407.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002408.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002409.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002410.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002411.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002412.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002413.spx
+hkt_list:
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T110705.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111029.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111237.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111325.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111620.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111629.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111753.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T111915.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112009.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112210.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112304.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112506.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112801.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T112815.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113056.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113325.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113351.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113530.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113647.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113836.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T113942.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114051.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114237.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114346.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114532.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114827.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T114858.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115123.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115409.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115418.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115713.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115921.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T120009.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T120433.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T120944.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T121455.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T122007.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T122519.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T123030.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T123541.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T124053.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T124605.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T125117.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T125629.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T130140.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T130651.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T131203.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T131714.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T132226.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T132739.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T133251.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T133803.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T134314.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T134826.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T135338.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T135850.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T140402.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T140913.HKT.nc
+# - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T141453.HKT.nc

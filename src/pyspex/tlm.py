@@ -209,6 +209,7 @@ class SPXtlm:
            dump header information of the telemetry packages @1Hz for
            debugging purposes
         """
+        self.set_coverage(None)
         if isinstance(flnames, Path):
             flnames = [flnames]
         if instrument is None:
@@ -217,11 +218,9 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
-        self.set_coverage(None)
         ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
         for name in flnames:
             hkt = HKTio(name)
-            self.set_coverage(hkt.coverage(), update=True)
             ccsds_hk += hkt.housekeeping(instrument)
 
         if not ccsds_hk:
@@ -230,11 +229,31 @@ class SPXtlm:
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
 
+        # set epoch
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
         ii = len(ccsds_hk) // 2
         leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
         epoch -= dt.timedelta(seconds=leap_sec)
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
+
+        # reject nomHK records with obviously wrong timestamps
+        three_hours = dt.timedelta(hours=3)
+        tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
+        _mm = []
+        for tstamp in self.nomhk.tstamp:
+            _mm.append(tstamp_med - tstamp < three_hours
+                       and tstamp - tstamp_med < three_hours)
+        if np.sum(_mm) < self.nomhk.size:
+            self.logger.warning(
+                "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+            )
+            self.nomhk.sel(_mm)
+
+        # set time-coverage
+        self.set_coverage(
+            [self.nomhk.tstamp[0],
+             self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+        )
 
     def from_lv0(
         self: SPXtlm,
@@ -262,6 +281,7 @@ class SPXtlm:
            dump header information of the telemetry packages @1Hz for
            debugging purposes
         """
+        self.set_coverage(None)
         if isinstance(flnames, Path):
             flnames = [flnames]
         if tlm_type is None:
@@ -300,7 +320,6 @@ class SPXtlm:
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
-        self.set_coverage(None)
         if tlm_type != "hk":
             # collect Science telemetry data
             if self.science.extract_l0_sci(ccsds_sci, epoch) == 0:
@@ -359,13 +378,13 @@ class SPXtlm:
         mps_id :  int, optional
            select on MPS ID
         """
+        self.set_coverage(None)
         if tlm_type is None:
             tlm_type = "all"
         elif tlm_type not in ["hk", "sci", "all"]:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
         self.file_list = [flname]
-        self.set_coverage(None)
         with h5py.File(flname) as fid:
             # collect Science telemetry data
             if tlm_type != "hk":
