@@ -87,6 +87,18 @@ class SCItlm:
         self.tstamp = None
         self.images = ()
 
+    @property
+    def size(self: SCItlm) -> int:
+        """Return number of elements."""
+        return 0 if self.tlm is None else len(self.tlm)
+
+    def sel(self: SCItlm, mask: np.NDArray[bool]) -> None:
+        """Use mask array to reject housekeeping packages."""
+        self.hdr = self.hdr[mask]
+        self.tlm = self.tlm[mask]
+        self.tstamp = self.tstamp[mask]
+        self.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
 

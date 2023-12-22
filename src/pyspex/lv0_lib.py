@@ -110,7 +110,7 @@ class CorruptPacketWarning(UserWarning):
 
 
 def read_lv0_data(
-    file_list: list[Path, ...], file_format: str, *, debug: bool = False
+    file_list: list[Path], file_format: str, *, debug: bool = False
 ) -> tuple[tuple, tuple]:
     """Read level 0 data and return Science and telemetry data.
 

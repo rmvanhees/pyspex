@@ -66,6 +66,17 @@ class HKtlm:
         self.tstamp = []
         self.events = []
 
+    @property
+    def size(self: HKtlm) -> int:
+        """Return number of elements."""
+        return 0 if self.tlm is None else len(self.tlm)
+
+    def sel(self: HKtlm, mask: np.NDArray[bool]) -> None:
+        """Use mask array to reject housekeeping packages."""
+        self.hdr = self.hdr[mask]
+        self.tlm = self.tlm[mask]
+        self.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
         """Extract data from SPEXone level-0 housekeeping telemetry packets.
 

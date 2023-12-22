@@ -263,7 +263,7 @@ class HKTio:
 
         return res
 
-    def coverage(self: HKTio) -> tuple[dt.datetime, dt.datetime]:
+    def coverage(self: HKTio) -> list[dt.datetime, dt.datetime]:
         """Return data coverage."""
         one_day = dt.timedelta(days=1)
         with h5py.File(self.filename) as fid:
@@ -275,7 +275,7 @@ class HKTio:
             coverage_end = dt.datetime.fromisoformat(val.replace("Z", "+00:00"))
 
         if abs(coverage_end - coverage_start) < one_day:
-            return coverage_start, coverage_end
+            return [coverage_start, coverage_end]
 
         # Oeps, now we have to check the timestamps of the measurement data
         instr_list = ["harp", "oci", "sc", "spx"]
@@ -283,55 +283,54 @@ class HKTio:
         dt_list = []
         tstamp_mn_list = []
         tstamp_mx_list = []
-        with h5py.File(self.filename) as fid:
-            for instrument in instr_list:
-                res = self.read_hk_dset(instrument)
-                if res is None:
-                    continue
+        for instrument in instr_list:
+            res = self.read_hk_dset(instrument)
+            if res is None:
+                continue
 
-                for packet in res:
-                    try:
-                        ccsds_hdr = CCSDShdr()
-                        ccsds_hdr.read("raw", packet)
-                    except ValueError as exc:
-                        module_logger.warning('CCSDS header read error with "%s"', exc)
-                        break
+            for packet in res:
+                try:
+                    ccsds_hdr = CCSDShdr()
+                    ccsds_hdr.read("raw", packet)
+                except ValueError as exc:
+                    module_logger.warning('CCSDS header read error with "%s"', exc)
+                    break
 
-                    val = ccsds_hdr.tstamp(EPOCH)
-                    if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
-                        dt_list += (val,)
+                val = ccsds_hdr.tstamp(EPOCH)
+                if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
+                    dt_list += (val,)
 
-                if not dt_list:
-                    continue
+            if not dt_list:
+                continue
 
-                dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
-                ii = dt_arr.size // 2
-                leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
-                dt_arr -= dt.timedelta(seconds=leap_sec)
-                mn_val = min(dt_arr)
-                mx_val = max(dt_arr)
-                if mx_val - mn_val > one_day:
-                    indx_close_to_mn = (dt_arr - mn_val) <= one_day
-                    indx_close_to_mx = (mx_val - dt_arr) <= one_day
-                    module_logger.warning(
-                        "coverage_range: %s[%d] - %s[%d]",
-                        mn_val,
-                        np.sum(indx_close_to_mn),
-                        mx_val,
-                        np.sum(indx_close_to_mx),
-                    )
-                    if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
-                        mx_val = max(dt_arr[indx_close_to_mn])
-                    else:
-                        mn_val = min(dt_arr[indx_close_to_mx])
+            dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
+            ii = dt_arr.size // 2
+            leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
+            dt_arr -= dt.timedelta(seconds=leap_sec)
+            mn_val = min(dt_arr)
+            mx_val = max(dt_arr)
+            if mx_val - mn_val > one_day:
+                indx_close_to_mn = (dt_arr - mn_val) <= one_day
+                indx_close_to_mx = (mx_val - dt_arr) <= one_day
+                module_logger.warning(
+                    "coverage_range: %s[%d] - %s[%d]",
+                    mn_val,
+                    np.sum(indx_close_to_mn),
+                    mx_val,
+                    np.sum(indx_close_to_mx),
+                )
+                if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                    mx_val = max(dt_arr[indx_close_to_mn])
+                else:
+                    mn_val = min(dt_arr[indx_close_to_mx])
 
-                tstamp_mn_list.append(mn_val)
-                tstamp_mx_list.append(mx_val)
+            tstamp_mn_list.append(mn_val)
+            tstamp_mx_list.append(mx_val)
 
         if len(tstamp_mn_list) == 1:
-            return tstamp_mn_list[0], tstamp_mx_list[0]
+            return [tstamp_mn_list[0], tstamp_mx_list[0]]
 
-        return min(*tstamp_mn_list), max(*tstamp_mx_list)
+        return [min(*tstamp_mn_list), max(*tstamp_mx_list)]
 
     def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.

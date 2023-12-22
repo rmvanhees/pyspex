@@ -94,7 +94,8 @@ class SPXtlm:
     -----
     This class has the following methods::
 
-     - set_coverage(coverage: tuple[datetime, datetime] | None) -> None
+     - set_coverage(coverage: tuple[datetime, datetime] | None,
+                    update: boot = False) -> None
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
@@ -140,24 +141,31 @@ class SPXtlm:
     def __init__(self: SPXtlm) -> None:
         """Initialize SPXtlm object."""
         self.logger = logging.getLogger(__name__)
-        self.file_list: list | None = None
-        self._coverage: tuple[dt.datetime, dt.datetime] | None = None
+        self.file_list: list[Path] | None = None
+        self._coverage: list[dt.datetime, dt.datetime] | None = None
         self.nomhk = HKtlm()
         self.science = SCItlm()
 
+    @property
+    def coverage(self: SPXtlm) -> list[dt.datetime, dt.datetime] | None:
+        """Return data time_coverage."""
+        return self._coverage
+
     def set_coverage(
-        self: SPXtlm, coverage: tuple[dt.datetime, dt.datetime] | None
+        self: SPXtlm,
+        coverage_new: list[dt.datetime, dt.datetime] | None,
+        update: bool = False,
     ) -> None:
-        """Store or update the class attribute `coverage`."""
-        if coverage is None:
-            self._coverage = None
-        elif self._coverage is None:
-            self._coverage = coverage
-        else:
-            self._coverage = (
-                min(self._coverage[0], coverage[0]),
-                max(self._coverage[1], coverage[1]),
-            )
+        """Set, reset or update the class attribute `coverage`."""
+        if not update or self._coverage is None:
+            self._coverage = coverage_new
+            return
+
+        one_hour = dt.timedelta(hours=1)
+        if self._coverage[0] - one_hour < coverage_new[0] < self._coverage[0]:
+            self._coverage[0] = coverage_new[0]
+        if self._coverage[1] < coverage_new[1] < self._coverage[1] + one_hour:
+            self._coverage[1] = coverage_new[1]
 
     @property
     def reference_date(self: SPXtlm) -> dt.datetime:
@@ -213,7 +221,7 @@ class SPXtlm:
         ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
         for name in flnames:
             hkt = HKTio(name)
-            self.set_coverage(hkt.coverage())
+            self.set_coverage(hkt.coverage(), update=True)
             ccsds_hk += hkt.housekeeping(instrument)
 
         if not ccsds_hk:
@@ -292,27 +300,46 @@ class SPXtlm:
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
-        tstamp = None
         self.set_coverage(None)
         if tlm_type != "hk":
-            _mm = []
             # collect Science telemetry data
-            if self.science.extract_l0_sci(ccsds_sci, epoch) > 0:
-                _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
-            else:
+            if self.science.extract_l0_sci(ccsds_sci, epoch) == 0:
                 self.logger.info("no valid Science package found")
-            if np.any(_mm):
-                tstamp = self.science.tstamp["dt"][_mm]
-                ii = int(np.nonzero(_mm)[0][-1])
-                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                self.set_coverage((tstamp[0], tstamp[-1] + intg))
+            else:
+                three_hours = 3 * 60 * 60
+                tai_sec_med = self.science.tstamp["tai_sec"][self.science.size // 2]
+                _mm = ((tai_sec_med - self.science.tstamp["tai_sec"] < three_hours)
+                       & (self.science.tstamp["tai_sec"] - tai_sec_med < three_hours))
+                if np.sum(_mm) < self.science.size:
+                    self.logger.warning(
+                        "Rejected Science: %d -> %d", self.science.size, np.sum(_mm)
+                    )
+                    self.science.sel(_mm)
+
+                intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
+                self.set_coverage(
+                    [self.science.tstamp["dt"][0],
+                     self.science.tstamp["dt"][-1] + intg]
+                )
 
         # collected NomHK telemetry data
         if tlm_type != "sci" and ccsds_hk:
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
-            if tstamp is None:
-                tstamp = [x for x in self.nomhk.tstamp if x > DATE_MIN]
-                self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
+            three_hours = dt.timedelta(hours=3)
+            tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
+            _mm = []
+            for tstamp in self.nomhk.tstamp:
+                _mm.append(tstamp_med - tstamp < three_hours
+                           and tstamp - tstamp_med < three_hours)
+            if np.sum(_mm) < self.nomhk.size:
+                self.logger.warning(
+                    "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                )
+                self.nomhk.sel(_mm)
+            self.set_coverage(
+                [self.nomhk.tstamp[0],
+                 self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+            )
 
     def from_l1a(
         self: SPXtlm,
@@ -337,7 +364,6 @@ class SPXtlm:
         elif tlm_type not in ["hk", "sci", "all"]:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
 
-        tstamp = None
         self.file_list = [flname]
         self.set_coverage(None)
         with h5py.File(flname) as fid:
@@ -350,17 +376,15 @@ class SPXtlm:
                         tstamp = self.science.tstamp["dt"][_mm]
                         ii = int(np.nonzero(_mm)[0][-1])
                         intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                        self.set_coverage((tstamp[0], tstamp[-1] + intg))
+                        self.set_coverage([tstamp[0], tstamp[-1] + intg])
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
                 self.nomhk.extract_l1a_hk(fid, mps_id)
-                if tstamp is not None:
-                    return
-
-                tstamp = [x for x in self.nomhk.tstamp if x > DATE_MIN]
-                if tstamp:
-                    self.set_coverage((tstamp[0], tstamp[-1] + dt.timedelta(seconds=1)))
+                self.set_coverage(
+                    [self.nomhk.tstamp[0],
+                     self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+                )
 
     def __select_msm_mode(self: SPXtlm, mode: str) -> dict | None:
         """Obtain image and housekeeping dimensions given data-mode.
@@ -380,19 +404,17 @@ class SPXtlm:
         }
         """
         if mode == "all":
-            nr_hk = 0 if self.nomhk.hdr is None else len(self.nomhk.hdr)
-            nr_sci = 0 if self.science.hdr is None else len(self.science.hdr)
             return {
-                "hk_mask": np.full(nr_hk, True),
-                "sci_mask": np.full(nr_sci, True),
+                "hk_mask": np.full(self.nomhk.size, True),
+                "sci_mask": np.full(self.science.size, True),
                 "dims": {
-                    "number_of_images": nr_sci,
+                    "number_of_images": self.science.size,
                     "samples_per_image": (
                         DET_CONSTS["dimRow"]
-                        if nr_sci == 0
+                        if self.science.size == 0
                         else np.max([x.size for x in self.science.images])
                     ),
-                    "hk_packets": nr_hk,
+                    "hk_packets": self.nomhk.size,
                 },
             }
 
