@@ -1,27 +1,12 @@
+#
+# Diagnostic mesurements with MPS 130 (nearly one full orbit)
+#
 processing_version: "v0.9"
 outdir: L1A
 l0_list:
-- /nfs/SPEXone/ocal/pace-sds/spx1_l0_diag/0x12d/2023/07/22/SPX000002400.spx
-- /nfs/SPEXone/ocal/pace-sds/spx1_l0_diag/0x12d/2023/07/22/SPX000002401.spx
 - /nfs/SPEXone/ocal/pace-sds/spx1_l0_diag/0x12d/2023/07/22/SPX000002402.spx
 - /nfs/SPEXone/ocal/pace-sds/spx1_l0_diag/0x12d/2023/07/22/SPX000002403.spx
 hkt_list:
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T190355.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T190945.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T191241.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T191536.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T191831.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T192126.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T192421.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T192716.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T193012.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T193307.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T193602.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T193857.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T194152.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T194447.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T194741.HKT.nc
-- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T195034.HKT.nc
 - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T195328.HKT.nc
 - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T195622.HKT.nc
 - /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T195916.HKT.nc
