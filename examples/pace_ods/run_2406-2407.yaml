@@ -1,0 +1,14 @@
+#
+# Science mesurements with MPS 46 (short)
+#
+processing_version: "v0.9"
+outdir: L1A
+l0_list:
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002406.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2024/03/24/SPX000002407.spx
+hkt_list:
+#- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115418.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115713.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T115921.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T120009.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2024/03/24/PACE.20240324T120433.HKT.nc

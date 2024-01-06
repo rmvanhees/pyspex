@@ -1,0 +1,10 @@
+#
+# Diagnostic mesurements with MPS 2
+#
+processing_version: "v0.9"
+outdir: L1A
+l0_list:
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0_diag/0x12d/2023/07/22/SPX000002400.spx
+hkt_list:
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T190355.HKT.nc
+- /nfs/SPEXone/ocal/pace-sds/pace_hkt/V1.0/2023/07/22/PACE.20230722T190945.HKT.nc
