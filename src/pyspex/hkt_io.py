@@ -203,9 +203,8 @@ class HKTio:
 
     def __init__(self: HKTio, filename: Path | str) -> None:
         """Initialize access to a PACE HKT product."""
-        self._coverage = None
-        self._reference_date = None
-        self.filename = filename if isinstance(filename, Path) else Path(filename)
+        self._reference_date: dt.datetime | None = None
+        self.filename: Path = filename if isinstance(filename, Path) else Path(filename)
         if not self.filename.is_file():
             raise FileNotFoundError(f"file {filename} not found")
         self.set_reference_date()
