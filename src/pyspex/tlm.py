@@ -178,18 +178,12 @@ class SPXtlm:
     @property
     def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
         """Return time_coverage_start."""
-        if self._coverage is None:
-            return None
-
-        return self._coverage[0]
+        return None if self._coverage is None else self._coverage[0]
 
     @property
     def time_coverage_end(self: SPXtlm) -> dt.datetime | None:
         """Return time_coverage_end."""
-        if self._coverage is None:
-            return None
-
-        return self._coverage[1]
+        return None if self._coverage is None else self._coverage[1]
 
     def from_hkt(
         self: SPXtlm,
