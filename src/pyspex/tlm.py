@@ -217,17 +217,21 @@ class SPXtlm:
             hkt = HKTio(name)
             ccsds_hk += hkt.housekeeping(instrument)
 
+        # check number of telemetry data-packages
         if not ccsds_hk:
             return
-
+        # perform dump of telemetry data-packages
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
+            return
+        # check if TAI timestamp is valid
+        ii = len(ccsds_hk) // 2
+        if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+            return
 
         # set epoch
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
-        ii = len(ccsds_hk) // 2
-        leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
-        epoch -= dt.timedelta(seconds=leap_sec)
+        epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records with obviously wrong timestamps
@@ -307,10 +311,13 @@ class SPXtlm:
 
         # set epoch
         if file_format == "dsb":
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+            # check if TAI timestamp is valid
             ii = len(ccsds_hk) // 2
-            leap_sec = get_leap_seconds(ccsds_hk[ii]["hdr"]["tai_sec"][0])
-            epoch -= dt.timedelta(seconds=leap_sec)
+            if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+                return
+
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
+            epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
