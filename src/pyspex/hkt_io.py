@@ -276,60 +276,44 @@ class HKTio:
         if abs(coverage_end - coverage_start) < one_day:
             return [coverage_start, coverage_end]
 
-        # Oeps, now we have to check the timestamps of the measurement data
-        instr_list = ["harp", "oci", "sc", "spx"]
+        module_logger.warning("Attributes time_coverage_* are not present or invalid")
+        # derive time_coverage_start/end from spacecraft telemetry
+        res = self.read_hk_dset('sc')
+        dt_list = ()
+        for packet in res:
+            try:
+                ccsds_hdr = CCSDShdr()
+                ccsds_hdr.read("raw", packet)
+            except ValueError as exc:
+                module_logger.warning('CCSDS header read error with "%s"', exc)
+                break
 
-        dt_list = []
-        tstamp_mn_list = []
-        tstamp_mx_list = []
-        for instrument in instr_list:
-            res = self.read_hk_dset(instrument)
-            if res is None:
-                continue
+            val = ccsds_hdr.tstamp(EPOCH)
+            if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
+                dt_list += (val,)
 
-            for packet in res:
-                try:
-                    ccsds_hdr = CCSDShdr()
-                    ccsds_hdr.read("raw", packet)
-                except ValueError as exc:
-                    module_logger.warning('CCSDS header read error with "%s"', exc)
-                    break
+        dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
+        ii = dt_arr.size // 2
+        leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
+        dt_arr -= dt.timedelta(seconds=leap_sec)
+        mn_val = min(dt_arr)
+        mx_val = max(dt_arr)
+        if mx_val - mn_val > one_day:
+            indx_close_to_mn = (dt_arr - mn_val) <= one_day
+            indx_close_to_mx = (mx_val - dt_arr) <= one_day
+            module_logger.warning(
+                "coverage_range: %s[%d] - %s[%d]",
+                mn_val,
+                np.sum(indx_close_to_mn),
+                mx_val,
+                np.sum(indx_close_to_mx),
+            )
+            if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                mx_val = max(dt_arr[indx_close_to_mn])
+            else:
+                mn_val = min(dt_arr[indx_close_to_mx])
 
-                val = ccsds_hdr.tstamp(EPOCH)
-                if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
-                    dt_list += (val,)
-
-            if not dt_list:
-                continue
-
-            dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
-            ii = dt_arr.size // 2
-            leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
-            dt_arr -= dt.timedelta(seconds=leap_sec)
-            mn_val = min(dt_arr)
-            mx_val = max(dt_arr)
-            if mx_val - mn_val > one_day:
-                indx_close_to_mn = (dt_arr - mn_val) <= one_day
-                indx_close_to_mx = (mx_val - dt_arr) <= one_day
-                module_logger.warning(
-                    "coverage_range: %s[%d] - %s[%d]",
-                    mn_val,
-                    np.sum(indx_close_to_mn),
-                    mx_val,
-                    np.sum(indx_close_to_mx),
-                )
-                if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
-                    mx_val = max(dt_arr[indx_close_to_mn])
-                else:
-                    mn_val = min(dt_arr[indx_close_to_mx])
-
-            tstamp_mn_list.append(mn_val)
-            tstamp_mx_list.append(mx_val)
-
-        if len(tstamp_mn_list) == 1:
-            return [tstamp_mn_list[0], tstamp_mx_list[0]]
-
-        return [min(*tstamp_mn_list), max(*tstamp_mx_list)]
+        return [mn_val, mx_val]
 
     def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.
