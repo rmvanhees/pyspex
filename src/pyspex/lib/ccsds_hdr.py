@@ -43,6 +43,11 @@ class CCSDShdr:
             self.__hdr = hdr
             self.__dtype = hdr.dtype
 
+    def _tm_raw_(self: CCSDShdr) -> np.dtype:  # ApID unknown
+        """Return data-type of unknown packet, just a header and byte data."""
+        return np.dtype(
+            [("hdr", self.__hdr.dtype), ("Data", "u1", (self.__hdr["length"] - 5))])
+
     def _tm_800_(self: CCSDShdr) -> np.dtype:  # ApID = 0x320
         """Return data-type of NomHk packet."""
         return np.dtype([("hdr", self.__hdr.dtype), ("hk", tmtc_dtype(0x320))])
@@ -421,7 +426,7 @@ class CCSDShdr:
     def data_dtype(self: CCSDShdr) -> np.dtype:
         """Return numpy data-type of CCSDS User Data."""
         method = getattr(self, f"_tm_{self.apid:d}_", None)
-        return None if method is None else method()
+        return self._tm_raw_() if method is None else method()
 
     def tstamp(self: CCSDShdr, epoch: dt.datetime) -> dt.datetime:
         """Return time of the telemetry packet.
