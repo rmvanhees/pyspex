@@ -243,7 +243,7 @@ class SPXtlm:
                        and tstamp - tstamp_med < three_hours)
         if np.sum(_mm) < self.nomhk.size:
             self.logger.warning(
-                "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
             )
             self.nomhk.sel(_mm)
 
@@ -332,7 +332,7 @@ class SPXtlm:
                        & (self.science.tstamp["tai_sec"] - tai_sec_med < three_hours))
                 if np.sum(_mm) < self.science.size:
                     self.logger.warning(
-                        "Rejected Science: %d -> %d", self.science.size, np.sum(_mm)
+                        "rejected Science: %d -> %d", self.science.size, np.sum(_mm)
                     )
                     self.science.sel(_mm)
 
@@ -353,7 +353,7 @@ class SPXtlm:
                            and tstamp - tstamp_med < three_hours)
             if np.sum(_mm) < self.nomhk.size:
                 self.logger.warning(
-                    "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                    "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
                 )
                 self.nomhk.sel(_mm)
             self.set_coverage(

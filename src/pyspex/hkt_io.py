@@ -276,7 +276,7 @@ class HKTio:
         if abs(coverage_end - coverage_start) < one_day:
             return [coverage_start, coverage_end]
 
-        module_logger.warning("Attributes time_coverage_* are not present or invalid")
+        module_logger.warning("attributes time_coverage_* are not present or invalid")
         # derive time_coverage_start/end from spacecraft telemetry
         res = self.read_hk_dset('sc')
         dt_list = ()
