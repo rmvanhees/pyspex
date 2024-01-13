@@ -278,7 +278,7 @@ class HKTio:
 
         module_logger.warning("attributes time_coverage_* are not present or invalid")
         # derive time_coverage_start/end from spacecraft telemetry
-        res = self.read_hk_dset('sc')
+        res = self.read_hk_dset("sc")
         dt_list = ()
         for packet in res:
             try:

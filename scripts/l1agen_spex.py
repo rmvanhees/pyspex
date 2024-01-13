@@ -460,7 +460,8 @@ class CCSDShdr:
     def _tm_raw_(self: CCSDShdr) -> np.dtype:  # ApID unknown
         """Return data-type of unknown packet, just a header and byte data."""
         return np.dtype(
-            [("hdr", self.__hdr.dtype), ("Data", "u1", (self.__hdr["length"] - 5))])
+            [("hdr", self.__hdr.dtype), ("Data", "u1", (self.__hdr["length"] - 5))]
+        )
 
     def _tm_800_(self: CCSDShdr) -> np.dtype:  # ApID = 0x320
         """Return data-type of NomHk packet."""
@@ -2792,7 +2793,7 @@ class HKTio:
 
         module_logger.warning("attributes time_coverage_* are not present or invalid")
         # derive time_coverage_start/end from spacecraft telemetry
-        res = self.read_hk_dset('sc')
+        res = self.read_hk_dset("sc")
         dt_list = ()
         for packet in res:
             try:
@@ -3482,8 +3483,9 @@ class SPXtlm:
         tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
         _mm = []
         for tstamp in self.nomhk.tstamp:
-            _mm.append(tstamp_med - tstamp < three_hours
-                       and tstamp - tstamp_med < three_hours)
+            _mm.append(
+                tstamp_med - tstamp < three_hours and tstamp - tstamp_med < three_hours
+            )
         if np.sum(_mm) < self.nomhk.size:
             self.logger.warning(
                 "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
@@ -3492,8 +3494,7 @@ class SPXtlm:
 
         # set time-coverage
         self.set_coverage(
-            [self.nomhk.tstamp[0],
-             self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+            [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
         )
 
     def from_lv0(
@@ -3570,8 +3571,9 @@ class SPXtlm:
             else:
                 three_hours = 3 * 60 * 60
                 tai_sec_med = self.science.tstamp["tai_sec"][self.science.size // 2]
-                _mm = ((tai_sec_med - self.science.tstamp["tai_sec"] < three_hours)
-                       & (self.science.tstamp["tai_sec"] - tai_sec_med < three_hours))
+                _mm = (tai_sec_med - self.science.tstamp["tai_sec"] < three_hours) & (
+                    self.science.tstamp["tai_sec"] - tai_sec_med < three_hours
+                )
                 if np.sum(_mm) < self.science.size:
                     self.logger.warning(
                         "rejected Science: %d -> %d", self.science.size, np.sum(_mm)
@@ -3580,8 +3582,7 @@ class SPXtlm:
 
                 intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
                 self.set_coverage(
-                    [self.science.tstamp["dt"][0],
-                     self.science.tstamp["dt"][-1] + intg]
+                    [self.science.tstamp["dt"][0], self.science.tstamp["dt"][-1] + intg]
                 )
 
         # collected NomHK telemetry data
@@ -3591,16 +3592,17 @@ class SPXtlm:
             tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
             _mm = []
             for tstamp in self.nomhk.tstamp:
-                _mm.append(tstamp_med - tstamp < three_hours
-                           and tstamp - tstamp_med < three_hours)
+                _mm.append(
+                    tstamp_med - tstamp < three_hours
+                    and tstamp - tstamp_med < three_hours
+                )
             if np.sum(_mm) < self.nomhk.size:
                 self.logger.warning(
                     "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
                 )
                 self.nomhk.sel(_mm)
             self.set_coverage(
-                [self.nomhk.tstamp[0],
-                 self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+                [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
             )
 
     def from_l1a(
@@ -3644,8 +3646,10 @@ class SPXtlm:
             if tlm_type != "sci":
                 self.nomhk.extract_l1a_hk(fid, mps_id)
                 self.set_coverage(
-                    [self.nomhk.tstamp[0],
-                     self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+                    [
+                        self.nomhk.tstamp[0],
+                        self.nomhk.tstamp[-1] + dt.timedelta(seconds=1),
+                    ]
                 )
 
     def __select_msm_mode(self: SPXtlm, mode: str) -> dict | None:
