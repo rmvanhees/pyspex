@@ -83,7 +83,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.7"
+    return "1.4.8"
 
 
 # --------------------------------------------------
@@ -456,6 +456,11 @@ class CCSDShdr:
         if hdr is not None:
             self.__hdr = hdr
             self.__dtype = hdr.dtype
+
+    def _tm_raw_(self: CCSDShdr) -> np.dtype:  # ApID unknown
+        """Return data-type of unknown packet, just a header and byte data."""
+        return np.dtype(
+            [("hdr", self.__hdr.dtype), ("Data", "u1", (self.__hdr["length"] - 5))])
 
     def _tm_800_(self: CCSDShdr) -> np.dtype:  # ApID = 0x320
         """Return data-type of NomHk packet."""
@@ -835,7 +840,7 @@ class CCSDShdr:
     def data_dtype(self: CCSDShdr) -> np.dtype:
         """Return numpy data-type of CCSDS User Data."""
         method = getattr(self, f"_tm_{self.apid:d}_", None)
-        return None if method is None else method()
+        return self._tm_raw_() if method is None else method()
 
     def tstamp(self: CCSDShdr, epoch: dt.datetime) -> dt.datetime:
         """Return time of the telemetry packet.
@@ -2712,9 +2717,8 @@ class HKTio:
 
     def __init__(self: HKTio, filename: Path) -> None:
         """Initialize access to a PACE HKT product."""
-        self._coverage = None
-        self._reference_date = None
-        self.filename = filename
+        self._reference_date: dt.datetime | None = None
+        self.filename: Path = filename if isinstance(filename, Path) else Path(filename)
         if not self.filename.is_file():
             raise FileNotFoundError(f"file {filename} not found")
         self.set_reference_date()
@@ -2786,60 +2790,44 @@ class HKTio:
         if abs(coverage_end - coverage_start) < one_day:
             return [coverage_start, coverage_end]
 
-        # Oeps, now we have to check the timestamps of the different instruments
-        instr_list = ["harp", "oci", "sc", "spx"]
+        module_logger.warning("attributes time_coverage_* are not present or invalid")
+        # derive time_coverage_start/end from spacecraft telemetry
+        res = self.read_hk_dset('sc')
+        dt_list = ()
+        for packet in res:
+            try:
+                ccsds_hdr = CCSDShdr()
+                ccsds_hdr.read("raw", packet)
+            except ValueError as exc:
+                module_logger.warning('CCSDS header read error with "%s"', exc)
+                break
 
-        dt_list = []
-        tstamp_mn_list = []
-        tstamp_mx_list = []
-        for instrument in instr_list:
-            res = self.read_hk_dset(instrument)
-            if res is None:
-                continue
+            val = ccsds_hdr.tstamp(EPOCH)
+            if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
+                dt_list += (val,)
 
-            for packet in res:
-                try:
-                    ccsds_hdr = CCSDShdr()
-                    ccsds_hdr.read("raw", packet)
-                except ValueError as exc:
-                    module_logger.warning('CCSDS header read error with "%s"', exc)
-                    break
+        dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
+        ii = dt_arr.size // 2
+        leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
+        dt_arr -= dt.timedelta(seconds=leap_sec)
+        mn_val = min(dt_arr)
+        mx_val = max(dt_arr)
+        if mx_val - mn_val > one_day:
+            indx_close_to_mn = (dt_arr - mn_val) <= one_day
+            indx_close_to_mx = (mx_val - dt_arr) <= one_day
+            module_logger.warning(
+                "coverage_range: %s[%d] - %s[%d]",
+                mn_val,
+                np.sum(indx_close_to_mn),
+                mx_val,
+                np.sum(indx_close_to_mx),
+            )
+            if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
+                mx_val = max(dt_arr[indx_close_to_mn])
+            else:
+                mn_val = min(dt_arr[indx_close_to_mx])
 
-                val = ccsds_hdr.tstamp(EPOCH)
-                if (val > VALID_COVERAGE_MIN) & (val < VALID_COVERAGE_MAX):
-                    dt_list += (val,)
-
-            if not dt_list:
-                continue
-
-            dt_arr: npt.NDArray[dt.datetime] = np.array(dt_list)
-            ii = dt_arr.size // 2
-            leap_sec = get_leap_seconds(dt_arr[ii].timestamp(), epochyear=1970)
-            dt_arr -= dt.timedelta(seconds=leap_sec)
-            mn_val = min(dt_arr)
-            mx_val = max(dt_arr)
-            if mx_val - mn_val > one_day:
-                indx_close_to_mn = (dt_arr - mn_val) <= one_day
-                indx_close_to_mx = (mx_val - dt_arr) <= one_day
-                module_logger.warning(
-                    "coverage_range: %s[%d] - %s[%d]",
-                    mn_val,
-                    np.sum(indx_close_to_mn),
-                    mx_val,
-                    np.sum(indx_close_to_mx),
-                )
-                if np.sum(indx_close_to_mn) > np.sum(indx_close_to_mx):
-                    mx_val = max(dt_arr[indx_close_to_mn])
-                else:
-                    mn_val = min(dt_arr[indx_close_to_mx])
-
-            tstamp_mn_list.append(mn_val)
-            tstamp_mx_list.append(mx_val)
-
-        if len(tstamp_mn_list) == 1:
-            return [tstamp_mn_list[0], tstamp_mx_list[0]]
-
-        return [min(*tstamp_mn_list), max(*tstamp_mx_list)]
+        return [mn_val, mx_val]
 
     def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray, ...]:
         """Get housekeeping telemetry data.
@@ -3432,18 +3420,12 @@ class SPXtlm:
     @property
     def time_coverage_start(self: SPXtlm) -> dt.datetime | None:
         """Return time_coverage_start."""
-        if self._coverage is None:
-            return None
-
-        return self._coverage[0]
+        return None if self._coverage is None else self._coverage[0]
 
     @property
     def time_coverage_end(self: SPXtlm) -> dt.datetime | None:
         """Return time_coverage_end."""
-        if self._coverage is None:
-            return None
-
-        return self._coverage[1]
+        return None if self._coverage is None else self._coverage[1]
 
     def from_hkt(
         self: SPXtlm,
@@ -3477,17 +3459,22 @@ class SPXtlm:
             hkt = HKTio(name)
             ccsds_hk += hkt.housekeeping(instrument)
 
+        # check number of telemetry data-packages
         if not ccsds_hk:
             return
 
+        # perform dump of telemetry data-packages
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
+            return
+        # check if TAI timestamp is valid
+        ii = len(ccsds_hk) // 2
+        if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+            return
 
         # set epoch
         epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
-        ii = len(ccsds_hk) // 2
-        leap_sec = get_leap_seconds(float(ccsds_hk[ii]["hdr"]["tai_sec"][0]))
-        epoch -= dt.timedelta(seconds=leap_sec)
+        epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records with obviously wrong timestamps
@@ -3499,7 +3486,7 @@ class SPXtlm:
                        and tstamp - tstamp_med < three_hours)
         if np.sum(_mm) < self.nomhk.size:
             self.logger.warning(
-                "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
             )
             self.nomhk.sel(_mm)
 
@@ -3566,10 +3553,13 @@ class SPXtlm:
 
         # set epoch
         if file_format == "dsb":
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            # check if TAI timestamp is valid
             ii = len(ccsds_hk) // 2
-            leap_sec = get_leap_seconds(ccsds_hk[ii]["hdr"]["tai_sec"][0])
-            epoch -= dt.timedelta(seconds=leap_sec)
+            if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+                return
+
+            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
+            epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
         else:
             epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
@@ -3584,7 +3574,7 @@ class SPXtlm:
                        & (self.science.tstamp["tai_sec"] - tai_sec_med < three_hours))
                 if np.sum(_mm) < self.science.size:
                     self.logger.warning(
-                        "Rejected Science: %d -> %d", self.science.size, np.sum(_mm)
+                        "rejected Science: %d -> %d", self.science.size, np.sum(_mm)
                     )
                     self.science.sel(_mm)
 
@@ -3605,7 +3595,7 @@ class SPXtlm:
                            and tstamp - tstamp_med < three_hours)
             if np.sum(_mm) < self.nomhk.size:
                 self.logger.warning(
-                    "Rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                    "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
                 )
                 self.nomhk.sel(_mm)
             self.set_coverage(
