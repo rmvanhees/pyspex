@@ -3,7 +3,7 @@
 # This file is part of pyspex
 #    https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -79,11 +79,11 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # from pyspex.version import pyspex_version
 #
 # Remarks:
-# - Use hardcoded version (git hash: 6345207)
+# - Use hardcoded version!
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.8"
+    return "1.4.9"
 
 
 # --------------------------------------------------
@@ -3327,6 +3327,61 @@ class SCItlm:
         return convert_hk(key.upper(), raw_data)
 
 
+def get_l1a_filename(
+    config: dataclass,
+    coverage: tuple[dt.datetime, dt.datetime],
+    mode: str | None = None,
+) -> Path:
+    """Return filename of level-1A product.
+
+    Parameters
+    ----------
+    config :  dataclass
+        Settings for the L0->l1A processing
+    coverage :  tuple[dt.datetime, dt.datetime]
+        time_coverage_start and time_coverage_end of the data
+    mode :  {'binned', 'full'} | None, default=None
+        Select Science packages with full-frame images or binned images
+
+    Returns
+    -------
+    Path
+        Filename of level-1A product.
+
+    Notes
+    -----
+    L1A file name format, following the NASA ... naming convention:
+        PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
+    where
+        TTT is an optional data type (e.g., for the calibration data files)
+        YYYYMMDDTHHMMSS is time stamp of the first image in the file
+        Vnn file-version number (omitted when nn=1)
+
+    for example (file-version=1):
+        [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
+        [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
+        [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
+    """
+    if config.outfile:
+        return config.outdir / config.outfile
+
+    # +++++ in-flight product-name convention +++++
+    if config.eclipse is None:
+        subtype = "_OCAL"
+    elif not config.eclipse:
+        subtype = ""
+    else:
+        subtype = "_CAL" if mode == "full" else "_DARK"
+
+    prod_ver = "" if config.file_version == 1 else f".V{config.file_version:02d}"
+
+    return config.outdir / (
+        f'PACE_SPEXONE{subtype}'
+        f'.{coverage[0].strftime("%Y%m%dT%H%M%S"):15s}'
+        f'.L1A{prod_ver}.nc'
+    )
+
+
 # - class SPXtlm ----------------------------
 class SPXtlm:
     """Access/convert parameters of SPEXone Science telemetry data.
@@ -3834,10 +3889,12 @@ class SPXtlm:
             tstamp = [x for x in tstamp if x > DATE_MIN]
             coverage = (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1))
 
-        l1a_file = self.l1a_file(config, mode)
-        ref_date = self.reference_date
+        l1a_path = get_l1a_filename(config, coverage, mode)
         with L1Aio(
-            l1a_file, ref_date, selection["dims"], compression=config.compression
+            l1a_path,
+            self.reference_date,
+            selection["dims"],
+            compression=config.compression,
         ) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != "raw")
             l1a.set_attr("processing_version", config.processing_version)
@@ -3860,17 +3917,17 @@ class SPXtlm:
 
         # add processor_configuration
         if config.yaml_fl:
-            add_proc_conf(l1a_file, config.yaml_fl)
+            add_proc_conf(l1a_path, config.yaml_fl)
 
         # add PACE navigation information from HKT products
         if config.hkt_list:
-            status_ok = add_hkt_navigation(l1a_file, config.hkt_list)
+            status_ok = add_hkt_navigation(l1a_path, config.hkt_list)
             self.logger.debug("(5) added PACE navigation data")
 
             if not status_ok:
                 raise UserWarning("time-coverage of navigation data is too short")
 
-        self.logger.info("successfully generated: %s", l1a_file.name)
+        self.logger.info("successfully generated: %s", l1a_path.name)
 
     def _fill_engineering(self: SPXtlm, l1a: L1Aio, hk_mask: np.ndarray) -> None:
         """Fill datasets in group '/engineering_data'."""
