@@ -318,7 +318,7 @@ class SPXtlm:
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
-            _mm[:indx[0] + 1] = False
+            _mm[indx[0] + 1:] = False
             if np.sum(_mm) < self.nomhk.size // 2:
                 _mm = ~_mm
             self.logger.warning(
@@ -409,7 +409,7 @@ class SPXtlm:
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
-                    _mm[:indx[0] + 1] = False
+                    _mm[indx[0] + 1:] = False
                     if np.sum(_mm) < self.science.size // 2:
                         _mm = ~_mm
                     self.logger.warning(
@@ -432,15 +432,21 @@ class SPXtlm:
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
-                _mm[:indx[0] + 1] = False
-                if np.sum(_mm) < self.nomhk.size // 2:
-                    _mm = ~_mm
+                _mm[indx[0] + 1:] = False
+                if self.coverage is None:
+                    if np.sum(_mm) < self.nomhk.size // 2:
+                        _mm = ~_mm
+                else:
+                    dt_start = abs(self.coverage[0] - self.nomhk.tstamp[0])
+                    dt_end = abs(self.coverage[-1] - self.nomhk.tstamp[-1])
+                    if dt_start > dt_end:
+                        _mm = ~_mm
                 self.logger.warning(
                     "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
                 )
                 self.nomhk.sel(_mm)
 
-            # set time-coverage
+            # set time-coverage (only, when self._coverage is None)
             self.set_coverage(
                 [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
             )
