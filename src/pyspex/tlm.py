@@ -316,13 +316,15 @@ class SPXtlm:
         # reject nomHK records before or after a big time-jump
         _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
         if np.any(_mm):
-            if (indx := _mm.nonzero()[0]) > self.nomhk.size // 2:
-                msg = "rejected nomHK with [:%d] to %d"
-                self.nomhk = self.nomhk[:indx[0] + 1]
-            else:
-                msg = "rejected nomHK with [%d:] to %d"
-                self.nomhk = self.nomhk[indx[0] + 1:]
-            self.logger.warning(msg, indx[0] + 1, self.nomhk.size)
+            indx = _mm.nonzero()[0]
+            _mm = np.full(self.nomhk.size, True, dtype=bool)
+            _mm[:indx[0] + 1] = False
+            if np.sum(_mm) < self.nomhk.size // 2:
+                _mm = ~_mm
+            self.logger.warning(
+                "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+            )
+            self.nomhk.sel(_mm)
 
         # set time-coverage
         self.set_coverage(
@@ -405,13 +407,15 @@ class SPXtlm:
                 # reject Science records before or after a big time-jump
                 _mm = np.diff(self.science.tstamp["dt"]) > np.timedelta64(1, "D")
                 if np.any(_mm):
-                    if (indx := _mm.nonzero()[0]) > self.science.size // 2:
-                        msg = "rejected Science with [:%d] to %d"
-                        self.science = self.science[:indx[0] + 1]
-                    else:
-                        msg = "rejected Science with [%d:] to %d"
-                        self.science = self.science[indx[0] + 1:]
-                    self.logger.warning(msg, indx[0] + 1, self.science.size)
+                    indx = _mm.nonzero()[0]
+                    _mm = np.full(self.science.size, True, dtype=bool)
+                    _mm[:indx[0] + 1] = False
+                    if np.sum(_mm) < self.science.size // 2:
+                        _mm = ~_mm
+                    self.logger.warning(
+                        "rejected science: %d -> %d", self.science.size, np.sum(_mm)
+                    )
+                    self.science.sel(_mm)
 
                 # set time-coverage
                 intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
@@ -426,13 +430,15 @@ class SPXtlm:
             # reject nomHK records before or after a big time-jump
             _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
             if np.any(_mm):
-                if (indx := _mm.nonzero()[0]) > self.nomhk.size // 2:
-                    msg = "rejected nomHK with [:%d] to %d"
-                    self.nomhk = self.nomhk[:indx[0] + 1]
-                else:
-                    msg = "rejected nomHK with [%d:] to %d"
-                    self.nomhk = self.nomhk[indx[0] + 1:]
-                self.logger.warning(msg, indx[0] + 1, self.nomhk.size)
+                indx = _mm.nonzero()[0]
+                _mm = np.full(self.nomhk.size, True, dtype=bool)
+                _mm[:indx[0] + 1] = False
+                if np.sum(_mm) < self.nomhk.size // 2:
+                    _mm = ~_mm
+                self.logger.warning(
+                    "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
+                )
+                self.nomhk.sel(_mm)
 
             # set time-coverage
             self.set_coverage(
