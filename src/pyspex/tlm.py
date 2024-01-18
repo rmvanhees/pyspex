@@ -313,19 +313,16 @@ class SPXtlm:
         epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
-        # reject nomHK records with obviously wrong timestamps
-        three_hours = dt.timedelta(hours=3)
-        tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
-        _mm = []
-        for tstamp in self.nomhk.tstamp:
-            _mm.append(
-                tstamp_med - tstamp < three_hours and tstamp - tstamp_med < three_hours
-            )
-        if np.sum(_mm) < self.nomhk.size:
-            self.logger.warning(
-                "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
-            )
-            self.nomhk.sel(_mm)
+        # reject nomHK records before or after a big time-jump
+        _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+        if np.any(_mm):
+            if (indx := _mm.nonzero()[0]) > self.nomhk.size // 2:
+                msg = "rejected nomHK with [:%d] to %d"
+                self.nomhk = self.nomhk[:indx[0] + 1]
+            else:
+                msg = "rejected nomHK with [%d:] to %d"
+                self.nomhk = self.nomhk[indx[0] + 1:]
+            self.logger.warning(msg, indx[0] + 1, self.nomhk.size)
 
         # set time-coverage
         self.set_coverage(
@@ -405,17 +402,18 @@ class SPXtlm:
             if self.science.extract_l0_sci(ccsds_sci, epoch) == 0:
                 self.logger.info("no valid Science package found")
             else:
-                three_hours = 3 * 60 * 60
-                tai_sec_med = self.science.tstamp["tai_sec"][self.science.size // 2]
-                _mm = (tai_sec_med - self.science.tstamp["tai_sec"] < three_hours) & (
-                    self.science.tstamp["tai_sec"] - tai_sec_med < three_hours
-                )
-                if np.sum(_mm) < self.science.size:
-                    self.logger.warning(
-                        "rejected Science: %d -> %d", self.science.size, np.sum(_mm)
-                    )
-                    self.science.sel(_mm)
+                # reject Science records before or after a big time-jump
+                _mm = np.diff(self.science.tstamp["dt"]) > np.timedelta64(1, "D")
+                if np.any(_mm):
+                    if (indx := _mm.nonzero()[0]) > self.science.size // 2:
+                        msg = "rejected Science with [:%d] to %d"
+                        self.science = self.science[:indx[0] + 1]
+                    else:
+                        msg = "rejected Science with [%d:] to %d"
+                        self.science = self.science[indx[0] + 1:]
+                    self.logger.warning(msg, indx[0] + 1, self.science.size)
 
+                # set time-coverage
                 intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
                 self.set_coverage(
                     [self.science.tstamp["dt"][0], self.science.tstamp["dt"][-1] + intg]
@@ -424,19 +422,19 @@ class SPXtlm:
         # collected NomHK telemetry data
         if tlm_type != "sci" and ccsds_hk:
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
-            three_hours = dt.timedelta(hours=3)
-            tstamp_med = self.nomhk.tstamp[self.nomhk.size // 2]
-            _mm = []
-            for tstamp in self.nomhk.tstamp:
-                _mm.append(
-                    tstamp_med - tstamp < three_hours
-                    and tstamp - tstamp_med < three_hours
-                )
-            if np.sum(_mm) < self.nomhk.size:
-                self.logger.warning(
-                    "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
-                )
-                self.nomhk.sel(_mm)
+
+            # reject nomHK records before or after a big time-jump
+            _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+            if np.any(_mm):
+                if (indx := _mm.nonzero()[0]) > self.nomhk.size // 2:
+                    msg = "rejected nomHK with [:%d] to %d"
+                    self.nomhk = self.nomhk[:indx[0] + 1]
+                else:
+                    msg = "rejected nomHK with [%d:] to %d"
+                    self.nomhk = self.nomhk[indx[0] + 1:]
+                self.logger.warning(msg, indx[0] + 1, self.nomhk.size)
+
+            # set time-coverage
             self.set_coverage(
                 [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
             )
@@ -576,8 +574,7 @@ class SPXtlm:
         mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
         """
-        selection = self.__select_msm_mode(mode)
-        if selection is None:
+        if (selection := self.__select_msm_mode(mode)) is None:
             return
 
         # set time-coverage range

@@ -82,18 +82,19 @@ def main() -> int:
         if config.eclipse is None:
             tlm.gen_l1a(config, "all")
         elif config.eclipse:
-            tlm.gen_l1a(config, "binned")
             tlm.gen_l1a(config, "full")
+            tlm.gen_l1a(config, "binned")
         else:
             tlm.gen_l1a(config, "binned")
     except (KeyError, RuntimeError) as exc:
+        raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)
         error_code = 131
     except UserWarning as exc:
         logger.warning('navigation data is incomplete: "%s".', exc)
         error_code = 132
     except Exception as exc:
-        # raise RuntimeError from exc
+        raise RuntimeError from exc
         logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 
