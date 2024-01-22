@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2023-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -92,12 +92,22 @@ class SCItlm:
         """Return number of elements."""
         return 0 if self.tlm is None else len(self.tlm)
 
-    def sel(self: SCItlm, mask: np.NDArray[bool]) -> None:
-        """Use mask array to reject housekeeping packages."""
-        self.hdr = self.hdr[mask]
-        self.tlm = self.tlm[mask]
-        self.tstamp = self.tstamp[mask]
-        self.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+    def copy(self: SCItlm) -> SCItlm:
+        """Return deep-copy of SCItlm object."""
+        sci = SCItlm()
+        sci.hdr = self.hdr.copy()
+        sci.tlm = self.tlm.copy()
+        sci.tstamp = self.tstamp.copy()
+        sci.images = tuple(x for x in self.images)
+
+    def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
+        """Return subset of SCItlm object using a mask array."""
+        sci = SCItlm()
+        sci.hdr = self.hdr[mask]
+        sci.tlm = self.tlm[mask]
+        sci.tstamp = self.tstamp[mask]
+        sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+        return sci
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.

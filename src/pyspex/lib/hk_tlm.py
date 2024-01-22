@@ -71,11 +71,23 @@ class HKtlm:
         """Return number of elements."""
         return 0 if self.tlm is None else len(self.tlm)
 
-    def sel(self: HKtlm, mask: np.NDArray[bool]) -> None:
-        """Use mask array to reject housekeeping packages."""
-        self.hdr = self.hdr[mask]
-        self.tlm = self.tlm[mask]
-        self.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+    def copy(self: HKtlm) -> HKtlm:
+        """Return deep-copy of HKtlm object."""
+        hkt = HKtlm()
+        hkt.hdr = self.hdr.copy()
+        hkt.tlm = self.tlm.copy()
+        hkt.tstamp = [x for x in self.tstamp]
+        hkt.events = self.events.copy()
+        return hkt
+
+    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
+        """Return subset of HKtlm object using a mask array."""
+        hkt = HKtlm()
+        hkt.hdr = self.hdr[mask]
+        hkt.tlm = self.tlm[mask]
+        hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+        hkt.events = self.events.copy()
+        return hkt
 
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
         """Extract data from SPEXone level-0 housekeeping telemetry packets.
