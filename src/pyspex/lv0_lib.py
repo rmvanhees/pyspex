@@ -3,10 +3,11 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+#
 """Contains a collection of routines to access SPEXone Level-0 data.
 
 Routines to read and write SPEXone CCSDS data:
