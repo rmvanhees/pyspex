@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -178,12 +178,13 @@ class SPXtlm:
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
-     - from_hkt(flnames: Path | list[Path], *,
+     - from_hkt(flnames: str | Path | list[Path], *,
                 instrument: str | None = None, dump: bool = False) -> None
-     - from_lv0(flnames: Path | list[Path], *,
-                file_format: str, tlm_type: str | None = None,
+     - from_lv0(flnames: str | Path | list[Path], file_format: str = 'dsb',
+                *, tlm_type: str | None = None,
                 debug: bool = False, dump: bool = False) -> None
-     - from_l1a(flname: Path, *, tlm_type: str | None = None,
+     - from_l1a(flname: str | Path,
+                *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
      - gen_l1a(config: dataclass, mode: str) -> None
 
@@ -230,6 +231,32 @@ class SPXtlm:
         """Return data time_coverage."""
         return self._coverage
 
+    def sel(self: SPXtlm, mask: np.NDArray[bool]) -> SPXtlm:
+        """Return subset of SPXtlm object using a mask array."""
+        spx = SPXtlm()
+        spx.logger = self.logger
+        spx.file_list = self.file_list.copy()
+        spx.science = self.science.sel(mask)
+
+        # set Science time_coverage_range
+        indices =mask.nonzero()[0]
+        if len(indices) == 1:
+            frame_period = dt.timedelta(milliseconds=self.science.frame_period(0))
+            spx.set_coverage([spx.science.tstamp[0]["dt"],
+                              spx.science.tstamp[0]["dt"] + frame_period])
+        else:
+            frame_period = dt.timedelta(milliseconds=self.science.frame_period(-1))
+            spx.set_coverage([spx.science.tstamp[0]["dt"],
+                              spx.science.tstamp[-1]["dt"] + frame_period])
+
+        # select nomhk data within Science time_coverage_range
+        hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
+        dt_min = np.datetime64(spx.coverage[0]) - np.timedelta64(1, "s")
+        dt_max = np.datetime64(spx.coverage[1]) + np.timedelta64(1, "s")
+        hk_mask = ((hk_tstamps >= dt_min) & (hk_tstamps <= dt_max))
+        spx.nomhk = self.nomhk.sel(hk_mask)
+        return spx
+
     def set_coverage(
         self: SPXtlm,
         coverage_new: list[dt.datetime, dt.datetime] | None,
@@ -266,7 +293,7 @@ class SPXtlm:
 
     def from_hkt(
         self: SPXtlm,
-        flnames: Path | list[Path],
+        flnames: str | Path | list[Path],
         *,
         instrument: str | None = None,
         dump: bool = False,
@@ -275,7 +302,7 @@ class SPXtlm:
 
         Parameters
         ----------
-        flnames :  Path | list[Path]
+        flnames :  str | Path | list[Path]
            sorted list of PACE_HKT filenames (netCDF4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
         dump :  bool, default=False
@@ -283,8 +310,8 @@ class SPXtlm:
            debugging purposes
         """
         self.set_coverage(None)
-        if isinstance(flnames, Path):
-            flnames = [flnames]
+        if isinstance(flnames, str | Path):
+            flnames = [flnames] if isinstance(flnames, Path) else [Path(flnames)]
         if instrument is None:
             instrument = "spx"
         elif instrument not in ["spx", "sc", "oci", "harp"]:
@@ -333,9 +360,9 @@ class SPXtlm:
 
     def from_lv0(
         self: SPXtlm,
-        flnames: Path | list[Path],
+        flnames: str | Path | list[Path],
+        file_format: str = 'dsb',
         *,
-        file_format: str,
         tlm_type: str | None = None,
         debug: bool = False,
         dump: bool = False,
@@ -344,13 +371,13 @@ class SPXtlm:
 
         Parameters
         ----------
-        flnames :  Path | list[Path]
+        flnames :  str | Path | list[Path]
            sorted list of CCSDS filenames
-        file_format : {'raw', 'st3', 'dsb'}
+        file_format : {'raw', 'st3', 'dsb'}, default='dsb'
            type of CCSDS data
         tlm_type :  {'hk', 'sci', 'all'}, default='all'
            select type of telemetry packages
-           Note that we allways read the complete level-0 products.
+           Note that we always read the complete level-0 products.
         debug : bool, default=False
            run in debug mode, read only packages heades
         dump :  bool, default=False
@@ -358,14 +385,14 @@ class SPXtlm:
            debugging purposes
         """
         self.set_coverage(None)
-        if isinstance(flnames, Path):
-            flnames = [flnames]
+        if isinstance(flnames, str | Path):
+            flnames = [flnames] if isinstance(flnames, Path) else [Path(flnames)]
+        if file_format not in ["raw", "st3", "dsb"]:
+            raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
         if tlm_type is None:
             tlm_type = "all"
         elif tlm_type not in ["hk", "sci", "all"]:
             raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
-        if file_format not in ["raw", "st3", "dsb"]:
-            raise KeyError("file_format not in ['raw', 'st3', 'dsb']")
         self.file_list = flnames
 
         # read telemetry data
@@ -453,7 +480,7 @@ class SPXtlm:
 
     def from_l1a(
         self: SPXtlm,
-        flname: Path,
+        flname: str | Path,
         *,
         tlm_type: str | None = None,
         mps_id: int | None = None,
