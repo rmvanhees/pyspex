@@ -507,17 +507,21 @@ class SPXtlm:
             # collect Science telemetry data
             if tlm_type != "hk":
                 self.science.extract_l1a_sci(fid, mps_id)
-                if self.science.tstamp is not None:
-                    _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
-                    if np.any(_mm):
-                        tstamp = self.science.tstamp["dt"][_mm]
-                        ii = int(np.nonzero(_mm)[0][-1])
-                        intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                        self.set_coverage([tstamp[0], tstamp[-1] + intg])
+                if self.science.size == 0:
+                    return
+
+                _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
+                if np.any(_mm):
+                    tstamp = self.science.tstamp["dt"][_mm]
+                    ii = int(np.nonzero(_mm)[0][-1])
+                    intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
+                    self.set_coverage([tstamp[0], tstamp[-1] + intg])
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
                 self.nomhk.extract_l1a_hk(fid, mps_id)
+                if self.nomhk.size == 0:
+                    return
                 self.set_coverage(
                     [
                         self.nomhk.tstamp[0],
