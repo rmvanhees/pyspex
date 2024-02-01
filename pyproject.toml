@@ -65,7 +65,11 @@ namespaces = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-"pyspex.data" = ["*.dat", "*.yaml"]
+"pyspex.data" = [
+	"*.dat",
+	"*.yaml",
+	"*.nc"
+]
 
 [tool.setuptools_scm]
 
