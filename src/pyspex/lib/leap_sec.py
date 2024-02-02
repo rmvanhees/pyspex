@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # Author: Sean Bailey - DAAC Manager, OB.DAAC, NASA/GSFC Code 619
