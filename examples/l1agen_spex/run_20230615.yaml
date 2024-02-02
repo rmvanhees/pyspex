@@ -1,5 +1,6 @@
 processing_version: "v0.9"
 outdir: L1A
+eclipse: False
 l0_list:
 - /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001086.spx
 - /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001087.spx
