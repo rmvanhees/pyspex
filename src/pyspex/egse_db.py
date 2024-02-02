@@ -334,8 +334,8 @@ def create_egse_db(args: argparse.Namespace) -> None:
         egse_t = fid.createCompoundType(egse.dtype, "egse_dtype")
         dset = fid.createVariable("egse", egse_t, ("time",), chunksizes=(64,))
         dset.long_name = "EGSE settings"
-        dset.fields = np.array([np.string_(n) for n in egse.dtype.names])
-        dset.units = np.array([np.string_(n) for n in egse_units()])
+        dset.fields = np.bytes_(egse.dtype.names)
+        dset.units = np.bytes_(egse_units())
         dset.comment = (
             "DIG_IN_00 is of enumType ldls_t;"
             " SHUTTER_STATUS is of enumType shutter_t"
@@ -409,8 +409,8 @@ def add_egse_data(args: argparse.Namespace) -> None:
         egse_t = gid.createCompoundType(egse_data.dtype, "egse_dtype")
         dset = gid.createVariable("egse", egse_t, ("time",))
         dset.long_name = "EGSE settings"
-        dset.fields = np.array([np.string_(n) for n in egse_data.dtype.names])
-        dset.units = np.array([np.string_(n) for n in egse_units()])
+        dset.fields = np.bytes_(egse_data.dtype.names)
+        dset.units = np.bytes_(egse_units())
         dset.comment = (
             "DIG_IN_00 is of enumType ldls_t;"
             " SHUTTER_STATUS is of enumType shutter_t"

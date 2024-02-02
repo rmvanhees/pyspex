@@ -85,8 +85,7 @@ def get_stimulus(hdr: np.ndarray) -> xr.Dataset:
 
 
 def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
-    """
-    Return name of SPEXone product for DEM measurements.
+    """Return name of SPEXone product for DEM measurements.
 
     Parameters
     ----------
@@ -103,6 +102,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
        msm_id is the measurement identifier
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
        vvvvvvv is the git-hash string of the pyspex repository
+
     """
     # define string of sensing start as yyyymmddThhmmss
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")

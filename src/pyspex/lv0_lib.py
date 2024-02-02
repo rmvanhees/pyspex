@@ -129,6 +129,7 @@ def read_lv0_data(
     tuple
          Contains all Science and TmTc CCSDS packages as numpy arrays,
          or None if called with debug is True
+
     """
     scihk_dtype = tmtc_dtype(0x350)
     icutm_dtype = np.dtype([("tai_sec", ">u4"), ("sub_sec", ">u2")])

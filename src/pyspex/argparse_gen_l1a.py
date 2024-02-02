@@ -276,6 +276,7 @@ def argparse_gen_l1a() -> dataclass:
     -------
     dataclass
        settings from both command-line arguments and YAML config-file
+
     """
     config = __commandline_settings()
     if config.yaml_fl is None:

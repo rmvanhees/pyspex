@@ -73,8 +73,7 @@ MSG_CORRUPT_FRAME = "corrupted segments - previous frame not closed"
 def img_sec_of_day(
     img_sec: np.ndarray, img_subsec: np.ndarray, img_hk: np.ndarray
 ) -> tuple[datetime, float | Any]:
-    """
-    Convert Image CCSDS timestamp to seconds after midnight.
+    """Convert Image CCSDS timestamp to seconds after midnight.
 
     Parameters
     ----------
@@ -89,6 +88,7 @@ def img_sec_of_day(
     -------
     tuple
         reference day: datetime, sec_of_day: numpy.ndarray
+
     """
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = datetime(1970, 1, 1, tzinfo=UTC)
@@ -118,8 +118,7 @@ def img_sec_of_day(
 def hk_sec_of_day(
     ccsds_sec: np.ndarray, ccsds_subsec: np.ndarray, ref_day: datetime | None = None
 ) -> np.ndarray:
-    """
-    Convert CCSDS timestamp to seconds after midnight.
+    """Convert CCSDS timestamp to seconds after midnight.
 
     Parameters
     ----------
@@ -128,10 +127,12 @@ def hk_sec_of_day(
     ccsds_subsec : numpy array (dtype='u2')
         Sub-seconds as (1 / 2**16) seconds
     ref_day : datetime.datetime, optional
+        `date` object represent a date (year, month, day)
 
     Returns
     -------
     numpy.ndarray with sec_of_day
+
     """
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = datetime(1970, 1, 1, tzinfo=UTC)
@@ -321,6 +322,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            SPEXone DEM housekeeping packages
+
         """
         for key in [
             "DET_EXPTIME",
@@ -353,6 +355,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            SPEXone Science telemetry packages
+
         """
         if np.all(sci_hk["ICUSWVER"] < 0x129):
             key = "REG_BINNING_TABLE_START"
@@ -405,6 +408,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            SPEXone Science telemetry packages
+
         """
         num_bytes = self.packet_length - TIME_DTYPE.itemsize + 1
         packet = np.empty(
@@ -447,6 +451,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            SPEXone Nominal housekeeping packages
+
         """
         packet = np.empty(
             1,
@@ -470,6 +475,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            SPEXone detector housekeeping packages
+
         """
         packet = np.empty(
             1,
@@ -598,6 +604,7 @@ class CCSDSio:
         -------
         numpy.ndarray
            CCSDS packet data
+
         """
         if self.fp is None:
             return None
@@ -646,6 +653,7 @@ class CCSDSio:
         -------
         tuple
            selected telemetry packages
+
         """
         packets = ()
         for packet in packets_in:
@@ -669,6 +677,7 @@ class CCSDSio:
         -------
         tuple
            unsegmented Science telemetry packages
+
         """
         # reject non-Science telemetry packages
         packets = self.select_tm(packets_in, 0x350)

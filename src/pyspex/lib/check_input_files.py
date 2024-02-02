@@ -25,6 +25,7 @@ def check_input_files(config: dataclass) -> dataclass:
     Parameters
     ----------
     config :  dataclass
+       Dataclass that contains the settings of the L0-L1A processor
 
     Returns
     -------
@@ -37,6 +38,7 @@ def check_input_files(config: dataclass) -> dataclass:
        If files are not found on the system.
     TypeError
        If determined file type differs from value supplied by user.
+
     """
     file_list = config.l0_list
     if file_list[0].suffix == ".H":

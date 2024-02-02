@@ -123,6 +123,7 @@ class SCItlm:
         -------
         int
             number of detector frames
+
         """
         self.init_attrs()
         if not ccsds_sci:
@@ -204,6 +205,7 @@ class SCItlm:
            File pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
+
         """
         # pylint: disable=no-member
         self.init_attrs()
@@ -335,6 +337,7 @@ class SCItlm:
         Returns
         -------
         np.ndarray
+
         """
         if key.upper() not in self.tlm.dtype.names:
             raise KeyError(

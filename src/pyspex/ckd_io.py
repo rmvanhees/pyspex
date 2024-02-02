@@ -12,6 +12,8 @@
 References
 ----------
 * https://spexone-cal-doc.readthedocs.io/en/latest/
+
+
 """
 from __future__ import annotations
 
@@ -89,6 +91,7 @@ class CKDio:
         ----------
         compact :  bool
            return date in iso-format if not compact else return 'YYYYmmddHHMMSS'
+
         """
         # pylint: disable=no-member
         date_str = self.fid.attrs["date_created"].decode()
@@ -111,6 +114,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone Dark CKD
+
         """
         try:
             gid = self.fid["DARK"]
@@ -132,6 +136,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone Noise CKD
+
         """
         try:
             gid = self.fid["NOISE"]
@@ -149,6 +154,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone non-linearity CKD
+
         """
         try:
             gid = self.fid["NON_LINEARITY"]
@@ -189,6 +195,7 @@ class CKDio:
         -------
         xr.DataArray
            parameters of the SPEXone PRNU CKD
+
         """
         try:
             gid = self.fid["PRNU"]
@@ -203,6 +210,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone field-of-view CKD
+
         """
         try:
             gid = self.fid["FIELD_OF_VIEW"]
@@ -222,6 +230,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone Wavelength CKD
+
         """
         try:
             gid = self.fid["WAVELENGTH"]
@@ -242,6 +251,7 @@ class CKDio:
         -------
         xr.DataArray
            parameters of the SPEXone Radiometric CKD
+
         """
         try:
             gid = self.fid["RADIOMETRIC"]
@@ -256,6 +266,7 @@ class CKDio:
         -------
         xarray.Dataset
            parameters of the SPEXone polarimetric CKD
+
         """
         try:
             gid = self.fid["POLARIMETRIC"]

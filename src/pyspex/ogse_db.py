@@ -140,8 +140,7 @@ def read_ref_diode(ogse_dir: Path, file_list: list, verbose: bool = False) -> Da
 
 # ---------------
 def read_wav_mon(ogse_dir: Path, file_list: list, verbose: bool = False) -> Dataset:
-    """
-    Read wavelength monitor data into a xarray.Dataset.
+    """Read wavelength monitor data into a xarray.Dataset.
 
     (input comma separated values).
     """
@@ -158,6 +157,7 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose: bool = False) -> Data
         -------
         timestamp :  float
             Unix timestamp in UTC
+
         """
         buff = str_date.strip().decode("ascii") + "+01:00"
         return datetime.strptime(buff, "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()

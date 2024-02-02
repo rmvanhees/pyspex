@@ -15,6 +15,8 @@ The DEM measurements are performed at SRON between 17-10-2019 and 13-12-2019.
 References
 ----------
 * SRON-SPEX-TN-2020-001_0_5_SPEXone_Detector_Characterization.pdf
+
+
 """
 from __future__ import annotations
 
@@ -36,8 +38,7 @@ DEFAULT_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 # - local functions --------------------------------
 def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
-    """
-    Return name of SPEXone product for DEM measurements.
+    """Return name of SPEXone product for DEM measurements.
 
     Parameters
     ----------
@@ -54,6 +55,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
        msm_id is the measurement identifier
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
        vvvvvvv is the git-hash string of the pyspex repository
+
     """
     # define string of sensing start as yyyymmddThhmmss
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")

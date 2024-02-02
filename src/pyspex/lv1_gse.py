@@ -32,6 +32,7 @@ class LV1gse:
     ----------
     l1a_file: str
         Name of the Level-1A product
+
     """
 
     def __init__(self: LV1gse, l1a_file: str) -> None:
@@ -139,8 +140,11 @@ class LV1gse:
 
         Parameters
         ----------
-        name: str
-        value: anything(?)
+        name :  str
+           name of the attribute
+        value :  Any
+           value of the attribute
+
         """
         self.fid["/gse_data"].setncattr(name, value)
 
@@ -152,7 +156,10 @@ class LV1gse:
         Parameters
         ----------
         angle :  float
-        illumination :  float
+           ACT angle
+        illumination :  float, optional
+           Illumination level
+
         """
         self.fid["/gse_data"].ACT_rotationAngle = angle
         if illumination is not None:
@@ -166,7 +173,10 @@ class LV1gse:
         Parameters
         ----------
         angle :  float
+           ALT angle
         illumination :  float
+           Illumination level
+
         """
         self.fid["/gse_data"].ALT_rotationAngle = angle
         if illumination is not None:
@@ -181,6 +191,7 @@ class LV1gse:
            Angle of linear polarization
         dolp :  float
            Degree of linear polarization
+
         """
         if aolp is not None:
             self.fid["/gse_data"].AoLP = aolp
@@ -195,8 +206,12 @@ class LV1gse:
         Parameters
         ----------
         egse_time :  ndarray
+           EGSE timestamps
         egse_data :  ndarray
+           EGSE data
         egse_attrs :  dict
+           EGSE attributes
+
         """
         # perform sanity check on EGSE parameters
         self.check_egse(egse_data)
@@ -220,6 +235,8 @@ class LV1gse:
         Parameters
         ----------
         viewport :  int
+           Viewport as an intergier between 0 and 5
+
         """
         self.fid["/gse_data/viewport"][:] = viewport
 
@@ -238,6 +255,7 @@ class LV1gse:
         Notes
         -----
         Used for non-linearity measurements.
+
         """
         gid = self.fid["/gse_data"]
         gid.Illumination_level = 5e9 / 1.602176634 * signal
@@ -261,9 +279,13 @@ class LV1gse:
         Parameters
         ----------
         ref_time :  ndarray
+           reference diode timestamps
         ref_data :  ndarray
+           reference diode data
         ref_attrs :  dict
+           reference diode attributes
            fid['/ReferenceDiode/ref_diode'].__dict__
+
         """
         gid = self.fid.createGroup("/gse_data/ReferenceDiode")
         _ = gid.createDimension("time", len(ref_data))
@@ -284,6 +306,7 @@ class LV1gse:
         ----------
         xds_wav_mon :  xarray::Dataset
            Contains xarray::DataArrays 'signal', 'wavelength', 'wav_time'
+
         """
         xds_wav_mon.to_netcdf(
             self.fid.filepath(), mode="a", group="/gse_data/WaveMonitor"

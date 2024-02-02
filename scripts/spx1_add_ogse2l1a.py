@@ -8,8 +8,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Add OGSE information of a OCAL measurement to a SPEXone L1A product.
+"""Add OGSE information of a OCAL measurement to a SPEXone L1A product.
 
 Possible OGSE information:
 

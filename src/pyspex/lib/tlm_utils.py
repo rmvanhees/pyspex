@@ -93,6 +93,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
     - TS4 DEM Redundant Temperature
     - TS5 Housing Redundant Temperature
     - TS6 Radiator Redundant Temperature*
+
     """
     coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
@@ -118,6 +119,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
     - ICU MidBoard temperature
     - ICU MCU-RAM temperature
     - ICU 1V2, 3V3 supply temperature
+
     """
     coefficients = (273.15, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
@@ -132,6 +134,7 @@ def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
     - ICU 3.3 Volt bus voltage
     - ICU 1.2 Volt bus voltage
     - DEM power supply
+
     """
     coefficients = (0, 0.001)
     return coefficients[0] + coefficients[1] * raw_data
@@ -298,7 +301,7 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
         "LED2_I": poly_spex_led_i,
     }
 
-    func = conv_dict.get(key, None)
+    func = conv_dict.get(key)
     if func is not None:
         return func(raw_data)
 

@@ -36,6 +36,7 @@ class CCSDShdr:
         ----------
         hdr :  np.ndarray, optional
            CCSDS primary and secondary headers
+
         """
         self.__dtype = None
         self.__hdr = None
@@ -377,6 +378,7 @@ class CCSDShdr:
         - 0x340:  MemDump
         - 0x341:  MemCheckRp
         - 0x350:  Science
+
         """
         return self.__hdr["type"] & 0x7FF
 
@@ -384,7 +386,7 @@ class CCSDShdr:
     def grouping_flag(self: CCSDShdr) -> int:
         """Data packages can be segmented.
 
-        Note
+        Note:
         ----
         This flag is encoded as::
 
@@ -392,6 +394,7 @@ class CCSDShdr:
          01 : first segment
          10 : last segment
          11 : unsegmented
+
         """
         return (self.__hdr["sequence"] >> 14) & 0x3
 
@@ -436,6 +439,7 @@ class CCSDShdr:
         ----------
         epoch :  datetime
            Provide the UTC epoch of the time (thus corrected for leap seconds)
+
         """
         return epoch + dt.timedelta(
             seconds=int(self.tai_sec),
@@ -463,6 +467,7 @@ class CCSDShdr:
            data has no file header and ITOS + spacewire + CCSDS packet headers
         'dsb'
            data has a cFE file-header and spacewire + CCSDS packet headers
+
         """
         if file_format == "dsb":
             hdr_dtype = np.dtype(

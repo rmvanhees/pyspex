@@ -31,8 +31,7 @@ ORBIT_DURATION = 5904  # seconds
 
 # - local functions --------------------------------
 def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
-    """
-    Add CF attributes to a dataset holding 'seconds of day'.
+    """Add CF attributes to a dataset holding 'seconds of day'.
 
     Parameters
     ----------
@@ -67,6 +66,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
 
     Note that '_FillValue', 'long_name' and 'description' are not set by
     this function.
+
     """
     dset.units = f"seconds since {ref_date.strftime('%Y-%m-%d %H:%M:%S')}"
     dset.year = f"{ref_date.year}"
@@ -210,8 +210,7 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
 def init_l1a(
     l1a_flname: str, ref_date: dt.datetime, dims: dict, compression: bool = False
 ) -> Dataset:
-    """
-    Create an empty SPEXone Level-1A product (on-ground or in-flight).
+    """Create an empty SPEXone Level-1A product (on-ground or in-flight).
 
     Parameters
     ----------
@@ -235,15 +234,16 @@ def init_l1a(
     by this script.
 
     Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
+
     """
     # check function parameters
     if not isinstance(dims, dict):
         raise TypeError("dims should be a dictionary")
 
     # initialize dimensions
-    number_img = dims.get("number_of_images", None)
-    img_samples = dims.get("samples_per_image", None)
-    hk_packets = dims.get("hk_packets", None)
+    number_img = dims.get("number_of_images")
+    img_samples = dims.get("samples_per_image")
+    hk_packets = dims.get("hk_packets")
 
     # create/overwrite netCDF4 product
     try:

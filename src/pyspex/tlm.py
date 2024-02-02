@@ -86,6 +86,7 @@ def get_l1a_filename(
         msm_id is the measurement identifier
         YYYYMMDDTHHMMSS is time stamp of the first image in the file
         vvvvvvv is the git-hash string of the pyspex repository
+
     """
     if config.outfile:
         return config.outdir / config.outfile
@@ -131,6 +132,7 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
        name of an existing L1A product.
     hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
+
     """
     # read PACE navigation data from HKT files
     # and add PACE navigation data to existing level-1A product
@@ -148,6 +150,7 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
        name of an existing L1A product.
     yaml_conf :  Path
        name of the YAML file with the processor settings
+
     """
     with Dataset(l1a_file, "r+") as fid:
         dset = fid.createVariable("processor_configuration", str)
@@ -216,6 +219,7 @@ class SPXtlm:
     >>> spx.from_hkt(hkt_product)
     # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
     >>> spx.nomhk.events
+
     """
 
     def __init__(self: SPXtlm) -> None:
@@ -239,21 +243,29 @@ class SPXtlm:
         spx.science = self.science.sel(mask)
 
         # set Science time_coverage_range
-        indices =mask.nonzero()[0]
+        indices = mask.nonzero()[0]
         if len(indices) == 1:
             frame_period = dt.timedelta(milliseconds=self.science.frame_period(0))
-            spx.set_coverage([spx.science.tstamp[0]["dt"],
-                              spx.science.tstamp[0]["dt"] + frame_period])
+            spx.set_coverage(
+                [
+                    spx.science.tstamp[0]["dt"],
+                    spx.science.tstamp[0]["dt"] + frame_period,
+                ]
+            )
         else:
             frame_period = dt.timedelta(milliseconds=self.science.frame_period(-1))
-            spx.set_coverage([spx.science.tstamp[0]["dt"],
-                              spx.science.tstamp[-1]["dt"] + frame_period])
+            spx.set_coverage(
+                [
+                    spx.science.tstamp[0]["dt"],
+                    spx.science.tstamp[-1]["dt"] + frame_period,
+                ]
+            )
 
         # select nomhk data within Science time_coverage_range
         hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
         dt_min = np.datetime64(spx.coverage[0]) - np.timedelta64(1, "s")
         dt_max = np.datetime64(spx.coverage[1]) + np.timedelta64(1, "s")
-        hk_mask = ((hk_tstamps >= dt_min) & (hk_tstamps <= dt_max))
+        hk_mask = (hk_tstamps >= dt_min) & (hk_tstamps <= dt_max)
         spx.nomhk = self.nomhk.sel(hk_mask)
         return spx
 
@@ -305,9 +317,11 @@ class SPXtlm:
         flnames :  str | Path | list[Path]
            sorted list of PACE_HKT filenames (netCDF4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
+           abbreviations for the PACE instruments
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
+
         """
         self.set_coverage(None)
         if isinstance(flnames, str | Path):
@@ -345,7 +359,7 @@ class SPXtlm:
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
-            _mm[indx[0] + 1:] = False
+            _mm[indx[0] + 1 :] = False
             if np.sum(_mm) < self.nomhk.size // 2:
                 _mm = ~_mm
             self.logger.warning(
@@ -361,7 +375,7 @@ class SPXtlm:
     def from_lv0(
         self: SPXtlm,
         flnames: str | Path | list[Path],
-        file_format: str = 'dsb',
+        file_format: str = "dsb",
         *,
         tlm_type: str | None = None,
         debug: bool = False,
@@ -383,6 +397,7 @@ class SPXtlm:
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
+
         """
         self.set_coverage(None)
         if isinstance(flnames, str | Path):
@@ -436,7 +451,7 @@ class SPXtlm:
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
-                    _mm[indx[0] + 1:] = False
+                    _mm[indx[0] + 1 :] = False
                     if np.sum(_mm) < self.science.size // 2:
                         _mm = ~_mm
                     self.logger.warning(
@@ -459,7 +474,7 @@ class SPXtlm:
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
-                _mm[indx[0] + 1:] = False
+                _mm[indx[0] + 1 :] = False
                 if self.coverage is None:
                     if np.sum(_mm) < self.nomhk.size // 2:
                         _mm = ~_mm
@@ -495,6 +510,7 @@ class SPXtlm:
            select type of telemetry packages
         mps_id :  int, optional
            select on MPS ID
+
         """
         self.set_coverage(None)
         if tlm_type is None:
@@ -545,6 +561,7 @@ class SPXtlm:
                        'samples_per_image': int,
                        'hk_packets': int}
         }
+
         """
         if mode == "all":
             return {
@@ -616,6 +633,7 @@ class SPXtlm:
            Settings for the L0->L1A processing
         mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
+
         """
         if (selection := self.__select_msm_mode(mode)) is None:
             return

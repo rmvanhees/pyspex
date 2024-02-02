@@ -111,6 +111,7 @@ class L1Aio:
 
     compression : bool, default=False
        Use compression on dataset /science_data/detector_images
+
     """
 
     dset_stored = {
@@ -208,6 +209,7 @@ class L1Aio:
         -------
         scalar or array_like
            value of attribute 'name', global or attached to dataset 'ds_name'
+
         """
         if ds_name is None:
             res = self.fid.getncattr(name)
@@ -240,10 +242,11 @@ class L1Aio:
         ds_name : str, default=None
            name of group or dataset to which the attribute is attached
            **Use group name without starting '/'**
+
         """
         if ds_name is None:
             if isinstance(value, str):
-                self.fid.setncattr(name, np.string_(value))
+                self.fid.setncattr(name, np.bytes_(value))
             else:
                 self.fid.setncattr(name, value)
         else:
@@ -263,7 +266,7 @@ class L1Aio:
                     raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
-                self.fid[ds_name].setncattr(name, np.string_(value))
+                self.fid[ds_name].setncattr(name, np.bytes_(value))
             else:
                 self.fid[ds_name].setncattr(name, value)
 
@@ -280,6 +283,7 @@ class L1Aio:
         -------
         scalar or array_like
            value of dataset 'name'
+
         """
         grp_name = str(PurePosixPath(name).parent)
         var_name = str(PurePosixPath(name).name)
@@ -301,6 +305,7 @@ class L1Aio:
            Name of level-1A dataset
         value : scalar or array_like
            Value or values to be written
+
         """
         value = np.asarray(value)
         grp_name = str(PurePosixPath(name).parent)
@@ -323,6 +328,7 @@ class L1Aio:
         ----------
         inflight :  bool, default=False
            Measurements performed on-ground or inflight
+
         """
         dict_attrs = attrs_def(inflight)
         dict_attrs["product_name"] = self.product.name
@@ -337,6 +343,8 @@ class L1Aio:
         Parameters
         ----------
         allow_empty :  bool, default=False
+           Allow variables to be empty
+
         """
         warn_str = (
             "SPEX level-1A format check [WARNING]:"
@@ -397,6 +405,7 @@ class L1Aio:
         Parameters: binning_table, digital_offset, exposure_time
         and nr_coadditions are extracted from the telemetry packets and writen
         in the group /image_attributes
+
         """
         if len(img_hk) == 0:
             return
@@ -423,6 +432,7 @@ class L1Aio:
 
         Parameters: temp_detector and temp_housing are extracted and converted
         to Kelvin and writen to the group /engineering_data
+
         """
         if len(nomhk_data) == 0:
             return

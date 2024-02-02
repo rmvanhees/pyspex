@@ -18,6 +18,8 @@ Notes
 - Although pyspex is using features from Python v3.11+, the code of this module
   should run fine with Python v3.8 and the modules listed in requirements-3.8.txt.
 - Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
+
+
 """
 from __future__ import annotations
 
@@ -339,6 +341,7 @@ def argparse_gen_l1a() -> dataclass:
     -------
     dataclass
        settings from both command-line arguments and YAML config-file
+
     """
     config = __commandline_settings()
     if config.yaml_fl is None:
@@ -367,6 +370,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
     -------
     dict
        Global attributes for a Level-1A product
+
     """
     if origin is None:
         origin = "NASA" if inflight else "SRON"
@@ -450,6 +454,7 @@ class CCSDShdr:
         ----------
         hdr :  np.ndarray, optional
            CCSDS primary and secondary headers
+
         """
         self.__dtype = None
         self.__hdr = None
@@ -791,6 +796,7 @@ class CCSDShdr:
         - 0x340:  MemDump
         - 0x341:  MemCheckRp
         - 0x350:  Science
+
         """
         return self.__hdr["type"] & 0x7FF
 
@@ -798,7 +804,7 @@ class CCSDShdr:
     def grouping_flag(self: CCSDShdr) -> int:
         """Data packages can be segmented.
 
-        Note
+        Note:
         ----
         This flag is encoded as::
 
@@ -806,6 +812,7 @@ class CCSDShdr:
          01 : first segment
          10 : last segment
          11 : unsegmented
+
         """
         return (self.__hdr["sequence"] >> 14) & 0x3
 
@@ -850,6 +857,7 @@ class CCSDShdr:
         ----------
         epoch :  datetime
            Provide the UTC epoch of the time (thus corrected for leap seconds)
+
         """
         return epoch + dt.timedelta(
             seconds=int(self.tai_sec),
@@ -877,6 +885,7 @@ class CCSDShdr:
            data has no file header and ITOS + spacewire + CCSDS packet headers
         'dsb'
            data has a cFE file-header and spacewire + CCSDS packet headers
+
         """
         if file_format == "dsb":
             hdr_dtype = np.dtype(
@@ -927,6 +936,7 @@ def check_input_files(config: dataclass) -> dataclass:
     Parameters
     ----------
     config :  dataclass
+       dataclass that contains the settings for the L0-1A processing
 
     Returns
     -------
@@ -939,6 +949,7 @@ def check_input_files(config: dataclass) -> dataclass:
        If files are not found on the system.
     TypeError
        If determined file type differs from value supplied by user.
+
     """
     file_list = config.l0_list
     if file_list[0].suffix == ".H":
@@ -984,8 +995,7 @@ def check_input_files(config: dataclass) -> dataclass:
 # from pyspex.lib.l1a_def import init_l1a
 # --------------------------------------------------
 def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
-    """
-    Add CF attributes to a dataset holding 'seconds of day'.
+    """Add CF attributes to a dataset holding 'seconds of day'.
 
     Parameters
     ----------
@@ -1020,6 +1030,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
 
     Note that '_FillValue', 'long_name' and 'description' are not set by
     this function.
+
     """
     dset.units = f"seconds since {ref_date.strftime('%Y-%m-%d %H:%M:%S')}"
     dset.year = f"{ref_date.year}"
@@ -1163,8 +1174,7 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
 def init_l1a(
     l1a_flname: str, ref_date: dt.datetime, dims: dict, compression: bool = False
 ) -> Dataset:
-    """
-    Create an empty SPEXone Level-1A product (on-ground or in-flight).
+    """Create an empty SPEXone Level-1A product (on-ground or in-flight).
 
     Parameters
     ----------
@@ -1188,15 +1198,16 @@ def init_l1a(
     by this script.
 
     Original CDL definition is from F. S. Patt (GSFC), 08-Feb-2019
+
     """
     # check function parameters
     if not isinstance(dims, dict):
         raise TypeError("dims should be a dictionary")
 
     # initialize dimensions
-    number_img = dims.get("number_of_images", None)
-    img_samples = dims.get("samples_per_image", None)
-    hk_packets = dims.get("hk_packets", None)
+    number_img = dims.get("number_of_images")
+    img_samples = dims.get("samples_per_image")
+    hk_packets = dims.get("hk_packets")
 
     # create/overwrite netCDF4 product
     try:
@@ -1328,6 +1339,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
     - TS4 DEM Redundant Temperature
     - TS5 Housing Redundant Temperature
     - TS6 Radiator Redundant Temperature*
+
     """
     coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
@@ -1353,6 +1365,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
     - ICU MidBoard temperature
     - ICU MCU-RAM temperature
     - ICU 1V2, 3V3 supply temperature
+
     """
     coefficients = (273.15, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
@@ -1367,6 +1380,7 @@ def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
     - ICU 3.3 Volt bus voltage
     - ICU 1.2 Volt bus voltage
     - DEM power supply
+
     """
     coefficients = (0, 0.001)
     return coefficients[0] + coefficients[1] * raw_data
@@ -1480,7 +1494,7 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
         "LED2_I": poly_spex_led_i,
     }
 
-    func = conv_dict.get(key, None)
+    func = conv_dict.get(key)
     if func is not None:
         return func(raw_data)
 
@@ -1503,6 +1517,7 @@ def __tmtc_def(apid: int) -> list:
     -------
     list of tuples
        Definition of a numpy structured datatype.
+
     """
     if apid == 0x350:  # *** Science TM ***
         return [  # offs  start in packet
@@ -1950,6 +1965,7 @@ def tmtc_dtype(apid: int) -> np.dtype:
 
     >> from pyspex.lib.tmtc_def import tmtc_dtype
     >> mps_dtype = tmtc_dtype(0x350)
+
     """
     return np.dtype(__tmtc_def(apid))
 
@@ -2145,6 +2161,7 @@ def read_lv0_data(
     tuple
          Contains all Science and TmTc CCSDS packages as numpy arrays,
          or None if called with debug is True
+
     """
     scihk_dtype = tmtc_dtype(0x350)
     icutm_dtype = np.dtype([("tai_sec", ">u4"), ("sub_sec", ">u2")])
@@ -2292,6 +2309,7 @@ class L1Aio:
 
     compression : bool, default=False
        Use compression on dataset /science_data/detector_images
+
     """
 
     dset_stored = {
@@ -2389,6 +2407,7 @@ class L1Aio:
         -------
         scalar or array_like
            value of attribute 'name', global or attached to dataset 'ds_name'
+
         """
         if ds_name is None:
             res = self.fid.getncattr(name)
@@ -2421,10 +2440,11 @@ class L1Aio:
         ds_name : str, default=None
            name of group or dataset to which the attribute is attached
            **Use group name without starting '/'**
+
         """
         if ds_name is None:
             if isinstance(value, str):
-                self.fid.setncattr(name, np.string_(value))
+                self.fid.setncattr(name, np.bytes_(value))
             else:
                 self.fid.setncattr(name, value)
         else:
@@ -2444,7 +2464,7 @@ class L1Aio:
                     raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
-                self.fid[ds_name].setncattr(name, np.string_(value))
+                self.fid[ds_name].setncattr(name, np.bytes_(value))
             else:
                 self.fid[ds_name].setncattr(name, value)
 
@@ -2461,6 +2481,7 @@ class L1Aio:
         -------
         scalar or array_like
            value of dataset 'name'
+
         """
         grp_name = str(PurePosixPath(name).parent)
         var_name = str(PurePosixPath(name).name)
@@ -2482,6 +2503,7 @@ class L1Aio:
            Name of level-1A dataset
         value : scalar or array_like
            Value or values to be written
+
         """
         value = np.asarray(value)
         grp_name = str(PurePosixPath(name).parent)
@@ -2504,6 +2526,7 @@ class L1Aio:
         ----------
         inflight :  bool, default=False
            Measurements performed on-ground or inflight
+
         """
         dict_attrs = attrs_def(inflight)
         dict_attrs["product_name"] = self.product.name
@@ -2518,6 +2541,8 @@ class L1Aio:
         Parameters
         ----------
         allow_empty :  bool, default=False
+            allow variables to be present, but empty
+
         """
         warn_str = (
             "SPEX level-1A format check [WARNING]:"
@@ -2580,6 +2605,7 @@ def copy_hkt_nav(hkt_list: tuple[Path, ...], l1a_file: Path) -> None:
        listing of PACE-HKT products collocated with SPEXone measurements
     l1a_file :  Path
        name of the SPEXone level-1A product
+
     """
     nav = None
     for hkt_file in sorted(hkt_list):
@@ -2615,6 +2641,7 @@ def check_coverage_nav(l1a_file: Path) -> bool:
     ----------
     l1a_file :  Path
        name of the SPEXone level-1A product
+
     """
     coverage_quality = CoverageFlag.GOOD
 
@@ -2714,6 +2741,7 @@ class HKTio:
      - coverage() -> tuple[datetime, datetime]
      - housekeeping(instrument: str) -> tuple[np.ndarray, ...]
      - navigation() -> dict
+
     """
 
     def __init__(self: HKTio, filename: Path) -> None:
@@ -2842,6 +2870,7 @@ class HKTio:
         Notes
         -----
         Current implementation only works for SPEXone.
+
         """
         res = self.read_hk_dset(instrument)
         if res is None:
@@ -2915,6 +2944,7 @@ def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
        name of an existing L1A product.
     hkt_list :  list[Path, ...]
        listing of files from which the navigation data has to be read
+
     """
     # read PACE navigation data from HKT files
     # and add PACE navigation data to existing level-1A product
@@ -2933,6 +2963,7 @@ def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
        name of an existing L1A product.
     yaml_conf :  Path
        name of the YAML file with the processor settings
+
     """
     with Dataset(l1a_file, "r+") as fid:
         dset = fid.createVariable("processor_configuration", str)
@@ -2988,6 +3019,7 @@ class HKtlm:
            SPEXone level-0 housekeeping telemetry packets
         epoch :  dt.datetime
            Epoch of the telemetry packets (1958 or 1970)
+
         """
         self.init_attrs()
         if not ccsds_hk:
@@ -3040,6 +3072,7 @@ class HKtlm:
            File pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
+
         """
         self.init_attrs()
 
@@ -3070,6 +3103,7 @@ class HKtlm:
         Returns
         -------
         np.ndarray
+
         """
         if key.upper() not in self.tlm.dtype.names:
             raise KeyError(
@@ -3124,6 +3158,7 @@ class SCItlm:
         -------
         int
             number of detector frames
+
         """
         self.init_attrs()
         if not ccsds_sci:
@@ -3204,6 +3239,7 @@ class SCItlm:
            File pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
+
         """
         # pylint: disable=no-member
         self.init_attrs()
@@ -3317,6 +3353,7 @@ class SCItlm:
         Returns
         -------
         np.ndarray
+
         """
         if key.upper() not in self.tlm.dtype.names:
             raise KeyError(
@@ -3361,6 +3398,7 @@ def get_l1a_filename(
         [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
         [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
         [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
+
     """
     if config.outfile:
         return config.outdir / config.outfile
@@ -3432,6 +3470,7 @@ class SPXtlm:
     >>> spx.from_hkt(hkt_product)
     # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
     >>> spx.nomhk.events
+
     """
 
     def __init__(self: SPXtlm) -> None:
@@ -3497,9 +3536,11 @@ class SPXtlm:
         flnames :  Path | list[Path]
            sorted list of PACE_HKT filenames (netCDF4 format)
         instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
+           abbreviations for the PACE instruments
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
+
         """
         self.set_coverage(None)
         if isinstance(flnames, Path):
@@ -3539,7 +3580,7 @@ class SPXtlm:
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
-            _mm[indx[0] + 1:] = False
+            _mm[indx[0] + 1 :] = False
             if np.sum(_mm) < self.nomhk.size // 2:
                 _mm = ~_mm
             self.logger.warning(
@@ -3577,6 +3618,7 @@ class SPXtlm:
         dump :  bool, default=False
            dump header information of the telemetry packages @1Hz for
            debugging purposes
+
         """
         self.set_coverage(None)
         if isinstance(flnames, Path):
@@ -3630,7 +3672,7 @@ class SPXtlm:
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
-                    _mm[indx[0] + 1:] = False
+                    _mm[indx[0] + 1 :] = False
                     if np.sum(_mm) < self.science.size // 2:
                         _mm = ~_mm
                     self.logger.warning(
@@ -3653,7 +3695,7 @@ class SPXtlm:
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
-                _mm[indx[0] + 1:] = False
+                _mm[indx[0] + 1 :] = False
                 if self.coverage is None:
                     if np.sum(_mm) < self.nomhk.size // 2:
                         _mm = ~_mm
@@ -3689,6 +3731,7 @@ class SPXtlm:
            select type of telemetry packages
         mps_id :  int, optional
            select on MPS ID
+
         """
         self.set_coverage(None)
         if tlm_type is None:
@@ -3735,6 +3778,7 @@ class SPXtlm:
                        'samples_per_image': int,
                        'hk_packets': int}
         }
+
         """
         if mode == "all":
             return {
@@ -3833,6 +3877,7 @@ class SPXtlm:
            msm_id is the measurement identifier
            YYYYMMDDTHHMMSS is time stamp of the first image in the file
            vvvvvvv is the git-hash string of the pyspex repository
+
         """
         if config.outfile:
             return config.outdir / config.outfile
@@ -3879,6 +3924,7 @@ class SPXtlm:
            Settings for the L0->L1A processing
         mode :  {'all', 'binned', 'full'}
            Select Science packages with full-frame images or binned images
+
         """
         selection = self.__select_msm_mode(mode)
         if selection is None:

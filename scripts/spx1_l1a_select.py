@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2023 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -32,12 +32,16 @@ def inv_sec_of_day(
     Parameters
     ----------
     reference_day :  datetime object
+       `date` object represent a date (year, month, day)
     sec_of_day :  ndarray
+       Seconds since midnight on `reference_day`
     epoch :  datetime object, optional
+       Provide timestamp of epoch, default 1970-01-01
 
     Returns
     -------
     tuple holding CCSDS timestamps
+
     """
     offs = np.uint32((reference_day - epoch).total_seconds())
     ccsds_sec = sec_of_day.astype("u4")

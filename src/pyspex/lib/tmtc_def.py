@@ -7,12 +7,13 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""
-Defines the SPEXone telemetry packets as numpy data-types.
+"""Defines the SPEXone telemetry packets as numpy data-types.
 
 References
 ----------
 * SPX1-TN-005 Telemetry and Tele-command Handbook, issue 14, date 15-Mar-2021
+
+
 """
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ def __tmtc_def(apid: int) -> list:
     -------
     list of tuples
        Definition of a numpy structured datatype.
+
     """
     if apid == 0x350:  # *** Science TM ***
         return [  # offs  start in packet
@@ -481,5 +483,6 @@ def tmtc_dtype(apid: int) -> np.dtype:
 
     >> from pyspex.lib.tmtc_def import tmtc_dtype
     >> mps_dtype = tmtc_dtype(0x350)
+
     """
     return np.dtype(__tmtc_def(apid))

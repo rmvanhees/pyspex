@@ -33,6 +33,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
     -------
     dict
        Global attributes for a Level-1A product
+
     """
     if origin is None:
         origin = "NASA" if inflight else "SRON"

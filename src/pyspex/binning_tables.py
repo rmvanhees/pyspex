@@ -68,6 +68,7 @@ class BinningTables:
 
     > bin_tbl BinningTables()
     > img = bin_tbl.unbin(130, img_binned)
+
     """
 
     def __init__(self: BinningTables) -> None:
@@ -94,6 +95,7 @@ class BinningTables:
         -------
         np.ndarray
            unbinned image data (no interpolation).
+
         """
         with Dataset(self.bin_tbl, "r") as fid:
             if f"Table_{table_id:03d}" not in fid.groups:
@@ -121,6 +123,7 @@ class BinningTables:
            Validity start of the CKD data, as ``yyyymmddTHHMMSS``
         release :  int, default=1
            Release number, start at 1
+
         """
         # initialize netCDF file with binning tables
         with Dataset("binning_table.nc", "w") as fid:
@@ -153,6 +156,7 @@ class BinningTables:
            Lineskip array definition
         binning_table :  ndarray
            Binning table definition
+
         """
         index, count = np.unique(
             binning_table[lineskip_arr == 1, :], return_counts=True

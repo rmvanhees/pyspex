@@ -30,8 +30,7 @@ EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 # - local functions --------------------------------
 def get_l1a_name(msm_id: str) -> str:
-    """
-    Return name of SPEXone product for OCAL measurements (@SRON).
+    """Return name of SPEXone product for OCAL measurements (@SRON).
 
     Parameters
     ----------
@@ -46,6 +45,7 @@ def get_l1a_name(msm_id: str) -> str:
        msm_id is the measurement identifier
        YYYYMMDDTHHMMSS is time stamp of the first image in the file
        vvvvvvv is the git-hash string of the pyspex repository
+
     """
     # define string of sensing start as yyyymmddThhmmss
     return f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc"
@@ -70,6 +70,7 @@ def main() -> None:
     different directory::
 
     > spx1_ccsds2l1a.py --datapath L1A ./MPS_time_msg3_2020-11-02_20-20-04.200841.pdump
+
     """
     # parse command-line parameters
     parser = argparse.ArgumentParser(

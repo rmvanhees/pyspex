@@ -32,7 +32,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
     Requires the file tai-utc.dat.
     """
     # determine location of the file 'tai-utc.dat'
-    ocvarroot = environ["OCVARROOT"] if "OCVARROOT" in environ else None
+    ocvarroot = environ.get("OCVARROOT")
     if ocvarroot is None:
         taiutc = files("pyspex.data").joinpath("tai-utc.dat")
     else:

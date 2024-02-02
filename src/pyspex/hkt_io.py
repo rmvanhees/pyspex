@@ -65,6 +65,7 @@ def copy_hkt_nav(hkt_list: tuple[Path, ...], l1a_file: Path) -> None:
        listing of PACE-HKT products collocated with SPEXone measurements
     l1a_file :  Path
        name of the SPEXone level-1A product
+
     """
     nav = None
     for hkt_file in sorted(hkt_list):
@@ -100,6 +101,7 @@ def check_coverage_nav(l1a_file: Path) -> bool:
     ----------
     l1a_file :  Path
        name of the SPEXone level-1A product
+
     """
     coverage_quality = CoverageFlag.GOOD
 
@@ -199,6 +201,7 @@ class HKTio:
      - coverage() -> tuple[datetime, datetime]
      - housekeeping(instrument: str) -> tuple[np.ndarray, ...]
      - navigation() -> dict
+
     """
 
     def __init__(self: HKTio, filename: Path | str) -> None:
@@ -327,6 +330,7 @@ class HKTio:
         Notes
         -----
         Current implementation only works for SPEXone.
+
         """
         res = self.read_hk_dset(instrument)
         if res is None:

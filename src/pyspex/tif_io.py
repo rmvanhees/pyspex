@@ -34,8 +34,7 @@ else:
 if FOUND_PYTIFF:
 
     class TIFio:
-        """
-        This class can be used to read SPEXone instrument simulator output.
+        """Class to read SPEXone instrument simulator output.
 
         Parameters
         ----------
@@ -51,6 +50,7 @@ if FOUND_PYTIFF:
         >>  print(tif.header())
         >>  print(tif.tags()[0])
         >>  print(tif.images().shape)
+
         """
 
         def __init__(
@@ -125,6 +125,7 @@ if FOUND_PYTIFF:
             ----------
             n_frame :  int, optional
                Distribute coadded signal (32-bit) over n_frame images (16-bit)
+
             """
             if self.__header is None:
                 self.header()

@@ -98,6 +98,7 @@ class HKtlm:
            SPEXone level-0 housekeeping telemetry packets
         epoch :  dt.datetime
            Epoch of the telemetry packets (1958 or 1970)
+
         """
         self.init_attrs()
         if not ccsds_hk:
@@ -150,6 +151,7 @@ class HKtlm:
            File pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
+
         """
         self.init_attrs()
 
@@ -180,6 +182,7 @@ class HKtlm:
         Returns
         -------
         np.ndarray
+
         """
         if key.upper() not in self.tlm.dtype.names:
             raise KeyError(

@@ -143,6 +143,7 @@ def img_sec_of_day(
     -------
     tuple
         reference day: datetime, sec_of_day: numpy.ndarray
+
     """
     # determine for the first timestamp the offset with last midnight [seconds]
     epoch = datetime(1970, 1, 1, tzinfo=UTC)
@@ -185,6 +186,7 @@ class DEMio:
     > dem = DEMio(dem_file)
     > img_hk = dem.get_sci_hk()
     > img_data = dem.get_data()
+
     """
 
     def __init__(self: DEMio, flname: str) -> None:
@@ -330,6 +332,7 @@ class DEMio:
         Notes
         -----
         Uncalibrated conversion: ((1184 - 1066) * 0.3 * 40 / 40Mhz) + offs [K]
+
         """
         return (self.hdr["TEMP"][1] << 8) + self.hdr["TEMP"][0]
 
@@ -369,6 +372,7 @@ class DEMio:
         Returns
         -------
         numpy.ndarray
+
         """
 
         def convert_val(kk: str) -> int:
@@ -470,6 +474,7 @@ class DEMio:
         -------
         numpy.ndarray:
            data of a detector frame, dtype np.uint16
+
         """
         if numlines is None:
             # obtain number of rows
