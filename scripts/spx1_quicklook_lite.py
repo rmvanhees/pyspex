@@ -25,13 +25,10 @@ from pyspex.binning_tables import BinningTables
 
 
 # --------------------------------------------------
-def binned_to_2x2_image(
-    coverage_start: str, table_id: int, img_binned: np.ndarray
-) -> np.ndarray:
+def binned_to_2x2_image(table_id: int, img_binned: np.ndarray) -> np.ndarray:
     """Convert binned detector data to image (1024, 1024)."""
     try:
         bin_ckd = BinningTables()
-        bin_ckd.search(coverage_start)
     except Exception as exc:
         raise RuntimeError from exc
 
@@ -88,7 +85,6 @@ def main() -> None:
             coverage_start = coverage_start.decode()
         except (UnicodeDecodeError, AttributeError):
             date_start = "1970-01-01T00:00:00"
-            pass
         else:
             date_start = coverage_start.split(".")[0]
 
@@ -119,9 +115,7 @@ def main() -> None:
         # generate pages in quick-look
         for ii in indx:
             if med_table_id > 0:
-                img2d = (
-                    binned_to_2x2_image(coverage_start, med_table_id, images[ii, :]) / 4
-                )
+                img2d = binned_to_2x2_image(med_table_id, images[ii, :]) / 4
             else:
                 if images[ii, :].size != 4194304:
                     continue
@@ -149,6 +143,8 @@ def main() -> None:
             plot = DrawImage(img2d)
             fig, axx = plot.subplots()
             plot.draw(axx, fig_info=figinfo, title=suptitle)
+            report.add_copyright(axx["image"])
+            report.close_this_page(fig, None)
 
         # close plot object
         report.close()

@@ -21,8 +21,8 @@ from pathlib import Path
 import numpy as np
 from pyspex.ccsds_io import CCSDSio, hk_sec_of_day, img_sec_of_day
 from pyspex.l1a_io import L1Aio
+from pyspex.lib import pyspex_version
 from pyspex.lib.tmtc_def import tmtc_dtype
-from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=UTC)

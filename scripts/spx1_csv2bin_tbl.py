@@ -84,7 +84,7 @@ def main() -> None:
         lineskip_data = lineskip_data[1:, :]
 
     # create BinningTable object
-    bin_ckd = BinningTables(ckd_dir=".")
+    bin_ckd = BinningTables()
     bin_ckd.create_if_needed(args.validity_start)
 
     # add binning tables

@@ -25,10 +25,10 @@ import h5py
 import numpy as np
 import xarray as xr
 from pyspex.l1a_io import L1Aio
+from pyspex.lib import pyspex_version
 from pyspex.lib.tmtc_def import tmtc_dtype
 from pyspex.lv1_gse import LV1gse
 from pyspex.tif_io import TIFio
-from pyspex.version import pyspex_version
 
 # - global parameters ------------------------------
 EPOCH = datetime(1970, 1, 1, tzinfo=UTC)

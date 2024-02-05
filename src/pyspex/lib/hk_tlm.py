@@ -76,7 +76,7 @@ class HKtlm:
         hkt = HKtlm()
         hkt.hdr = self.hdr.copy()
         hkt.tlm = self.tlm.copy()
-        hkt.tstamp = [x for x in self.tstamp]
+        hkt.tstamp = self.tstamp.copy()
         hkt.events = self.events.copy()
         return hkt
 

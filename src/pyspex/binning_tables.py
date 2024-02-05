@@ -78,7 +78,7 @@ class BinningTables:
             raise FileNotFoundError(f"{self.bin_tbl} not found")
 
     def flex_binning(self: BinningTables, table_id: int) -> np.ndarray:
-        """Return flexible binning of a binning table.""" 
+        """Return flexible binning of a binning table."""
         with Dataset(self.bin_tbl, "r") as fid:
             if f"Table_{table_id:03d}" not in fid.groups:
                 raise KeyError(f"Table_{table_id:03d} not defined")

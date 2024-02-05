@@ -78,7 +78,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 
 
 # --------------------------------------------------
-# from pyspex.version import pyspex_version
+# from pyspex.lib import pyspex_version
 #
 # Remarks:
 # - Use hardcoded version!
