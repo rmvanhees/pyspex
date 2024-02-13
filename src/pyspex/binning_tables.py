@@ -66,7 +66,7 @@ class BinningTables:
 
     # use binning-table '130' to unbin SPEXone detector data::
 
-    > bin_tbl BinningTables()
+    > bin_tbl = BinningTables()
     > img = bin_tbl.unbin(130, img_binned)
 
     """
