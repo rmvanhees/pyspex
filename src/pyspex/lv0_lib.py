@@ -276,7 +276,12 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
 
     def msg_335(val: np.ndarray) -> str:
         return (
-            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}" f" {bin(val['Event_Sev'][0])}"
+            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}"
+            f" {bin(val['Event_Sev'][0])}"
+            f" 0x{val['Word1'][0]:x}"
+            f" 0x{val['Word2'][0]:x}"
+            f" 0x{val['Word3'][0]:x}"
+            f" 0x{val['Word4'][0]:x}"
         )
 
     with Path(flname).open("w", encoding="ascii") as fp:
