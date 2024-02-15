@@ -111,29 +111,44 @@ def check_coverage_nav(l1a_file: Path) -> bool:
         group="image_attributes",
         drop_variables=("icu_time_sec", "icu_time_subsec"),
     )
+    if len(xds_l1a["image_time"]) == 0:
+        xds_l1a = xr.open_dataset(
+            l1a_file,
+            group="engineering_data",
+        )
+        l1a_coverage_start = xds_l1a["HK_tlm_time"].values[0]
+        l1a_coverage_end = xds_l1a["HK_tlm_time"].values[-1]
+    else:
+        l1a_coverage_start = xds_l1a["image_time"].values[0]
+        l1a_coverage_end = xds_l1a["image_time"].values[-1]
+    xds_l1a.close()
     module_logger.debug(
         "SPEXone measurement time-coverage: %s - %s",
-        xds_l1a["image_time"].values[0],
-        xds_l1a["image_time"].values[-1],
+        l1a_coverage_start,
+        l1a_coverage_end,
     )
 
+    # obtain time_coverage_range from the navigation data
     xds_nav = xr.open_dataset(l1a_file, group="navigation_data")
+    nav_coverage_start = xds_nav["att_time"].values[0]
+    nav_coverage_end = xds_nav["att_time"].values[-1]
+    xds_nav.close()
     module_logger.debug(
         "SPEXone navigation time-coverage: %s - %s",
-        xds_nav["att_time"].values[0],
-        xds_nav["att_time"].values[-1],
+        nav_coverage_start,
+        nav_coverage_end,
     )
-    time_coverage_start = str(xds_nav["att_time"].values[0])[:23]
-    time_coverage_end = str(xds_nav["att_time"].values[-1])[:23]
+    time_coverage_start = str(nav_coverage_start)[:23]
+    time_coverage_end = str(nav_coverage_end)[:23]
 
     # check at the start of the data
-    if xds_l1a["image_time"].values[0] < xds_nav["att_time"].values[0]:
+    if l1a_coverage_start < nav_coverage_start:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         module_logger.error(
             "time coverage of navigation data starts after 'time_coverage_start'"
         )
 
-    diff_coverage = xds_l1a["image_time"].values[0] - xds_nav["att_time"].values[0]
+    diff_coverage = l1a_coverage_start - nav_coverage_start
     if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
@@ -142,24 +157,19 @@ def check_coverage_nav(l1a_file: Path) -> bool:
         )
 
     # check at the end of the data
-    if xds_l1a["image_time"].values[-1] > xds_nav["att_time"].values[-1]:
+    if l1a_coverage_end > nav_coverage_end:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         module_logger.error(
             "time coverage of navigation data ends before 'time_coverage_end'"
         )
 
-    diff_coverage = xds_nav["att_time"].values[-1] - xds_l1a["image_time"].values[-1]
+    diff_coverage = nav_coverage_end - l1a_coverage_end
     if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
             "time coverage of navigation data ends before 'time_coverage_end + %s'",
             np.timedelta64(10, "s"),
         )
-
-    # ToDo: check for completeness
-    # close interface
-    xds_l1a.close()
-    xds_nav.close()
 
     # add coverage flag and attributes to Level-1A product
     with Dataset(l1a_file, "a") as fid:
