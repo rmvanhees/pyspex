@@ -142,7 +142,7 @@ def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
 
 def poly_spex_htr_v(raw_data: np.ndarray) -> np.ndarray:
     """Convert Heater Bus voltages to Volt."""
-    coefficients = (0, 0.003)
+    coefficients = (0, 0.01 / 3)
     return coefficients[0] + coefficients[1] * raw_data
 
 
