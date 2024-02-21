@@ -146,6 +146,30 @@ def poly_spex_htr_v(raw_data: np.ndarray) -> np.ndarray:
     return coefficients[0] + coefficients[1] * raw_data
 
 
+def poly_spex_htr1_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater1 Current to Watt."""
+    resistance = 238.3
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr2_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater2 Current to Watt."""
+    resistance = 212.5
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr3_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater3 Current to Watt."""
+    resistance = 237.7
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr4_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater4 Current to Watt."""
+    resistance = 213.2
+    return resistance * (raw_data / 1000) ** 2
+
+
 def poly_spex_dutycycle(raw_data: np.ndarray) -> np.ndarray:
     """Convert Heater Controller Duty Cycle output to percent."""
     coefficients = (0, 0.1)
@@ -279,6 +303,10 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
         "HTR2_DUTYCYCL": poly_spex_dutycycle,
         "HTR3_DUTYCYCL": poly_spex_dutycycle,
         "HTR4_DUTYCYCL": poly_spex_dutycycle,
+        "HTR1_POWER(I)": poly_spex_htr1_p,
+        "HTR2_POWER(I)": poly_spex_htr2_p,
+        "HTR3_POWER(I)": poly_spex_htr3_p,
+        "HTR4_POWER(I)": poly_spex_htr4_p,
         "HTRGRP1_V": poly_spex_htr_v,
         "HTRGRP2_V": poly_spex_htr_v,
         "ICU_4V_T": poly_spex_icuhk_internaltemp,
