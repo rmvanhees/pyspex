@@ -66,60 +66,65 @@ class BinningTables:
 
     # use binning-table '130' to unbin SPEXone detector data::
 
-    > bin_tbl = BinningTables()
-    > img = bin_tbl.unbin(130, img_binned)
+    > bin_tbl = BinningTables(130)
+    > img_1d = bin_tbl.unbin(img_binned)
+    > img_2d = bin_tbl.to_image(img_1d)
 
     """
 
-    def __init__(self: BinningTables) -> None:
+    def __init__(self: BinningTables, table_id: int | None = None) -> None:
         """Initialize class attributes."""
         self.bin_tbl = files("pyspex.data").joinpath("binning_tables.nc")
+        if table_id is None:
+            return
+
         if not self.bin_tbl.is_file():
             raise FileNotFoundError(f"{self.bin_tbl} not found")
 
-    def flex_binning(self: BinningTables, table_id: int) -> np.ndarray:
-        """Return flexible binning of a binning table."""
         with Dataset(self.bin_tbl, "r") as fid:
             if f"Table_{table_id:03d}" not in fid.groups:
                 raise KeyError(f"Table_{table_id:03d} not defined")
             gid = fid[f"Table_{table_id:03d}"]
-            count_table = gid.variables["count_table"][:]
+            self.binning_table = gid.variables["binning_table"][:]
+            self.lineskip_arr = gid.variables["lineskip_arr"][:]
+            self.count_table = gid.variables["count_table"][:]
 
-        return count_table
-
-    def unbin(
-        self: BinningTables,
-        table_id: int,
-        img_binned: np.ndarray,
-    ) -> np.ndarray:
-        """Return unbinned detector data.
+    def unbin(self: BinningTables, img_binned: np.ndarray) -> np.ndarray:
+        """Return detector data corrected for flexible and fixed binning (still 1-D).
 
         Parameters
         ----------
-        table_id :  int
-           Table identifier (integer between 1 and 255)
         img_binned : np.ndarray
            Binned image data (1D array)
 
         Returns
         -------
         np.ndarray
-           unbinned image data (no interpolation).
+           unbinned image data
 
         """
-        with Dataset(self.bin_tbl, "r") as fid:
-            if f"Table_{table_id:03d}" not in fid.groups:
-                raise KeyError(f"Table_{table_id:03d} not defined")
-            gid = fid[f"Table_{table_id:03d}"]
-            binning_table = gid.variables["binning_table"][:]
-            lineskip_arr = gid.variables["lineskip_arr"][:]
-            count_table = gid.variables["count_table"][:]
+        mask = self.count_table > 5
+        img_binned[mask] = np.nan
+        img_binned[~mask] /= (4 * self.count_table[~mask])
+        return img_binned
 
-        revert = np.full(binning_table.shape, np.nan)
-        table = binning_table[lineskip_arr == 1, :].reshape(-1)
-        revert[lineskip_arr == 1, :] = (img_binned / count_table)[table].reshape(
-            -1, 1024
-        )
+    def to_image(self: BinningTables, img_1d: np.ndarray) -> np.ndarray:
+        """Return unbinned detector data.
+
+        Parameters
+        ----------
+        img_1d : np.ndarray
+           unbinned image data (1-D array)
+
+        Returns
+        -------
+        np.ndarray
+           2x2 image (2-D array).
+
+        """
+        revert = np.full(self.binning_table.shape, np.nan)
+        table = self.binning_table[self.lineskip_arr == 1, :].reshape(-1)
+        revert[self.lineskip_arr == 1, :] = img_1d[table].reshape(-1, 1024)
         return revert
 
     def create_if_needed(
