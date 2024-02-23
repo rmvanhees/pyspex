@@ -146,7 +146,7 @@ def read_lv0_data(
         buff_sci = ()  # Use chunking to speed-up memory allocation
         buff_hk = ()
         with open(flname, "rb") as fp:
-            module_logger.info('processing file "%s"', flname)
+            module_logger.debug('processing file "%s"', flname)
 
             # read CCSDS header and user data
             ccsds_data = fp.read()
@@ -240,8 +240,8 @@ def read_lv0_data(
         ccsds_sci += buff_sci
         ccsds_hk += buff_hk
 
-    module_logger.info("number of Science packages %d", len(ccsds_sci))
-    module_logger.info("number of Engineering packages %d", len(ccsds_hk))
+    module_logger.debug("number of Science packages %d", len(ccsds_sci))
+    module_logger.debug("number of Engineering packages %d", len(ccsds_hk))
 
     return ccsds_sci, ccsds_hk
 
