@@ -103,9 +103,14 @@ class BinningTables:
            unbinned image data
 
         """
+        img_binned /= 4 * self.count_table
         mask = self.count_table > 5
+
+        if img_binned.ndim == 2:
+            img_binned[:, mask] = np.nan
+            return img_binned
+
         img_binned[mask] = np.nan
-        img_binned[~mask] /= (4 * self.count_table[~mask])
         return img_binned
 
     def to_image(self: BinningTables, img_1d: np.ndarray) -> np.ndarray:
