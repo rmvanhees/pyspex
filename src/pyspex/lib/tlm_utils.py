@@ -79,6 +79,7 @@ def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
     mask = raw_data < 400
     res[mask] = 1.224 * raw_data[mask] - 17.05
     res[~mask] = 0.6426 * raw_data[~mask] - 145.57
+    res[res > 325] = np.nan
     return res
 
 
