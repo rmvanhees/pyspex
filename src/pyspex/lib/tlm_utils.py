@@ -30,8 +30,8 @@ UNITS_DICT = {
     "ADC2_T": "K",
     "ADC2_VCC": "Volt",
     "DEM_I": "mA",
-    "DEM_T": "K",
     "DEM_V": "Volt",
+    "DET_T": "K",
     "HTR1_DUTYCYCL": "%",
     "HTR1_I": "mA",
     "HTR2_DUTYCYCL": "%",
@@ -282,7 +282,7 @@ class WriteProt(Enum):
 def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
     """Convert a DemHK or NomHK parameter to physical units."""
     conv_dict = {
-        "DEM_T": exp_spex_det_t,
+        "DET_T": exp_spex_det_t,
         "TS1_DEM_N_T": exp_spex_thermistor,
         "TS2_HOUSING_N_T": exp_spex_thermistor,
         "TS3_RADIATOR_N_T": exp_spex_thermistor,
