@@ -87,7 +87,7 @@ EPILOG_HELP = f"""Usage:
        outdir: L1A
        outfile: ''
        file_version: 1
-       processing_version: V1.0
+       processing_version: 1
        compression: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
@@ -134,7 +134,7 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
-    processing_version: str = ""
+    processing_version: str = "1"
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)

@@ -199,7 +199,7 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
-    processing_version: str = ""
+    processing_version: str = "1"
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
@@ -1450,7 +1450,7 @@ def poly_spex_dem_i(raw_data: np.ndarray) -> np.ndarray:
 def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
     """Convert a DemHK or NomHK parameter to physical units."""
     conv_dict = {
-        "DEM_T": exp_spex_det_t,
+        "DET_T": exp_spex_det_t,
         "TS1_DEM_N_T": exp_spex_thermistor,
         "TS2_HOUSING_N_T": exp_spex_thermistor,
         "TS3_RADIATOR_N_T": exp_spex_thermistor,
