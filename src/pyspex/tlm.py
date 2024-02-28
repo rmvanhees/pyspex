@@ -272,11 +272,37 @@ class SPXtlm:
     def set_coverage(
         self: SPXtlm,
         coverage_new: list[dt.datetime, dt.datetime] | None,
-        update: bool = False,
+        extent: bool = False,
     ) -> None:
-        """Set, reset or update the class attribute `coverage`."""
-        if not update or self._coverage is None:
+        """Set, reset or update the class attribute `coverage`.
+
+        Parameters
+        ----------
+        coverage_new :  list[dt.datetime, dt.datetime] | None,
+           Provide new time_coverage range, or reset when coverage_new is None
+        extent :  bool, default=False
+           Extent existing time_coverage range with coverage_new
+
+        Examples
+        --------
+        Reset self.coverage to a new time_coverage:
+        > self.set_coverage(None)
+        > self.set_coverage(coverage_new)
+
+        Extent self.coverage with a new time_coverage
+        if self.coverage is not None else self.coverage will be coverage_new:
+        > self.set_coverage(coverage_new, extent=True)
+
+        This will not change self.coverage to coverage_new
+        when self.coverage is not None:
+        > self.set_coverage(coverage_new)
+
+        """
+        if self._coverage is None or coverage_new is None:
             self._coverage = coverage_new
+            return
+
+        if not extent:
             return
 
         one_hour = dt.timedelta(hours=1)
