@@ -85,7 +85,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.9"
+    return "1.4.10"
 
 
 # --------------------------------------------------
@@ -1325,6 +1325,7 @@ def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
     mask = raw_data < 400
     res[mask] = 1.224 * raw_data[mask] - 17.05
     res[~mask] = 0.6426 * raw_data[~mask] - 145.57
+    res[res > 325] = np.nan
     return res
 
 
@@ -1388,8 +1389,32 @@ def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
 
 def poly_spex_htr_v(raw_data: np.ndarray) -> np.ndarray:
     """Convert Heater Bus voltages to Volt."""
-    coefficients = (0, 0.003)
+    coefficients = (0, 0.01 / 3)
     return coefficients[0] + coefficients[1] * raw_data
+
+
+def poly_spex_htr1_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater1 Current to Watt."""
+    resistance = 238.3
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr2_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater2 Current to Watt."""
+    resistance = 212.5
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr3_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater3 Current to Watt."""
+    resistance = 237.7
+    return resistance * (raw_data / 1000) ** 2
+
+
+def poly_spex_htr4_p(raw_data: np.ndarray) -> np.ndarray:
+    """Convert Heater4 Current to Watt."""
+    resistance = 213.2
+    return resistance * (raw_data / 1000) ** 2
 
 
 def poly_spex_dutycycle(raw_data: np.ndarray) -> np.ndarray:
@@ -1472,6 +1497,10 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
         "HTR2_DUTYCYCL": poly_spex_dutycycle,
         "HTR3_DUTYCYCL": poly_spex_dutycycle,
         "HTR4_DUTYCYCL": poly_spex_dutycycle,
+        "HTR1_POWER": poly_spex_htr1_p,
+        "HTR2_POWER": poly_spex_htr2_p,
+        "HTR3_POWER": poly_spex_htr3_p,
+        "HTR4_POWER": poly_spex_htr4_p,
         "HTRGRP1_V": poly_spex_htr_v,
         "HTRGRP2_V": poly_spex_htr_v,
         "ICU_4V_T": poly_spex_icuhk_internaltemp,
@@ -2010,7 +2039,12 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
 
     def msg_335(val: np.ndarray) -> str:
         return (
-            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}" f" {bin(val['Event_Sev'][0])}"
+            f" {-1:8x} {-1:6d} {bin(val['Event_ID'][0])}"
+            f" {bin(val['Event_Sev'][0])}"
+            f" 0x{val['Word1'][0]:x}"
+            f" 0x{val['Word2'][0]:x}"
+            f" 0x{val['Word3'][0]:x}"
+            f" 0x{val['Word4'][0]:x}"
         )
 
     with Path(flname).open("w", encoding="ascii") as fp:
@@ -2178,7 +2212,7 @@ def read_lv0_data(
         buff_sci = ()  # Use chunking to speed-up memory allocation
         buff_hk = ()
         with open(flname, "rb") as fp:
-            module_logger.info('processing file "%s"', flname)
+            module_logger.debug('processing file "%s"', flname)
 
             # read CCSDS header and user data
             ccsds_data = fp.read()
@@ -2272,8 +2306,8 @@ def read_lv0_data(
         ccsds_sci += buff_sci
         ccsds_hk += buff_hk
 
-    module_logger.info("number of Science packages %d", len(ccsds_sci))
-    module_logger.info("number of Engineering packages %d", len(ccsds_hk))
+    module_logger.debug("number of Science packages %d", len(ccsds_sci))
+    module_logger.debug("number of Engineering packages %d", len(ccsds_hk))
 
     return ccsds_sci, ccsds_hk
 
@@ -2651,29 +2685,44 @@ def check_coverage_nav(l1a_file: Path) -> bool:
         group="image_attributes",
         drop_variables=("icu_time_sec", "icu_time_subsec"),
     )
+    if len(xds_l1a["image_time"]) == 0:
+        xds_l1a = xr.open_dataset(
+            l1a_file,
+            group="engineering_data",
+        )
+        l1a_coverage_start = xds_l1a["HK_tlm_time"].values[0]
+        l1a_coverage_end = xds_l1a["HK_tlm_time"].values[-1]
+    else:
+        l1a_coverage_start = xds_l1a["image_time"].values[0]
+        l1a_coverage_end = xds_l1a["image_time"].values[-1]
+    xds_l1a.close()
     module_logger.debug(
         "SPEXone measurement time-coverage: %s - %s",
-        xds_l1a["image_time"].values[0],
-        xds_l1a["image_time"].values[-1],
+        l1a_coverage_start,
+        l1a_coverage_end,
     )
 
+    # obtain time_coverage_range from the navigation data
     xds_nav = xr.open_dataset(l1a_file, group="navigation_data")
+    nav_coverage_start = xds_nav["att_time"].values[0]
+    nav_coverage_end = xds_nav["att_time"].values[-1]
+    xds_nav.close()
     module_logger.debug(
         "SPEXone navigation time-coverage: %s - %s",
-        xds_nav["att_time"].values[0],
-        xds_nav["att_time"].values[-1],
+        nav_coverage_start,
+        nav_coverage_end,
     )
-    time_coverage_start = str(xds_nav["att_time"].values[0])[:23]
-    time_coverage_end = str(xds_nav["att_time"].values[-1])[:23]
+    time_coverage_start = str(nav_coverage_start)[:23]
+    time_coverage_end = str(nav_coverage_end)[:23]
 
     # check at the start of the data
-    if xds_l1a["image_time"].values[0] < xds_nav["att_time"].values[0]:
+    if l1a_coverage_start < nav_coverage_start:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
         module_logger.error(
             "time coverage of navigation data starts after 'time_coverage_start'"
         )
 
-    diff_coverage = xds_l1a["image_time"].values[0] - xds_nav["att_time"].values[0]
+    diff_coverage = l1a_coverage_start - nav_coverage_start
     if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
@@ -2682,25 +2731,20 @@ def check_coverage_nav(l1a_file: Path) -> bool:
         )
 
     # check at the end of the data
-    if xds_l1a["image_time"].values[-1] > xds_nav["att_time"].values[-1]:
+    if l1a_coverage_end > nav_coverage_end:
         coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
         module_logger.error(
             "time coverage of navigation data ends before 'time_coverage_end'"
         )
 
-    diff_coverage = xds_nav["att_time"].values[-1] - xds_l1a["image_time"].values[-1]
+    diff_coverage = nav_coverage_end - l1a_coverage_end
     if diff_coverage < np.timedelta64(10, "s"):
         coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
         module_logger.warning(
             "time coverage of navigation data ends before 'time_coverage_end + %s'",
             np.timedelta64(10, "s"),
         )
-
     # ToDo: check for completeness
-    # close interface
-    xds_l1a.close()
-    xds_nav.close()
-
     # add coverage flag and attributes to Level-1A product
     with Dataset(l1a_file, "a") as fid:
         gid = fid["/navigation_data"]
@@ -3105,12 +3149,15 @@ class HKtlm:
         np.ndarray
 
         """
-        if key.upper() not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
-            )
-
-        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        parm = key.upper()
+        if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
+            parm = parm.replace("_POWER", "_I")
+        else:
+            if parm not in self.tlm.dtype.names:
+                raise KeyError(
+                    f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
+                )
+        raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
 
@@ -3355,12 +3402,15 @@ class SCItlm:
         np.ndarray
 
         """
-        if key.upper() not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {key.upper()} not found" f" in {self.tlm.dtype.names}"
-            )
-
-        raw_data = np.array([x[key.upper()] for x in self.tlm])
+        parm = key.upper()
+        if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
+            parm = parm.replace("_POWER", "_I")
+        else:
+            if parm not in self.tlm.dtype.names:
+                raise KeyError(
+                    f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
+                )
+        raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
 
@@ -3489,18 +3539,42 @@ class SPXtlm:
     def set_coverage(
         self: SPXtlm,
         coverage_new: list[dt.datetime, dt.datetime] | None,
-        update: bool = False,
+        extent: bool = False,
     ) -> None:
-        """Set, reset or update the class attribute `coverage`."""
-        if not update or self._coverage is None:
+        """Set, reset or update the class attribute `coverage`.
+
+        Parameters
+        ----------
+        coverage_new :  list[dt.datetime, dt.datetime] | None,
+           Provide new time_coverage range, or reset when coverage_new is None
+        extent :  bool, default=False
+           Extent existing time_coverage range with coverage_new
+
+        Examples
+        --------
+        Reset self.coverage to a new time_coverage:
+        > self.set_coverage(None)
+        > self.set_coverage(coverage_new)
+
+        Extent self.coverage with a new time_coverage
+        if self.coverage is not None else self.coverage will be coverage_new:
+        > self.set_coverage(coverage_new, extent=True)
+
+        This will not change self.coverage to coverage_new
+        when self.coverage is not None:
+        > self.set_coverage(coverage_new)
+
+        """
+        if self._coverage is None or coverage_new is None:
             self._coverage = coverage_new
             return
 
-        one_hour = dt.timedelta(hours=1)
-        if self._coverage[0] - one_hour < coverage_new[0] < self._coverage[0]:
-            self._coverage[0] = coverage_new[0]
-        if self._coverage[1] < coverage_new[1] < self._coverage[1] + one_hour:
-            self._coverage[1] = coverage_new[1]
+        if extent:
+            one_hour = dt.timedelta(hours=1)
+            if self._coverage[0] - one_hour < coverage_new[0] < self._coverage[0]:
+                self._coverage[0] = coverage_new[0]
+            if self._coverage[1] < coverage_new[1] < self._coverage[1] + one_hour:
+                self._coverage[1] = coverage_new[1]
 
     @property
     def reference_date(self: SPXtlm) -> dt.datetime:
@@ -3762,85 +3836,6 @@ class SPXtlm:
                     ]
                 )
 
-    def __select_msm_mode(self: SPXtlm, mode: str) -> dict | None:
-        """Obtain image and housekeeping dimensions given data-mode.
-
-        Parameters
-        ----------
-        mode :  {'all', 'binned', 'full'}
-           Select image data in binned mode or full-frame mode, or no selection
-
-        Returns
-        -------
-        dict {'sci_mask': np.ndarray | [],
-              'hk_mask': np.ndarray,
-              'dims': {'number_of_images': int,
-                       'samples_per_image': int,
-                       'hk_packets': int}
-        }
-
-        """
-        if mode == "all":
-            return {
-                "hk_mask": np.full(self.nomhk.size, True),
-                "sci_mask": np.full(self.science.size, True),
-                "dims": {
-                    "number_of_images": self.science.size,
-                    "samples_per_image": (
-                        DET_CONSTS["dimRow"]
-                        if self.science.size == 0
-                        else np.max([x.size for x in self.science.images])
-                    ),
-                    "hk_packets": self.nomhk.size,
-                },
-            }
-
-        if mode == "full":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
-            ):
-                return None
-
-            sci_mask = self.science.tlm["IMRLEN"] == FULLFRAME_BYTES
-            mps_list = np.unique(self.science.tlm["MPS_ID"][sci_mask])
-            self.logger.debug("unique Diagnostic MPS: %s", mps_list)
-            hk_mask = np.in1d(self.nomhk.tlm["MPS_ID"], mps_list)
-
-            return {
-                "sci_mask": sci_mask,
-                "hk_mask": hk_mask,
-                "dims": {
-                    "number_of_images": np.sum(sci_mask),
-                    "samples_per_image": DET_CONSTS["dimFullFrame"],
-                    "hk_packets": np.sum(hk_mask),
-                },
-            }
-
-        if mode == "binned":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
-            ):
-                return None
-
-            sci_mask = self.science.tlm["IMRLEN"] < FULLFRAME_BYTES
-            mps_list = np.unique(self.science.tlm["MPS_ID"][sci_mask])
-            self.logger.debug("unique Science MPS: %s", mps_list)
-            hk_mask = np.in1d(self.nomhk.tlm["MPS_ID"], mps_list)
-            return {
-                "sci_mask": sci_mask,
-                "hk_mask": hk_mask,
-                "dims": {
-                    "number_of_images": np.sum(sci_mask),
-                    "samples_per_image": np.max(
-                        [self.science.images[ii].size for ii in sci_mask.nonzero()[0]]
-                    ),
-                    "hk_packets": np.sum(hk_mask),
-                },
-            }
-        raise KeyError("mode should be 'binned', 'full' or 'all'")
-
     def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
         """Return filename of level-1A product.
 
@@ -3926,51 +3921,77 @@ class SPXtlm:
            Select Science packages with full-frame images or binned images
 
         """
-        selection = self.__select_msm_mode(mode)
-        if selection is None:
-            return
-
-        # set time-coverage range
-        coverage = None
-        if np.sum(selection["sci_mask"]) > 0:
-            _mm = selection["sci_mask"] & self.science.tstamp["tai_sec"] > TSTAMP_MIN
+        # reject packages with corrupted timestamps
+        if self.science.size > 0 and np.any(
+            self.science.tstamp["tai_sec"] < TSTAMP_MIN
+        ):
+            self.science.sel(self.science.tstamp["tai_sec"] > TSTAMP_MIN)
+        if self.nomhk.size > 0:
+            _mm = [x < DATE_MIN for x in self.nomhk.tstamp]
             if np.any(_mm):
-                tstamp = self.science.tstamp["dt"][_mm]
-                ii = int(np.nonzero(_mm)[0][-1])
-                intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                coverage = (tstamp[0], tstamp[-1] + intg)
+                self.nomhk.sel(~_mm)
 
-        if coverage is None:
-            tstamp = [
-                self.nomhk.tstamp[ii] for ii in np.nonzero(selection["hk_mask"])[0]
-            ]
-            tstamp = [x for x in tstamp if x > DATE_MIN]
-            coverage = (tstamp[0], tstamp[-1] + dt.timedelta(seconds=1))
+        if mode == "all":
+            pass
+        elif mode == "binned":
+            if (
+                self.science.tlm is None
+                or np.sum(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
+            ):
+                return
+            self.science.sel(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
+            mps_list = np.unique(self.science.tlm["MPS_ID"])
+            self.logger.debug("unique Science MPS: %s", mps_list)
+            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
+        elif mode == "full":
+            if (
+                self.science.tlm is None
+                or np.sum(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
+            ):
+                return
+            self.science.sel(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
+            mps_list = np.unique(self.science.tlm["MPS_ID"])
+            self.logger.debug("unique Diagnostic MPS: %s", mps_list)
+            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
+        else:
+            raise KeyError("mode should be 'binned', 'full' or 'all'")
 
-        l1a_path = get_l1a_filename(config, coverage, mode)
+        dims = {
+            "number_of_images": self.science.size,
+            "samples_per_image": (
+                DET_CONSTS["dimRow"]
+                if self.science.size == 0
+                else np.max([x.size for x in self.science.images])
+            ),
+            "hk_packets": self.nomhk.size,
+        }
+
+        l1a_path = get_l1a_filename(config, self.coverage, mode)
         with L1Aio(
             l1a_path,
             self.reference_date,
-            selection["dims"],
+            dims,
             compression=config.compression,
         ) as l1a:
             l1a.fill_global_attrs(inflight=config.l0_format != "raw")
             l1a.set_attr("processing_version", config.processing_version)
             l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
             l1a.set_attr(
-                "time_coverage_start", coverage[0].isoformat(timespec="milliseconds")
+                "time_coverage_start",
+                self.time_coverage_start.isoformat(timespec="milliseconds"),
             )
             l1a.set_attr(
-                "time_coverage_end", coverage[1].isoformat(timespec="milliseconds")
+                "time_coverage_end",
+                self.time_coverage_end.isoformat(timespec="milliseconds"),
             )
             l1a.set_attr("input_files", [x.name for x in config.l0_list])
             self.logger.debug("(1) initialized level-1A product")
 
-            self._fill_engineering(l1a, selection["hk_mask"])
+            self._fill_engineering(l1a)
             self.logger.debug("(2) added engineering data")
-            self._fill_science(l1a, selection["sci_mask"])
+            self._fill_science(l1a)
             self.logger.debug("(3) added science data")
-            self._fill_image_attrs(l1a, config.l0_format, selection["sci_mask"])
+            self._fill_image_attrs(l1a, config.l0_format)
             self.logger.debug("(4) added image attributes")
 
         # add processor_configuration
@@ -3987,60 +4008,51 @@ class SPXtlm:
 
         self.logger.info("successfully generated: %s", l1a_path.name)
 
-    def _fill_engineering(self: SPXtlm, l1a: L1Aio, hk_mask: np.ndarray) -> None:
+    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/engineering_data'."""
-        if np.sum(hk_mask) == 0:
+        if self.nomhk.size == 0:
             return
 
-        l1a.set_dset("/engineering_data/NomHK_telemetry", self.nomhk.tlm[hk_mask])
+        l1a.set_dset("/engineering_data/NomHK_telemetry", self.nomhk.tlm)
         ref_date = self.reference_date
         l1a.set_dset(
             "/engineering_data/HK_tlm_time",
-            [
-                (x - ref_date).total_seconds()
-                for ii, x in enumerate(self.nomhk.tstamp)
-                if hk_mask[ii]
-            ],
+            [(x - ref_date).total_seconds() for x in self.nomhk.tstamp],
         )
         l1a.set_dset(
             "/engineering_data/temp_detector",
-            self.nomhk.convert("TS1_DEM_N_T")[hk_mask],
+            self.nomhk.convert("TS1_DEM_N_T"),
         )
         l1a.set_dset(
             "/engineering_data/temp_housing",
-            self.nomhk.convert("TS2_HOUSING_N_T")[hk_mask],
+            self.nomhk.convert("TS2_HOUSING_N_T"),
         )
         l1a.set_dset(
             "/engineering_data/temp_radiator",
-            self.nomhk.convert("TS3_RADIATOR_N_T")[hk_mask],
+            self.nomhk.convert("TS3_RADIATOR_N_T"),
         )
 
-    def _fill_science(self: SPXtlm, l1a: L1Aio, sci_mask: np.ndarray) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/science_data'."""
-        if np.sum(sci_mask) == 0:
+        if self.science.size == 0:
             return
 
-        img_list = [img for ii, img in enumerate(self.science.images) if sci_mask[ii]]
-        img_sz = [img.size for img in img_list]
+        img_sz = [img.size for img in self.science.images]
         if len(np.unique(img_sz)) != 1:
             images = np.zeros((len(img_sz), np.max(img_sz)), dtype="u2")
-            for ii, img in enumerate(img_list):
+            for ii, img in enumerate(self.science.images):
                 images[ii, : len(img)] = img
+            l1a.set_dset("/science_data/detector_images", images)
         else:
-            images = np.vstack(img_list)
-        l1a.set_dset("/science_data/detector_images", images)
-        l1a.set_dset("/science_data/detector_telemetry", self.science.tlm[sci_mask])
+            l1a.set_dset("/science_data/detector_images", self.science.images)
+        l1a.set_dset("/science_data/detector_telemetry", self.science.tlm)
 
-    def _fill_image_attrs(
-        self: SPXtlm, l1a: L1Aio, lv0_format: str, sci_mask: np.ndarray
-    ) -> None:
+    def _fill_image_attrs(self: SPXtlm, l1a: L1Aio, lv0_format: str) -> None:
         """Fill datasets in group '/image_attributes'."""
-        if np.sum(sci_mask) == 0:
+        if self.science.size == 0:
             return
 
-        l1a.set_dset(
-            "/image_attributes/icu_time_sec", self.science.tstamp["tai_sec"][sci_mask]
-        )
+        l1a.set_dset("/image_attributes/icu_time_sec", self.science.tstamp["tai_sec"])
         # modify attribute units for non-DSB products
         if lv0_format != "dsb":
             # timestamp of 2020-01-01T00:00:00+00:00
@@ -4062,33 +4074,26 @@ class SPXtlm:
             )
         l1a.set_dset(
             "/image_attributes/icu_time_subsec",
-            self.science.tstamp["sub_sec"][sci_mask],
+            self.science.tstamp["sub_sec"],
         )
         ref_date = self.reference_date
         l1a.set_dset(
             "/image_attributes/image_time",
-            [
-                (x - ref_date).total_seconds()
-                for x in self.science.tstamp["dt"][sci_mask]
-            ],
+            [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]],
         )
         l1a.set_dset(
             "/image_attributes/image_ID",
-            np.bitwise_and(self.science.hdr["sequence"][sci_mask], 0x3FFF),
+            np.bitwise_and(self.science.hdr["sequence"], 0x3FFF),
         )
-        l1a.set_dset(
-            "/image_attributes/binning_table", self.science.binning_table()[sci_mask]
-        )
-        l1a.set_dset(
-            "/image_attributes/digital_offset", self.science.digital_offset()[sci_mask]
-        )
+        l1a.set_dset("/image_attributes/binning_table", self.science.binning_table())
+        l1a.set_dset("/image_attributes/digital_offset", self.science.digital_offset())
         l1a.set_dset(
             "/image_attributes/exposure_time",
-            self.science.exposure_time()[sci_mask] / 1000,
+            self.science.exposure_time() / 1000,
         )
         l1a.set_dset(
             "/image_attributes/nr_coadditions",
-            self.science.tlm["REG_NCOADDFRAMES"][sci_mask],
+            self.science.tlm["REG_NCOADDFRAMES"],
         )
 
 
