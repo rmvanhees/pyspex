@@ -571,14 +571,12 @@ class SPXtlm:
                 )
 
     def full(self: SPXtlm) -> SPXtlm:
-        """Select full-frame measurements"""
+        """Select full-frame measurements."""
         tlm = copy(self)
         tlm.mode = "full"
 
         # reject packages with corrupted timestamps
-        if tlm.science.size > 0 and np.any(
-            tlm.science.tstamp["tai_sec"] < TSTAMP_MIN
-        ):
+        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
             tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
 
         if tlm.nomhk.size > 0:
@@ -604,9 +602,7 @@ class SPXtlm:
         tlm.mode = "binned"
 
         # reject packages with corrupted timestamps
-        if tlm.science.size > 0 and np.any(
-            tlm.science.tstamp["tai_sec"] < TSTAMP_MIN
-        ):
+        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
             tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
 
         if tlm.nomhk.size > 0:

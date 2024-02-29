@@ -28,6 +28,7 @@ import datetime as dt
 import logging
 import sys
 import warnings
+from copy import copy
 from dataclasses import dataclass, field
 from enum import IntFlag, auto
 from logging.config import dictConfig
@@ -85,7 +86,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.10"
+    return "1.4.11"
 
 
 # --------------------------------------------------
@@ -3048,11 +3049,23 @@ class HKtlm:
         """Return number of elements."""
         return 0 if self.tlm is None else len(self.tlm)
 
-    def sel(self: HKtlm, mask: np.NDArray[bool]) -> None:
-        """Use mask array to reject housekeeping packages."""
-        self.hdr = self.hdr[mask]
-        self.tlm = self.tlm[mask]
-        self.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+    def copy(self: HKtlm) -> HKtlm:
+        """Return deep-copy of HKtlm object."""
+        hkt = HKtlm()
+        hkt.hdr = self.hdr.copy()
+        hkt.tlm = self.tlm.copy()
+        hkt.tstamp = copy(self.tstamp)
+        hkt.events = copy(self.events)
+        return hkt
+
+    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
+        """Return subset of HKtlm object using a mask array."""
+        hkt = HKtlm()
+        hkt.hdr = self.hdr[mask]
+        hkt.tlm = self.tlm[mask]
+        hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+        hkt.events = self.events.copy()
+        return hkt
 
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
         """Extract data from SPEXone level-0 housekeeping telemetry packets.
@@ -3184,12 +3197,22 @@ class SCItlm:
         """Return number of elements."""
         return 0 if self.tlm is None else len(self.tlm)
 
-    def sel(self: SCItlm, mask: np.NDArray[bool]) -> None:
-        """Use mask array to reject housekeeping packages."""
-        self.hdr = self.hdr[mask]
-        self.tlm = self.tlm[mask]
-        self.tstamp = self.tstamp[mask]
-        self.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+    def copy(self: SCItlm) -> SCItlm:
+        """Return deep-copy of SCItlm object."""
+        sci = SCItlm()
+        sci.hdr = self.hdr.copy()
+        sci.tlm = self.tlm.copy()
+        sci.tstamp = self.tstamp.copy()
+        sci.images = copy(self.images)
+
+    def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
+        """Return subset of SCItlm object using a mask array."""
+        sci = SCItlm()
+        sci.hdr = self.hdr[mask]
+        sci.tlm = self.tlm[mask]
+        sci.tstamp = self.tstamp[mask]
+        sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+        return sci
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
@@ -3490,7 +3513,7 @@ class SPXtlm:
                 debug: bool = False, dump: bool = False) -> None
      - from_l1a(flname: Path, *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - gen_l1a(config: dataclass, mode: str) -> None
+     - gen_l1a(config: dataclass) -> None
 
 
     Examples
@@ -3525,6 +3548,7 @@ class SPXtlm:
 
     def __init__(self: SPXtlm) -> None:
         """Initialize SPXtlm object."""
+        self.mode = "all"
         self.logger = logging.getLogger(__name__)
         self.file_list: list[Path, ...] | None = None
         self._coverage: list[dt.datetime, dt.datetime] | None = None
@@ -3595,6 +3619,37 @@ class SPXtlm:
     def time_coverage_end(self: SPXtlm) -> dt.datetime | None:
         """Return time_coverage_end."""
         return None if self._coverage is None else self._coverage[1]
+
+    def sel(self: SPXtlm, mask: np.NDArray[bool]) -> SPXtlm:
+        """Return subset of SPXtlm object using a mask array."""
+        spx = copy(self)
+        spx.set_coverage(None)
+        spx.science = self.science.sel(mask)
+
+        # set Science time_coverage_range
+        indices = mask.nonzero()[0]
+        if len(indices) == 1:
+            frame_period = dt.timedelta(milliseconds=self.science.frame_period(0))
+            spx.set_coverage(
+                [
+                    spx.science.tstamp[0]["dt"],
+                    spx.science.tstamp[0]["dt"] + frame_period,
+                ]
+            )
+        else:
+            frame_period = dt.timedelta(milliseconds=self.science.frame_period(-1))
+            spx.set_coverage(
+                [
+                    spx.science.tstamp[0]["dt"],
+                    spx.science.tstamp[-1]["dt"] + frame_period,
+                ]
+            )
+        # select nomhk data within Science time_coverage_range
+        hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
+        dt_min = np.datetime64(spx.coverage[0]) - np.timedelta64(1, "s")
+        dt_max = np.datetime64(spx.coverage[1]) + np.timedelta64(1, "s")
+        spx.nomhk = self.nomhk.sel((hk_tstamps >= dt_min) & (hk_tstamps <= dt_max))
+        return spx
 
     def from_hkt(
         self: SPXtlm,
@@ -3910,52 +3965,67 @@ class SPXtlm:
 
         return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version()}.nc"
 
-    def gen_l1a(self: SPXtlm, config: dataclass, mode: str) -> None:
+    def full(self: SPXtlm) -> SPXtlm:
+        """Select full-frame measurements."""
+        tlm = copy(self)
+        tlm.mode = "full"
+
+        # reject packages with corrupted timestamps
+        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
+            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+
+        if tlm.nomhk.size > 0:
+            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
+            if np.any(_mm):
+                tlm.nomhk = tlm.nomhk.sel(~_mm)
+
+        if (
+            tlm.science.tlm is None
+            or np.sum(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
+        ):
+            return SPXtlm()
+
+        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
+        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+        self.logger.debug("unique Diagnostic MPS: %s", mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
+        return tlm
+
+    def binned(self: SPXtlm) -> SPXtlm:
+        """Select binned images from data."""
+        tlm = copy(self)
+        tlm.mode = "binned"
+
+        # reject packages with corrupted timestamps
+        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
+            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+
+        if tlm.nomhk.size > 0:
+            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
+            if np.any(_mm):
+                tlm.nomhk = tlm.nomhk.sel(~_mm)
+
+        if (
+            tlm.science.tlm is None
+            or np.sum(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
+        ):
+            return SPXtlm()
+
+        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
+        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+        self.logger.debug("unique Science MPS: %s", mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
+        return tlm
+
+    def gen_l1a(self: SPXtlm, config: dataclass) -> None:
         """Generate a SPEXone level-1A product.
 
         Parameters
         ----------
         config :  dataclass
            Settings for the L0->L1A processing
-        mode :  {'all', 'binned', 'full'}
-           Select Science packages with full-frame images or binned images
 
         """
-        # reject packages with corrupted timestamps
-        if self.science.size > 0 and np.any(
-            self.science.tstamp["tai_sec"] < TSTAMP_MIN
-        ):
-            self.science.sel(self.science.tstamp["tai_sec"] > TSTAMP_MIN)
-        if self.nomhk.size > 0:
-            _mm = [x < DATE_MIN for x in self.nomhk.tstamp]
-            if np.any(_mm):
-                self.nomhk.sel(~_mm)
-
-        if mode == "all":
-            pass
-        elif mode == "binned":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
-            ):
-                return
-            self.science.sel(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
-            mps_list = np.unique(self.science.tlm["MPS_ID"])
-            self.logger.debug("unique Science MPS: %s", mps_list)
-            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
-        elif mode == "full":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
-            ):
-                return
-            self.science.sel(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
-            mps_list = np.unique(self.science.tlm["MPS_ID"])
-            self.logger.debug("unique Diagnostic MPS: %s", mps_list)
-            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
-        else:
-            raise KeyError("mode should be 'binned', 'full' or 'all'")
-
         dims = {
             "number_of_images": self.science.size,
             "samples_per_image": (
@@ -3966,7 +4036,7 @@ class SPXtlm:
             "hk_packets": self.nomhk.size,
         }
 
-        l1a_path = get_l1a_filename(config, self.coverage, mode)
+        l1a_path = get_l1a_filename(config, self.coverage, self.mode)
         with L1Aio(
             l1a_path,
             self.reference_date,
@@ -4159,12 +4229,12 @@ def main() -> int:
         config.outdir.mkdir(mode=0o755, parents=True)
     try:
         if config.eclipse is None:
-            tlm.gen_l1a(config, "all")
+            tlm.gen_l1a(config)
         elif config.eclipse:
-            tlm.gen_l1a(config, "binned")
-            tlm.gen_l1a(config, "full")
+            tlm.full().gen_l1a(config)
+            tlm.binned().gen_l1a(config)
         else:
-            tlm.gen_l1a(config, "binned")
+            tlm.binned().gen_l1a(config)
     except (KeyError, RuntimeError) as exc:
         logger.fatal('RuntimeError with "%s"', exc)
         error_code = 131
