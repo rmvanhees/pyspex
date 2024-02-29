@@ -3645,7 +3645,8 @@ class SPXtlm:
                 ]
             )
         # select nomhk data within Science time_coverage_range
-        hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
+        hk_tstamps = np.array([x.replace(tzinfo=None) for x in self.nomhk.tstamp],
+                              dtype="datetime64")
         dt_min = np.datetime64(spx.coverage[0].replace(tzinfo=None)) - np.timedelta64(
             1, "s"
         )
