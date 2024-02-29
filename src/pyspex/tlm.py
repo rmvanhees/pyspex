@@ -323,8 +323,12 @@ class SPXtlm:
             )
         # select nomhk data within Science time_coverage_range
         hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
-        dt_min = np.datetime64(spx.coverage[0]) - np.timedelta64(1, "s")
-        dt_max = np.datetime64(spx.coverage[1]) + np.timedelta64(1, "s")
+        dt_min = np.datetime64(spx.coverage[0].replace(tzinfo=None)) - np.timedelta64(
+            1, "s"
+        )
+        dt_max = np.datetime64(spx.coverage[1].replace(tzinfo=None)) + np.timedelta64(
+            1, "s"
+        )
         spx.nomhk = self.nomhk.sel((hk_tstamps >= dt_min) & (hk_tstamps <= dt_max))
         return spx
 
