@@ -80,12 +80,12 @@ def main() -> int:
         config.outdir.mkdir(mode=0o755, parents=True)
     try:
         if config.eclipse is None:
-            tlm.gen_l1a(config, "all")
+            tlm.gen_l1a(config)
         elif config.eclipse:
-            tlm.gen_l1a(config, "full")
-            tlm.gen_l1a(config, "binned")
+            tlm.full().gen_l1a(config)
+            tlm.binned().gen_l1a(config)
         else:
-            tlm.gen_l1a(config, "binned")
+            tlm.binned().gen_l1a(config)
     except (KeyError, RuntimeError) as exc:
         # raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)

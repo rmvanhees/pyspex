@@ -14,6 +14,7 @@ __all__ = ["SPXtlm"]
 
 import datetime as dt
 import logging
+from copy import copy
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -189,7 +190,7 @@ class SPXtlm:
      - from_l1a(flname: str | Path,
                 *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - gen_l1a(config: dataclass, mode: str) -> None
+     - gen_l1a(config: dataclass) -> None
 
 
     Examples
@@ -224,6 +225,7 @@ class SPXtlm:
 
     def __init__(self: SPXtlm) -> None:
         """Initialize SPXtlm object."""
+        self.mode = "all"
         self.logger = logging.getLogger(__name__)
         self.file_list: list[Path] | None = None
         self._coverage: list[dt.datetime, dt.datetime] | None = None
@@ -297,9 +299,8 @@ class SPXtlm:
 
     def sel(self: SPXtlm, mask: np.NDArray[bool]) -> SPXtlm:
         """Return subset of SPXtlm object using a mask array."""
-        spx = SPXtlm()
-        spx.logger = self.logger
-        spx.file_list = self.file_list.copy()
+        spx = copy(self)
+        spx.set_coverage(None)
         spx.science = self.science.sel(mask)
 
         # set Science time_coverage_range
@@ -320,7 +321,6 @@ class SPXtlm:
                     spx.science.tstamp[-1]["dt"] + frame_period,
                 ]
             )
-
         # select nomhk data within Science time_coverage_range
         hk_tstamps = np.array(self.nomhk.tstamp, dtype="datetime64")
         dt_min = np.datetime64(spx.coverage[0]) - np.timedelta64(1, "s")
@@ -570,52 +570,71 @@ class SPXtlm:
                     ]
                 )
 
-    def gen_l1a(self: SPXtlm, config: dataclass, mode: str) -> None:
+    def full(self: SPXtlm) -> SPXtlm:
+        """Select full-frame measurements"""
+        tlm = copy(self)
+        tlm.mode = "full"
+
+        # reject packages with corrupted timestamps
+        if tlm.science.size > 0 and np.any(
+            tlm.science.tstamp["tai_sec"] < TSTAMP_MIN
+        ):
+            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+
+        if tlm.nomhk.size > 0:
+            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
+            if np.any(_mm):
+                tlm.nomhk = tlm.nomhk.sel(~_mm)
+
+        if (
+            tlm.science.tlm is None
+            or np.sum(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
+        ):
+            return SPXtlm()
+
+        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
+        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+        self.logger.debug("unique Diagnostic MPS: %s", mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
+        return tlm
+
+    def binned(self: SPXtlm) -> SPXtlm:
+        """Select binned images from data."""
+        tlm = copy(self)
+        tlm.mode = "binned"
+
+        # reject packages with corrupted timestamps
+        if tlm.science.size > 0 and np.any(
+            tlm.science.tstamp["tai_sec"] < TSTAMP_MIN
+        ):
+            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+
+        if tlm.nomhk.size > 0:
+            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
+            if np.any(_mm):
+                tlm.nomhk = tlm.nomhk.sel(~_mm)
+
+        if (
+            tlm.science.tlm is None
+            or np.sum(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
+        ):
+            return SPXtlm()
+
+        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
+        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+        self.logger.debug("unique Science MPS: %s", mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
+        return tlm
+
+    def gen_l1a(self: SPXtlm, config: dataclass) -> None:
         """Generate a SPEXone level-1A product.
 
         Parameters
         ----------
         config :  dataclass
            Settings for the L0->L1A processing
-        mode :  {'all', 'binned', 'full'}
-           Select Science packages with full-frame images or binned images
 
         """
-        # reject packages with corrupted timestamps
-        if self.science.size > 0 and np.any(
-            self.science.tstamp["tai_sec"] < TSTAMP_MIN
-        ):
-            self.science.sel(self.science.tstamp["tai_sec"] > TSTAMP_MIN)
-        if self.nomhk.size > 0:
-            _mm = [x < DATE_MIN for x in self.nomhk.tstamp]
-            if np.any(_mm):
-                self.nomhk.sel(~_mm)
-
-        if mode == "all":
-            pass
-        elif mode == "binned":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
-            ):
-                return
-            self.science.sel(self.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
-            mps_list = np.unique(self.science.tlm["MPS_ID"])
-            self.logger.debug("unique Science MPS: %s", mps_list)
-            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
-        elif mode == "full":
-            if (
-                self.science.tlm is None
-                or np.sum(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
-            ):
-                return
-            self.science.sel(self.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
-            mps_list = np.unique(self.science.tlm["MPS_ID"])
-            self.logger.debug("unique Diagnostic MPS: %s", mps_list)
-            self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
-        else:
-            raise KeyError("mode should be 'binned', 'full' or 'all'")
-
         dims = {
             "number_of_images": self.science.size,
             "samples_per_image": (
@@ -625,7 +644,7 @@ class SPXtlm:
             ),
             "hk_packets": self.nomhk.size,
         }
-        l1a_path = get_l1a_filename(config, self.coverage, mode)
+        l1a_path = get_l1a_filename(config, self.coverage, self.mode)
         with L1Aio(
             l1a_path,
             self.reference_date,

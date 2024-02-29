@@ -7,6 +7,7 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+#
 """`SCItlm`, class to read/access PACE/SPEXone telemetry data."""
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ __all__ = ["SCItlm"]
 
 import datetime as dt
 import logging
+from copy import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -98,7 +100,7 @@ class SCItlm:
         sci.hdr = self.hdr.copy()
         sci.tlm = self.tlm.copy()
         sci.tstamp = self.tstamp.copy()
-        sci.images = tuple(x for x in self.images)
+        sci.images = copy(self.images)
 
     def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""

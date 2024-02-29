@@ -7,12 +7,14 @@
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
+#
 """`HKtlm`, class to read/access PACE/SPEXone telemetry data."""
 from __future__ import annotations
 
 __all__ = ["HKtlm"]
 
 import datetime as dt
+from copy import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -76,8 +78,8 @@ class HKtlm:
         hkt = HKtlm()
         hkt.hdr = self.hdr.copy()
         hkt.tlm = self.tlm.copy()
-        hkt.tstamp = self.tstamp.copy()
-        hkt.events = self.events.copy()
+        hkt.tstamp = copy(self.tstamp)
+        hkt.events = copy(self.events)
         return hkt
 
     def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
