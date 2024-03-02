@@ -11,6 +11,7 @@
 
 The OPO laser is used for ISRF and stray-light calibration measurements.
 """
+
 from __future__ import annotations
 
 __all__ = ["read_gse_excel"]

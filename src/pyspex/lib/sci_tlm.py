@@ -9,6 +9,7 @@
 # License:  BSD-3-Clause
 #
 """`SCItlm`, class to read/access PACE/SPEXone telemetry data."""
+
 from __future__ import annotations
 
 __all__ = ["SCItlm"]

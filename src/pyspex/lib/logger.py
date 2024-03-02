@@ -9,6 +9,7 @@
 # License:  BSD-3-Clause
 #
 """Provide function to start the logger for spx1_monitor."""
+
 from __future__ import annotations
 
 __all__ = ["start_logger"]

@@ -7,6 +7,7 @@
 #
 # License:  BSD-3-Clause
 """Necessary but empty file."""
+
 from __future__ import annotations
 
 __all__ = ["pyspex_version"]

@@ -17,6 +17,7 @@ Possible OGSE information:
  * Wavelength monitor (Ambient/GSFC polarized, radiometric, wavelength).
  * Wavelength of OPO laser (GSFC spectral-radiometry).
 """
+
 from __future__ import annotations
 
 import argparse

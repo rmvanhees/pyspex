@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Defines the Grande spectrum for a given number of lamps, used at NASA GSFC."""
+
 from __future__ import annotations
 
 __all__ = ["grande_spectrum"]

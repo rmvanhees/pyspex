@@ -8,6 +8,7 @@
 #
 # License:  BSD-3-Clause
 """Contains helper functions for the class `SPXtlm`."""
+
 from __future__ import annotations
 
 __all__ = ["UNITS_DICT", "convert_hk"]

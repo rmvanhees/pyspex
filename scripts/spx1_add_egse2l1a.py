@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Add ITOS EGSE information of OCAL measurements to one SPEXone L1A product."""
+
 from __future__ import annotations
 
 import argparse

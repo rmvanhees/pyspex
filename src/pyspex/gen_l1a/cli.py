@@ -9,6 +9,7 @@
 #
 # License:  BSD-3-Clause
 """Command-line implementation of spx1_level01a."""
+
 from __future__ import annotations
 
 import logging
