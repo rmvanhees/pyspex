@@ -18,12 +18,16 @@ from __future__ import annotations
 
 __all__ = ["get_leap_seconds"]
 
+import logging
 import datetime as dt
 from importlib.resources import files
 from os import environ
 from pathlib import Path
 
 import julian
+
+# - global parameters -----------------------
+module_logger = logging.getLogger("pyspex.lib.leap_sec")
 
 
 def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
@@ -46,5 +50,6 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
             rec = line.rstrip().split(None, 7)
             if julian.from_jd(float(rec[4])).replace(tzinfo=dt.UTC) < taidt:
                 leapsec = float(rec[6])
+    module_logger.debug("leap seconds: %f", leapsec)
 
     return leapsec

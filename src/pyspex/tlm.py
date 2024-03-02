@@ -376,7 +376,7 @@ class SPXtlm:
             return
         # check if TAI timestamp is valid
         ii = len(ccsds_hk) // 2
-        if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+        if (tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0]) == 0:
             return
 
         # set epoch
@@ -463,7 +463,7 @@ class SPXtlm:
         if file_format == "dsb":
             # check if TAI timestamp is valid
             ii = len(ccsds_hk) // 2
-            if tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0] == 0:
+            if (tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0]) == 0:
                 return
 
             epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)

@@ -1257,6 +1257,7 @@ def get_leap_seconds(taitime: float, epochyear: int = 1958) -> float:
             rec = line.rstrip().split(None, 7)
             if julian.from_jd(float(rec[4])).replace(tzinfo=dt.timezone.utc) < taidt:
                 leapsec = float(rec[6])
+    module_logger.debug("leap seconds: %f", leapsec)
 
     return leapsec
 
@@ -3063,7 +3064,7 @@ class HKtlm:
         hkt = HKtlm()
         hkt.hdr = self.hdr[mask]
         hkt.tlm = self.tlm[mask]
-        hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+        hkt.tstamp = [x for x, y in zip(self.tstamp, mask) if y]
         hkt.events = self.events.copy()
         return hkt
 
@@ -3211,7 +3212,7 @@ class SCItlm:
         sci.hdr = self.hdr[mask]
         sci.tlm = self.tlm[mask]
         sci.tstamp = self.tstamp[mask]
-        sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+        sci.images = tuple(x for x, y in zip(self.images, mask) if y)
         return sci
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
