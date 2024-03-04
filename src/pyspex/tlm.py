@@ -579,55 +579,37 @@ class SPXtlm:
 
     def full(self: SPXtlm) -> SPXtlm:
         """Select full-frame measurements."""
-        tlm = copy(self)
-        tlm.mode = "full"
+        self.mode = "full"
+        if self.science.size == 0:
+            return self
 
-        # reject packages with corrupted timestamps
-        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
-            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+        sci_mask = (self.science.tstamp["tai_sec"] > TSTAMP_MIN) & (
+            self.science.tlm["IMRLEN"] == FULLFRAME_BYTES
+        )
+        if np.all(~sci_mask):
+            return SPXtlm()  # return empy object
+        if np.all(sci_mask):
+            return self  # return original object
+        self.logger.debug("Rejected %d binned Science images", np.sum(~sci_mask))
 
-        if tlm.nomhk.size > 0:
-            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
-            if np.any(_mm):
-                tlm.nomhk = tlm.nomhk.sel(~_mm)
-
-        if (
-            tlm.science.tlm is None
-            or np.sum(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES) == 0
-        ):
-            return SPXtlm()
-
-        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] == FULLFRAME_BYTES)
-        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
-        self.logger.debug("unique Diagnostic MPS: %s", mps_list)
-        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
-        return tlm
+        return copy(self).sel(sci_mask)
 
     def binned(self: SPXtlm) -> SPXtlm:
         """Select binned images from data."""
-        tlm = copy(self)
-        tlm.mode = "binned"
+        self.mode = "binned"
+        if self.science.size == 0:
+            return self
 
-        # reject packages with corrupted timestamps
-        if tlm.science.size > 0 and np.any(tlm.science.tstamp["tai_sec"] < TSTAMP_MIN):
-            tlm.science = tlm.science.sel(tlm.science.tstamp["tai_sec"] > TSTAMP_MIN)
+        sci_mask = (self.science.tstamp["tai_sec"] > TSTAMP_MIN) & (
+            self.science.tlm["IMRLEN"] < FULLFRAME_BYTES
+        )
+        if np.all(~sci_mask):
+            return SPXtlm()  # return empy object
+        if np.all(sci_mask):
+            return self  # return original object
+        self.logger.debug("Rejected %d full-frame Science images", np.sum(~sci_mask))
 
-        if tlm.nomhk.size > 0:
-            _mm = [x < DATE_MIN for x in tlm.nomhk.tstamp]
-            if np.any(_mm):
-                tlm.nomhk = tlm.nomhk.sel(~_mm)
-
-        if (
-            tlm.science.tlm is None
-            or np.sum(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES) == 0
-        ):
-            return SPXtlm()
-
-        tlm = tlm.sel(tlm.science.tlm["IMRLEN"] < FULLFRAME_BYTES)
-        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
-        self.logger.debug("unique Science MPS: %s", mps_list)
-        tlm.nomhk = tlm.nomhk.sel(np.in1d(tlm.nomhk.tlm["MPS_ID"], mps_list))
-        return tlm
+        return copy(self).sel(sci_mask)
 
     def gen_l1a(self: SPXtlm, config: dataclass) -> None:
         """Generate a SPEXone level-1A product.
@@ -638,12 +620,18 @@ class SPXtlm:
            Settings for the L0->L1A processing
 
         """
+        if self.science.size == 0:
+            return
+        mps_list = np.unique(self.science.tlm["MPS_ID"])
+        self.logger.debug("unique Science MPS: %s", mps_list)
+        self.nomhk = self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
+
         dims = {
             "number_of_images": self.science.size,
             "samples_per_image": (
                 DET_CONSTS["dimRow"]
                 if self.science.size == 0
-                else np.max([x.size for x in self.science.images])
+                else np.max(self.science.tlm["IMRLEN"]) // 2
             ),
             "hk_packets": self.nomhk.size,
         }
@@ -671,7 +659,7 @@ class SPXtlm:
 
             self._fill_engineering(l1a)
             self.logger.debug("(2) added engineering data")
-            self._fill_science(l1a)
+            self._fill_science(l1a, dims["samples_per_image"])
             self.logger.debug("(3) added science data")
             self._fill_image_attrs(l1a, config.l0_format)
             self.logger.debug("(4) added image attributes")
@@ -714,19 +702,18 @@ class SPXtlm:
             self.nomhk.convert("TS3_RADIATOR_N_T"),
         )
 
-    def _fill_science(self: SPXtlm, l1a: L1Aio) -> None:
+    def _fill_science(self: SPXtlm, l1a: L1Aio, samples_per_image: int) -> None:
         """Fill datasets in group '/science_data'."""
         if self.science.size == 0:
             return
 
-        img_sz = [img.size for img in self.science.images]
-        if len(np.unique(img_sz)) != 1:
-            images = np.zeros((len(img_sz), np.max(img_sz)), dtype="u2")
-            for ii, img in enumerate(self.science.images):
-                images[ii, : len(img)] = img
-            l1a.set_dset("/science_data/detector_images", images)
-        else:
+        if len(np.unique([img.size for img in self.science.images])) == 1:
             l1a.set_dset("/science_data/detector_images", self.science.images)
+        else:
+            images = np.zeros((self.science.size, samples_per_image), dtype="u2")
+            for ii, img in enumerate(self.science.images):
+                images[ii, : img.size] = img
+            l1a.set_dset("/science_data/detector_images", images)
         l1a.set_dset("/science_data/detector_telemetry", self.science.tlm)
 
     def _fill_image_attrs(self: SPXtlm, l1a: L1Aio, lv0_format: str) -> None:

@@ -192,10 +192,20 @@ class SCItlm:
             elif ccsds_hdr.grouping_flag == 2:
                 found_start_first = False
                 img += (buf["frame"][0],)
-                self.images += (np.concatenate(img),)
-                ii += 1
+                img = np.concatenate(img)
+                if img.size == self.tlm[ii]["IMRLEN"] // 2:
+                    self.images += (img,)
+                    ii += 1
+                else:
+                    n_frames -= 1
                 if ii == n_frames:
                     break
+
+        # adjust number of frames for corrupted images
+        if ii != self.hdr.size:
+            self.hdr = self.hdr[:ii]
+            self.tlm = self.tlm[:ii]
+            self.tstamp = self.tstamp[:ii]
 
         return n_frames
 
