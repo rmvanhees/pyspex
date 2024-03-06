@@ -80,7 +80,7 @@ def main() -> int:
     if not config.outdir.is_dir():
         config.outdir.mkdir(mode=0o755, parents=True)
     try:
-        if config.eclipse is None:
+        if config.eclipse is None or tlm.science.size == 0:
             tlm.gen_l1a(config)
         elif config.eclipse:
             tlm.full().gen_l1a(config)
