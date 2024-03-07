@@ -46,7 +46,7 @@ compression: True
 # define file-version as nn, neglected when outfile not empty
 file_version: 1
 # provide processing version
-processing_version: ''
+processing_version: '1.0'
 # flag to indicate measurements taken in eclipse or day-side
 eclipse: True
 # provide list, directory, file-glob or empty
@@ -87,7 +87,7 @@ EPILOG_HELP = f"""Usage:
        outdir: L1A
        outfile: ''
        file_version: 1
-       processing_version: 1
+       processing_version: 1.0
        compression: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
@@ -134,7 +134,7 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
-    processing_version: str = "1"
+    processing_version: str = "1.0"
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
