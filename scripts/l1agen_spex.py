@@ -2695,8 +2695,10 @@ class HKTio:
     def __init__(self: HKTio, flnames: str | Path | list[Path]) -> None:
         """Initialize access to PACE HKT products."""
         self.nav_data: xr.Dataset | None = None
-        if isinstance(flnames, str | Path):
-            self.flnames = [flnames] if isinstance(flnames, Path) else [Path(flnames)]
+        if isinstance(flnames, str):
+            self.flnames = [Path(flnames)]
+        elif isinstance(flnames, Path):
+            self.flnames = [flnames]
         else:
             self.flnames = flnames
 
@@ -3912,6 +3914,10 @@ class SPXtlm:
            Settings for the L0->L1A processing
 
         """
+        # sanity check
+        if self.science.size == 0 and self.nomhk.size == 0:
+            return
+
         if self.science.size > 0:
             mps_list = np.unique(self.science.tlm["MPS_ID"])
             self.logger.debug("unique Science MPS: %s", mps_list)
