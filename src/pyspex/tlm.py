@@ -25,7 +25,7 @@ import numpy as np
 # pylint: disable=no-name-in-module
 from netCDF4 import Dataset
 
-from .hkt_io import HKTio, check_coverage_nav, copy_hkt_nav
+from .hkt_io import HKTio
 from .l1a_io import L1Aio
 from .lib import pyspex_version
 from .lib.hk_tlm import HKtlm
@@ -123,24 +123,6 @@ def get_l1a_filename(
         msm_id = msm_id[:-22] + new_date
 
     return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc"
-
-
-def add_hkt_navigation(l1a_file: Path, hkt_list: tuple[Path, ...]) -> int:
-    """Add PACE navigation information from PACE_HKT products.
-
-    Parameters
-    ----------
-    l1a_file :  Path
-       name of an existing L1A product.
-    hkt_list :  list[Path, ...]
-       listing of files from which the navigation data has to be read
-
-    """
-    # read PACE navigation data from HKT files
-    # and add PACE navigation data to existing level-1A product
-    copy_hkt_nav(hkt_list, l1a_file)
-    # check time coverage of navigation data.
-    return check_coverage_nav(l1a_file)
 
 
 def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
@@ -364,18 +346,17 @@ class SPXtlm:
             raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
 
         self.file_list = flnames
-        ccsds_hk: tuple[np.ndarray, ...] | tuple[()] = ()
-        for name in flnames:
-            hkt = HKTio(name)
-            ccsds_hk += hkt.housekeeping(instrument)
 
         # check number of telemetry data-packages
+        ccsds_hk = HKTio(flnames).housekeeping(instrument)
         if not ccsds_hk:
             return
+
         # perform dump of telemetry data-packages
         if dump:
             dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
             return
+
         # check if TAI timestamp is valid
         ii = len(ccsds_hk) // 2
         if (tai_sec := ccsds_hk[ii]["hdr"]["tai_sec"][0]) == 0:
@@ -663,17 +644,16 @@ class SPXtlm:
             self._fill_image_attrs(l1a, config.l0_format)
             self.logger.debug("(4) added image attributes")
 
+        # add PACE navigation information from HKT products
+        if config.hkt_list:
+            hkt = HKTio(config.hkt_list)
+            hkt.navigation()
+            hkt.add_nav(l1a_path, self.coverage)
+            self.logger.debug("(5) added PACE navigation data")
+
         # add processor_configuration
         if config.yaml_fl:
             add_proc_conf(l1a_path, config.yaml_fl)
-
-        # add PACE navigation information from HKT products
-        if config.hkt_list:
-            status_ok = add_hkt_navigation(l1a_path, config.hkt_list)
-            self.logger.debug("(5) added PACE navigation data")
-
-            if not status_ok:
-                raise UserWarning("time-coverage of navigation data is too short")
 
         self.logger.info("successfully generated: %s", l1a_path.name)
 
