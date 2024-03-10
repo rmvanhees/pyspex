@@ -2844,8 +2844,8 @@ class HKTio:
         self.nav_data.close()
 
         # add coverage-quality flag
-        xarr = xr.DataArray(
-            np.array([CoverageFlag.check(nav, coverage)]),
+        nav["coverage_quality"] = xr.DataArray(
+            data=CoverageFlag.check(nav, coverage),
             name="coverage_quality",
             attrs={
                 "long_name": "coverage quality of navigation data",
@@ -2858,7 +2858,6 @@ class HKTio:
                 ),
             },
         )
-        nav["coverage_quality"] = xarr
         nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
         nav.close()
 
