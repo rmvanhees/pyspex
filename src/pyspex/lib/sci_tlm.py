@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .ccsds_hdr import CCSDShdr
-from .leap_sec import get_leap_seconds
 from .tlm_utils import convert_hk
 
 if TYPE_CHECKING:
@@ -234,33 +233,17 @@ class SCItlm:
         self.tlm = fid["/science_data/detector_telemetry"][data_sel]
 
         # determine time-stamps
-        dset = fid["/image_attributes/icu_time_sec"]
-        seconds = dset[data_sel]
-        try:
-            _ = dset.attrs["units"].index(b"1958")
-        except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
-        else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.UTC)
-            epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
-        subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
-
-        _dt = []
-        for ii, sec in enumerate(seconds):
-            msec_offs = self.readout_offset(ii)
-            _dt.append(
-                epoch
-                + dt.timedelta(
-                    seconds=int(sec),
-                    milliseconds=-msec_offs,
-                    microseconds=subsec2musec(subsec[ii]),
-                )
-            )
-
-        self.tstamp = np.empty(len(seconds), dtype=TSTAMP_TYPE)
-        self.tstamp["tai_sec"] = seconds
-        self.tstamp["sub_sec"] = subsec
-        self.tstamp["dt"] = _dt
+        dset = fid["/image_attributes/image_time"]
+        indx = dset.attrs["units"].decode().find("20")
+        ref_date = dt.datetime.fromisoformat(
+            dset.attrs["units"].decode()[indx:] + "+00:00"
+        )
+        self.tstamp = np.empty(len(dset[data_sel]), dtype=TSTAMP_TYPE)
+        self.tstamp["tai_sec"] = fid["/image_attributes/icu_time_sec"][data_sel]
+        self.tstamp["sub_sec"] = fid["/image_attributes/icu_time_subsec"][data_sel]
+        self.tstamp["dt"] = [
+            ref_date + dt.timedelta(milliseconds=int(1000 * x)) for x in dset[data_sel]
+        ]
 
         # read image data
         self.images = fid["/science_data/detector_images"][data_sel, :]
