@@ -101,6 +101,7 @@ class SCItlm:
         sci.tlm = self.tlm.copy()
         sci.tstamp = self.tstamp.copy()
         sci.images = copy(self.images)
+        return sci
 
     def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""

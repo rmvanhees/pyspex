@@ -182,11 +182,11 @@ class SPXtlm:
 
     >>> from pyspex.tlm import SPXtlm
     >>> spx = SPXtlm()
-    >>> spx.from_l0(list_l0_products, tlm_type='hk')
+    >>> spx.from_lv0(list_l0_products, tlm_type='hk')
     # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
     >>> spx.nomhk.events
     # return detector images
-    >>> spx.from_l0(list_l0_products, tlm_type='sci')
+    >>> spx.from_lv0(list_l0_products, tlm_type='sci')
     >>> spx.science.images
 
     Read data from a SPEXone level-1a product
@@ -212,8 +212,8 @@ class SPXtlm:
         self.logger = logging.getLogger(__name__)
         self.file_list: list[Path] | None = None
         self._coverage: list[dt.datetime, dt.datetime] | None = None
-        self.nomhk = HKtlm()
-        self.science = SCItlm()
+        self.nomhk: HKtlm = HKtlm()
+        self.science: SCItlm = SCItlm()
 
     @property
     def coverage(self: SPXtlm) -> list[dt.datetime, dt.datetime] | None:

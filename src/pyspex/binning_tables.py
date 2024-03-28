@@ -132,9 +132,8 @@ class BinningTables:
         revert[self.lineskip_arr == 1, :] = img_1d[table].reshape(-1, 1024)
         return revert
 
-    def create_if_needed(
-        self: BinningTables, validity_start: str, release: int = 1
-    ) -> None:
+    @staticmethod
+    def create_if_needed(validity_start: str, release: int = 1) -> None:
         """Initialize CKD file for binning tables if not exist.
 
         Parameters
