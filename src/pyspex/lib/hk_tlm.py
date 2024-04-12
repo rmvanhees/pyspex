@@ -86,10 +86,12 @@ class HKtlm:
     def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
         """Return subset of HKtlm object using a mask array."""
         hkt = HKtlm()
-        hkt.hdr = self.hdr[mask]
-        hkt.tlm = self.tlm[mask]
-        hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
-        hkt.events = self.events.copy()
+        if self.hdr is not None:
+            hkt.hdr = self.hdr[mask]
+        if self.tlm is not None:
+            hkt.tlm = self.tlm[mask]
+            hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+            hkt.events = self.events.copy()
         return hkt
 
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:

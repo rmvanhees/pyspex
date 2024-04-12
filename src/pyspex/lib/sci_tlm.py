@@ -106,10 +106,12 @@ class SCItlm:
     def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""
         sci = SCItlm()
-        sci.hdr = self.hdr[mask]
-        sci.tlm = self.tlm[mask]
-        sci.tstamp = self.tstamp[mask]
-        sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+        if self.hdr is not None:
+            sci.hdr = self.hdr[mask]
+        if self.tlm is not None:
+            sci.tlm = self.tlm[mask]
+            sci.tstamp = self.tstamp[mask]
+            sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
         return sci
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
