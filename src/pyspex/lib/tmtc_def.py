@@ -221,7 +221,7 @@ def __tmtc_def(apid: int) -> list:
             ("BOOTCNTGOOD_IM2", ">u4"),  # 46    0x003a
             ("BOOTCNTGOOD_IM3", ">u4"),  # 50    0x003e
             ("BOOTATTEMPTS_CURRIM", "u1"),  # 54    0x0042
-            ("dummy_01", "u1"),  # 55    0x0043
+            ("MPS_ACT_STATUS", "u1"),  # 55    0x0043
             ("SWIMG_LOADED", "u1"),  # 56    0x0044
             ("SWIMG_DEFAULT", "u1"),  # 57    0x0045
             ("SWIMG_NXTBOOT", "u1"),  # 58    0x0046
@@ -261,7 +261,7 @@ def __tmtc_def(apid: int) -> list:
             ("ICU_3P3V_I", ">u2"),  # 136   0x0094
             ("ICU_1P2V_I", ">u2"),  # 138   0x0096
             ("DEM_STATUS", "u1"),  # 140   0x0098
-            ("dummy_02", "u1"),  # 141   0x0099
+            ("dummy_01", "u1"),  # 141   0x0099
             ("ICU_5P0V_V", ">u2"),  # 142   0x009a
             ("ICU_5P0V_I", ">u2"),  # 144   0x009c
             ("DEMSPWSTAT", "u1"),  # 146   0x009e
@@ -321,7 +321,7 @@ def __tmtc_def(apid: int) -> list:
             ("DEM_V", ">u2"),  # 266   0x0116
             ("DEM_I", ">u2"),  # 268   0x0118
             ("REG_FW_VERSION", "u1"),  # 270   0x011a
-            ("dummy_03", "u1"),  # 271   0x011b
+            ("dummy_02", "u1"),  # 271   0x011b
             ("DET_T", ">u2"),  # 272   0x011c
             ("REG_SPW_ERROR", "u1"),  # 274   0x011e
             ("REG_CMV_OUTOFSYNC", "u1"),  # 275   0x011f
