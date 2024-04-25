@@ -23,16 +23,16 @@ UNITS_DICT = {
     "ADC1_GAIN": "Volt",
     "ADC1_OFFSET": "Volt",
     "ADC1_REF": "Volt",
-    "ADC1_T": "K",
+    "ADC1_T": "degC",
     "ADC1_VCC": "Volt",
     "ADC2_GAIN": "Volt",
     "ADC2_OFFSET": "Volt",
     "ADC2_REF": "Volt",
-    "ADC2_T": "K",
+    "ADC2_T": "degC",
     "ADC2_VCC": "Volt",
     "DEM_I": "mA",
     "DEM_V": "Volt",
-    "DET_T": "K",
+    "DET_T": "degC",
     "HTR1_DUTYCYCL": "%",
     "HTR1_I": "mA",
     "HTR2_DUTYCYCL": "%",
@@ -49,43 +49,43 @@ UNITS_DICT = {
     "ICU_3P3V_V": "Volt",
     "ICU_4P0V_I": "mA",
     "ICU_4P0V_V": "Volt",
-    "ICU_4V_T": "K",
+    "ICU_4V_T": "degC",
     "ICU_5P0V_I": "mA",
     "ICU_5P0V_V": "Volt",
-    "ICU_5V_T": "K",
-    "ICU_DIGV_T": "K",
-    "ICU_HG1_T": "K",
-    "ICU_HG2_T": "K",
-    "ICU_MCU_T": "K",
-    "ICU_MID_T": "K",
+    "ICU_5V_T": "degC",
+    "ICU_DIGV_T": "degC",
+    "ICU_HG1_T": "degC",
+    "ICU_HG2_T": "degC",
+    "ICU_MCU_T": "degC",
+    "ICU_MID_T": "degC",
     "LED1_ANODE_V": "Volt",
     "LED1_CATH_V": "Volt",
     "LED1_I": "mA",
     "LED2_ANODE_V": "Volt",
     "LED2_CATH_V": "Volt",
     "LED2_I": "mA",
-    "TS1_DEM_N_T": "K",
-    "TS2_HOUSING_N_T": "K",
-    "TS3_RADIATOR_N_T": "K",
-    "TS4_DEM_R_T": "K",
-    "TS5_HOUSING_R_T": "K",
-    "TS6_RADIATOR_R_T": "K",
+    "TS1_DEM_N_T": "degC",
+    "TS2_HOUSING_N_T": "degC",
+    "TS3_RADIATOR_N_T": "degC",
+    "TS4_DEM_R_T": "degC",
+    "TS5_HOUSING_R_T": "degC",
+    "TS6_RADIATOR_R_T": "degC",
 }
 
 
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Detector Temperature Sensor to [K]."""
+    """Convert Detector Temperature Sensor to degree Celsius."""
     res = np.empty(raw_data.size, dtype=float)
     mask = raw_data < 400
-    res[mask] = 1.224 * raw_data[mask] - 17.05
-    res[~mask] = 0.6426 * raw_data[~mask] - 145.57
-    res[res > 325] = np.nan
+    res[mask] = 1.224 * raw_data[mask] - 290.2
+    res[~mask] = 0.6426 * raw_data[~mask] - 418.72
+    res[res > 50] = np.nan
     return res
 
 
 def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of the Temperature Sensors to [K].
+    """Convert readouts of the Temperature Sensors to degree Celsius.
 
     Notes
     -----
@@ -97,7 +97,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
     - TS6 Radiator Redundant Temperature*
 
     """
-    coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
+    coefficients = (21.19, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
     buff = (
         coefficients[0]
@@ -110,7 +110,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of temperature sensors on ICU power supplies to [K].
+    """Convert readouts of temperature sensors on ICU power supplies to degree Celsius.
 
     Notes
     -----
@@ -123,7 +123,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
     - ICU 1V2, 3V3 supply temperature
 
     """
-    coefficients = (273.15, 0.0625)
+    coefficients = (0., 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
 
 
@@ -209,8 +209,8 @@ def poly_spex_adc_gain(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_adc_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC1 Temperature reading to [K]."""
-    coefficients = (-0.25, 0.0007385466842651367)
+    """Convert ADC1 Temperature reading to degree Celsius."""
+    coefficients = (-273.4, 0.0007385466842651367)
     return coefficients[0] + coefficients[1] * raw_data
 
 
