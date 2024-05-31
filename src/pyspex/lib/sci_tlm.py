@@ -35,10 +35,11 @@ DET_CONSTS = {
     "dimColumn": 2048,
     "dimFullFrame": 2048 * 2048,
     "DEM_frequency": 10,  # [MHz]
-    "FTI_science": 1000 / 15,  # [ms]
+    "FOT_diagnostic": 0.4644,  # [ms]
     "FTI_diagnostic": 240.0,  # [ms]
     "FTI_margin": 212.4,  # [ms]
-    "overheadTime": 0.4644,  # [ms]
+    "FOT_science": 0.3096, # [ms]
+    "FTI_science": 1000 / 15,  # [ms]
     "FOT_length": 20,
 }
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
@@ -52,7 +53,7 @@ module_logger = logging.getLogger("pyspex.lib.sci_tlm")
 # - helper functions ------------------------
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
-    return 100 * int(sub_sec / 65536 * 10000)
+    return int(1e6 * sub_sec / 65536)
 
 
 def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
@@ -180,6 +181,7 @@ class SCItlm:
                     epoch
                     + dt.timedelta(
                         seconds=int(buf["icu_tm"]["tai_sec"][0]),
+                        milliseconds=-self.readout_offset(ii),
                         microseconds=subsec2musec(buf["icu_tm"]["sub_sec"][0]),
                     ),
                 )
@@ -245,7 +247,7 @@ class SCItlm:
         self.tstamp["tai_sec"] = fid["/image_attributes/icu_time_sec"][data_sel]
         self.tstamp["sub_sec"] = fid["/image_attributes/icu_time_subsec"][data_sel]
         self.tstamp["dt"] = [
-            ref_date + dt.timedelta(milliseconds=int(1000 * x)) for x in dset[data_sel]
+            ref_date + dt.timedelta(seconds=float(x)) for x in dset[data_sel]
         ]
 
         # read image data
@@ -279,32 +281,31 @@ class SCItlm:
 
     def frame_period(self: SCItlm, indx: int) -> float:
         """Return frame period of detector measurement [ms]."""
-        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
         # binning mode
         if self.tlm["REG_FULL_FRAME"][indx] == 2:
-            return float(n_coad * DET_CONSTS["FTI_science"])
+            return DET_CONSTS["FTI_science"]
 
         # full-frame mode
-        return float(
-            n_coad
-            * np.clip(
-                DET_CONSTS["FTI_margin"]
-                + DET_CONSTS["overheadTime"]
-                + self.exposure_time(indx),
-                a_min=DET_CONSTS["FTI_diagnostic"],
-                a_max=None,
-            )
+        return np.clip(
+            DET_CONSTS["FTI_margin"]
+            + DET_CONSTS["FOT_diagnostic"]
+            + self.exposure_time(indx),
+            a_min=DET_CONSTS["FTI_diagnostic"],
+            a_max=None,
         )
+
+    def master_cycle(self: SCItlm, indx: int) -> float:
+        """Return master-cycle period."""
+        return self.tlm["REG_NCOADDFRAMES"][indx] * self.frame_period(indx)
 
     def readout_offset(self: SCItlm, indx: int) -> float:
         """Return offset wrt start-of-integration [ms]."""
         n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
         n_frm = (
-            n_coad + 3
+            n_coad + 1
             if self.tlm["IMRLEN"][indx] == FULLFRAME_BYTES
-            else 2 * n_coad + 2
+            else 2 * n_coad + 1
         )
-
         return n_frm * self.frame_period(indx)
 
     def binning_table(self: SCItlm) -> np.ndarray:

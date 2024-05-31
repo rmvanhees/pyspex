@@ -8,7 +8,7 @@
 #
 # License:  BSD-3-Clause
 #
-"""An amalgamation of the pyspex code needed for SPEXone L0-L1A processing.
+"""An amalgamation of the pyspex code used for SPEXone L0-L1A processing.
 
 Intended for operational processing of SPEXone data at NASA Goddard Space
  Flight Center, Ocean Biology Processing Group.
@@ -16,7 +16,8 @@ Intended for operational processing of SPEXone data at NASA Goddard Space
 Notes
 -----
 - Although pyspex is using features from Python v3.11+, the code of this module
-  should run fine with Python v3.8 and the modules listed in requirements-3.8.txt.
+  should run fine with Python v3.8 using the modules listed in the file
+  'requirements-3.8.txt'.
 - Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 
 
@@ -68,10 +69,11 @@ DET_CONSTS = {
     "dimColumn": 2048,
     "dimFullFrame": 2048 * 2048,
     "DEM_frequency": 10,  # [MHz]
-    "FTI_science": 1000 / 15,  # [ms]
+    "FOT_diagnostic": 0.4644,  # [ms]
     "FTI_diagnostic": 240.0,  # [ms]
     "FTI_margin": 212.4,  # [ms]
-    "overheadTime": 0.4644,  # [ms]
+    "FOT_science": 0.3096, # [ms]
+    "FTI_science": 1000 / 15,  # [ms]
     "FOT_length": 20,
 }
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
@@ -2871,7 +2873,7 @@ class HKTio:
 # - helper functions ------------------------
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
-    return 100 * int(sub_sec / 65536 * 10000)
+    return int(1e6 * sub_sec / 65536)
 
 
 def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
@@ -3171,6 +3173,7 @@ class SCItlm:
                     epoch
                     + dt.timedelta(
                         seconds=int(buf["icu_tm"]["tai_sec"][0]),
+                        milliseconds=-self.readout_offset(ii),
                         microseconds=subsec2musec(buf["icu_tm"]["sub_sec"][0]),
                     ),
                 )
@@ -3227,33 +3230,17 @@ class SCItlm:
         self.tlm = fid["/science_data/detector_telemetry"][data_sel]
 
         # determine time-stamps
-        dset = fid["/image_attributes/icu_time_sec"]
-        seconds = dset[data_sel]
-        try:
-            _ = dset.attrs["units"].index(b"1958")
-        except ValueError:
-            epoch = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
-        else:
-            epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
-            epoch -= dt.timedelta(seconds=get_leap_seconds(seconds[0]))
-        subsec = fid["/image_attributes/icu_time_subsec"][data_sel]
-
-        _dt = []
-        for ii, sec in enumerate(seconds):
-            msec_offs = self.readout_offset(ii)
-            _dt.append(
-                epoch
-                + dt.timedelta(
-                    seconds=int(sec),
-                    milliseconds=-msec_offs,
-                    microseconds=subsec2musec(subsec[ii]),
-                )
-            )
-
-        self.tstamp = np.empty(len(seconds), dtype=TSTAMP_TYPE)
-        self.tstamp["tai_sec"] = seconds
-        self.tstamp["sub_sec"] = subsec
-        self.tstamp["dt"] = _dt
+        dset = fid["/image_attributes/image_time"]
+        indx = dset.attrs["units"].decode().find("20")
+        ref_date = dt.datetime.fromisoformat(
+            dset.attrs["units"].decode()[indx:] + "+00:00"
+        )
+        self.tstamp = np.empty(len(dset[data_sel]), dtype=TSTAMP_TYPE)
+        self.tstamp["tai_sec"] = fid["/image_attributes/icu_time_sec"][data_sel]
+        self.tstamp["sub_sec"] = fid["/image_attributes/icu_time_subsec"][data_sel]
+        self.tstamp["dt"] = [
+            ref_date + dt.timedelta(seconds=float(x)) for x in dset[data_sel]
+        ]
 
         # read image data
         self.images = fid["/science_data/detector_images"][data_sel, :]
@@ -3268,30 +3255,30 @@ class SCItlm:
 
     def frame_period(self: SCItlm, indx: int) -> float:
         """Return frame period of detector measurement [ms]."""
-        n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
         # binning mode
         if self.tlm["REG_FULL_FRAME"][indx] == 2:
-            return float(n_coad * DET_CONSTS["FTI_science"])
+            return DET_CONSTS["FTI_science"]
 
         # full-frame mode
-        return float(
-            n_coad
-            * np.clip(
-                DET_CONSTS["FTI_margin"]
-                + DET_CONSTS["overheadTime"]
-                + self.exposure_time(indx),
-                a_min=DET_CONSTS["FTI_diagnostic"],
-                a_max=None,
-            )
+        return np.clip(
+            DET_CONSTS["FTI_margin"]
+            + DET_CONSTS["FOT_diagnostic"]
+            + self.exposure_time(indx),
+            a_min=DET_CONSTS["FTI_diagnostic"],
+            a_max=None,
         )
+
+    def master_cycle(self: SCItlm, indx: int) -> float:
+        """Return master-cycle period."""
+        return self.tlm["REG_NCOADDFRAMES"][indx] * self.frame_period(indx)
 
     def readout_offset(self: SCItlm, indx: int) -> float:
         """Return offset wrt start-of-integration [ms]."""
         n_coad = self.tlm["REG_NCOADDFRAMES"][indx]
         n_frm = (
-            n_coad + 3
+            n_coad + 1
             if self.tlm["IMRLEN"][indx] == FULLFRAME_BYTES
-            else 2 * n_coad + 2
+            else 2 * n_coad + 1
         )
 
         return n_frm * self.frame_period(indx)
@@ -3530,20 +3517,19 @@ class SPXtlm:
 
         # set Science time_coverage_range
         indices = mask.nonzero()[0]
+        master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
         if len(indices) == 1:
-            frame_period = dt.timedelta(milliseconds=self.science.frame_period(0))
             spx.set_coverage(
                 [
                     spx.science.tstamp[0]["dt"],
-                    spx.science.tstamp[0]["dt"] + frame_period,
+                    spx.science.tstamp[0]["dt"] + master_cycle,
                 ]
             )
         else:
-            frame_period = dt.timedelta(milliseconds=self.science.frame_period(-1))
             spx.set_coverage(
                 [
                     spx.science.tstamp[0]["dt"],
-                    spx.science.tstamp[-1]["dt"] + frame_period,
+                    spx.science.tstamp[-1]["dt"] + master_cycle,
                 ]
             )
         # select nomhk data within Science time_coverage_range
@@ -3716,9 +3702,12 @@ class SPXtlm:
                     self.science.sel(_mm)
 
                 # set time-coverage
-                intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
+                master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
                 self.set_coverage(
-                    [self.science.tstamp["dt"][0], self.science.tstamp["dt"][-1] + intg]
+                    [
+                        self.science.tstamp["dt"][0],
+                        self.science.tstamp["dt"][-1] + master_cycle,
+                    ]
                 )
 
         # collected NomHK telemetry data
@@ -3784,8 +3773,10 @@ class SPXtlm:
                     if np.any(_mm):
                         tstamp = self.science.tstamp["dt"][_mm]
                         ii = int(np.nonzero(_mm)[0][-1])
-                        intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                        self.set_coverage([tstamp[0], tstamp[-1] + intg])
+                        master_cycle = dt.timedelta(
+                            milliseconds=self.science.master_cycle(ii)
+                        )
+                        self.set_coverage([tstamp[0], tstamp[-1] + master_cycle])
 
             # collected NomHk telemetry data
             if tlm_type != "sci":

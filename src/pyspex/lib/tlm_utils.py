@@ -123,7 +123,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
     - ICU 1V2, 3V3 supply temperature
 
     """
-    coefficients = (0., 0.0625)
+    coefficients = (0.0, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
 
 

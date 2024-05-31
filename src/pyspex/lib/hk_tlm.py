@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # - helper functions ------------------------
 def subsec2musec(sub_sec: int) -> int:
     """Return subsec as microseconds."""
-    return 100 * int(sub_sec / 65536 * 10000)
+    return int(1e6 * sub_sec / 65536)
 
 
 def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:

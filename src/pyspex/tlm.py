@@ -288,20 +288,19 @@ class SPXtlm:
 
         # set Science time_coverage_range
         indices = mask.nonzero()[0]
+        master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
         if len(indices) == 1:
-            frame_period = dt.timedelta(milliseconds=self.science.frame_period(0))
             spx.set_coverage(
                 [
                     spx.science.tstamp[0]["dt"],
-                    spx.science.tstamp[0]["dt"] + frame_period,
+                    spx.science.tstamp[0]["dt"] + master_cycle,
                 ]
             )
         else:
-            frame_period = dt.timedelta(milliseconds=self.science.frame_period(-1))
             spx.set_coverage(
                 [
                     spx.science.tstamp[0]["dt"],
-                    spx.science.tstamp[-1]["dt"] + frame_period,
+                    spx.science.tstamp[-1]["dt"] + master_cycle,
                 ]
             )
         # select nomhk data within Science time_coverage_range
@@ -473,9 +472,12 @@ class SPXtlm:
                     self.science.sel(_mm)
 
                 # set time-coverage
-                intg = dt.timedelta(milliseconds=self.science.frame_period(-1))
+                master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
                 self.set_coverage(
-                    [self.science.tstamp["dt"][0], self.science.tstamp["dt"][-1] + intg]
+                    [
+                        self.science.tstamp["dt"][0],
+                        self.science.tstamp["dt"][-1] + master_cycle,
+                    ]
                 )
 
         # collected NomHK telemetry data
@@ -543,8 +545,10 @@ class SPXtlm:
                 if np.any(_mm):
                     tstamp = self.science.tstamp["dt"][_mm]
                     ii = int(np.nonzero(_mm)[0][-1])
-                    intg = dt.timedelta(milliseconds=self.science.frame_period(ii))
-                    self.set_coverage([tstamp[0], tstamp[-1] + intg])
+                    master_cycle = dt.timedelta(
+                        milliseconds=self.science.master_cycle(ii)
+                    )
+                    self.set_coverage([tstamp[0], tstamp[-1] + master_cycle])
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
