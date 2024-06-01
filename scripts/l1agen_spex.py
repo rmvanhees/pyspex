@@ -72,7 +72,7 @@ DET_CONSTS = {
     "FOT_diagnostic": 0.4644,  # [ms]
     "FTI_diagnostic": 240.0,  # [ms]
     "FTI_margin": 212.4,  # [ms]
-    "FOT_science": 0.3096, # [ms]
+    "FOT_science": 0.3096,  # [ms]
     "FTI_science": 1000 / 15,  # [ms]
     "FOT_length": 20,
 }

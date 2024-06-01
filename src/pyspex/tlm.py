@@ -738,6 +738,14 @@ class SPXtlm:
             [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]],
         )
         l1a.set_dset(
+            "/image_attributes/timedelta_centre",
+            (
+                (self.science.tlm["REG_NCOADDFRAMES"] - 1) * self.science.frame_period()
+                + self.science.exposure_time()
+            )
+            / 2000,
+        )
+        l1a.set_dset(
             "/image_attributes/image_ID",
             np.bitwise_and(self.science.hdr["sequence"], 0x3FFF),
         )

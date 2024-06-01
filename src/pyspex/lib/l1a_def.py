@@ -91,12 +91,15 @@ def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "1/65536 s"
-
     dset = sgrp.createVariable(
         "image_time", "f8", ("number_of_images",), fill_value=-32767
     )
     dset.long_name = "image time"
     dset.description = "Integration start time in seconds of day."
+    dset = sgrp.createVariable("timedelta_centre", "f4", ("number_of_images",))
+    dset.description = "add this offset to image-time (MPS specific)"
+    dset.long_name = "time-delta to centre of integration time"
+    dset.units = "s"
     attrs_sec_per_day(dset, ref_date)
     dset = sgrp.createVariable("image_ID", "i4", ("number_of_images",))
     dset.long_name = "image counter from power-up"
@@ -185,21 +188,21 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset = sgrp.createVariable("temp_detector", "f4", ("hk_packets",))
     dset.long_name = "detector temperature"
     dset.comment = "TS1 DEM Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = 17.83
+    dset.valid_max = 18.83
+    dset.units = "degC"
     dset = sgrp.createVariable("temp_housing", "f4", ("hk_packets",))
     dset.long_name = "housing temperature"
     dset.comment = "TS2 Housing Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = 19.11
+    dset.valid_max = 20.11
+    dset.units = "degC"
     dset = sgrp.createVariable("temp_radiator", "f4", ("hk_packets",))
     dset.long_name = "radiator temperature"
     dset.comment = "TS3 Radiator Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = -2
+    dset.valid_max = 3
+    dset.units = "degC"
     # hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x322)), 'demhk_dtype')
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
