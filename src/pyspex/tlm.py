@@ -612,7 +612,7 @@ class SPXtlm:
         if self.science.size > 0:
             mps_list = np.unique(self.science.tlm["MPS_ID"])
             self.logger.debug("unique Science MPS: %s", mps_list)
-            self.nomhk = self.nomhk.sel(np.in1d(self.nomhk.tlm["MPS_ID"], mps_list))
+            self.nomhk = self.nomhk.sel(np.isin(self.nomhk.tlm["MPS_ID"], mps_list))
 
         dims = {
             "number_of_images": self.science.size,
