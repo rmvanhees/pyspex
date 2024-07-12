@@ -15,7 +15,7 @@ __all__ = ["L1Aio"]
 
 import logging
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -124,6 +124,7 @@ class L1Aio:
         "/image_attributes/icu_time_sec": 0,
         "/image_attributes/icu_time_subsec": 0,
         "/image_attributes/image_time": 0,
+        "/image_attributes/timedelta_centre": 0,
         "/image_attributes/image_ID": 0,
         "/engineering_data/NomHK_telemetry": 0,
         # '/engineering_data/DemHK_telemetry': 0,
@@ -223,7 +224,7 @@ class L1Aio:
     def set_attr(
         self: L1Aio,
         name: str,
-        value: Any,  # noqa: ANN401
+        value: np.scalar | np.ndarray,
         ds_name: str | None = None,
     ) -> None:
         """Write data to an attribute.
@@ -255,10 +256,7 @@ class L1Aio:
                     and var_name not in self.fid[grp_name].variables
                 ):
                     raise KeyError(f"ds_name {ds_name} not in product")
-            elif (
-                    var_name not in self.fid.groups
-                    and var_name not in self.fid.variables
-            ):
+            elif var_name not in self.fid.groups and var_name not in self.fid.variables:
                 raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
@@ -291,7 +289,7 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: Any) -> None:  # noqa: ANN401
+    def set_dset(self: L1Aio, name: str, value: np.scalar | np.ndarray) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters

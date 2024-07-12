@@ -36,7 +36,6 @@ from enum import IntFlag, auto
 from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
-from typing import Any
 
 import h5py
 import julian
@@ -57,7 +56,6 @@ ORBIT_DURATION = 5904  # seconds
 DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
 TSTAMP_TYPE = np.dtype([("tai_sec", int), ("sub_sec", int), ("dt", "O")])
-SECONDS_IN_DAY = np.timedelta64(1, "D") / np.timedelta64(1, "s")
 
 # reduce extend of navigation data to
 TEN_SECONDS = np.timedelta64(10, "s")
@@ -1058,13 +1056,18 @@ def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFF)
     dset.units = "1/65536 s"
-
     dset = sgrp.createVariable(
         "image_time", "f8", ("number_of_images",), fill_value=-32767
     )
     dset.long_name = "image time"
     dset.description = "Integration start time in seconds of day."
     attrs_sec_per_day(dset, ref_date)
+    dset = sgrp.createVariable(
+        "timedelta_centre", "f8", ("number_of_images",), fill_value=-32767
+    )
+    dset.long_name = "time-delta to centre of integration time"
+    dset.description = "Add this offset to image-time (MPS specific)."
+    dset.units = "s"
     dset = sgrp.createVariable("image_ID", "i4", ("number_of_images",))
     dset.long_name = "image counter from power-up"
     dset.valid_min = np.int32(0)
@@ -2360,6 +2363,7 @@ class L1Aio:
         "/image_attributes/icu_time_sec": 0,
         "/image_attributes/icu_time_subsec": 0,
         "/image_attributes/image_time": 0,
+        "/image_attributes/timedelta_centre": 0,
         "/image_attributes/image_ID": 0,
         "/engineering_data/NomHK_telemetry": 0,
         # '/engineering_data/DemHK_telemetry': 0,
@@ -2462,7 +2466,7 @@ class L1Aio:
     def set_attr(
         self: L1Aio,
         name: str,
-        value: Any,  # noqa: ANN401
+        value: np.scalar | np.ndarray,
         ds_name: str | None = None,
     ) -> None:
         """Write data to an attribute.
@@ -2494,10 +2498,7 @@ class L1Aio:
                     and var_name not in self.fid[grp_name].variables
                 ):
                     raise KeyError(f"ds_name {ds_name} not in product")
-            elif (
-                    var_name not in self.fid.groups
-                    and var_name not in self.fid.variables
-            ):
+            elif var_name not in self.fid.groups and var_name not in self.fid.variables:
                 raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
@@ -2530,7 +2531,7 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: Any) -> None:  # noqa: ANN401
+    def set_dset(self: L1Aio, name: str, value: np.scalar | np.ndarray) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters
@@ -3057,9 +3058,7 @@ class HKtlm:
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
         elif parm not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
-            )
+            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
@@ -3242,7 +3241,7 @@ class SCItlm:
         # read image data
         self.images = fid["/science_data/detector_images"][data_sel, :]
 
-    def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
+    def exposure_time(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
         """Return exposure time [ms]."""
         if indx is None:
             indx = np.s_[:]
@@ -3250,8 +3249,27 @@ class SCItlm:
             0.43 * self.tlm["DET_FOTLEN"][indx] + self.tlm["DET_EXPTIME"][indx]
         )
 
-    def frame_period(self: SCItlm, indx: int) -> float:
+    def frame_period(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
         """Return frame period of detector measurement [ms]."""
+        if indx is None:
+            res = np.zeros(self.tlm.size, dtype="f8")
+            _mm = self.tlm["REG_FULL_FRAME"] == 2
+            # binning mode
+            if np.sum(_mm) > 0:
+                res[_mm] = DET_CONSTS["FTI_science"]
+
+            # full-frame mode
+            _mm = ~_mm
+            if np.sum(_mm) > 0:
+                res[_mm] = np.clip(
+                    DET_CONSTS["FTI_margin"]
+                    + DET_CONSTS["FOT_diagnostic"]
+                    + self.exposure_time(_mm),
+                    a_min=DET_CONSTS["FTI_diagnostic"],
+                    a_max=None,
+                )
+            return res
+
         # binning mode
         if self.tlm["REG_FULL_FRAME"][indx] == 2:
             return DET_CONSTS["FTI_science"]
@@ -3315,9 +3333,7 @@ class SCItlm:
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
         elif parm not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
-            )
+            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
@@ -3593,7 +3609,7 @@ class SPXtlm:
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records before or after a big time-jump
-        _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
+        _mm = np.diff(self.nomhk.tstamp) > dt.timedelta(days=1)
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -3685,7 +3701,7 @@ class SPXtlm:
                 self.logger.info("no valid Science package found")
             else:
                 # reject Science records before or after a big time-jump
-                _mm = np.diff(self.science.tstamp["dt"]) > SECONDS_IN_DAY
+                _mm = np.diff(self.science.tstamp["dt"]) > dt.timedelta(days=1)
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
@@ -3714,7 +3730,7 @@ class SPXtlm:
                 return
 
             # reject nomHK records before or after a big time-jump
-            _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
+            _mm = np.diff(self.nomhk.tstamp) > dt.timedelta(days=1)
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -4050,6 +4066,10 @@ class SPXtlm:
             "/image_attributes/nr_coadditions",
             self.science.tlm["REG_NCOADDFRAMES"],
         )
+        buff = (
+            self.science.tlm["REG_NCOADDFRAMES"] - 1
+        ) * self.science.frame_period() + self.science.exposure_time()
+        l1a.set_dset("/image_attributes/timedelta_centre", buff / 2000)
 
 
 # --------------------------------------------------

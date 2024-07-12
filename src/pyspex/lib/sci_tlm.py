@@ -271,7 +271,7 @@ class SCItlm:
 
         return (1 + 0.2 * reg_pgagain) * 2**reg_pgagainfactor
 
-    def exposure_time(self: SCItlm, indx: int | None = None) -> np.ndarray:
+    def exposure_time(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
         """Return exposure time [ms]."""
         if indx is None:
             indx = np.s_[:]
@@ -279,8 +279,27 @@ class SCItlm:
             0.43 * self.tlm["DET_FOTLEN"][indx] + self.tlm["DET_EXPTIME"][indx]
         )
 
-    def frame_period(self: SCItlm, indx: int) -> float:
+    def frame_period(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
         """Return frame period of detector measurement [ms]."""
+        if indx is None:
+            res = np.zeros(self.tlm.size, dtype="f8")
+            _mm = self.tlm["REG_FULL_FRAME"] == 2
+            # binning mode
+            if np.sum(_mm) > 0:
+                res[_mm] = DET_CONSTS["FTI_science"]
+
+            # full-frame mode
+            _mm = ~_mm
+            if np.sum(_mm) > 0:
+                res[_mm] = np.clip(
+                    DET_CONSTS["FTI_margin"]
+                    + DET_CONSTS["FOT_diagnostic"]
+                    + self.exposure_time(_mm),
+                    a_min=DET_CONSTS["FTI_diagnostic"],
+                    a_max=None,
+                )
+            return res
+
         # binning mode
         if self.tlm["REG_FULL_FRAME"][indx] == 2:
             return DET_CONSTS["FTI_science"]
@@ -343,9 +362,7 @@ class SCItlm:
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
         elif parm not in self.tlm.dtype.names:
-            raise KeyError(
-                f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
-            )
+            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
 
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)

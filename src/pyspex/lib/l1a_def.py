@@ -96,22 +96,13 @@ def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     )
     dset.long_name = "image time"
     dset.description = "Integration start time in seconds of day."
-    dset = sgrp.createVariable("timedelta_centre", "f4", ("number_of_images",))
-    dset.description = "add this offset to image-time (MPS specific)"
-    dset.long_name = "time-delta to centre of integration time"
-    dset.units = "s"
     attrs_sec_per_day(dset, ref_date)
-    dset = sgrp.createVariable("image_ID", "i4", ("number_of_images",))
-    dset.long_name = "image counter from power-up"
-    dset.valid_min = np.int32(0)
-    dset.valid_max = np.int32(0x7FFFFFFF)
-    dset = sgrp.createVariable("binning_table", "u1", ("number_of_images",))
-    dset.long_name = "binning-table ID"
-    dset.valid_min = np.uint8(0)
-    dset.valid_max = np.uint8(0xFF)
-    dset = sgrp.createVariable("digital_offset", "i2", ("number_of_images",))
-    dset.long_name = "digital offset"
-    dset.units = "1"
+    dset = sgrp.createVariable(
+        "timedelta_centre", "f8", ("number_of_images",), fill_value=-32767
+    )
+    dset.long_name = "time-delta to centre of integration time"
+    dset.description = "Add this offset to image-time (MPS specific)."
+    dset.units = "s"
     dset = sgrp.createVariable(
         "nr_coadditions", "u2", ("number_of_images",), fill_value=0
     )
@@ -123,6 +114,17 @@ def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     )
     dset.long_name = "exposure time"
     dset.units = "s"
+    dset = sgrp.createVariable("image_ID", "i4", ("number_of_images",))
+    dset.long_name = "image counter from power-up"
+    dset.valid_min = np.int32(0)
+    dset.valid_max = np.int32(0x7FFFFFFF)
+    dset = sgrp.createVariable("binning_table", "u1", ("number_of_images",))
+    dset.long_name = "binning-table ID"
+    dset.valid_min = np.uint8(0)
+    dset.valid_max = np.uint8(0xFF)
+    dset = sgrp.createVariable("digital_offset", "i2", ("number_of_images",))
+    dset.long_name = "digital offset"
+    dset.units = "1"
 
 
 def get_chunksizes(ydim: int, compression: bool) -> tuple[int, int]:
@@ -188,14 +190,14 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset = sgrp.createVariable("temp_detector", "f4", ("hk_packets",))
     dset.long_name = "detector temperature"
     dset.comment = "TS1 DEM Temperature (nominal)."
-    dset.valid_min = 17.83
-    dset.valid_max = 18.83
+    dset.valid_min = np.float32(17.83)
+    dset.valid_max = np.float32(18.83)
     dset.units = "degC"
     dset = sgrp.createVariable("temp_housing", "f4", ("hk_packets",))
     dset.long_name = "housing temperature"
     dset.comment = "TS2 Housing Temperature (nominal)."
-    dset.valid_min = 19.11
-    dset.valid_max = 20.11
+    dset.valid_min = np.float32(19.11)
+    dset.valid_max = np.float32(20.11)
     dset.units = "degC"
     dset = sgrp.createVariable("temp_radiator", "f4", ("hk_packets",))
     dset.long_name = "radiator temperature"

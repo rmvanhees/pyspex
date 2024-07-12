@@ -42,7 +42,6 @@ module_logger = logging.getLogger("pyspex.tlm")
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.UTC)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
-SECONDS_IN_DAY = np.timedelta64(1, "D") / np.timedelta64(1, "s")
 
 
 # - helper functions ------------------------
@@ -368,7 +367,7 @@ class SPXtlm:
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records before or after a big time-jump
-        _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
+        _mm = np.diff(self.nomhk.tstamp) > dt.timedelta(days=1)
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -460,7 +459,7 @@ class SPXtlm:
                 self.logger.info("no valid Science package found")
             else:
                 # reject Science records before or after a big time-jump
-                _mm = np.diff(self.science.tstamp["dt"]) > SECONDS_IN_DAY
+                _mm = np.diff(self.science.tstamp["dt"]) > dt.timedelta(days=1)
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
@@ -489,7 +488,7 @@ class SPXtlm:
                 return
 
             # reject nomHK records before or after a big time-jump
-            _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
+            _mm = np.diff(self.nomhk.tstamp) > dt.timedelta(days=1)
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -742,14 +741,6 @@ class SPXtlm:
             [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]],
         )
         l1a.set_dset(
-            "/image_attributes/timedelta_centre",
-            (
-                (self.science.tlm["REG_NCOADDFRAMES"] - 1) * self.science.frame_period()
-                + self.science.exposure_time()
-            )
-            / 2000,
-        )
-        l1a.set_dset(
             "/image_attributes/image_ID",
             np.bitwise_and(self.science.hdr["sequence"], 0x3FFF),
         )
@@ -763,3 +754,7 @@ class SPXtlm:
             "/image_attributes/nr_coadditions",
             self.science.tlm["REG_NCOADDFRAMES"],
         )
+        buff = (
+            self.science.tlm["REG_NCOADDFRAMES"] - 1
+        ) * self.science.frame_period() + self.science.exposure_time()
+        l1a.set_dset("/image_attributes/timedelta_centre", buff / 2000)
