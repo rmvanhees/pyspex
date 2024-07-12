@@ -57,6 +57,7 @@ ORBIT_DURATION = 5904  # seconds
 DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.timezone.utc)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
 TSTAMP_TYPE = np.dtype([("tai_sec", int), ("sub_sec", int), ("dt", "O")])
+SECONDS_IN_DAY = np.timedelta64(1, "D") / np.timedelta64(1, "s")
 
 # reduce extend of navigation data to
 TEN_SECONDS = np.timedelta64(10, "s")
@@ -2493,12 +2494,11 @@ class L1Aio:
                     and var_name not in self.fid[grp_name].variables
                 ):
                     raise KeyError(f"ds_name {ds_name} not in product")
-            else:
-                if (
+            elif (
                     var_name not in self.fid.groups
                     and var_name not in self.fid.variables
-                ):
-                    raise KeyError(f"ds_name {ds_name} not in product")
+            ):
+                raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.bytes_(value))
@@ -2525,9 +2525,8 @@ class L1Aio:
         if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
                 raise KeyError(f"dataset {name} not in level-1A product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in level-1A product")
+        elif var_name not in self.fid.variables:
+            raise KeyError(f"dataset {name} not in level-1A product")
 
         return self.fid[name][:]
 
@@ -2548,9 +2547,8 @@ class L1Aio:
         if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
                 raise KeyError(f"dataset {name} not in level-1A product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in level-1A product")
+        elif var_name not in self.fid.variables:
+            raise KeyError(f"dataset {name} not in level-1A product")
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
@@ -3058,11 +3056,10 @@ class HKtlm:
         parm = key.upper()
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
-        else:
-            if parm not in self.tlm.dtype.names:
-                raise KeyError(
-                    f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
-                )
+        elif parm not in self.tlm.dtype.names:
+            raise KeyError(
+                f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
+            )
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
@@ -3317,11 +3314,10 @@ class SCItlm:
         parm = key.upper()
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
-        else:
-            if parm not in self.tlm.dtype.names:
-                raise KeyError(
-                    f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
-                )
+        elif parm not in self.tlm.dtype.names:
+            raise KeyError(
+                f"Parameter: {parm} not found" f" in {self.tlm.dtype.names}"
+            )
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
@@ -3597,7 +3593,7 @@ class SPXtlm:
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records before or after a big time-jump
-        _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+        _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -3689,7 +3685,7 @@ class SPXtlm:
                 self.logger.info("no valid Science package found")
             else:
                 # reject Science records before or after a big time-jump
-                _mm = np.diff(self.science.tstamp["dt"]) > np.timedelta64(1, "D")
+                _mm = np.diff(self.science.tstamp["dt"]) > SECONDS_IN_DAY
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
@@ -3713,9 +3709,12 @@ class SPXtlm:
         # collected NomHK telemetry data
         if tlm_type != "sci" and ccsds_hk:
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
+            if self.nomhk.size == 0:
+                self.logger.info("no valid housekeeping package found")
+                return
 
             # reject nomHK records before or after a big time-jump
-            _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+            _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)

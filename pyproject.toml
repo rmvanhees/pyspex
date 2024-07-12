@@ -85,6 +85,7 @@ select = [
   "W",   # pycodestyle
   "I",   # isort
   "N",   # pep8-naming
+  # "PL",  # pylint
   "UP",  # pyupgrade
   "ANN", # flake8-annotations
   "B",   # flake8-bugbear
@@ -94,7 +95,7 @@ select = [
   "TCH", # flake8-type-checking
   "NPY", # NumPy-specific rules
 ]
-ignore = ["D203", "D213", "Q000", "Q003"]
+ignore = ["D203", "D213"]   ##  "Q000", "Q003"
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/l1agen_spex.py" = ["B905", "UP017"]

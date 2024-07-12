@@ -213,15 +213,12 @@ class L1Aio:
         """
         if ds_name is None:
             res = self.fid.getncattr(name)
-        else:
-            if ds_name not in self.fid.groups and ds_name not in self.fid.variables:
-                return None
+        elif ds_name in self.fid.groups or ds_name in self.fid.variables:
             res = self.fid[ds_name].getncattr(name)
+        else:
+            return None
 
-        if isinstance(res, bytes):
-            return res.decode("ascii")
-
-        return res
+        return res.decode() if isinstance(res, bytes) else res
 
     def set_attr(
         self: L1Aio,
@@ -258,12 +255,11 @@ class L1Aio:
                     and var_name not in self.fid[grp_name].variables
                 ):
                     raise KeyError(f"ds_name {ds_name} not in product")
-            else:
-                if (
+            elif (
                     var_name not in self.fid.groups
                     and var_name not in self.fid.variables
-                ):
-                    raise KeyError(f"ds_name {ds_name} not in product")
+            ):
+                raise KeyError(f"ds_name {ds_name} not in product")
 
             if isinstance(value, str):
                 self.fid[ds_name].setncattr(name, np.bytes_(value))
@@ -290,9 +286,8 @@ class L1Aio:
         if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
                 raise KeyError(f"dataset {name} not in level-1A product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in level-1A product")
+        elif var_name not in self.fid.variables:
+            raise KeyError(f"dataset {name} not in level-1A product")
 
         return self.fid[name][:]
 
@@ -313,9 +308,8 @@ class L1Aio:
         if grp_name != ".":
             if var_name not in self.fid[grp_name].variables:
                 raise KeyError(f"dataset {name} not in level-1A product")
-        else:
-            if var_name not in self.fid.variables:
-                raise KeyError(f"dataset {name} not in level-1A product")
+        elif var_name not in self.fid.variables:
+            raise KeyError(f"dataset {name} not in level-1A product")
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]

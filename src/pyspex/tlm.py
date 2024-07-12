@@ -42,6 +42,7 @@ module_logger = logging.getLogger("pyspex.tlm")
 FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 DATE_MIN = dt.datetime(2020, 1, 1, 1, tzinfo=dt.UTC)
 TSTAMP_MIN = int(DATE_MIN.timestamp())
+SECONDS_IN_DAY = np.timedelta64(1, "D") / np.timedelta64(1, "s")
 
 
 # - helper functions ------------------------
@@ -367,7 +368,7 @@ class SPXtlm:
         self.nomhk.extract_l0_hk(ccsds_hk, epoch)
 
         # reject nomHK records before or after a big time-jump
-        _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+        _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
         if np.any(_mm):
             indx = _mm.nonzero()[0]
             _mm = np.full(self.nomhk.size, True, dtype=bool)
@@ -459,7 +460,7 @@ class SPXtlm:
                 self.logger.info("no valid Science package found")
             else:
                 # reject Science records before or after a big time-jump
-                _mm = np.diff(self.science.tstamp["dt"]) > np.timedelta64(1, "D")
+                _mm = np.diff(self.science.tstamp["dt"]) > SECONDS_IN_DAY
                 if np.any(_mm):
                     indx = _mm.nonzero()[0]
                     _mm = np.full(self.science.size, True, dtype=bool)
@@ -483,9 +484,12 @@ class SPXtlm:
         # collected NomHK telemetry data
         if tlm_type != "sci" and ccsds_hk:
             self.nomhk.extract_l0_hk(ccsds_hk, epoch)
+            if self.nomhk.size == 0:
+                self.logger.info("no valid housekeeping package found")
+                return
 
             # reject nomHK records before or after a big time-jump
-            _mm = np.diff(self.nomhk.tstamp) > np.timedelta64(1, "D")
+            _mm = np.diff(self.nomhk.tstamp) > SECONDS_IN_DAY
             if np.any(_mm):
                 indx = _mm.nonzero()[0]
                 _mm = np.full(self.nomhk.size, True, dtype=bool)
