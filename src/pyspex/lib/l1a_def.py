@@ -266,5 +266,7 @@ def init_l1a(
     chunksizes = get_chunksizes(img_samples, compression)
     science_data(rootgrp, compression, chunksizes)
     engineering_data(rootgrp, ref_date)
+    sgrp = rootgrp.createGroup("/processing_control")
+    _ = sgrp.createGroup("input_parameters")
 
     return rootgrp

@@ -16,6 +16,7 @@ __all__ = ["SPXtlm"]
 import datetime as dt
 import logging
 from copy import copy
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,7 @@ from netCDF4 import Dataset
 from .hkt_io import HKTio
 from .l1a_io import L1Aio
 from .lib import pyspex_version
+from .lib.attrs_def import attrs_def
 from .lib.hk_tlm import HKtlm
 from .lib.leap_sec import get_leap_seconds
 from .lib.sci_tlm import DET_CONSTS, SCItlm
@@ -633,10 +635,7 @@ class SPXtlm:
             dims,
             compression=config.compression,
         ) as l1a:
-            l1a.fill_global_attrs(inflight=config.l0_format != "raw")
-            if config.processing_version:
-                l1a.set_attr("processing_version", config.processing_version)
-            l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
+            self._fill_attrs(l1a, config)
             l1a.set_attr(
                 "time_coverage_start",
                 self.time_coverage_start.isoformat(timespec="milliseconds"),
@@ -645,7 +644,6 @@ class SPXtlm:
                 "time_coverage_end",
                 self.time_coverage_end.isoformat(timespec="milliseconds"),
             )
-            l1a.set_attr("input_files", [x.name for x in config.l0_list])
             self.logger.debug("(1) initialized level-1A product")
 
             self._fill_engineering(l1a)
@@ -667,6 +665,42 @@ class SPXtlm:
             add_proc_conf(l1a_path, config.yaml_fl)
 
         self.logger.info("successfully generated: %s", l1a_path.name)
+
+    def _fill_attrs(self: SPXtlm, l1a: L1Aio, config: dataclass) -> None:
+        """Fill attributes global and in the group '/processing_control'."""
+        inflight = config.l0_format != "raw"
+
+        # fill global attributes
+        dict_attrs = attrs_def(inflight)
+        dict_attrs["product_name"] = l1a.product.name
+        if config.processing_version:
+            dict_attrs["processing_version"] = config.processing_version
+        for key, value in dict_attrs.items():
+            if key.startswith("software"):
+                l1a.set_attr(key, value, ds_name="processing_control")
+            elif value is not None:
+                l1a.set_attr(key, value)
+
+        # fill attributes in the group processing_control
+        l1a.set_attr(
+            "icu_sw_version",
+            f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}',
+            ds_name="processing_control"
+        )
+        for key, value in asdict(config).items():
+            print(key, value)
+            if key in ("l0_list", "hkt_list"):
+                l1a.set_attr(
+                    key,
+                    "" if not value else ",".join([x.name for x in value]),
+                    ds_name="processing_control/input_parameters"
+                )
+            else:
+                l1a.set_attr(
+                    key,
+                    f"{value}",
+                    ds_name="processing_control/input_parameters"
+                )
 
     def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/engineering_data'."""

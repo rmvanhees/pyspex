@@ -14,6 +14,8 @@ from __future__ import annotations
 __all__ = ["attrs_def"]
 
 import datetime as dt
+import sys
+from pathlib import Path
 
 from . import pyspex_version
 
@@ -39,52 +41,51 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         origin = "NASA" if inflight else "SRON"
 
     res = {
-        "title": "PACE SPEXone Level-1A data",
-        "platform": "PACE",
-        "instrument": "SPEXone",
+        "creator_name": "NASA/GSFC",
+        "creator_email": "data@oceancolor.gsfc.nasa.gov",
+        "creator_url": "http://oceancolor.gsfc.nasa.gov",
         "institution": (
-            "NASA Goddard Space Flight Center," " Ocean Biology Processing Group"
+            "NASA Goddard Space Flight Center, Ocean Biology Processing Group"
+        ),
+        "publisher_name": "NASA/GSFC",
+        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
+        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
+        "standard_name_vocabulary": "CF Standard Name Table v79",
+        "keyword_vocabulary": (
+            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
         ),
         "license": (
             "http://science.nasa.gov/earth-science/"
             "earth-science-data/data-information-policy/"
         ),
         "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
-        "keyword_vocabulary": (
-            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
-        ),
+        "project": "PACE Project",
+        "conventions": "CF-1.8 ACDD-1.3",
+        "title": "PACE SPEXone Level-1A Data",
+        "instrument": "SPEXone",
+        "platform": "PACE",
         "stdname_vocabulary": (
             "NetCDF Climate and Forecast (CF)" " Metadata Convention"
         ),
-        "standard_name_vocabulary": "CF Standard Name Table v79",
-        "conventions": "CF-1.8 ACDD-1.3",
-        "identifier_product_doi_authority": "http://dx.doi.org/",
-        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
-        "creator_name": "NASA/GSFC",
-        "creator_email": "data@oceancolor.gsfc.nasa.gov",
-        "creator_url": "http://oceancolor.gsfc.nasa.gov",
-        "project": "PACE Project",
-        "publisher_name": "NASA/GSFC",
-        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
-        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
-        "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
-        "cdl_version_date": "2021-09-10",
-        "product_name": None,
         "processing_level": "L1A",
-        "processing_version": "",
-        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
-        "software_name": "SPEXone L0-L1A processor",
-        "software_url": "https://github.com/rmvanhees/pyspex",
-        "software_version": pyspex_version(),
-        "history": "spx1_level01a.py",
+        "cdm_data_type": "swath" if inflight else "granule",
+        "product_name": None,
         "start_direction": "Ascending" if inflight else None,
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
+        "processing_version": "",
+        "identifier_product_doi_authority": "http://dx.doi.org/",
+        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
+        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
+        "software_name": f"{Path(sys.argv[0]).name}",
+        "software_description": "SPEXone L0-L1A processor (SRON)",
+        "software_url": "https://github.com/rmvanhees/pyspex",
+        "software_version": pyspex_version(),
+        "history": " ".join(sys.argv),
     }
 
     if origin == "SRON":
-        res["title"] = "SPEXone Level-1A data"
         res["institution"] = "SRON Netherlands Institute for Space Research"
         res["creator_name"] = "SRON/Earth"
         res["creator_email"] = "SPEXone-MPC@sron.nl"

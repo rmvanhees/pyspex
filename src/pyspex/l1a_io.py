@@ -225,6 +225,7 @@ class L1Aio:
         self: L1Aio,
         name: str,
         value: np.scalar | np.ndarray,
+        *,
         ds_name: str | None = None,
     ) -> None:
         """Write data to an attribute.

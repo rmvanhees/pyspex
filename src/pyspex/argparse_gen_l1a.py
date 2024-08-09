@@ -16,7 +16,7 @@ __all__ = ["argparse_gen_l1a"]
 import argparse
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import astuple, dataclass, field
 from pathlib import Path
 
 import yaml
@@ -134,12 +134,15 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
-    processing_version: str = "1.0"
+    processing_version: str = "1"
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
     l0_format: str = ""
     l0_list: list[Path] = field(default_factory=list)
+
+    def __iter__(self: Config) -> tuple:
+        yield from astuple(self)
 
 
 def __commandline_settings() -> Config:
