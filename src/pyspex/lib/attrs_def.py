@@ -76,12 +76,13 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
         "processing_version": "",
         "identifier_product_doi_authority": "http://dx.doi.org/",
-        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
+        "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
         "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),
+        "software_doi": "https://doi.org/10.5281/zenodo.5705691",
         "history": " ".join(sys.argv),
     }
 
