@@ -20,7 +20,6 @@ Notes
   'requirements-3.8.txt'.
 - Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 
-
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ import logging
 import sys
 import warnings
 from copy import copy
-from dataclasses import dataclass, field
+from dataclasses import asdict, astuple, dataclass, field
 from enum import IntFlag, auto
 from logging.config import dictConfig
 from os import environ
@@ -86,7 +85,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.13"
+    return "1.4.14"
 
 
 # --------------------------------------------------
@@ -200,12 +199,16 @@ class Config:
     outdir: Path = Path(".").resolve()
     outfile: str = ""
     file_version: int = 1
-    processing_version: str = "1.0"
+    processing_version: str = "1"
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
     l0_format: str = ""
     l0_list: list[Path] = field(default_factory=list)
+
+    def __iter__(self: Config) -> tuple:
+        """Make this class iterable."""
+        yield from astuple(self)
 
 
 def __commandline_settings() -> Config:
@@ -377,54 +380,54 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         origin = "NASA" if inflight else "SRON"
 
     res = {
-        "title": "PACE SPEXone Level-1A data",
-        "platform": "PACE",
-        "instrument": "SPEXone",
+        "creator_name": "NASA/GSFC",
+        "creator_email": "data@oceancolor.gsfc.nasa.gov",
+        "creator_url": "http://oceancolor.gsfc.nasa.gov",
         "institution": (
-            "NASA Goddard Space Flight Center," " Ocean Biology Processing Group"
+            "NASA Goddard Space Flight Center, Ocean Biology Processing Group"
+        ),
+        "publisher_name": "NASA/GSFC",
+        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
+        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
+        "standard_name_vocabulary": "CF Standard Name Table v79",
+        "keyword_vocabulary": (
+            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
         ),
         "license": (
             "http://science.nasa.gov/earth-science/"
             "earth-science-data/data-information-policy/"
         ),
         "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
-        "keyword_vocabulary": (
-            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
-        ),
+        "project": "PACE Project",
+        "conventions": "CF-1.8 ACDD-1.3",
+        "title": "PACE SPEXone Level-1A Data",
+        "instrument": "SPEXone",
+        "platform": "PACE",
         "stdname_vocabulary": (
             "NetCDF Climate and Forecast (CF)" " Metadata Convention"
         ),
-        "standard_name_vocabulary": "CF Standard Name Table v79",
-        "conventions": "CF-1.8 ACDD-1.3",
-        "identifier_product_doi_authority": "http://dx.doi.org/",
-        "identifier_product_doi": "https://doi.org/10.5281/zenodo.5705691",
-        "creator_name": "NASA/GSFC",
-        "creator_email": "data@oceancolor.gsfc.nasa.gov",
-        "creator_url": "http://oceancolor.gsfc.nasa.gov",
-        "project": "PACE Project",
-        "publisher_name": "NASA/GSFC",
-        "publisher_email": "data@oceancolor.gsfc.nasa.gov",
-        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
-        "cdm_data_type": ("One orbit swath or granule" if inflight else "granule"),
-        "cdl_version_date": "2021-09-10",
-        "product_name": None,
         "processing_level": "L1A",
-        "processing_version": "",
-        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
-            timespec="milliseconds"
-        ),
-        "software_name": "SPEXone L0-L1A processor",
-        "software_url": "https://github.com/rmvanhees/pyspex",
-        "software_version": pyspex_version(),
-        "history": "spx1_level01a.py",
+        "cdm_data_type": "swath" if inflight else "granule",
+        "product_name": None,
         "start_direction": "Ascending" if inflight else None,
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
+        "processing_version": "",
+        "identifier_product_doi_authority": "http://dx.doi.org/",
+        "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
+        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
+            timespec="milliseconds"
+        ),
+        "software_name": f"{Path(sys.argv[0]).name}",
+        "software_description": "SPEXone L0-L1A processor (SRON)",
+        "software_url": "https://github.com/rmvanhees/pyspex",
+        "software_version": pyspex_version(),
+        "software_doi": "https://doi.org/10.5281/zenodo.5705691",
+        "history": " ".join(sys.argv),
     }
 
     if origin == "SRON":
-        res["title"] = "SPEXone Level-1A data"
         res["institution"] = "SRON Netherlands Institute for Space Research"
         res["creator_name"] = "SRON/Earth"
         res["creator_email"] = "SPEXone-MPC@sron.nl"
@@ -1155,21 +1158,21 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset = sgrp.createVariable("temp_detector", "f4", ("hk_packets",))
     dset.long_name = "detector temperature"
     dset.comment = "TS1 DEM Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = np.float32(17.83)
+    dset.valid_max = np.float32(18.83)
+    dset.units = "degC"
     dset = sgrp.createVariable("temp_housing", "f4", ("hk_packets",))
     dset.long_name = "housing temperature"
     dset.comment = "TS2 Housing Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = np.float32(19.11)
+    dset.valid_max = np.float32(20.11)
+    dset.units = "degC"
     dset = sgrp.createVariable("temp_radiator", "f4", ("hk_packets",))
     dset.long_name = "radiator temperature"
     dset.comment = "TS3 Radiator Temperature (nominal)."
-    dset.valid_min = 260
-    dset.valid_max = 300
-    dset.units = "K"
+    dset.valid_min = -2
+    dset.valid_max = 3
+    dset.units = "degC"
     # hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x322)), 'demhk_dtype')
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
     # dset.long_name = "SPEX detector-HK telemetry"
@@ -1231,6 +1234,8 @@ def init_l1a(
     chunksizes = get_chunksizes(img_samples, compression)
     science_data(rootgrp, compression, chunksizes)
     engineering_data(rootgrp, ref_date)
+    sgrp = rootgrp.createGroup("/processing_control")
+    _ = sgrp.createGroup("input_parameters")
 
     return rootgrp
 
@@ -1327,17 +1332,17 @@ def start_logger() -> None:
 # --------------------------------------------------
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert Detector Temperature Sensor to [K]."""
+    """Convert Detector Temperature Sensor to degree Celsius."""
     res = np.empty(raw_data.size, dtype=float)
     mask = raw_data < 400
-    res[mask] = 1.224 * raw_data[mask] - 17.05
-    res[~mask] = 0.6426 * raw_data[~mask] - 145.57
-    res[res > 325] = np.nan
+    res[mask] = 1.224 * raw_data[mask] - 290.2
+    res[~mask] = 0.6426 * raw_data[~mask] - 418.72
+    res[res > 50] = np.nan
     return res
 
 
 def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of the Temperature Sensors to [K].
+    """Convert readouts of the Temperature Sensors to degree Celsius.
 
     Notes
     -----
@@ -1349,7 +1354,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
     - TS6 Radiator Redundant Temperature*
 
     """
-    coefficients = (294.34, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
+    coefficients = (21.19, 272589.0, 1.5173e-15, 5.73666e-19, 5.11328e-20)
     buff = ma.masked_array(raw_data / 256, mask=raw_data == 0)
     buff = (
         coefficients[0]
@@ -1362,7 +1367,7 @@ def exp_spex_thermistor(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
-    """Convert readouts of temperature sensors on ICU power supplies to [K].
+    """Convert readouts of temperature sensors on ICU power supplies to degree Celsius.
 
     Notes
     -----
@@ -1375,7 +1380,7 @@ def poly_spex_icuhk_internaltemp(raw_data: np.ndarray) -> np.ndarray:
     - ICU 1V2, 3V3 supply temperature
 
     """
-    coefficients = (273.15, 0.0625)
+    coefficients = (0.0, 0.0625)
     return coefficients[0] + coefficients[1] * raw_data
 
 
@@ -1461,8 +1466,8 @@ def poly_spex_adc_gain(raw_data: np.ndarray) -> np.ndarray:
 
 
 def poly_spex_adc_t(raw_data: np.ndarray) -> np.ndarray:
-    """Convert ADC1 Temperature reading to [K]."""
-    coefficients = (-0.25, 0.0007385466842651367)
+    """Convert ADC1 Temperature reading to degree Celsius."""
+    coefficients = (-273.4, 0.0007385466842651367)
     return coefficients[0] + coefficients[1] * raw_data
 
 
@@ -1738,7 +1743,7 @@ def __tmtc_def(apid: int) -> list:
             ("BOOTCNTGOOD_IM2", ">u4"),  # 46    0x003a
             ("BOOTCNTGOOD_IM3", ">u4"),  # 50    0x003e
             ("BOOTATTEMPTS_CURRIM", "u1"),  # 54    0x0042
-            ("dummy_01", "u1"),  # 55    0x0043
+            ("MPS_ACT_STATUS", "u1"),  # 55    0x0043
             ("SWIMG_LOADED", "u1"),  # 56    0x0044
             ("SWIMG_DEFAULT", "u1"),  # 57    0x0045
             ("SWIMG_NXTBOOT", "u1"),  # 58    0x0046
@@ -1778,7 +1783,7 @@ def __tmtc_def(apid: int) -> list:
             ("ICU_3P3V_I", ">u2"),  # 136   0x0094
             ("ICU_1P2V_I", ">u2"),  # 138   0x0096
             ("DEM_STATUS", "u1"),  # 140   0x0098
-            ("dummy_02", "u1"),  # 141   0x0099
+            ("dummy_01", "u1"),  # 141   0x0099
             ("ICU_5P0V_V", ">u2"),  # 142   0x009a
             ("ICU_5P0V_I", ">u2"),  # 144   0x009c
             ("DEMSPWSTAT", "u1"),  # 146   0x009e
@@ -1838,7 +1843,7 @@ def __tmtc_def(apid: int) -> list:
             ("DEM_V", ">u2"),  # 266   0x0116
             ("DEM_I", ">u2"),  # 268   0x0118
             ("REG_FW_VERSION", "u1"),  # 270   0x011a
-            ("dummy_03", "u1"),  # 271   0x011b
+            ("dummy_02", "u1"),  # 271   0x011b
             ("DET_T", ">u2"),  # 272   0x011c
             ("REG_SPW_ERROR", "u1"),  # 274   0x011e
             ("REG_CMV_OUTOFSYNC", "u1"),  # 275   0x011f
@@ -2329,6 +2334,7 @@ def read_lv0_data(
 #   * _exposure_time_()
 #   * _nr_coadditions_()
 # - removed obsoleted L1Aio methods:
+#   * fill_global_attrs
 #   * fill_science()
 #   * fill_nomhk()
 # --------------------------------------------------
@@ -2467,6 +2473,7 @@ class L1Aio:
         self: L1Aio,
         name: str,
         value: np.scalar | np.ndarray,
+        *,
         ds_name: str | None = None,
     ) -> None:
         """Write data to an attribute.
@@ -2553,22 +2560,6 @@ class L1Aio:
 
         self.fid[name][...] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
-
-    # -------------------------
-    def fill_global_attrs(self: L1Aio, inflight: bool = False) -> None:
-        """Define global attributes in the SPEXone level-1A products.
-
-        Parameters
-        ----------
-        inflight :  bool, default=False
-           Measurements performed on-ground or inflight
-
-        """
-        dict_attrs = attrs_def(inflight)
-        dict_attrs["product_name"] = self.product.name
-        for key, value in dict_attrs.items():
-            if value is not None:
-                self.fid.setncattr(key, value)
 
     # - L1A specific functions ------------------------
     def check_stored(self: L1Aio, allow_empty: bool = False) -> None:
@@ -2944,10 +2935,12 @@ class HKtlm:
     def copy(self: HKtlm) -> HKtlm:
         """Return deep-copy of HKtlm object."""
         hkt = HKtlm()
-        hkt.hdr = self.hdr.copy()
-        hkt.tlm = self.tlm.copy()
-        hkt.tstamp = copy(self.tstamp)
-        hkt.events = copy(self.events)
+        if self.hdr is not None:
+            hkt.hdr = self.hdr[mask]
+        if self.tlm is not None:
+            hkt.tlm = self.tlm[mask]
+            hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+            hkt.events = self.events.copy()
         return hkt
 
     def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
@@ -3946,9 +3939,7 @@ class SPXtlm:
             dims,
             compression=config.compression,
         ) as l1a:
-            l1a.fill_global_attrs(inflight=config.l0_format != "raw")
-            l1a.set_attr("processing_version", config.processing_version)
-            l1a.set_attr("icu_sw_version", f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}')
+            self._fill_attrs(l1a, config)
             l1a.set_attr(
                 "time_coverage_start",
                 self.time_coverage_start.isoformat(timespec="milliseconds"),
@@ -3957,7 +3948,6 @@ class SPXtlm:
                 "time_coverage_end",
                 self.time_coverage_end.isoformat(timespec="milliseconds"),
             )
-            l1a.set_attr("input_files", [x.name for x in config.l0_list])
             self.logger.debug("(1) initialized level-1A product")
 
             self._fill_engineering(l1a)
@@ -3979,6 +3969,39 @@ class SPXtlm:
             add_proc_conf(l1a_path, config.yaml_fl)
 
         self.logger.info("successfully generated: %s", l1a_path.name)
+
+    def _fill_attrs(self: SPXtlm, l1a: L1Aio, config: dataclass) -> None:
+        """Fill attributes global and in the group '/processing_control'."""
+        inflight = config.l0_format != "raw"
+
+        # fill global attributes
+        dict_attrs = attrs_def(inflight)
+        dict_attrs["product_name"] = l1a.product.name
+        if config.processing_version:
+            dict_attrs["processing_version"] = config.processing_version
+        for key, value in dict_attrs.items():
+            if key.startswith("software"):
+                l1a.set_attr(key, value, ds_name="processing_control")
+            elif value is not None:
+                l1a.set_attr(key, value)
+
+        # fill attributes in the group processing_control
+        l1a.set_attr(
+            "icu_sw_version",
+            f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}',
+            ds_name="processing_control",
+        )
+        for key, value in asdict(config).items():
+            if key in ("l0_list", "hkt_list"):
+                l1a.set_attr(
+                    key,
+                    "" if not value else ",".join([x.name for x in value]),
+                    ds_name="processing_control/input_parameters",
+                )
+            else:
+                l1a.set_attr(
+                    key, f"{value}", ds_name="processing_control/input_parameters"
+                )
 
     def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
         """Fill datasets in group '/engineering_data'."""

@@ -142,6 +142,7 @@ class Config:
     l0_list: list[Path] = field(default_factory=list)
 
     def __iter__(self: Config) -> tuple:
+        """Make this class iterable."""
         yield from astuple(self)
 
 
