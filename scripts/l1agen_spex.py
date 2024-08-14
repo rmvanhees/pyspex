@@ -111,8 +111,9 @@ outdir: .
 outfile: ''
 # compress the dataset /science_data/detector_images
 compression: True
-# define file-version as nn, neglected when outfile not empty
-file_version: 1
+# define processing_version as a number between 1 and 99
+# - neglected when outfile not empty
+processing_version: 1
 # flag to indicate measurements taken in eclipse or day-side
 eclipse: True
 # provide list, directory, file-glob or empty
@@ -152,7 +153,7 @@ EPILOG_HELP = f"""Usage:
     An example YAML file:
        outdir: L1A
        outfile: ''
-       file_version: 1
+       processing_version: 1
        compression: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
@@ -198,8 +199,7 @@ class Config:
     compression: bool = False
     outdir: Path = Path(".").resolve()
     outfile: str = ""
-    file_version: int = 1
-    processing_version: str = "1"
+    processing_version: int = 1
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
@@ -309,9 +309,7 @@ def __yaml_settings(config: dataclass) -> dataclass:
         config.outfile = config_yaml["outfile"]
     if "compression" in config_yaml and config_yaml["compression"]:
         config.compression = True
-    if "file_version" in config_yaml and config_yaml["file_version"] != 1:
-        config.file_version = config_yaml["file_version"]
-    if "processing_version" in config_yaml and config_yaml["processing_version"] != "":
+    if "processing_version" in config_yaml and config_yaml["processing_version"] != 1:
         config.processing_version = config_yaml["processing_version"]
     if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
         config.eclipse = config_yaml["eclipse"]
@@ -391,7 +389,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "publisher_url": "http://oceancolor.gsfc.nasa.gov",
         "standard_name_vocabulary": "CF Standard Name Table v79",
         "keyword_vocabulary": (
-            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
+            "NASA Global Change Master Directory (GCMD) Science Keywords"
         ),
         "license": (
             "http://science.nasa.gov/earth-science/"
@@ -404,7 +402,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "instrument": "SPEXone",
         "platform": "PACE",
         "stdname_vocabulary": (
-            "NetCDF Climate and Forecast (CF)" " Metadata Convention"
+            "NetCDF Climate and Forecast (CF) Metadata Convention"
         ),
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
@@ -413,10 +411,10 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
-        "processing_version": "",
+        "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.timezone.utc).isoformat(
+        "date_created": dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat(
             timespec="milliseconds"
         ),
         "software_name": f"{Path(sys.argv[0]).name}",
@@ -1286,7 +1284,7 @@ def start_logger() -> None:
         "formatters": {
             "standard": {
                 "format": (
-                    "[%(asctime)s] {%(name)s:%(lineno)d} %(levelname)s" " - %(message)s"
+                    "[%(asctime)s] {%(name)s:%(lineno)d} %(levelname)s - %(message)s"
                 ),
                 "datefmt": "%H:%M:%S",
             }
@@ -3371,15 +3369,15 @@ def get_l1a_filename(
         return config.outdir / config.outfile
 
     # +++++ in-flight product-name convention +++++
+    subtype = ""
     if config.eclipse is None:
         subtype = "_OCAL"
-    elif not config.eclipse:
-        subtype = ""
-    else:
+    elif config.eclipse:
         subtype = "_CAL" if mode == "full" else "_DARK"
 
-    prod_ver = "" if config.file_version == 1 else f".V{config.file_version:02d}"
-
+    prod_ver = (
+        "" if config.processing_version == 1 else f".V{config.processing_version:d}"
+    )
     return config.outdir / (
         f'PACE_SPEXONE{subtype}'
         f'.{coverage[0].strftime("%Y%m%dT%H%M%S"):15s}'
@@ -3396,7 +3394,7 @@ class SPXtlm:
     This class has the following methods::
 
      - set_coverage(coverage: tuple[datetime, datetime] | None,
-                    update: boot = False) -> None
+                    extent: bool = False) -> None
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
@@ -3796,80 +3794,6 @@ class SPXtlm:
                     ]
                 )
 
-    def l1a_file(self: SPXtlm, config: dataclass, mode: str) -> Path:
-        """Return filename of level-1A product.
-
-        Parameters
-        ----------
-        config :  dataclass
-           Settings for the L0->l1A processing
-        mode :  {'all', 'binned', 'full'}
-           Select Science packages with full-frame images or binned images
-
-        Returns
-        -------
-        Path
-           Filename of level-1A product.
-
-        Notes
-        -----
-        === Inflight ===
-        L1A file name format, following the NASA ... naming convention:
-           PACE_SPEXONE[_TTT].YYYYMMDDTHHMMSS.L1A[.Vnn].nc
-        where
-           TTT is an optional data type (e.g., for the calibration data files)
-           YYYYMMDDTHHMMSS is time stamp of the first image in the file
-           Vnn file-version number (omitted when nn=1)
-        for example (file-version=1):
-           [Science Product] PACE_SPEXONE.20230115T123456.L1A.nc
-           [Calibration Product] PACE_SPEXONE_CAL.20230115T123456.L1A.nc
-           [Dark science Product] PACE_SPEXONE_DARK.20230115T123456.L1A.nc
-
-        === OCAL ===
-        L1A file name format:
-           SPX1_OCAL_<msm_id>[_YYYYMMDDTHHMMSS]_L1A_vvvvvvv.nc
-        where
-           msm_id is the measurement identifier
-           YYYYMMDDTHHMMSS is time stamp of the first image in the file
-           vvvvvvv is the git-hash string of the pyspex repository
-
-        """
-        if config.outfile:
-            return config.outdir / config.outfile
-
-        # +++++ in-flight product-name convention +++++
-        if config.l0_format != "raw":
-            if config.eclipse is None:
-                subtype = "_OCAL"
-            elif not config.eclipse:
-                subtype = ""
-            else:
-                subtype = "_CAL" if mode == "full" else "_DARK"
-
-            prod_ver = (
-                "" if config.file_version == 1 else f".V{config.file_version:02d}"
-            )
-
-            return config.outdir / (
-                f'PACE_SPEXONE{subtype}'
-                f'.{self.time_coverage_start.strftime("%Y%m%dT%H%M%S"):15s}'
-                f'.L1A{prod_ver}.nc'
-            )
-
-        # +++++ OCAL product-name convention +++++
-        # determine measurement identifier
-        msm_id = config.l0_list[0].stem
-        try:
-            new_date = dt.datetime.strptime(msm_id[-22:], "%y-%j-%H:%M:%S.%f").strftime(
-                "%Y%m%dT%H%M%S.%f"
-            )
-        except ValueError:
-            pass
-        else:
-            msm_id = msm_id[:-22] + new_date
-
-        return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version()}.nc"
-
     def full(self: SPXtlm) -> SPXtlm:
         """Select full-frame measurements."""
         self.mode = "full"
@@ -3942,11 +3866,13 @@ class SPXtlm:
             self._fill_attrs(l1a, config)
             l1a.set_attr(
                 "time_coverage_start",
-                self.time_coverage_start.isoformat(timespec="milliseconds"),
+                self.time_coverage_start.replace(tzinfo=None).isoformat(
+                    timespec="milliseconds"),
             )
             l1a.set_attr(
                 "time_coverage_end",
-                self.time_coverage_end.isoformat(timespec="milliseconds"),
+                self.time_coverage_end.replace(tzinfo=None).isoformat(
+                    timespec="milliseconds"),
             )
             self.logger.debug("(1) initialized level-1A product")
 

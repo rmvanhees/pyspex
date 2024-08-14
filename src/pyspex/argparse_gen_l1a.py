@@ -43,10 +43,8 @@ outdir: .
 outfile: ''
 # compress the dataset /science_data/detector_images
 compression: True
-# define file-version as nn, neglected when outfile not empty
-file_version: 1
 # provide processing version
-processing_version: '1.0'
+processing_version: 1
 # flag to indicate measurements taken in eclipse or day-side
 eclipse: True
 # provide list, directory, file-glob or empty
@@ -86,8 +84,7 @@ EPILOG_HELP = f"""Usage:
     An example YAML file:
        outdir: L1A
        outfile: ''
-       file_version: 1
-       processing_version: 1.0
+       processing_version: 1
        compression: False
        eclipse: False
        hkt_list: HKT/PACE.20220617T011*.HKT.nc
@@ -133,8 +130,7 @@ class Config:
     compression: bool = False
     outdir: Path = Path(".").resolve()
     outfile: str = ""
-    file_version: int = 1
-    processing_version: str = "1"
+    processing_version: int = 1
     eclipse: bool | None = None
     yaml_fl: Path = None
     hkt_list: list[Path] = field(default_factory=list)
@@ -244,9 +240,7 @@ def __yaml_settings(config: dataclass) -> dataclass:
         config.outfile = config_yaml["outfile"]
     if "compression" in config_yaml and config_yaml["compression"]:
         config.compression = True
-    if "file_version" in config_yaml and config_yaml["file_version"] != 1:
-        config.file_version = config_yaml["file_version"]
-    if "processing_version" in config_yaml and config_yaml["processing_version"] != "":
+    if "processing_version" in config_yaml and config_yaml["processing_version"] != 1:
         config.processing_version = config_yaml["processing_version"]
     if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
         config.eclipse = config_yaml["eclipse"]

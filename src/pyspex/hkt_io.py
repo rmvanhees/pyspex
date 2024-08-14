@@ -235,9 +235,23 @@ class HKTio:
         self.nav_data = nav
 
     def add_nav(
-        self: HKTio, l1a_file: Path, coverage: list[dt.datetime, dt.datetime]
+        self: HKTio,
+        l1a_file: Path,
+        coverage: list[dt.datetime, dt.datetime],
+        add_coverage_quality: bool = True,
     ) -> None:
-        """..."""
+        """Add navigation data to SPEXone Level-1A product.
+
+        Parameters
+        ----------
+        l1a_file :  Path
+           Name of existing SPEXone Level-1A product
+        coverage :  list[dt.datetime, dt.datetime]
+           Time coverage of the science measurements
+        add_coverage_quality :  bool, default=True
+           Add coverage flag of the naviagation data and science data
+
+        """
         time_range = (
             np.datetime64(coverage[0].replace(tzinfo=None)) - TEN_SECONDS,
             np.datetime64(coverage[1].replace(tzinfo=None)) + TEN_SECONDS,
@@ -260,19 +274,20 @@ class HKTio:
         self.nav_data.close()
 
         # add coverage-quality flag
-        nav["coverage_quality"] = xr.DataArray(
-            data=CoverageFlag.check(nav, coverage),
-            name="coverage_quality",
-            attrs={
-                "long_name": "coverage quality of navigation data",
-                "standard_name": "status_flag",
-                "valid_range": np.array([0, 15], dtype="u2"),
-                "flag_values": np.array([0, 1, 2, 4, 8], dtype="u2"),
-                "flag_meanings": (
-                    "good missing-samples too_short_extends no_extend_at_start"
-                    " no_extend_at_end"
-                ),
-            },
-        )
+        if add_coverage_quality:
+            nav["coverage_quality"] = xr.DataArray(
+                data=CoverageFlag.check(nav, coverage),
+                name="coverage_quality",
+                attrs={
+                    "long_name": "coverage quality of navigation data",
+                    "standard_name": "status_flag",
+                    "valid_range": np.array([0, 15], dtype="u2"),
+                    "flag_values": np.array([0, 1, 2, 4, 8], dtype="u2"),
+                    "flag_meanings": (
+                        "good missing-samples too_short_extends no_extend_at_start"
+                        " no_extend_at_end"
+                    ),
+                },
+            )
         nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
         nav.close()

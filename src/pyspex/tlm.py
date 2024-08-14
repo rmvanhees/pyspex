@@ -97,15 +97,15 @@ def get_l1a_filename(
 
     # +++++ in-flight product-name convention +++++
     if config.l0_format != "raw":
+        subtype = ""
         if config.eclipse is None:
             subtype = "_OCAL"
-        elif not config.eclipse:
-            subtype = ""
-        else:
+        elif config.eclipse:
             subtype = "_CAL" if mode == "full" else "_DARK"
 
-        prod_ver = "" if config.file_version == 1 else f".V{config.file_version:02d}"
-
+        prod_ver = (
+            "" if config.processing_version == 1 else f".V{config.processing_version:d}"
+        )
         return config.outdir / (
             f'PACE_SPEXONE{subtype}'
             f'.{coverage[0].strftime("%Y%m%dT%H%M%S"):15s}'
@@ -163,7 +163,7 @@ class SPXtlm:
     This class has the following methods::
 
      - set_coverage(coverage: tuple[datetime, datetime] | None,
-                    update: boot = False) -> None
+                    extent: bool = False) -> None
      - reference_date() -> datetime
      - time_coverage_start() -> datetime
      - time_coverage_end() -> datetime
@@ -175,7 +175,7 @@ class SPXtlm:
      - from_l1a(flname: str | Path,
                 *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - gen_l1a(config: dataclass) -> None
+     - gen_l1a(config: dataclass, add_coverage_quality: bool = True) -> None
 
 
     Examples
@@ -601,13 +601,19 @@ class SPXtlm:
 
         return copy(self).sel(sci_mask)
 
-    def gen_l1a(self: SPXtlm, config: dataclass) -> None:
+    def gen_l1a(
+        self: SPXtlm,
+        config: dataclass,
+        add_coverage_quality: boot = True,
+    ) -> None:
         """Generate a SPEXone level-1A product.
 
         Parameters
         ----------
         config :  dataclass
            Settings for the L0->L1A processing
+        add_coverage_quality :  bool, default=True
+           Add coverage flag of the naviagation data and science data
 
         """
         # sanity check
@@ -638,11 +644,13 @@ class SPXtlm:
             self._fill_attrs(l1a, config)
             l1a.set_attr(
                 "time_coverage_start",
-                self.time_coverage_start.isoformat(timespec="milliseconds"),
+                self.time_coverage_start.replace(tzinfo=None).isoformat(
+                    timespec="milliseconds"),
             )
             l1a.set_attr(
                 "time_coverage_end",
-                self.time_coverage_end.isoformat(timespec="milliseconds"),
+                self.time_coverage_end.replace(tzinfo=None).isoformat(
+                    timespec="milliseconds"),
             )
             self.logger.debug("(1) initialized level-1A product")
 
@@ -657,7 +665,7 @@ class SPXtlm:
         if config.hkt_list:
             hkt = HKTio(config.hkt_list)
             hkt.navigation()
-            hkt.add_nav(l1a_path, self.coverage)
+            hkt.add_nav(l1a_path, self.coverage, add_coverage_quality)
             self.logger.debug("(5) added PACE navigation data")
 
         # add processor_configuration
@@ -688,7 +696,6 @@ class SPXtlm:
             ds_name="processing_control"
         )
         for key, value in asdict(config).items():
-            print(key, value)
             if key in ("l0_list", "hkt_list"):
                 l1a.set_attr(
                     key,

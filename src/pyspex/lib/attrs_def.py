@@ -52,7 +52,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "publisher_url": "http://oceancolor.gsfc.nasa.gov",
         "standard_name_vocabulary": "CF Standard Name Table v79",
         "keyword_vocabulary": (
-            "NASA Global Change Master Directory (GCMD)" " Science Keywords"
+            "NASA Global Change Master Directory (GCMD) Science Keywords"
         ),
         "license": (
             "http://science.nasa.gov/earth-science/"
@@ -65,7 +65,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "instrument": "SPEXone",
         "platform": "PACE",
         "stdname_vocabulary": (
-            "NetCDF Climate and Forecast (CF)" " Metadata Convention"
+            "NetCDF Climate and Forecast (CF) Metadata Convention"
         ),
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
@@ -74,10 +74,11 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
-        "processing_version": "",
+        "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.UTC).isoformat(timespec="milliseconds"),
+        "date_created": dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat(
+            timespec="milliseconds"),
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
