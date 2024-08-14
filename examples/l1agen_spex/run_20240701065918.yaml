@@ -1,0 +1,20 @@
+#
+# Generate one orbit of SPEXone L1A eclipse measurements
+#
+# expected output:
+#  - PACE_SPEXONE_CAL.20240701T065918.L1A.nc
+#  - PACE_SPEXONE_DARK.20240701T072856.L1A.nc
+#
+processing_version: 1
+outdir: L1A
+eclipse: True
+l0_list:
+- /nfs/SPEXone/ical/archives/spx1_l0_diag/0x12d/2024/07/01/SPX000016250.spx
+hkt_list:
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T065406.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T065943.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T070520.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T071057.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T071634.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T072212.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T072749.HKT.nc

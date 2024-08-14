@@ -1,4 +1,4 @@
-netcdf PACE_SPEXONE_CAL.20230722T190927.L1A {
+netcdf PACE_SPEXONE_DARK.20240701T072856.L1A {
 types:
   compound science_dtype {
     ushort ICUSWVER ;
@@ -180,7 +180,7 @@ types:
     uint BOOTCNTGOOD_IM2 ;
     uint BOOTCNTGOOD_IM3 ;
     ubyte BOOTATTEMPTS_CURRIM ;
-    ubyte dummy_01 ;
+    ubyte MPS_ACT_STATUS ;
     ubyte SWIMG_LOADED ;
     ubyte SWIMG_DEFAULT ;
     ubyte SWIMG_NXTBOOT ;
@@ -214,7 +214,7 @@ types:
     ushort ICU_3P3V_I ;
     ushort ICU_1P2V_I ;
     ubyte DEM_STATUS ;
-    ubyte dummy_02 ;
+    ubyte dummy_01 ;
     ushort ICU_5P0V_V ;
     ushort ICU_5P0V_I ;
     ubyte DEMSPWSTAT ;
@@ -258,7 +258,7 @@ types:
     ushort DEM_V ;
     ushort DEM_I ;
     ubyte REG_FW_VERSION ;
-    ubyte dummy_03 ;
+    ubyte dummy_02 ;
     ushort DET_T ;
     ubyte REG_SPW_ERROR ;
     ubyte REG_CMV_OUTOFSYNC ;
@@ -270,50 +270,44 @@ types:
     uint SW_MAIN_LOOP_COUNT ;
   }; // nomhk_dtype
 dimensions:
-	number_of_images = 4 ;
-	samples_per_image = 4194304 ;
-	hk_packets = 48 ;
+	number_of_images = 28 ;
+	samples_per_image = 203500 ;
+	hk_packets = 18 ;
 variables:
 	string processor_configuration ;
 		processor_configuration:comment = "Configuration parameters used during the processor run that produced this file." ;
 		processor_configuration:markup_language = "YAML" ;
 
 // global attributes:
-		:title = "PACE SPEXone Level-1A data" ;
-		:platform = "PACE" ;
-		:instrument = "SPEXone" ;
-		:institution = "NASA Goddard Space Flight Center, Ocean Biology Processing Group" ;
-		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
-		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
-		:keyword_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
-		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
-		:standard_name_vocabulary = "CF Standard Name Table v79" ;
-		:conventions = "CF-1.8 ACDD-1.3" ;
-		:identifier_product_doi_authority = "http://dx.doi.org/" ;
-		:identifier_product_doi = "https://doi.org/10.5281/zenodo.5705691" ;
 		:creator_name = "NASA/GSFC" ;
 		:creator_email = "data@oceancolor.gsfc.nasa.gov" ;
 		:creator_url = "http://oceancolor.gsfc.nasa.gov" ;
-		:project = "PACE Project" ;
+		:institution = "NASA Goddard Space Flight Center, Ocean Biology Processing Group" ;
 		:publisher_name = "NASA/GSFC" ;
 		:publisher_email = "data@oceancolor.gsfc.nasa.gov" ;
 		:publisher_url = "http://oceancolor.gsfc.nasa.gov" ;
-		:cdm_data_type = "One orbit swath or granule" ;
-		:cdl_version_date = "2021-09-10" ;
-		:product_name = "PACE_SPEXONE_CAL.20230722T190927.L1A.nc" ;
+		:standard_name_vocabulary = "CF Standard Name Table v79" ;
+		:keyword_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
+		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
+		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
+		:project = "PACE Project" ;
+		:conventions = "CF-1.8 ACDD-1.3" ;
+		:title = "PACE SPEXone Level-1A Data" ;
+		:instrument = "SPEXone" ;
+		:platform = "PACE" ;
+		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
 		:processing_level = "L1A" ;
-		:processing_version = "v0.9" ;
-		:date_created = "2024-02-02T16:53:21.794+00:00" ;
-		:software_name = "SPEXone L0-L1A processor" ;
-		:software_url = "https://github.com/rmvanhees/pyspex" ;
-		:software_version = "1.4.9" ;
-		:history = "spx1_level01a.py" ;
+		:cdm_data_type = "swath" ;
+		:product_name = "PACE_SPEXONE_DARK.20240701T072856.L1A.nc" ;
 		:start_direction = "Ascending" ;
 		:end_direction = "Ascending" ;
-		:time_coverage_start = "2023-07-22T19:09:27.321+00:00" ;
-		:time_coverage_end = "2023-07-22T19:10:15.321+00:00" ;
-		:icu_sw_version = "0x12d" ;
-		:input_files = "SPX000002400.spx" ;
+		:time_coverage_start = "2024-07-01T07:28:56.606" ;
+		:time_coverage_end = "2024-07-01T07:29:11.276" ;
+		:processing_version = 1LL ;
+		:identifier_product_doi_authority = "http://dx.doi.org/" ;
+		:identifier_product_doi = "10.5067/PACE/SPEXONE/L1A/SCI/2" ;
+		:date_created = "2024-08-14T09:09:47.468" ;
+		:history = "/home/richardh/.local/bin/spx1_level01a --yaml examples/l1agen_spex/run_20240701065926.yaml" ;
 
 group: image_attributes {
   variables:
@@ -333,12 +327,26 @@ group: image_attributes {
   		image_time:_FillValue = -32767. ;
   		image_time:long_name = "image time" ;
   		image_time:description = "Integration start time in seconds of day." ;
-  		image_time:units = "seconds since 2023-07-22 00:00:00" ;
-  		image_time:year = "2023" ;
+  		image_time:units = "seconds since 2024-07-01 00:00:00" ;
+  		image_time:year = "2024" ;
   		image_time:month = "7" ;
-  		image_time:day = "22" ;
+  		image_time:day = "1" ;
   		image_time:valid_min = 0. ;
   		image_time:valid_max = 92304. ;
+  	double timedelta_centre(number_of_images) ;
+  		timedelta_centre:_FillValue = -32767. ;
+  		timedelta_centre:long_name = "time-delta to centre of integration time" ;
+  		timedelta_centre:description = "Add this offset to image-time (MPS specific)." ;
+  		timedelta_centre:units = "s" ;
+  	ushort nr_coadditions(number_of_images) ;
+  		nr_coadditions:_FillValue = 0US ;
+  		nr_coadditions:long_name = "number of coadditions" ;
+  		nr_coadditions:valid_min = 1US ;
+  		nr_coadditions:units = "1" ;
+  	double exposure_time(number_of_images) ;
+  		exposure_time:_FillValue = 0. ;
+  		exposure_time:long_name = "exposure time" ;
+  		exposure_time:units = "s" ;
   	int image_ID(number_of_images) ;
   		image_ID:long_name = "image counter from power-up" ;
   		image_ID:valid_min = 0 ;
@@ -350,15 +358,6 @@ group: image_attributes {
   	short digital_offset(number_of_images) ;
   		digital_offset:long_name = "digital offset" ;
   		digital_offset:units = "1" ;
-  	ushort nr_coadditions(number_of_images) ;
-  		nr_coadditions:_FillValue = 0US ;
-  		nr_coadditions:long_name = "number of coadditions" ;
-  		nr_coadditions:valid_min = 1US ;
-  		nr_coadditions:units = "1" ;
-  	double exposure_time(number_of_images) ;
-  		exposure_time:_FillValue = 0. ;
-  		exposure_time:long_name = "exposure time" ;
-  		exposure_time:units = "s" ;
   } // group image_attributes
 
 group: science_data {
@@ -380,10 +379,10 @@ group: engineering_data {
   		HK_tlm_time:_FillValue = -32767. ;
   		HK_tlm_time:long_name = "HK telemetry packet time" ;
   		HK_tlm_time:description = "Packaging time in seconds of day." ;
-  		HK_tlm_time:units = "seconds since 2023-07-22 00:00:00" ;
-  		HK_tlm_time:year = "2023" ;
+  		HK_tlm_time:units = "seconds since 2024-07-01 00:00:00" ;
+  		HK_tlm_time:year = "2024" ;
   		HK_tlm_time:month = "7" ;
-  		HK_tlm_time:day = "22" ;
+  		HK_tlm_time:day = "1" ;
   		HK_tlm_time:valid_min = 0. ;
   		HK_tlm_time:valid_max = 92304. ;
   	nomhk_dtype NomHK_telemetry(hk_packets) ;
@@ -392,37 +391,65 @@ group: engineering_data {
   	float temp_detector(hk_packets) ;
   		temp_detector:long_name = "detector temperature" ;
   		temp_detector:comment = "TS1 DEM Temperature (nominal)." ;
-  		temp_detector:valid_min = 260.f ;
-  		temp_detector:valid_max = 300.f ;
-  		temp_detector:units = "K" ;
+  		temp_detector:valid_min = 17.83f ;
+  		temp_detector:valid_max = 18.83f ;
+  		temp_detector:units = "degC" ;
   	float temp_housing(hk_packets) ;
   		temp_housing:long_name = "housing temperature" ;
   		temp_housing:comment = "TS2 Housing Temperature (nominal)." ;
-  		temp_housing:valid_min = 260.f ;
-  		temp_housing:valid_max = 300.f ;
-  		temp_housing:units = "K" ;
+  		temp_housing:valid_min = 19.11f ;
+  		temp_housing:valid_max = 20.11f ;
+  		temp_housing:units = "degC" ;
   	float temp_radiator(hk_packets) ;
   		temp_radiator:long_name = "radiator temperature" ;
   		temp_radiator:comment = "TS3 Radiator Temperature (nominal)." ;
-  		temp_radiator:valid_min = 260.f ;
-  		temp_radiator:valid_max = 300.f ;
-  		temp_radiator:units = "K" ;
+  		temp_radiator:valid_min = -2.f ;
+  		temp_radiator:valid_max = 3.f ;
+  		temp_radiator:units = "degC" ;
   } // group engineering_data
+
+group: processing_control {
+
+  // group attributes:
+  		:software_name = "spx1_level01a" ;
+  		:software_description = "SPEXone L0-L1A processor (SRON)" ;
+  		:software_url = "https://github.com/rmvanhees/pyspex" ;
+  		:software_version = "1.4.14.dev14" ;
+  		:software_doi = "https://doi.org/10.5281/zenodo.5705691" ;
+  		:icu_sw_version = "0x12d" ;
+
+  group: input_parameters {
+
+    // group attributes:
+    		:debug = "False" ;
+    		:dump = "False" ;
+    		:verbose = "30" ;
+    		:compression = "False" ;
+    		:outdir = "L1A" ;
+    		:outfile = "" ;
+    		:processing_version = "1" ;
+    		:eclipse = "True" ;
+    		:yaml_fl = "examples/l1agen_spex/run_20240701065926.yaml" ;
+    		:hkt_list = "PACE.20240701T065406.HKT.nc,PACE.20240701T065943.HKT.nc,PACE.20240701T070520.HKT.nc,PACE.20240701T071057.HKT.nc,PACE.20240701T071634.HKT.nc,PACE.20240701T072212.HKT.nc,PACE.20240701T072749.HKT.nc" ;
+    		:l0_format = "dsb" ;
+    		:l0_list = "SPX000016250.spx" ;
+    } // group input_parameters
+  } // group processing_control
 
 group: navigation_data {
   dimensions:
-  	att_time = 176 ;
+  	att_time = 34 ;
   	quaternion_elements = 4 ;
   	vector_elements = 3 ;
-  	orb_time = 87 ;
-  	tilt_time = 3504 ;
+  	orb_time = 9 ;
+  	tilt_time = 35 ;
   variables:
   	double att_time(att_time) ;
   		att_time:long_name = "Attitude sample time (seconds of day)" ;
-  		att_time:valid_max = 86400.999999 ;
+  		att_time:valid_max = 172800. ;
   		att_time:calendar = "proleptic_gregorian" ;
   		att_time:_FillValue = -32767. ;
-  		att_time:units = "seconds since 2023-07-22" ;
+  		att_time:units = "seconds since 2024-07-01" ;
   		att_time:valid_min = 0. ;
   	float att_quat(att_time, quaternion_elements) ;
   		att_quat:units = "seconds" ;
@@ -438,10 +465,10 @@ group: navigation_data {
   		att_rate:units = "radians/second" ;
   	double orb_time(orb_time) ;
   		orb_time:long_name = "Orbit vector time (seconds of day)" ;
-  		orb_time:valid_max = 86400.999999 ;
+  		orb_time:valid_max = 172800. ;
   		orb_time:calendar = "proleptic_gregorian" ;
   		orb_time:_FillValue = -32767. ;
-  		orb_time:units = "seconds since 2023-07-22" ;
+  		orb_time:units = "seconds since 2024-07-01" ;
   		orb_time:valid_min = 0. ;
   	float orb_pos(orb_time, vector_elements) ;
   		orb_pos:units = "meters" ;
@@ -450,11 +477,11 @@ group: navigation_data {
   		orb_pos:valid_min = -7200000.f ;
   		orb_pos:valid_max = 7200000.f ;
   	float orb_vel(orb_time, vector_elements) ;
+  		orb_vel:valid_max = 7600.f ;
+  		orb_vel:units = "meters/second" ;
   		orb_vel:_FillValue = -32767.f ;
   		orb_vel:long_name = "Orbit velocity vectors (ECR)" ;
   		orb_vel:valid_min = -7600.f ;
-  		orb_vel:valid_max = 7600.f ;
-  		orb_vel:units = "meters/second" ;
   	double orb_lon(orb_time) ;
   		orb_lon:_FillValue = -32767. ;
   		orb_lon:long_name = "Orbit longitude (degrees East)" ;
@@ -470,15 +497,15 @@ group: navigation_data {
   	double orb_alt(orb_time) ;
   		orb_alt:_FillValue = -32767. ;
   		orb_alt:long_name = "Orbit altitude" ;
-  		orb_alt:units = "meters" ;
   		orb_alt:valid_min = 670000. ;
   		orb_alt:valid_max = 710000. ;
+  		orb_alt:units = "meters" ;
   	double tilt_time(tilt_time) ;
   		tilt_time:long_name = "Tilt sample time (seconds of day)" ;
-  		tilt_time:valid_max = 86400.999999 ;
+  		tilt_time:valid_max = 172800. ;
   		tilt_time:calendar = "proleptic_gregorian" ;
   		tilt_time:_FillValue = -32767. ;
-  		tilt_time:units = "seconds since 2023-07-22" ;
+  		tilt_time:units = "seconds since 2024-07-01" ;
   		tilt_time:valid_min = 0. ;
   	float tilt(tilt_time) ;
   		tilt:_FillValue = -32767.f ;
@@ -491,16 +518,15 @@ group: navigation_data {
   		tilt_flag:long_name = "Tilt quality flag" ;
   		tilt_flag:flag_values = 0UB, 1UB ;
   		tilt_flag:flag_meanings = "Valid Not_initialized" ;
-  	ubyte coverage_quality ;
-  		coverage_quality:_FillValue = 255UB ;
+  	int64 coverage_quality ;
   		coverage_quality:long_name = "coverage quality of navigation data" ;
   		coverage_quality:standard_name = "status_flag" ;
-  		coverage_quality:valid_range = 0UB, 15UB ;
+  		coverage_quality:valid_range = 0US, 15US ;
   		coverage_quality:flag_values = 0US, 1US, 2US, 4US, 8US ;
   		coverage_quality:flag_meanings = "good missing-samples too_short_extends no_extend_at_start no_extend_at_end" ;
 
   // group attributes:
-  		:time_coverage_start = "2023-07-22T19:03:55.169" ;
-  		:time_coverage_end = "2023-07-22T19:12:39.169" ;
+  		:time_coverage_start = "2024-07-01T06:54:06.562Z" ;
+  		:time_coverage_end = "2024-07-01T07:33:26.562Z" ;
   } // group navigation_data
 }

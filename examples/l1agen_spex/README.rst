@@ -54,7 +54,7 @@ for the determination of geo-location information by the L1A->L1B processor.
 
     outdir: <PATH>/L1A
     outfile: ''
-    file_version: 1
+    processing_version: 1
     compression: False
     eclipse: True
     l0_list:
@@ -75,9 +75,8 @@ for the determination of geo-location information by the L1A->L1B processor.
 
     outdir: <PATH>/L1A
     outfile: ''
-    file_version: 1
+    processing_version: 1
     compression: False
-    eclipse: False
     eclipse: False
     hkt_list:
     - <PATH>/PACE.20240324T142500.HKT.nc

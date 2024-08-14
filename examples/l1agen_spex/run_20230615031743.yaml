@@ -1,0 +1,16 @@
+#
+# Process on-ground test data
+#
+# expected output:
+#  - L1A/PACE_SPEXONE_OCAL.20230615T031743.L1A.V2.nc
+#
+processing_version: 2
+outdir: L1A
+l0_list:
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001086.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001087.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001088.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001089.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001090.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001091.spx
+- /nfs/SPEXone/ocal/pace-sds/spx1_l0/0x12d/2023/06/15/SPX000001092.spx

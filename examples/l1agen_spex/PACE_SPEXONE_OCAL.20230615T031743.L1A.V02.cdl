@@ -1,4 +1,4 @@
-netcdf PACE_SPEXONE.20240324T143103.L1A {
+netcdf PACE_SPEXONE_OCAL.20230615T031743.L1A.V02 {
 types:
   compound science_dtype {
     ushort ICUSWVER ;
@@ -180,7 +180,7 @@ types:
     uint BOOTCNTGOOD_IM2 ;
     uint BOOTCNTGOOD_IM3 ;
     ubyte BOOTATTEMPTS_CURRIM ;
-    ubyte dummy_01 ;
+    ubyte MPS_ACT_STATUS ;
     ubyte SWIMG_LOADED ;
     ubyte SWIMG_DEFAULT ;
     ubyte SWIMG_NXTBOOT ;
@@ -214,7 +214,7 @@ types:
     ushort ICU_3P3V_I ;
     ushort ICU_1P2V_I ;
     ubyte DEM_STATUS ;
-    ubyte dummy_02 ;
+    ubyte dummy_01 ;
     ushort ICU_5P0V_V ;
     ushort ICU_5P0V_I ;
     ubyte DEMSPWSTAT ;
@@ -258,7 +258,7 @@ types:
     ushort DEM_V ;
     ushort DEM_I ;
     ubyte REG_FW_VERSION ;
-    ubyte dummy_03 ;
+    ubyte dummy_02 ;
     ushort DET_T ;
     ubyte REG_SPW_ERROR ;
     ubyte REG_CMV_OUTOFSYNC ;
@@ -270,46 +270,44 @@ types:
     uint SW_MAIN_LOOP_COUNT ;
   }; // nomhk_dtype
 dimensions:
-	number_of_images = 7867 ;
+	number_of_images = 7986 ;
 	samples_per_image = 203500 ;
-	hk_packets = 2627 ;
+	hk_packets = 2667 ;
+variables:
+	string processor_configuration ;
+		processor_configuration:comment = "Configuration parameters used during the processor run that produced this file." ;
+		processor_configuration:markup_language = "YAML" ;
 
 // global attributes:
-		:title = "PACE SPEXone Level-1A data" ;
-		:platform = "PACE" ;
-		:instrument = "SPEXone" ;
-		:institution = "NASA Goddard Space Flight Center, Ocean Biology Processing Group" ;
-		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
-		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
-		:keyword_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
-		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
-		:standard_name_vocabulary = "CF Standard Name Table v79" ;
-		:conventions = "CF-1.8 ACDD-1.3" ;
-		:identifier_product_doi_authority = "http://dx.doi.org/" ;
-		:identifier_product_doi = "https://doi.org/10.5281/zenodo.5705691" ;
 		:creator_name = "NASA/GSFC" ;
 		:creator_email = "data@oceancolor.gsfc.nasa.gov" ;
 		:creator_url = "http://oceancolor.gsfc.nasa.gov" ;
-		:project = "PACE Project" ;
+		:institution = "NASA Goddard Space Flight Center, Ocean Biology Processing Group" ;
 		:publisher_name = "NASA/GSFC" ;
 		:publisher_email = "data@oceancolor.gsfc.nasa.gov" ;
 		:publisher_url = "http://oceancolor.gsfc.nasa.gov" ;
-		:cdm_data_type = "One orbit swath or granule" ;
-		:cdl_version_date = "2021-09-10" ;
-		:product_name = "PACE_SPEXONE.20240324T143103.L1A.nc" ;
+		:standard_name_vocabulary = "CF Standard Name Table v79" ;
+		:keyword_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords" ;
+		:license = "http://science.nasa.gov/earth-science/earth-science-data/data-information-policy/" ;
+		:naming_authority = "gov.nasa.gsfc.sci.oceancolor" ;
+		:project = "PACE Project" ;
+		:conventions = "CF-1.8 ACDD-1.3" ;
+		:title = "PACE SPEXone Level-1A Data" ;
+		:instrument = "SPEXone" ;
+		:platform = "PACE" ;
+		:stdname_vocabulary = "NetCDF Climate and Forecast (CF) Metadata Convention" ;
 		:processing_level = "L1A" ;
-		:processing_version = "v0.9" ;
-		:date_created = "2024-02-02T21:04:42.401+00:00" ;
-		:software_name = "SPEXone L0-L1A processor" ;
-		:software_url = "https://github.com/rmvanhees/pyspex" ;
-		:software_version = "1.4.9" ;
-		:history = "spx1_level01a.py" ;
+		:cdm_data_type = "swath" ;
+		:product_name = "PACE_SPEXONE_OCAL.20230615T031743.L1A.V02.nc" ;
 		:start_direction = "Ascending" ;
 		:end_direction = "Ascending" ;
-		:time_coverage_start = "2024-03-24T14:31:03.043+00:00" ;
-		:time_coverage_end = "2024-03-24T15:14:49.199+00:00" ;
-		:icu_sw_version = "0x12c" ;
-		string :input_files = "SPX000000393.spx", "SPX000000394.spx", "SPX000000395.spx", "SPX000000396.spx", "SPX000000397.spx", "SPX000000398.spx" ;
+		:time_coverage_start = "2023-06-15T03:17:43.606" ;
+		:time_coverage_end = "2023-06-15T04:02:06.937" ;
+		:processing_version = 2LL ;
+		:identifier_product_doi_authority = "http://dx.doi.org/" ;
+		:identifier_product_doi = "10.5067/PACE/SPEXONE/L1A/SCI/2" ;
+		:date_created = "2024-08-14T07:50:31.110" ;
+		:history = "scripts/l1agen_spex.py --verbose debug --yaml examples/l1agen_spex/run_20230615.yaml" ;
 
 group: image_attributes {
   variables:
@@ -329,12 +327,17 @@ group: image_attributes {
   		image_time:_FillValue = -32767. ;
   		image_time:long_name = "image time" ;
   		image_time:description = "Integration start time in seconds of day." ;
-  		image_time:units = "seconds since 2024-03-24 00:00:00" ;
-  		image_time:year = "2024" ;
-  		image_time:month = "3" ;
-  		image_time:day = "24" ;
+  		image_time:units = "seconds since 2023-06-15 00:00:00" ;
+  		image_time:year = "2023" ;
+  		image_time:month = "6" ;
+  		image_time:day = "15" ;
   		image_time:valid_min = 0. ;
   		image_time:valid_max = 92304. ;
+  	double timedelta_centre(number_of_images) ;
+  		timedelta_centre:_FillValue = -32767. ;
+  		timedelta_centre:long_name = "time-delta to centre of integration time" ;
+  		timedelta_centre:description = "Add this offset to image-time (MPS specific)." ;
+  		timedelta_centre:units = "s" ;
   	int image_ID(number_of_images) ;
   		image_ID:long_name = "image counter from power-up" ;
   		image_ID:valid_min = 0 ;
@@ -376,10 +379,10 @@ group: engineering_data {
   		HK_tlm_time:_FillValue = -32767. ;
   		HK_tlm_time:long_name = "HK telemetry packet time" ;
   		HK_tlm_time:description = "Packaging time in seconds of day." ;
-  		HK_tlm_time:units = "seconds since 2024-03-24 00:00:00" ;
-  		HK_tlm_time:year = "2024" ;
-  		HK_tlm_time:month = "3" ;
-  		HK_tlm_time:day = "24" ;
+  		HK_tlm_time:units = "seconds since 2023-06-15 00:00:00" ;
+  		HK_tlm_time:year = "2023" ;
+  		HK_tlm_time:month = "6" ;
+  		HK_tlm_time:day = "15" ;
   		HK_tlm_time:valid_min = 0. ;
   		HK_tlm_time:valid_max = 92304. ;
   	nomhk_dtype NomHK_telemetry(hk_packets) ;
@@ -388,20 +391,48 @@ group: engineering_data {
   	float temp_detector(hk_packets) ;
   		temp_detector:long_name = "detector temperature" ;
   		temp_detector:comment = "TS1 DEM Temperature (nominal)." ;
-  		temp_detector:valid_min = 260.f ;
-  		temp_detector:valid_max = 300.f ;
-  		temp_detector:units = "K" ;
+  		temp_detector:valid_min = 17.83f ;
+  		temp_detector:valid_max = 18.83f ;
+  		temp_detector:units = "degC" ;
   	float temp_housing(hk_packets) ;
   		temp_housing:long_name = "housing temperature" ;
   		temp_housing:comment = "TS2 Housing Temperature (nominal)." ;
-  		temp_housing:valid_min = 260.f ;
-  		temp_housing:valid_max = 300.f ;
-  		temp_housing:units = "K" ;
+  		temp_housing:valid_min = 19.11f ;
+  		temp_housing:valid_max = 20.11f ;
+  		temp_housing:units = "degC" ;
   	float temp_radiator(hk_packets) ;
   		temp_radiator:long_name = "radiator temperature" ;
   		temp_radiator:comment = "TS3 Radiator Temperature (nominal)." ;
-  		temp_radiator:valid_min = 260.f ;
-  		temp_radiator:valid_max = 300.f ;
-  		temp_radiator:units = "K" ;
+  		temp_radiator:valid_min = -2.f ;
+  		temp_radiator:valid_max = 3.f ;
+  		temp_radiator:units = "degC" ;
   } // group engineering_data
+
+group: processing_control {
+
+  // group attributes:
+  		:software_name = "l1agen_spex.py" ;
+  		:software_description = "SPEXone L0-L1A processor (SRON)" ;
+  		:software_url = "https://github.com/rmvanhees/pyspex" ;
+  		:software_version = "1.4.14" ;
+  		:software_doi = "https://doi.org/10.5281/zenodo.5705691" ;
+  		:icu_sw_version = "0x12d" ;
+
+  group: input_parameters {
+
+    // group attributes:
+    		:debug = "False" ;
+    		:dump = "False" ;
+    		:verbose = "10" ;
+    		:compression = "False" ;
+    		:outdir = "L1A" ;
+    		:outfile = "" ;
+    		:processing_version = "2" ;
+    		:eclipse = "None" ;
+    		:yaml_fl = "examples/l1agen_spex/run_20230615.yaml" ;
+    		:hkt_list = "" ;
+    		:l0_format = "dsb" ;
+    		:l0_list = "SPX000001086.spx,SPX000001087.spx,SPX000001088.spx,SPX000001089.spx,SPX000001090.spx,SPX000001091.spx,SPX000001092.spx" ;
+    } // group input_parameters
+  } // group processing_control
 }

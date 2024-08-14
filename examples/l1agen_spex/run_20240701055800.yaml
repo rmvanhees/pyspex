@@ -1,0 +1,28 @@
+#
+# Generate one orbit of SPEXone L1A science measurements
+#
+# expected output:
+# - PACE_SPEXONE.20240701T055800.L1A.nc
+#
+processing_version: 1
+outdir: L1A
+eclipse: False
+l0_list:
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016243.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016244.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016245.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016246.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016247.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016248.spx
+- /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016249.spx
+hkt_list:
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T055223.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T055757.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T060332.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T060908.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T061445.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T062022.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T062600.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T063137.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T063714.HKT.nc
+- /nfs/SPEXone/ical/archives/pace_hkt/V1.0/2024/07/01/PACE.20240701T064252.HKT.nc
