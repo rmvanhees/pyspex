@@ -401,9 +401,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "title": "PACE SPEXone Level-1A Data",
         "instrument": "SPEXone",
         "platform": "PACE",
-        "stdname_vocabulary": (
-            "NetCDF Climate and Forecast (CF) Metadata Convention"
-        ),
+        "stdname_vocabulary": "NetCDF Climate and Forecast (CF) Metadata Convention",
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
         "product_name": None,
@@ -414,9 +412,9 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat(
-            timespec="milliseconds"
-        ),
+        "date_created": dt.datetime.now(dt.timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat(timespec="milliseconds"),
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
@@ -2933,21 +2931,21 @@ class HKtlm:
     def copy(self: HKtlm) -> HKtlm:
         """Return deep-copy of HKtlm object."""
         hkt = HKtlm()
+        hkt.hdr = self.hdr.copy()
+        hkt.tlm = self.tlm.copy()
+        hkt.tstamp = copy(self.tstamp)
+        hkt.events = copy(self.events)
+        return hkt
+
+    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
+        """Return subset of HKtlm object using a mask array."""
+        hkt = HKtlm()
         if self.hdr is not None:
             hkt.hdr = self.hdr[mask]
         if self.tlm is not None:
             hkt.tlm = self.tlm[mask]
             hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
             hkt.events = self.events.copy()
-        return hkt
-
-    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
-        """Return subset of HKtlm object using a mask array."""
-        hkt = HKtlm()
-        hkt.hdr = self.hdr[mask]
-        hkt.tlm = self.tlm[mask]
-        hkt.tstamp = [x for x, y in zip(self.tstamp, mask) if y]
-        hkt.events = self.events.copy()
         return hkt
 
     def extract_l0_hk(self: HKtlm, ccsds_hk: tuple, epoch: dt.datetime) -> None:
@@ -3867,12 +3865,14 @@ class SPXtlm:
             l1a.set_attr(
                 "time_coverage_start",
                 self.time_coverage_start.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"),
+                    timespec="milliseconds"
+                ),
             )
             l1a.set_attr(
                 "time_coverage_end",
                 self.time_coverage_end.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"),
+                    timespec="milliseconds"
+                ),
             )
             self.logger.debug("(1) initialized level-1A product")
 

@@ -604,7 +604,7 @@ class SPXtlm:
     def gen_l1a(
         self: SPXtlm,
         config: dataclass,
-        add_coverage_quality: boot = True,
+        add_coverage_quality: bool = True,
     ) -> None:
         """Generate a SPEXone level-1A product.
 
@@ -645,12 +645,14 @@ class SPXtlm:
             l1a.set_attr(
                 "time_coverage_start",
                 self.time_coverage_start.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"),
+                    timespec="milliseconds"
+                ),
             )
             l1a.set_attr(
                 "time_coverage_end",
                 self.time_coverage_end.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"),
+                    timespec="milliseconds"
+                ),
             )
             self.logger.debug("(1) initialized level-1A product")
 
@@ -693,20 +695,18 @@ class SPXtlm:
         l1a.set_attr(
             "icu_sw_version",
             f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}',
-            ds_name="processing_control"
+            ds_name="processing_control",
         )
         for key, value in asdict(config).items():
             if key in ("l0_list", "hkt_list"):
                 l1a.set_attr(
                     key,
                     "" if not value else ",".join([x.name for x in value]),
-                    ds_name="processing_control/input_parameters"
+                    ds_name="processing_control/input_parameters",
                 )
             else:
                 l1a.set_attr(
-                    key,
-                    f"{value}",
-                    ds_name="processing_control/input_parameters"
+                    key, f"{value}", ds_name="processing_control/input_parameters"
                 )
 
     def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:

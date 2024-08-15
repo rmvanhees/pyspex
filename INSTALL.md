@@ -41,8 +41,8 @@ And have the following Python modules available:
 
  * setuptools v57+
  * setuptools-scm v6+
- * numpy v1.19+
- * h5py v3.5+
+ * numpy v1.19+ or v2+
+ * h5py v3.8+
  * netCDF4 v1.5+
  * xarray v0.20+
  * moniplot v0.2+
@@ -50,14 +50,19 @@ And have the following Python modules available:
 
 The software is known to work using:
 
- * HDF5 v1.8.21, netCDF4 v4.7.3 and python-netCDF4 v1.5+
- * HDF5 v1.10+, netCDF4 v4.7.3 or v4.8+ and python-netCDF4 v1.5+
- * HDF5 v1.12+, netCDF4 v4.8+ and python-netCDF4 v1.5+
+ * HDF5 v1.14+, netCDF4 v4.9+ (preferred configuration)
+ * HDF5 v1.12+, netCDF4 v4.8+
+ * HDF5 v1.10+, netCDF4 v4.7.3
+ * HDF5 v1.8.21, netCDF4 v4.7.3
 
 You can install pyspex once you have satisfied the requirements listed above.
 Run at the top of the source tree:
 
+	pip install [--user] .
+	
+or
+
     python3 -m build
-    pip3 install dist/pyspex-<version>.whl [--user]
+    pip3 install [--user] dist/pyspex-<version>.whl
 
 The Python scripts can be found under `/usr/local/bin` or `$USER/.local/bin`.

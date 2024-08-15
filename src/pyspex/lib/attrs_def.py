@@ -64,9 +64,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "title": "PACE SPEXone Level-1A Data",
         "instrument": "SPEXone",
         "platform": "PACE",
-        "stdname_vocabulary": (
-            "NetCDF Climate and Forecast (CF) Metadata Convention"
-        ),
+        "stdname_vocabulary": "NetCDF Climate and Forecast (CF) Metadata Convention",
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
         "product_name": None,
@@ -77,8 +75,9 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat(
-            timespec="milliseconds"),
+        "date_created": dt.datetime.now(dt.UTC)
+        .replace(tzinfo=None)
+        .isoformat(timespec="milliseconds"),
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
