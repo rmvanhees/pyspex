@@ -25,6 +25,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import xarray as xr
+
 from pyspex.l1a_io import L1Aio
 from pyspex.lib import pyspex_version
 from pyspex.lib.tmtc_def import tmtc_dtype

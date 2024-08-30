@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
+
 from pyspex.ccsds_io import CCSDSio, hk_sec_of_day, img_sec_of_day
 from pyspex.l1a_io import L1Aio
 from pyspex.lib import pyspex_version

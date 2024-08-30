@@ -21,6 +21,7 @@ import numpy as np
 from moniplot.draw_image import DrawImage
 from moniplot.lib.fig_info import FIGinfo
 from moniplot.mon_plot import MONplot
+
 from pyspex.binning_tables import BinningTables
 
 
