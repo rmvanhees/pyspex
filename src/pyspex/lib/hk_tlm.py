@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .ccsds_hdr import CCSDShdr
-from .tlm_utils import convert_hk
+from .tlm_utils import RANGE_DICT, HkFlagging, convert_hk
 from .tmtc_def import tmtc_dtype
 
 if TYPE_CHECKING:
@@ -197,3 +197,29 @@ class HKtlm:
 
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
+
+    def check(self: HKtlm, key: str) -> np.ndarray:
+        """Check for out of limit values in SPEXone housekeeping data."""
+        parm = key.upper()
+        if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
+            parm = parm.replace("_POWER", "_I")
+        elif parm not in self.tlm.dtype.names:
+            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
+
+        try:
+            values = self.convert(key)
+        except KeyError as exc:
+            raise RuntimeError from exc
+        res = np.full(values.size, HkFlagging.NOMINAL)
+
+        valid_range = RANGE_DICT.get(key)
+        if valid_range is None:
+            res[values != values[0]] = HkFlagging.get_flag(key)
+            return res
+
+        if (flag := HkFlagging.get_flag(key, too_low=True)) is not None:
+            res[values < valid_range[0]] = flag
+        if (flag := HkFlagging.get_flag(key, too_low=False)) is not None:
+            res[values > valid_range[1]] = flag
+
+        return res

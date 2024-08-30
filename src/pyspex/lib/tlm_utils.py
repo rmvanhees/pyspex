@@ -11,9 +11,9 @@
 
 from __future__ import annotations
 
-__all__ = ["UNITS_DICT", "convert_hk"]
+__all__ = ["UNITS_DICT", "convert_hk", "HkFlagging"]
 
-from enum import Enum
+from enum import Enum, IntFlag, auto
 
 import numpy as np
 from numpy import ma
@@ -70,6 +70,47 @@ UNITS_DICT = {
     "TS4_DEM_R_T": "degC",
     "TS5_HOUSING_R_T": "degC",
     "TS6_RADIATOR_R_T": "degC",
+}
+
+
+RANGE_DICT = {
+    "ADC1_T": (-20, 60),
+    "ADC1_VCC": (4.77, 5.25),
+    "ADC2_T": (-20, 60),
+    "DEM_I": (100, 550),
+    "DEM_V": (4.7, 5.25),
+    "DET_T": (19, 36),
+    "HTR1_I": (0, 250),
+    "HTR2_I": (0, 250),
+    "HTR3_I": (0, 250),
+    "HTR4_I": (0, 250),
+    "ICU_1P2V_I": (70, 200),
+    "ICU_1P2V_V": (1.21, 1.26),
+    "ICU_3P3V_I": (100, 300),
+    "ICU_3P3V_V": (3.1, 3.456),
+    "ICU_4P0V_I": (100, 350),
+    "ICU_4P0V_V": (3.86, 5.4),
+    "ICU_4V_T": (-20, 60),
+    "ICU_5P0V_I": (5, 570),
+    "ICU_5P0V_V": (4.85, 5.25),
+    "ICU_5V_T": (-20, 60),
+    "ICU_DIGV_T": (-20, 60),
+    "ICU_HG1_T": (-20, 60),
+    "ICU_HG2_T": (-20, 60),
+    "ICU_MCU_T": (-20, 60),
+    "ICU_MID_T": (-20, 60),
+    "LED1_ANODE_V": (2.9, 5.4),
+    "LED1_CATH_V": (0.7, 5.4),
+    "LED1_I": (0, 10.1),
+    "LED2_ANODE_V": (2.9, 5.4),
+    "LED2_CATH_V": (0.7, 5.4),
+    "LED2_I": (0, 10.1),
+    "TS1_DEM_N_T": (18.13, 18.53),
+    "TS2_HOUSING_N_T": (19.51, 19.71),
+    "TS3_RADIATOR_N_T": (-0.9, 2.1),
+    "TS4_DEM_R_T": (17.7, 18.1),
+    "TS5_HOUSING_R_T": (19.05, 19.55),
+    "TS6_RADIATOR_R_T": (-0.9, 2.1),
 }
 
 
@@ -336,3 +377,31 @@ def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
         return func(raw_data)
 
     return raw_data
+
+
+class HkFlagging(IntFlag):
+    """..."""
+
+    NOMINAL = 0
+    CURRENT_TOO_LOW = auto()
+    CURRENT_TOO_HIGH = auto()
+    TEMP_TOO_LOW = auto()
+    TEMP_TOO_HIGH = auto()
+    VOLT_TOO_LOW = auto()
+    VOLT_TOO_HIGH = auto()
+    STATUS_CHANGED = auto()
+
+    @classmethod
+    def get_flag(cls: HkFlagging, key: str, too_low: bool = False) -> HkFlagging:
+        """..."""
+        match UNITS_DICT.get(key):
+            case "mA" | "A":
+                value = cls.CURRENT_TOO_LOW if too_low else cls.CURRENT_TOO_HIGH
+            case "degC" | "K":
+                value = cls.TEMP_TOO_LOW if too_low else cls.TEMP_TOO_HIGH
+            case "Volt":
+                value = cls.VOLT_TOO_LOW if too_low else cls.VOLT_TOO_HIGH
+            case _:
+                value = cls.STATUS_CHANGED
+
+        return value
