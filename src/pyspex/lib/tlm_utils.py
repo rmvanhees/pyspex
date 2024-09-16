@@ -11,110 +11,20 @@
 
 from __future__ import annotations
 
-__all__ = ["UNITS_DICT", "convert_hk", "HkFlagging"]
+__all__ = ["CONV_DICT", "convert_hk", "HkFlagging"]
 
 from enum import Enum, IntFlag, auto
 
 import numpy as np
 from numpy import ma
 
-# This dictionary is only valid when raw counts are converted to physical units
-UNITS_DICT = {
-    "ADC1_GAIN": "Volt",
-    "ADC1_OFFSET": "Volt",
-    "ADC1_REF": "Volt",
-    "ADC1_T": "degC",
-    "ADC1_VCC": "Volt",
-    "ADC2_GAIN": "Volt",
-    "ADC2_OFFSET": "Volt",
-    "ADC2_REF": "Volt",
-    "ADC2_T": "degC",
-    "ADC2_VCC": "Volt",
-    "DEM_I": "mA",
-    "DEM_V": "Volt",
-    "DET_T": "degC",
-    "HTR1_DUTYCYCL": "%",
-    "HTR1_I": "mA",
-    "HTR2_DUTYCYCL": "%",
-    "HTR2_I": "mA",
-    "HTR3_DUTYCYCL": "%",
-    "HTR3_I": "mA",
-    "HTR4_DUTYCYCL": "%",
-    "HTR4_I": "mA",
-    "HTRGRP1_V": "Volt",
-    "HTRGRP2_V": "Volt",
-    "ICU_1P2V_I": "mA",
-    "ICU_1P2V_V": "Volt",
-    "ICU_3P3V_I": "mA",
-    "ICU_3P3V_V": "Volt",
-    "ICU_4P0V_I": "mA",
-    "ICU_4P0V_V": "Volt",
-    "ICU_4V_T": "degC",
-    "ICU_5P0V_I": "mA",
-    "ICU_5P0V_V": "Volt",
-    "ICU_5V_T": "degC",
-    "ICU_DIGV_T": "degC",
-    "ICU_HG1_T": "degC",
-    "ICU_HG2_T": "degC",
-    "ICU_MCU_T": "degC",
-    "ICU_MID_T": "degC",
-    "LED1_ANODE_V": "Volt",
-    "LED1_CATH_V": "Volt",
-    "LED1_I": "mA",
-    "LED2_ANODE_V": "Volt",
-    "LED2_CATH_V": "Volt",
-    "LED2_I": "mA",
-    "TS1_DEM_N_T": "degC",
-    "TS2_HOUSING_N_T": "degC",
-    "TS3_RADIATOR_N_T": "degC",
-    "TS4_DEM_R_T": "degC",
-    "TS5_HOUSING_R_T": "degC",
-    "TS6_RADIATOR_R_T": "degC",
-}
-
-
-RANGE_DICT = {
-    "ADC1_T": (-20, 60),
-    "ADC1_VCC": (4.77, 5.25),
-    "ADC2_T": (-20, 60),
-    "DEM_I": (100, 550),
-    "DEM_V": (4.7, 5.25),
-    "DET_T": (19, 36),
-    "HTR1_I": (0, 250),
-    "HTR2_I": (0, 250),
-    "HTR3_I": (0, 250),
-    "HTR4_I": (0, 250),
-    "ICU_1P2V_I": (70, 200),
-    "ICU_1P2V_V": (1.21, 1.26),
-    "ICU_3P3V_I": (100, 300),
-    "ICU_3P3V_V": (3.1, 3.456),
-    "ICU_4P0V_I": (100, 350),
-    "ICU_4P0V_V": (3.86, 5.4),
-    "ICU_4V_T": (-20, 60),
-    "ICU_5P0V_I": (5, 570),
-    "ICU_5P0V_V": (4.85, 5.25),
-    "ICU_5V_T": (-20, 60),
-    "ICU_DIGV_T": (-20, 60),
-    "ICU_HG1_T": (-20, 60),
-    "ICU_HG2_T": (-20, 60),
-    "ICU_MCU_T": (-20, 60),
-    "ICU_MID_T": (-20, 60),
-    "LED1_ANODE_V": (2.9, 5.4),
-    "LED1_CATH_V": (0.7, 5.4),
-    "LED1_I": (0, 10.1),
-    "LED2_ANODE_V": (2.9, 5.4),
-    "LED2_CATH_V": (0.7, 5.4),
-    "LED2_I": (0, 10.1),
-    "TS1_DEM_N_T": (18.13, 18.53),
-    "TS2_HOUSING_N_T": (19.51, 19.71),
-    "TS3_RADIATOR_N_T": (-0.9, 2.1),
-    "TS4_DEM_R_T": (17.7, 18.1),
-    "TS5_HOUSING_R_T": (19.05, 19.55),
-    "TS6_RADIATOR_R_T": (-0.9, 2.1),
-}
-
 
 # - helper functions ------------------------
+def conv_2_float(raw_data: np.ndarray) -> np.ndarray:
+    """Convert integer array to float."""
+    return raw_data.astype(float)
+
+
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
     """Convert Detector Temperature Sensor to degree Celsius."""
     res = np.empty(raw_data.size, dtype=float)
@@ -321,59 +231,212 @@ class WriteProt(Enum):
 
 
 # - exported functions ----------------------
-def convert_hk(key: str, raw_data: np.ndarray) -> np.ndarray:
-    """Convert a DemHK or NomHK parameter to physical units."""
-    conv_dict = {
-        "DET_T": exp_spex_det_t,
-        "TS1_DEM_N_T": exp_spex_thermistor,
-        "TS2_HOUSING_N_T": exp_spex_thermistor,
-        "TS3_RADIATOR_N_T": exp_spex_thermistor,
-        "TS4_DEM_R_T": exp_spex_thermistor,
-        "TS5_HOUSING_R_T": exp_spex_thermistor,
-        "TS6_RADIATOR_R_T": exp_spex_thermistor,
-        "ADC1_GAIN": poly_spex_adc_gain,
-        "ADC2_GAIN": poly_spex_adc_gain,
-        "ADC1_OFFSET": poly_spex_adc_offset,
-        "ADC2_OFFSET": poly_spex_adc_offset,
-        "ADC1_T": poly_spex_adc_t,
-        "ADC2_T": poly_spex_adc_t,
-        "ADC1_REF": poly_spex_adc_vcc,
-        "ADC1_VCC": poly_spex_adc_vcc,
-        "ADC2_REF": poly_spex_adc_vcc,
-        "ADC2_VCC": poly_spex_adc_vcc,
-        "DEM_I": poly_spex_dem_i,
-        "HTR1_DUTYCYCL": poly_spex_dutycycle,
-        "HTR2_DUTYCYCL": poly_spex_dutycycle,
-        "HTR3_DUTYCYCL": poly_spex_dutycycle,
-        "HTR4_DUTYCYCL": poly_spex_dutycycle,
-        "HTR1_POWER": poly_spex_htr1_p,
-        "HTR2_POWER": poly_spex_htr2_p,
-        "HTR3_POWER": poly_spex_htr3_p,
-        "HTR4_POWER": poly_spex_htr4_p,
-        "HTRGRP1_V": poly_spex_htr_v,
-        "HTRGRP2_V": poly_spex_htr_v,
-        "ICU_4V_T": poly_spex_icuhk_internaltemp,
-        "ICU_5V_T": poly_spex_icuhk_internaltemp,
-        "ICU_DIGV_T": poly_spex_icuhk_internaltemp,
-        "ICU_HG1_T": poly_spex_icuhk_internaltemp,
-        "ICU_HG2_T": poly_spex_icuhk_internaltemp,
-        "ICU_MCU_T": poly_spex_icuhk_internaltemp,
-        "ICU_MID_T": poly_spex_icuhk_internaltemp,
-        "DEM_V": poly_spex_icuhk_internaltemp2,
-        "ICU_1P2V_V": poly_spex_icuhk_internaltemp2,
-        "ICU_3P3V_V": poly_spex_icuhk_internaltemp2,
-        "ICU_4P0V_V": poly_spex_icuhk_internaltemp2,
-        "ICU_5P0V_V": poly_spex_icuhk_internaltemp2,
-        "LED1_ANODE_V": poly_spex_led_anode_v,
-        "LED2_ANODE_V": poly_spex_led_anode_v,
-        "LED1_CATH_V": poly_spex_led_cath_v,
-        "LED2_CATH_V": poly_spex_led_cath_v,
-        "LED1_I": poly_spex_led_i,
-        "LED2_I": poly_spex_led_i,
-    }
+CONV_DICT = {
+    "SEQCNT": {"units": None, "func": None, "range": None},
+    "TCPKTID": {"units": None, "func": None, "range": None},
+    "TCPKTSEQCTRL": {"units": None, "func": None, "range": None},
+    "TCREJCODE": {"units": None, "func": None, "range": None},
+    "TCFAILCODE": {"units": None, "func": None, "range": None},
+    "TCREJPKTID": {"units": None, "func": None, "range": None},
+    "TCFAILPKTID": {"units": None, "func": None, "range": None},
+    "TCACCCNT": {"units": None, "func": None, "range": None},
+    "TCREJCNT": {"units": None, "func": None, "range": None},
+    "TCEXECCNT": {"units": None, "func": None, "range": None},
+    "TCFAILCNT": {"units": None, "func": None, "range": None},
+    "ICUSWVER": {"units": None, "func": None, "range": None},
+    "SYSSTATE": {"units": None, "func": None, "range": None},
+    "ICUMODE": {"units": None, "func": None, "range": None},
+    "EXTPPSSTAT": {"units": None, "func": None, "range": None},
+    "TIMEMSGSTAT": {"units": None, "func": None, "range": None},
+    "OBTSYNCSTAT": {"units": None, "func": None, "range": None},
+    "MPS_ID": {"units": None, "func": None, "range": None},
+    "MPS_VER": {"units": None, "func": None, "range": None},
+    "EVNTCNT_DEBUG": {"units": None, "func": None, "range": None},
+    "EVNTCNT_PROG": {"units": None, "func": None, "range": None},
+    "EVNTCNT_WARN": {"units": None, "func": None, "range": None},
+    "EVNTCNT_ERR": {"units": None, "func": None, "range": None},
+    "EVNTCNT_FATAL": {"units": None, "func": None, "range": None},
+    "BOOTSTATEPREV": {"units": None, "func": None, "range": None},
+    "BOOTCNTGOOD_IM0": {"units": None, "func": None, "range": None},
+    "BOOTCNTGOOD_IM1": {"units": None, "func": None, "range": None},
+    "BOOTCNTGOOD_IM2": {"units": None, "func": None, "range": None},
+    "BOOTCNTGOOD_IM3": {"units": None, "func": None, "range": None},
+    "BOOTATTEMPTS_CURRIM": {"units": None, "func": None, "range": None},
+    "MPS_ACT_STATUS": {"units": None, "func": None, "range": None},
+    "SWIMG_LOADED": {"units": None, "func": None, "range": None},
+    "SWIMG_DEFAULT": {"units": None, "func": None, "range": None},
+    "SWIMG_NXTBOOT": {"units": None, "func": None, "range": None},
+    "WRITEPROT": {"units": None, "func": None, "range": None},
+    "BOOTCAUSE": {"units": None, "func": None, "range": None},
+    "TCVER_STAT": {"units": None, "func": None, "range": None},
+    "SPW_REG_A": {"units": None, "func": None, "range": None},
+    "SPW_REG_B": {"units": None, "func": None, "range": None},
+    "LAST_CRC": {"units": None, "func": None, "range": None},
+    "SCITM_PKTINTVL": {"units": None, "func": None, "range": None},
+    "SCITM_BUFFREE": {"units": None, "func": None, "range": None},
+    "SWEXECTIMEWC": {"units": None, "func": None, "range": None},
+    "ERRCNT_PLACEHOLDER_03": {"units": None, "func": None, "range": None},
+    "TS1_DEM_N_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (18.13, 18.53),
+    },
+    "TS2_HOUSING_N_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (19.51, 19.71),
+    },
+    "TS3_RADIATOR_N_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (-0.9, 2.1),
+    },
+    "TS4_DEM_R_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (17.7, 18.1),
+    },
+    "TS5_HOUSING_R_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (19.05, 19.55),
+    },
+    "TS6_RADIATOR_R_T": {
+        "units": "degC",
+        "func": exp_spex_thermistor,
+        "range": (-0.9, 2.1),
+    },
+    "ICU_5V_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_4V_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_HG1_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_HG2_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_MID_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_MCU_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_DIGV_T": {
+        "units": "degC",
+        "func": poly_spex_icuhk_internaltemp,
+        "range": (-20, 60),
+    },
+    "ICU_4P0V_V": {
+        "units": "Volt",
+        "func": poly_spex_icuhk_internaltemp2,
+        "range": (3.86, 5.4),
+    },
+    "ICU_3P3V_V": {
+        "units": "Volt",
+        "func": poly_spex_icuhk_internaltemp2,
+        "range": (3.1, 3.456),
+    },
+    "ICU_1P2V_V": {
+        "units": "Volt",
+        "func": poly_spex_icuhk_internaltemp2,
+        "range": (1.21, 1.26),
+    },
+    "ICU_4P0V_I": {"units": "mA", "func": conv_2_float, "range": (100, 350)},
+    "ICU_3P3V_I": {"units": "mA", "func": conv_2_float, "range": (100, 300)},
+    "ICU_1P2V_I": {"units": "mA", "func": conv_2_float, "range": (70, 200)},
+    "DEM_STATUS": {"units": None, "func": None, "range": None},
+    "ICU_5P0V_V": {
+        "units": "Volt",
+        "func": poly_spex_icuhk_internaltemp2,
+        "range": (4.85, 5.25),
+    },
+    "ICU_5P0V_I": {"units": "mA", "func": conv_2_float, "range": (5, 570)},
+    "DEMSPWSTAT": {"units": None, "func": None, "range": None},
+    "DEMRESETCNT": {"units": None, "func": None, "range": None},
+    "HTRGRP1_V": {"units": "Volt", "func": poly_spex_htr_v, "range": (46, 49)},
+    "HTRGRP2_V": {"units": "Volt", "func": poly_spex_htr_v, "range": (46, 49)},
+    "HTR1_I": {"units": "mA", "func": poly_spex_htr1_p, "range": (0, 250)},
+    "HTR2_I": {"units": "mA", "func": poly_spex_htr2_p, "range": (0, 250)},
+    "HTR3_I": {"units": "mA", "func": poly_spex_htr3_p, "range": (0, 250)},
+    "HTR4_I": {"units": "mA", "func": poly_spex_htr4_p, "range": (0, 250)},
+    "HTR1_CALCPVAL": {"units": None, "func": None, "range": None},
+    "HTR2_CALCPVAL": {"units": None, "func": None, "range": None},
+    "HTR3_CALCPVAL": {"units": None, "func": None, "range": None},
+    "HTR4_CALCPVAL": {"units": None, "func": None, "range": None},
+    "HTR1_CALCIVAL": {"units": None, "func": None, "range": None},
+    "HTR2_CALCIVAL": {"units": None, "func": None, "range": None},
+    "HTR3_CALCIVAL": {"units": None, "func": None, "range": None},
+    "HTR4_CALCIVAL": {"units": None, "func": None, "range": None},
+    "HTR1_DUTYCYCL": {"units": None, "func": None, "range": None},
+    "HTR2_DUTYCYCL": {"units": None, "func": None, "range": None},
+    "HTR3_DUTYCYCL": {"units": None, "func": None, "range": None},
+    "HTR4_DUTYCYCL": {"units": None, "func": None, "range": None},
+    "LED1_ENADIS": {"units": None, "func": None, "range": None},
+    "LED2_ENADIS": {"units": None, "func": None, "range": None},
+    "LED1_ANODE_V": {
+        "units": "Volt",
+        "func": poly_spex_led_anode_v,
+        "range": (2.9, 5.4),
+    },
+    "LED1_CATH_V": {"units": "Volt", "func": poly_spex_led_cath_v, "range": (0.7, 5.4)},
+    "LED1_I": {"units": "mA", "func": poly_spex_led_i, "range": (0, 10.1)},
+    "LED2_ANODE_V": {
+        "units": "Volt",
+        "func": poly_spex_led_anode_v,
+        "range": (2.9, 5.4),
+    },
+    "LED2_CATH_V": {"units": "Volt", "func": poly_spex_led_cath_v, "range": (0.7, 5.4)},
+    "LED2_I": {"units": "mA", "func": poly_spex_led_i, "range": (0, 10.1)},
+    "ADC1_VCC": {"units": "Volt", "func": poly_spex_adc_vcc, "range": (4.77, 5.25)},
+    "ADC1_GAIN": {"units": "Volt", "func": poly_spex_adc_gain, "range": None},
+    "ADC1_REF": {"units": "Volt", "func": poly_spex_adc_vcc, "range": None},
+    "ADC1_T": {"units": "degC", "func": poly_spex_adc_t, "range": (-20, 60)},
+    "ADC1_OFFSET": {"units": "Volt", "func": poly_spex_adc_offset, "range": None},
+    "ADC2_VCC": {"units": "Volt", "func": poly_spex_adc_vcc, "range": None},
+    "ADC2_GAIN": {"units": "Volt", "func": poly_spex_adc_gain, "range": None},
+    "ADC2_REF": {"units": "Volt", "func": poly_spex_adc_vcc, "range": (4.77, 5.25)},
+    "ADC2_T": {"units": "degC", "func": poly_spex_adc_t, "range": (-20, 60)},
+    "ADC2_OFFSET": {"units": "Volt", "func": poly_spex_adc_offset, "range": None},
+    "DEM_V": {
+        "units": "Volt",
+        "func": poly_spex_icuhk_internaltemp2,
+        "range": (4.7, 5.25),
+    },
+    "DEM_I": {"units": "mA", "func": poly_spex_dem_i, "range": (100, 550)},
+    "REG_FW_VERSION": {"units": None, "func": None, "range": None},
+    "DET_T": {"units": "degC", "func": exp_spex_det_t, "range": (19, 36)},
+    "REG_SPW_ERROR": {"units": None, "func": None, "range": None},
+    "REG_CMV_OUTOFSYNC": {"units": None, "func": None, "range": None},
+    "REG_OCD_ACTUAL": {"units": None, "func": None, "range": None},
+    "REG_OCD_STICKY": {"units": None, "func": None, "range": None},
+    "REG_PWR_SENS": {"units": None, "func": None, "range": None},
+    "REG_FLASH_STATUS": {"units": None, "func": None, "range": None},
+    "REG_FLASH_EDAC_BLOCK": {"units": None, "func": None, "range": None},
+    "SW_MAIN_LOOP_COUNT": {"units": None, "func": None, "range": None},
+}
 
-    func = conv_dict.get(key)
-    if func is not None:
+
+def convert_hk(parm: str, raw_data: np.ndarray) -> np.ndarray:
+    """Convert a NomHK (or DemHK subset) parameter to physical units."""
+    if (res := CONV_DICT.get(parm)) is None:
+        raise KeyError(f"Parameter: {parm} not found in CONV_DICT")
+
+    if (func := res["func"]) is not None:
         return func(raw_data)
 
     return raw_data
@@ -389,12 +452,15 @@ class HkFlagging(IntFlag):
     TEMP_TOO_HIGH = auto()
     VOLT_TOO_LOW = auto()
     VOLT_TOO_HIGH = auto()
-    STATUS_CHANGED = auto()
+    CHANGED = auto()
 
     @classmethod
-    def get_flag(cls: HkFlagging, key: str, too_low: bool = False) -> HkFlagging:
-        """..."""
-        match UNITS_DICT.get(key):
+    def get_flag(cls: HkFlagging, parm: str, too_low: bool = False) -> HkFlagging:
+        """Get value of flag for parameter out-of-range or changed parameter-values."""
+        if (res := CONV_DICT.get(parm)) is None:
+            raise KeyError(f"Parameter: {parm} not found in CONV_DICT")
+
+        match res["units"]:
             case "mA" | "A":
                 value = cls.CURRENT_TOO_LOW if too_low else cls.CURRENT_TOO_HIGH
             case "degC" | "K":
@@ -402,6 +468,6 @@ class HkFlagging(IntFlag):
             case "Volt":
                 value = cls.VOLT_TOO_LOW if too_low else cls.VOLT_TOO_HIGH
             case _:
-                value = cls.STATUS_CHANGED
+                value = cls.CHANGED
 
         return value

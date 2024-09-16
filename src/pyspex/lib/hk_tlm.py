@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .ccsds_hdr import CCSDShdr
-from .tlm_utils import RANGE_DICT, HkFlagging, convert_hk
+from .tlm_utils import CONV_DICT, HkFlagging, convert_hk
 from .tmtc_def import tmtc_dtype
 
 if TYPE_CHECKING:
@@ -192,33 +192,28 @@ class HKtlm:
         parm = key.upper()
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
-        elif parm not in self.tlm.dtype.names:
-            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
 
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
 
     def check(self: HKtlm, key: str) -> np.ndarray:
-        """Check for out of limit values in SPEXone housekeeping data."""
-        parm = key.upper()
-        if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
-            parm = parm.replace("_POWER", "_I")
-        elif parm not in self.tlm.dtype.names:
-            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
-
+        """Check of parameter is out-of-range or changed of value."""
         try:
             values = self.convert(key)
         except KeyError as exc:
             raise RuntimeError from exc
         res = np.full(values.size, HkFlagging.NOMINAL)
 
-        valid_range = RANGE_DICT.get(key)
+        valid_range = CONV_DICT[key]["range"]
         if valid_range is None:
-            res[values != values[0]] = HkFlagging.get_flag(key)
+            # if no range is provided for key then check where its value has changed
+            res[np.diff(values) != 0] = HkFlagging.CHANGED
             return res
 
+        # flag too small values (value of flag depend on units of parameter)
         if (flag := HkFlagging.get_flag(key, too_low=True)) is not None:
             res[values < valid_range[0]] = flag
+        # flag too large values (value of flag depend on units of parameter)
         if (flag := HkFlagging.get_flag(key, too_low=False)) is not None:
             res[values > valid_range[1]] = flag
 

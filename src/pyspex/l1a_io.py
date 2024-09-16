@@ -434,7 +434,7 @@ class L1Aio:
 
         if np.all(nomhk_data["TS1_DEM_N_T"] == 0):
             self.set_dset(
-                "/engineering_data/temp_detector", np.full(nomhk_data.size, 273)
+                "/engineering_data/temp_detector", np.full(nomhk_data.size, 18.33)
             )
         else:
             self.set_dset(
@@ -444,7 +444,7 @@ class L1Aio:
 
         if np.all(nomhk_data["TS2_HOUSING_N_T"] == 0):
             self.set_dset(
-                "/engineering_data/temp_housing", np.full(nomhk_data.size, 293)
+                "/engineering_data/temp_housing", np.full(nomhk_data.size, 19.61)
             )
         else:
             self.set_dset(
@@ -454,7 +454,7 @@ class L1Aio:
 
         if np.all(nomhk_data["TS3_RADIATOR_N_T"] == 0):
             self.set_dset(
-                "/engineering_data/temp_radiator", np.full(nomhk_data.size, 294)
+                "/engineering_data/temp_radiator", np.full(nomhk_data.size, 0.6)
             )
         else:
             self.set_dset(

@@ -361,8 +361,6 @@ class SCItlm:
         parm = key.upper()
         if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
             parm = parm.replace("_POWER", "_I")
-        elif parm not in self.tlm.dtype.names:
-            raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
 
         raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(key.upper(), raw_data)
