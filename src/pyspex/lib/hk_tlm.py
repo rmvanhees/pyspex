@@ -190,11 +190,13 @@ class HKtlm:
 
         """
         parm = key.upper()
-        if parm in ("HTR1_POWER", "HTR2_POWER", "HTR3_POWER", "HTR4_POWER"):
-            parm = parm.replace("_POWER", "_I")
-
-        raw_data = np.array([x[parm] for x in self.tlm])
-        return convert_hk(key.upper(), raw_data)
+        if parm.endswith("_POWER"):
+            # HTR?_POWER is not defined in the telemetry structure, HTR?_I is available
+            # However, convert_hk will convert raw heater currents to Watt
+            raw_data = np.array([x[parm.replace("_POWER", "_I")] for x in self.tlm])
+        else:
+            raw_data = np.array([x[parm] for x in self.tlm])
+        return convert_hk(parm, raw_data)
 
     def check(self: HKtlm, key: str) -> np.ndarray:
         """Check of parameter is out-of-range or changed of value."""
@@ -204,17 +206,17 @@ class HKtlm:
             raise RuntimeError from exc
         res = np.full(values.size, HkFlagging.NOMINAL)
 
-        valid_range = CONV_DICT[key]["range"]
+        valid_range = CONV_DICT[key.upper()]["range"]
         if valid_range is None:
             # if no range is provided for key then check where its value has changed
             res[np.diff(values) != 0] = HkFlagging.CHANGED
             return res
 
         # flag too small values (value of flag depend on units of parameter)
-        if (flag := HkFlagging.get_flag(key, too_low=True)) is not None:
+        if (flag := HkFlagging.get_flag(key.upper(), too_low=True)) is not None:
             res[values < valid_range[0]] = flag
         # flag too large values (value of flag depend on units of parameter)
-        if (flag := HkFlagging.get_flag(key, too_low=False)) is not None:
+        if (flag := HkFlagging.get_flag(key.upper(), too_low=False)) is not None:
             res[values > valid_range[1]] = flag
 
         return res

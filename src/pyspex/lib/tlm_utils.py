@@ -20,7 +20,7 @@ from numpy import ma
 
 
 # - helper functions ------------------------
-def conv_2_float(raw_data: np.ndarray) -> np.ndarray:
+def convert_2_float(raw_data: np.ndarray) -> np.ndarray:
     """Convert integer array to float."""
     return raw_data.astype(float)
 
@@ -96,6 +96,12 @@ def poly_spex_icuhk_internaltemp2(raw_data: np.ndarray) -> np.ndarray:
 def poly_spex_htr_v(raw_data: np.ndarray) -> np.ndarray:
     """Convert Heater Bus voltages to Volt."""
     coefficients = (0, 0.01 / 3)
+    return coefficients[0] + coefficients[1] * raw_data
+
+
+def poly_spex_htr_i(raw_data: np.ndarray) -> np.ndarray:
+    """Convert readings of Heater Currents to mA."""
+    coefficients = (0, 0.001)
     return coefficients[0] + coefficients[1] * raw_data
 
 
@@ -356,24 +362,28 @@ CONV_DICT = {
         "func": poly_spex_icuhk_internaltemp2,
         "range": (1.21, 1.26),
     },
-    "ICU_4P0V_I": {"units": "mA", "func": conv_2_float, "range": (100, 350)},
-    "ICU_3P3V_I": {"units": "mA", "func": conv_2_float, "range": (100, 300)},
-    "ICU_1P2V_I": {"units": "mA", "func": conv_2_float, "range": (70, 200)},
+    "ICU_4P0V_I": {"units": "mA", "func": convert_2_float, "range": (100, 350)},
+    "ICU_3P3V_I": {"units": "mA", "func": convert_2_float, "range": (100, 300)},
+    "ICU_1P2V_I": {"units": "mA", "func": convert_2_float, "range": (70, 200)},
     "DEM_STATUS": {"units": None, "func": None, "range": None},
     "ICU_5P0V_V": {
         "units": "Volt",
         "func": poly_spex_icuhk_internaltemp2,
         "range": (4.85, 5.25),
     },
-    "ICU_5P0V_I": {"units": "mA", "func": conv_2_float, "range": (5, 570)},
+    "ICU_5P0V_I": {"units": "mA", "func": convert_2_float, "range": (5, 570)},
     "DEMSPWSTAT": {"units": None, "func": None, "range": None},
     "DEMRESETCNT": {"units": None, "func": None, "range": None},
     "HTRGRP1_V": {"units": "Volt", "func": poly_spex_htr_v, "range": (46, 49)},
     "HTRGRP2_V": {"units": "Volt", "func": poly_spex_htr_v, "range": (46, 49)},
-    "HTR1_I": {"units": "mA", "func": poly_spex_htr1_p, "range": (0, 250)},
-    "HTR2_I": {"units": "mA", "func": poly_spex_htr2_p, "range": (0, 250)},
-    "HTR3_I": {"units": "mA", "func": poly_spex_htr3_p, "range": (0, 250)},
-    "HTR4_I": {"units": "mA", "func": poly_spex_htr4_p, "range": (0, 250)},
+    "HTR1_I": {"units": "mA", "func": poly_spex_htr_i, "range": (0, 250)},
+    "HTR2_I": {"units": "mA", "func": poly_spex_htr_i, "range": (0, 250)},
+    "HTR3_I": {"units": "mA", "func": poly_spex_htr_i, "range": (0, 250)},
+    "HTR4_I": {"units": "mA", "func": poly_spex_htr_i, "range": (0, 250)},
+    "HTR1_POWER": {"units": "Watt", "func": poly_spex_htr1_p, "range": (-1, 1)},
+    "HTR2_POWER": {"units": "Watt", "func": poly_spex_htr2_p, "range": (0, 10)},
+    "HTR3_POWER": {"units": "Watt", "func": poly_spex_htr3_p, "range": (0, 10)},
+    "HTR4_POWER": {"units": "Watt", "func": poly_spex_htr4_p, "range": (-1, 1)},
     "HTR1_CALCPVAL": {"units": None, "func": None, "range": None},
     "HTR2_CALCPVAL": {"units": None, "func": None, "range": None},
     "HTR3_CALCPVAL": {"units": None, "func": None, "range": None},
@@ -382,10 +392,10 @@ CONV_DICT = {
     "HTR2_CALCIVAL": {"units": None, "func": None, "range": None},
     "HTR3_CALCIVAL": {"units": None, "func": None, "range": None},
     "HTR4_CALCIVAL": {"units": None, "func": None, "range": None},
-    "HTR1_DUTYCYCL": {"units": None, "func": None, "range": None},
-    "HTR2_DUTYCYCL": {"units": None, "func": None, "range": None},
-    "HTR3_DUTYCYCL": {"units": None, "func": None, "range": None},
-    "HTR4_DUTYCYCL": {"units": None, "func": None, "range": None},
+    "HTR1_DUTYCYCL": {"units": "%", "func": poly_spex_dutycycle, "range": (-1, 1)},
+    "HTR2_DUTYCYCL": {"units": "%", "func": poly_spex_dutycycle, "range": (6, 12)},
+    "HTR3_DUTYCYCL": {"units": "%", "func": poly_spex_dutycycle, "range": (6, 12)},
+    "HTR4_DUTYCYCL": {"units": "%", "func": poly_spex_dutycycle, "range": (-1, 1)},
     "LED1_ENADIS": {"units": None, "func": None, "range": None},
     "LED2_ENADIS": {"units": None, "func": None, "range": None},
     "LED1_ANODE_V": {
@@ -452,6 +462,8 @@ class HkFlagging(IntFlag):
     TEMP_TOO_HIGH = auto()
     VOLT_TOO_LOW = auto()
     VOLT_TOO_HIGH = auto()
+    WATT_TOO_LOW = auto()
+    WATT_TOO_HIGH = auto()
     CHANGED = auto()
 
     @classmethod
@@ -467,6 +479,8 @@ class HkFlagging(IntFlag):
                 value = cls.TEMP_TOO_LOW if too_low else cls.TEMP_TOO_HIGH
             case "Volt":
                 value = cls.VOLT_TOO_LOW if too_low else cls.VOLT_TOO_HIGH
+            case "Watt":
+                value = cls.WATT_TOO_LOW if too_low else cls.WATT_TOO_HIGH
             case _:
                 value = cls.CHANGED
 
