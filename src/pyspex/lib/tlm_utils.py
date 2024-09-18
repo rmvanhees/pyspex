@@ -295,7 +295,7 @@ CONV_DICT = {
     "TS3_RADIATOR_N_T": {
         "units": "degC",
         "func": exp_spex_thermistor,
-        "range": (-0.9, 2.1),
+        "range": (-1.5, 2.0),
     },
     "TS4_DEM_R_T": {
         "units": "degC",
@@ -310,7 +310,7 @@ CONV_DICT = {
     "TS6_RADIATOR_R_T": {
         "units": "degC",
         "func": exp_spex_thermistor,
-        "range": (-0.9, 2.1),
+        "range": (-1.5, 2.0),
     },
     "ICU_5V_T": {
         "units": "degC",
