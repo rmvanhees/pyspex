@@ -36,6 +36,7 @@ from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
 
+from netCDF4 import Dataset
 import h5py
 import julian
 import numpy as np
@@ -2944,7 +2945,7 @@ class HKtlm:
             hkt.hdr = self.hdr[mask]
         if self.tlm is not None:
             hkt.tlm = self.tlm[mask]
-            hkt.tstamp = [x for x, y in zip(self.tstamp, mask, strict=True) if y]
+            hkt.tstamp = [x for x, y in zip(self.tstamp, mask) if y]
             hkt.events = self.events.copy()
         return hkt
 
