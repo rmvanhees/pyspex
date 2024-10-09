@@ -41,29 +41,33 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         origin = "NASA" if inflight else "SRON"
 
     res = {
+        "publisher_name": "NASA/GSFC",
+
         "creator_name": "NASA/GSFC",
         "creator_email": "data@oceancolor.gsfc.nasa.gov",
-        "creator_url": "http://oceancolor.gsfc.nasa.gov",
+        "creator_url": "https://oceancolor.gsfc.nasa.gov",
         "institution": (
             "NASA Goddard Space Flight Center, Ocean Biology Processing Group"
         ),
-        "publisher_name": "NASA/GSFC",
         "publisher_email": "data@oceancolor.gsfc.nasa.gov",
         "publisher_url": "http://oceancolor.gsfc.nasa.gov",
         "standard_name_vocabulary": "CF Standard Name Table v79",
         "keyword_vocabulary": (
             "NASA Global Change Master Directory (GCMD) Science Keywords"
         ),
+        "date_created": dt.datetime.now(dt.UTC)
+        .replace(tzinfo=None)
+        .isoformat(timespec="milliseconds"),
         "license": (
-            "http://science.nasa.gov/earth-science/"
-            "earth-science-data/data-information-policy/"
+            "https://www.earthdata.nasa.gov/engage/"
+            "open-data-services-and-software/data-and-information-policy"
         ),
         "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
         "project": "PACE Project",
-        "conventions": "CF-1.8 ACDD-1.3",
+        "conventions": "CF-1.10 ACDD-1.3",
         "title": "PACE SPEXone Level-1A Data",
-        "instrument": "SPEXone",
         "platform": "PACE",
+        "instrument": "SPEXone",
         "stdname_vocabulary": "NetCDF Climate and Forecast (CF) Metadata Convention",
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
@@ -72,18 +76,16 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
+        "history": " ".join(sys.argv),
         "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.UTC)
-        .replace(tzinfo=None)
-        .isoformat(timespec="milliseconds"),
+        # these will be writen as group attributes of /processing_control
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),
         "software_doi": "https://doi.org/10.5281/zenodo.5705691",
-        "history": " ".join(sys.argv),
     }
 
     if origin == "SRON":

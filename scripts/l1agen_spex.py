@@ -381,7 +381,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
     res = {
         "creator_name": "NASA/GSFC",
         "creator_email": "data@oceancolor.gsfc.nasa.gov",
-        "creator_url": "http://oceancolor.gsfc.nasa.gov",
+        "creator_url": "https://oceancolor.gsfc.nasa.gov",
         "institution": (
             "NASA Goddard Space Flight Center, Ocean Biology Processing Group"
         ),
@@ -392,16 +392,20 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "keyword_vocabulary": (
             "NASA Global Change Master Directory (GCMD) Science Keywords"
         ),
+        "date_created": dt.datetime.now(dt.timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat(timespec="milliseconds"),
+
         "license": (
-            "http://science.nasa.gov/earth-science/"
-            "earth-science-data/data-information-policy/"
+            "https://www.earthdata.nasa.gov/engage/"
+            "open-data-services-and-software/data-and-information-policy"
         ),
         "naming_authority": "gov.nasa.gsfc.sci.oceancolor",
         "project": "PACE Project",
-        "conventions": "CF-1.8 ACDD-1.3",
+        "conventions": "CF-1.10 ACDD-1.3",
         "title": "PACE SPEXone Level-1A Data",
-        "instrument": "SPEXone",
         "platform": "PACE",
+        "instrument": "SPEXone",
         "stdname_vocabulary": "NetCDF Climate and Forecast (CF) Metadata Convention",
         "processing_level": "L1A",
         "cdm_data_type": "swath" if inflight else "granule",
@@ -410,18 +414,16 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "end_direction": "Ascending" if inflight else None,
         "time_coverage_start": "yyyy-mm-ddTHH:MM:DD",
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
+        "history": " ".join(sys.argv),
         "processing_version": 1,
         "identifier_product_doi_authority": "http://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
-        "date_created": dt.datetime.now(dt.timezone.utc)
-        .replace(tzinfo=None)
-        .isoformat(timespec="milliseconds"),
+        # these will be writen as group attributes of /processing_control
         "software_name": f"{Path(sys.argv[0]).name}",
         "software_description": "SPEXone L0-L1A processor (SRON)",
         "software_url": "https://github.com/rmvanhees/pyspex",
         "software_version": pyspex_version(),
         "software_doi": "https://doi.org/10.5281/zenodo.5705691",
-        "history": " ".join(sys.argv),
     }
 
     if origin == "SRON":
@@ -1012,7 +1014,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
       ref_date = dt.datetime(2022, 3, 21, tzinfo=dt.timezone.utc)
       dset = sgrp.createVariable('image_time', 'f8', ('number_of_images',),
                                 fill_value=-32767)
-      dset.long_name = "image time"
+      dset.long_name = "Image time"
       dset.description = "Integration start time in seconds of day."
       attrs_sec_per_day(dset, ref_date)
 
@@ -1020,7 +1022,7 @@ def attrs_sec_per_day(dset: Variable, ref_date: dt.datetime) -> None:
 
        double time(number_of_scans) ;
           time:_FillValue = -32767 ;
-          time:long_name = "time" ;
+          time:long_name = "Time" ;
           time:units = "seconds since 2022-03-21 00:00:00" ;
           time:description = "Earth view mid-time in seconds of day" ;
           time:year = 2022 ;
@@ -1059,36 +1061,36 @@ def image_attributes(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     dset = sgrp.createVariable(
         "image_time", "f8", ("number_of_images",), fill_value=-32767
     )
-    dset.long_name = "image time"
+    dset.long_name = "Image time"
     dset.description = "Integration start time in seconds of day."
     attrs_sec_per_day(dset, ref_date)
     dset = sgrp.createVariable(
         "timedelta_centre", "f8", ("number_of_images",), fill_value=-32767
     )
-    dset.long_name = "time-delta to centre of integration time"
+    dset.long_name = "Time-delta to centre of integration time"
     dset.description = "Add this offset to image-time (MPS specific)."
     dset.units = "s"
     dset = sgrp.createVariable("image_ID", "i4", ("number_of_images",))
-    dset.long_name = "image counter from power-up"
+    dset.long_name = "Image counter from power-up"
     dset.valid_min = np.int32(0)
     dset.valid_max = np.int32(0x7FFFFFFF)
     dset = sgrp.createVariable("binning_table", "u1", ("number_of_images",))
-    dset.long_name = "binning-table ID"
+    dset.long_name = "Binning-table ID"
     dset.valid_min = np.uint8(0)
     dset.valid_max = np.uint8(0xFF)
     dset = sgrp.createVariable("digital_offset", "i2", ("number_of_images",))
-    dset.long_name = "digital offset"
+    dset.long_name = "Digital offset"
     dset.units = "1"
     dset = sgrp.createVariable(
         "nr_coadditions", "u2", ("number_of_images",), fill_value=0
     )
-    dset.long_name = "number of coadditions"
+    dset.long_name = "Number of coadditions"
     dset.valid_min = np.int32(1)
     dset.units = "1"
     dset = sgrp.createVariable(
         "exposure_time", "f8", ("number_of_images",), fill_value=0
     )
-    dset.long_name = "exposure time"
+    dset.long_name = "Exposure time"
     dset.units = "s"
 
 
@@ -1129,7 +1131,7 @@ def science_data(
         chunksizes=chunksizes,
         fill_value=0xFFFF,
     )
-    dset.long_name = "detector pixel values"
+    dset.long_name = "Detector pixel values"
     dset.valid_min = np.uint16(0)
     dset.valid_max = np.uint16(0xFFFE)
     dset.units = "counts"
@@ -1137,7 +1139,7 @@ def science_data(
     dset = sgrp.createVariable(
         "detector_telemetry", hk_dtype, dimensions=("number_of_images",)
     )
-    dset.long_name = "SPEX science telemetry"
+    dset.long_name = "SPEXone science telemetry"
     dset.comment = "A subset of MPS and housekeeping parameters."
 
 
@@ -1150,29 +1152,29 @@ def engineering_data(rootgrp: Dataset, ref_date: dt.datetime) -> None:
     attrs_sec_per_day(dset, ref_date)
     hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x320), "nomhk_dtype")
     dset = sgrp.createVariable("NomHK_telemetry", hk_dtype, ("hk_packets",))
-    dset.long_name = "SPEX nominal-HK telemetry"
+    dset.long_name = "SPEXone nominal-HK telemetry"
     dset.comment = "An extended subset of the housekeeping parameters."
     dset = sgrp.createVariable("temp_detector", "f4", ("hk_packets",))
-    dset.long_name = "detector temperature"
+    dset.long_name = "Detector temperature"
     dset.comment = "TS1 DEM Temperature (nominal)."
     dset.valid_min = np.float32(17.83)
     dset.valid_max = np.float32(18.83)
     dset.units = "degC"
     dset = sgrp.createVariable("temp_housing", "f4", ("hk_packets",))
-    dset.long_name = "housing temperature"
+    dset.long_name = "Housing temperature"
     dset.comment = "TS2 Housing Temperature (nominal)."
     dset.valid_min = np.float32(19.11)
     dset.valid_max = np.float32(20.11)
     dset.units = "degC"
     dset = sgrp.createVariable("temp_radiator", "f4", ("hk_packets",))
-    dset.long_name = "radiator temperature"
+    dset.long_name = "Radiator temperature"
     dset.comment = "TS3 Radiator Temperature (nominal)."
     dset.valid_min = -2
     dset.valid_max = 3
     dset.units = "degC"
     # hk_dtype = rootgrp.createCompoundType(tmtc_dtype(0x322)), 'demhk_dtype')
     # dset = sgrp.createVariable('DemHK_telemetry', hk_dtype, ('hk_packets',))
-    # dset.long_name = "SPEX detector-HK telemetry"
+    # dset.long_name = "SPEXone detector-HK telemetry"
     # dset.comment = "DEM housekeeping parameters."
 
 
@@ -2837,7 +2839,7 @@ class HKTio:
             data=CoverageFlag.check(nav, coverage),
             name="coverage_quality",
             attrs={
-                "long_name": "coverage quality of navigation data",
+                "long_name": "Coverage quality of navigation data",
                 "standard_name": "status_flag",
                 "valid_range": np.array([0, 15], dtype="u2"),
                 "flag_values": np.array([0, 1, 2, 4, 8], dtype="u2"),
