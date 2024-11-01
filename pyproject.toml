@@ -1,14 +1,10 @@
 # pyproject.toml
 [build-system]
-build-backend = "setuptools.build_meta"
 requires = [
-  'importlib-resources; python_version < "3.10"',
-  "setuptools>=58",
-  "setuptools_scm>=6.2",
-  'tomli>=1; python_version < "3.11"',
-  'typing-extensions; python_version < "3.11"',
-  "wheel",
+   "hatchling",
+   "versioningit",
 ]
+build-backend = "hatchling.build"
 
 [project]
 name = "pyspex"
@@ -38,6 +34,7 @@ dynamic = [
 ]
 dependencies = [
   'importlib-resources; python_version < "3.10"',
+  'typing-extensions; python_version < "3.11"',
   "h5py>=3.8",
   "julian",
   "moniplot>=0.5.8",
@@ -46,32 +43,42 @@ dependencies = [
   "openpyxl>=3",
   "pyYAML>=6.0",
   "xarray>=2022.3",
-  'tomli>=1; python_version < "3.11"',
-  'typing-extensions; python_version < "3.11"',
 ]
 
 [project.scripts]
 spx1_level01a = "pyspex.gen_l1a.cli:main"
+spx1_add_egse2l1a = "pyspex.scripts.spx1_add_egse2l1a:main"
+spx1_add_ogse2l1a = "pyspex.scripts.spx1_add_ogse2l1a:main"
+spx1_ccsds2l1a = "pyspex.scripts.spx1_ccsds2l1a:main"
+spx1_csv2bin_tbl = "pyspex.scripts.spx1_csv2bin_tbl:main"
+spx1_dem2l1a = "pyspex.scripts.spx1_dem2l1a:main"
+spx1_quicklook_lite = "pyspex.scripts.spx1_quicklook_lite:main"
+
 
 [project.urls]
-homepage = "https://github.com/rmvanhees/pyspex"
-documentation = "https://pyspex.readthedocs.io/en/latest/"
-# Source = "https://github.com/rmvanhees/pyspex"
+Homepage = "https://github.com/rmvanhees/pyspex"
+Source = "https://github.com/rmvanhees/pyspex"
+Issues = "https://github.com/rmvanhees/pyspex/issues"
+Documentation = "https://pyspex.readthedocs.io/en/stable/"
 # Changelog = ""
-"Issue tracker" = "https://github.com/rmvanhees/pyspex/issues"
 
-[tool.setuptools.packages.find]
-namespaces = true
-where = ["src"]
-
-[tool.setuptools.package-data]
-"pyspex.data" = [
-	"*.dat",
-	"*.yaml",
-	"*.nc"
+[tool.hatch.build.targets.sdist]
+exclude = [
+   "src/pyspex/data/*.xls",
 ]
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit]
+
+[tool.versioningit.next-version]
+method = "smallest"
+
+[tool.versioningit.format]
+distance = "{next_version}.dev{distance}+{vcs}{rev}"
+dirty = "{base_version}+d{build_date:%Y%m%d}"
+distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
 
 [tool.ruff]
 line-length = 88
