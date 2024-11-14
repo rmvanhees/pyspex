@@ -21,6 +21,7 @@ Notes
 - Set environment variable OCVARROOT as '$OCVARROOT/common/tai-utc.dat'
 
 """
+# pylint: disable=no-name-in-module
 
 from __future__ import annotations
 
@@ -36,16 +37,13 @@ from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
 
-from netCDF4 import Dataset
+from netCDF4 import Dataset, Variable
 import h5py
 import julian
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 import yaml
-
-# pylint: disable=no-name-in-module
-from netCDF4 import Dataset, Variable
 from numpy import ma
 
 # - global parameters -----------------------
@@ -86,7 +84,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.14"
+    return "1.4.15"
 
 
 # --------------------------------------------------
@@ -387,7 +385,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         ),
         "publisher_name": "NASA/GSFC",
         "publisher_email": "data@oceancolor.gsfc.nasa.gov",
-        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
+        "publisher_url": "https://oceancolor.gsfc.nasa.gov",
         "standard_name_vocabulary": "CF Standard Name Table v79",
         "keyword_vocabulary": (
             "NASA Global Change Master Directory (GCMD) Science Keywords"
@@ -416,7 +414,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
         "history": " ".join(sys.argv),
         "processing_version": 1,
-        "identifier_product_doi_authority": "http://dx.doi.org/",
+        "identifier_product_doi_authority": "https://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
         # these will be writen as group attributes of /processing_control
         "software_name": f"{Path(sys.argv[0]).name}",
@@ -1327,7 +1325,7 @@ def start_logger() -> None:
 # from pyspex.lib.tlm_utils import convert_hk
 #
 # Remarks:
-# - removed all Enum classes and UNIT_DICTS (not needed)
+# - removed all Enum classes and CONV_DICT (not needed)
 # --------------------------------------------------
 # - helper functions ------------------------
 def exp_spex_det_t(raw_data: np.ndarray) -> np.ndarray:
@@ -2571,7 +2569,7 @@ class L1Aio:
 
         """
         warn_str = (
-            "SPEX level-1A format check [WARNING]:"
+            "SPEXone level-1A format check [WARNING]:"
             ' size of variable "{:s}" is wrong, only {:d} elements'
         )
 
@@ -3052,7 +3050,7 @@ class HKtlm:
         elif parm not in self.tlm.dtype.names:
             raise KeyError(f"Parameter: {parm} not found in {self.tlm.dtype.names}")
         raw_data = np.array([x[parm] for x in self.tlm])
-        return convert_hk(key.upper(), raw_data)
+        return convert_hk(parm, raw_data)
 
 
 # - class SCItlm ----------------------------

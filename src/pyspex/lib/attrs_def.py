@@ -50,7 +50,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
             "NASA Goddard Space Flight Center, Ocean Biology Processing Group"
         ),
         "publisher_email": "data@oceancolor.gsfc.nasa.gov",
-        "publisher_url": "http://oceancolor.gsfc.nasa.gov",
+        "publisher_url": "https://oceancolor.gsfc.nasa.gov",
         "standard_name_vocabulary": "CF Standard Name Table v79",
         "keyword_vocabulary": (
             "NASA Global Change Master Directory (GCMD) Science Keywords"
@@ -78,7 +78,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "time_coverage_end": "yyyy-mm-ddTHH:MM:DD",
         "history": " ".join(sys.argv),
         "processing_version": 1,
-        "identifier_product_doi_authority": "http://dx.doi.org/",
+        "identifier_product_doi_authority": "https://dx.doi.org/",
         "identifier_product_doi": "10.5067/PACE/SPEXONE/L1A/SCI/2",
         # these will be writen as group attributes of /processing_control
         "software_name": f"{Path(sys.argv[0]).name}",

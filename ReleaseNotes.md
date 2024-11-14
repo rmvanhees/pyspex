@@ -1,4 +1,15 @@
-# Release Notes for pyspex v1.4.14 
+# Release Notes for pyspex v1.4.15
+
+## API changes
+
+ * Extended flagging of HKT data [monitoring, only]
+
+## File format changes
+
+ * The global and dataset attributes of the L1A products have been modified to comform
+   to the NASA/PACE conventions
+
+# Release Notes for pyspex v1.4.14
 
 ## API changes
 
@@ -25,7 +36,7 @@
  * L0->L1A configuration file:
    * usage of keyword `file_version` is obsolete 
    * the data type of keyword `processing_version` is changed from str to int
- 
+
 ## File format changes
 
  * Added dataset `timedelta_centre` which contains the offset from the start of the
@@ -36,4 +47,3 @@
    * dropped the timezone offset from the date/time fields, since UTC is implicit
    * added DOI of the SPEXone L1A product 
  * Added group `/processing_control` providing `input_parameters`
-   
