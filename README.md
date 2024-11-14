@@ -4,7 +4,7 @@
 [![PyPI Downloads](https://img.shields.io/pypi/dm/pyspex.svg?label=PyPI%20downloads)](https://pypi.org/project/pyspex/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5705691.svg)](https://doi.org/10.5281/zenodo.5705691)
 
-Python package pyspex contains software to access SPEXone data.
+Python package `pyspex` contains software to access SPEXone data.
 This package contains software scripts and classes to:
 * Read data in CCSDS format from the SPEXone instrument and write the data in Level-1A format.
 * Read Level-0 data from the SPEXone after integration on the PACE platform and write the data in Level-1A in-flight science and calibration products.
@@ -24,6 +24,6 @@ For more information on SPEXone instrument visit:
 Online documentation is available from [Read the Docs](https://pyspex.readthedocs.io).
 
 ## Installation
-The module pyspex requires Python3.8+ and Python modules: h5py, netCDF4, numpy and xarray.
+The `pyspex` package requires Python3.8+ and the Python packages: h5py, netCDF4, numpy and xarray.
 
 Installation instructions are provided on [Read the Docs](https://pyspex.readthedocs.io/en/latest/build.html) or in the INSTALL file.
