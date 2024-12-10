@@ -462,7 +462,7 @@ class DEMio:
 
         return sci_hk
 
-    def get_data(self: DEMio, numlines: int = None) -> np.ndarray:
+    def get_data(self: DEMio, numlines: int | None = None) -> np.ndarray:
         """Return data of a detector frame (numpy uint16 array).
 
         Parameters

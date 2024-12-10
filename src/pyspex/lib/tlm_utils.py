@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ["CONV_DICT", "convert_hk", "HkFlagging"]
+__all__ = ["CONV_DICT", "HkFlagging", "convert_hk"]
 
 from enum import Enum, IntFlag, auto
 

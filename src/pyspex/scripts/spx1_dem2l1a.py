@@ -63,7 +63,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
     return (
-        f"SPX1_OCAL_{msm_id}_{sensing_start}" f"_L1A_{pyspex_version(githash=True)}.nc"
+        f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
     )
 
 
@@ -88,7 +88,7 @@ def main() -> None:
     parser.add_argument(
         "--dem_id",
         choices=("D35", "D39", "D84"),
-        help=("provide DEM ID" " or ID will be extracted from path"),
+        help=("provide DEM ID or ID will be extracted from path"),
     )
     parser.add_argument(
         "file_list",
@@ -114,10 +114,10 @@ def main() -> None:
             parts = Path(file).parts
             if len(parts) == 1:
                 continue
-            for dem_id in ("D35", "D39", "D84"):
-                if parts[-2].find(dem_id) != -1:
-                    dem_id_list.append(dem_id)
-
+            dem_id_list.extend(
+                [dem_id for dem_id in ("D35", "D39", "D84")
+                 if parts[-2].find(dem_id) != -1]
+            )
         if not dem_id_list:
             raise KeyError("Can not determine DEM_ID, please specify --dem_id")
         dem_id_list = set(dem_id_list)
@@ -179,7 +179,7 @@ def main() -> None:
         # obtain Science_HK information from header file (ASCII)
         img_hk[ii] = dem.get_sci_hk()
         # get nr_coaddings from file name
-        coad_str = [x for x in parts if x.startswith("coad")][0]
+        coad_str = next(x for x in parts if x.startswith("coad"))
         img_hk[ii]["REG_NCOADDFRAMES"] = int(coad_str[-2:])
         # determine exposure time
         t_exp[ii] = dem.exp_time()

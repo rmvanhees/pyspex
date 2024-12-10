@@ -143,7 +143,7 @@ if FOUND_PYTIFF:
                 if n_frame == 1:
                     return data.astype("u2")
 
-                frames = np.zeros((n_frame,) + data.shape, dtype="u2")
+                frames = np.zeros((n_frame, data.shape), dtype="u2")
                 frames += data // n_frame
                 diff = data - np.sum(frames, axis=0)
                 for img in frames:

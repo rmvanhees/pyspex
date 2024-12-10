@@ -110,7 +110,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
     return (
-        f"SPX1_OCAL_{msm_id}_{sensing_start}" f"_L1A_{pyspex_version(githash=True)}.nc"
+        f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
     )
 
 

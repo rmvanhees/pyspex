@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ["CCSDSio", "img_sec_of_day", "hk_sec_of_day"]
+__all__ = ["CCSDSio", "hk_sec_of_day", "img_sec_of_day"]
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path

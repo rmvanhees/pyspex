@@ -119,7 +119,7 @@ def main() -> None:
     parser_db.set_defaults(func=create_ogse_db)
 
     parser_wr = subparsers.add_parser(
-        "add", help=("add OGSE information to a" " SPEXone Level-1A product")
+        "add", help=("add OGSE information to a SPEXone Level-1A product")
     )
     parser_wr.add_argument(
         "--ref_diode",
@@ -129,7 +129,7 @@ def main() -> None:
     parser_wr.add_argument(
         "--avantes",
         action="store_true",
-        help=("add Avantes wavelength monitoring" "  from OGSE database"),
+        help=("add Avantes wavelength monitoring  from OGSE database"),
     )
     group_wr = parser_wr.add_mutually_exclusive_group()
     group_wr.add_argument(

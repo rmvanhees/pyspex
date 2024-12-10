@@ -50,7 +50,7 @@ def main() -> None:
         "--validity_start",
         default=None,
         type=str,
-        help=("validity start of the binning tables" " (format: yyyymmddTHHMMSS)"),
+        help=("validity start of the binning tables (format: yyyymmddTHHMMSS)"),
     )
     parser.add_argument(
         "--table_id",

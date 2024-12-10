@@ -17,7 +17,7 @@ product.
 
 from __future__ import annotations
 
-__all__ = ["read_ref_diode", "read_wav_mon", "add_ogse_ref_diode", "add_ogse_wav_mon"]
+__all__ = ["add_ogse_ref_diode", "add_ogse_wav_mon", "read_ref_diode", "read_wav_mon"]
 
 from datetime import datetime
 from io import StringIO

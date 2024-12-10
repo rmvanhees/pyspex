@@ -40,7 +40,7 @@ def main() -> None:
     parser_db.set_defaults(func=create_egse_db)
 
     parser_wr = subparsers.add_parser(
-        "add", help=("add EGSE information to a" " SPEXone level-1A product")
+        "add", help=("add EGSE information to a SPEXone level-1A product")
     )
     parser_wr.add_argument(
         "l1a_file", default=None, type=str, help="SPEXone L1A product"

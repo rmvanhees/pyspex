@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__all__ = ["create_egse_db", "add_egse_data"]
+__all__ = ["add_egse_data", "create_egse_db"]
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -260,7 +260,7 @@ def read_egse(
         usecols = list(range(len(names)))
 
         if "NOMHK_packets_time" in names:
-            formats = ("f8",) + formats
+            formats = ("f8", *formats)
             convertors = {
                 0: byte_to_timestamp,
                 1: byte_to_timestamp,

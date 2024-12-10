@@ -15,7 +15,7 @@ __all__ = ["L1Aio"]
 
 import logging
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 
@@ -114,7 +114,7 @@ class L1Aio:
 
     """
 
-    dset_stored = {
+    dset_stored: ClassVar[dict[str, int]] = {
         "/science_data/detector_images": 0,
         "/science_data/detector_telemetry": 0,
         "/image_attributes/binning_table": 0,
@@ -346,15 +346,12 @@ class L1Aio:
 
         # check image datasets
         dim_sz = self.get_dim("number_of_images")
-        res = []
         key_list = [
             x
             for x in self.dset_stored
             if (x.startswith("/science_data") or x.startswith("/image_attributes"))
         ]
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
+        res = np.array([self.dset_stored[key] for key in key_list])
         if allow_empty:
             indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
