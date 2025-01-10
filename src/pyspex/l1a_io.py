@@ -15,7 +15,7 @@ __all__ = ["L1Aio"]
 
 import logging
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Self
 
 import numpy as np
 
@@ -158,11 +158,11 @@ class L1Aio:
             if not attr.startswith("__"):
                 yield attr
 
-    def __enter__(self: L1Aio) -> L1Aio:
+    def __enter__(self: L1Aio) -> Self:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: L1Aio, *args: str) -> bool:
+    def __exit__(self: L1Aio, *args: object) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.

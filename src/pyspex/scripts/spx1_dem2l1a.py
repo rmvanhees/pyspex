@@ -62,9 +62,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
     # define string of sensing start as yyyymmddThhmmss
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
-    return (
-        f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
-    )
+    return f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
 
 
 # - main function ----------------------------------
@@ -115,8 +113,11 @@ def main() -> None:
             if len(parts) == 1:
                 continue
             dem_id_list.extend(
-                [dem_id for dem_id in ("D35", "D39", "D84")
-                 if parts[-2].find(dem_id) != -1]
+                [
+                    dem_id
+                    for dem_id in ("D35", "D39", "D84")
+                    if parts[-2].find(dem_id) != -1
+                ]
             )
         if not dem_id_list:
             raise KeyError("Can not determine DEM_ID, please specify --dem_id")

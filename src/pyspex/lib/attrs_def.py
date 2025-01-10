@@ -42,7 +42,6 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
 
     res = {
         "publisher_name": "NASA/GSFC",
-
         "creator_name": "NASA/GSFC",
         "creator_email": "data@oceancolor.gsfc.nasa.gov",
         "creator_url": "https://oceancolor.gsfc.nasa.gov",

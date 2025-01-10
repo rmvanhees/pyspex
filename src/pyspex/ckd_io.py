@@ -21,7 +21,7 @@ from __future__ import annotations
 __all__ = ["CKDio"]
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import h5py
 import xarray as xr
@@ -65,11 +65,11 @@ class CKDio:
         if "processor_configuration" not in self.fid:
             raise RuntimeError("SPEXone CKD product corrupted?")
 
-    def __enter__(self: CKDio) -> CKDio:
+    def __enter__(self: CKDio) -> Self:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: CKDio, *args: str) -> bool:
+    def __exit__(self: CKDio, *args: object) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.

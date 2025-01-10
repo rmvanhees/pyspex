@@ -15,7 +15,7 @@ __all__ = ["CCSDSio", "hk_sec_of_day", "img_sec_of_day"]
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 
@@ -210,11 +210,11 @@ class CCSDSio:
             if not attr.startswith("__"):
                 yield attr
 
-    def __enter__(self: CCSDSio) -> CCSDSio:
+    def __enter__(self: CCSDSio) -> Self:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: CCSDSio, *args: str) -> bool:
+    def __exit__(self: CCSDSio, *args: object) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.

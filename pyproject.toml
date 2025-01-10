@@ -27,6 +27,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Atmospheric Science",
 ]
 dynamic = [
@@ -96,6 +97,7 @@ select = [
   "B",    # flake8-bugbear
   "ISC",  # flake8-implicit-str-concat
   "PGH",  # flake8-pie
+  "PYI",  # flake8-pyi
   "Q",    # flake8-quotes
   "SIM",  # flake8-simplify
   "TID",  # flake8-tidy-imports

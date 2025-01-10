@@ -109,9 +109,7 @@ def get_l1a_name(msm_id: str, utc_sensing_start: datetime) -> str:
     # define string of sensing start as yyyymmddThhmmss
     sensing_start = utc_sensing_start.strftime("%Y%m%dT%H%M%S")
 
-    return (
-        f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
-    )
+    return f"SPX1_OCAL_{msm_id}_{sensing_start}_L1A_{pyspex_version(githash=True)}.nc"
 
 
 # - main function ----------------------------------
@@ -154,8 +152,7 @@ def main() -> None:
         "ascii_file",
         default=None,
         help=(
-            "provide path to SPEXone instrument simulator"
-            ' product with extension ".dat"'
+            'provide path to SPEXone instrument simulator product with extension ".dat"'
         ),
     )
     args = parser.parse_args()

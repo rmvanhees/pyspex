@@ -107,9 +107,9 @@ def get_l1a_filename(
             "" if config.processing_version == 1 else f".V{config.processing_version:d}"
         )
         return config.outdir / (
-            f'PACE_SPEXONE{subtype}'
-            f'.{coverage[0].strftime("%Y%m%dT%H%M%S"):15s}'
-            f'.L1A{prod_ver}.nc'
+            f"PACE_SPEXONE{subtype}"
+            f".{coverage[0].strftime('%Y%m%dT%H%M%S'):15s}"
+            f".L1A{prod_ver}.nc"
         )
 
     # +++++ OCAL product-name convention +++++
@@ -694,7 +694,7 @@ class SPXtlm:
         # fill attributes in the group processing_control
         l1a.set_attr(
             "icu_sw_version",
-            f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}',
+            f"0x{self.nomhk.tlm['ICUSWVER'][0]:x}",
             ds_name="processing_control",
         )
         for key, value in asdict(config).items():

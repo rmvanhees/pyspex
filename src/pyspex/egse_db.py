@@ -337,8 +337,7 @@ def create_egse_db(args: argparse.Namespace) -> None:
         dset.fields = np.bytes_(egse.dtype.names)
         dset.units = np.bytes_(egse_units())
         dset.comment = (
-            "DIG_IN_00 is of enumType ldls_t;"
-            " SHUTTER_STATUS is of enumType shutter_t"
+            "DIG_IN_00 is of enumType ldls_t; SHUTTER_STATUS is of enumType shutter_t"
         )
         dset[:] = egse[indx]
 
@@ -412,8 +411,7 @@ def add_egse_data(args: argparse.Namespace) -> None:
         dset.fields = np.bytes_(egse_data.dtype.names)
         dset.units = np.bytes_(egse_units())
         dset.comment = (
-            "DIG_IN_00 is of enumType ldls_t;"
-            " SHUTTER_STATUS is of enumType shutter_t"
+            "DIG_IN_00 is of enumType ldls_t; SHUTTER_STATUS is of enumType shutter_t"
         )
         dset[:] = egse_data
 

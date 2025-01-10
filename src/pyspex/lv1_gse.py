@@ -13,7 +13,7 @@ from __future__ import annotations
 
 __all__ = ["LV1gse"]
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
@@ -98,11 +98,11 @@ class LV1gse:
             if not attr.startswith("__"):
                 yield attr
 
-    def __enter__(self: LV1gse) -> LV1gse:
+    def __enter__(self: LV1gse) -> Self:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: LV1gse, *args: str) -> bool:
+    def __exit__(self: LV1gse, *args: object) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
@@ -127,13 +127,13 @@ class LV1gse:
         if np.isfinite(act_angle) and not np.allclose(
             egse_data["ACT_ANGLE"], act_angle, 1e-2
         ):
-            print(f'[WARNING]: ACT_ANGLE={egse_data["ACT_ANGLE"]}')
+            print(f"[WARNING]: ACT_ANGLE={egse_data['ACT_ANGLE']}")
 
         alt_angle = self.fid["/gse_data"].ALT_rotationAngle
         if np.isfinite(alt_angle) and not np.allclose(
             egse_data["ALT_ANGLE"], alt_angle, 1e-2
         ):
-            print(f'[WARNING]: ALT_ANGLE={egse_data["ALT_ANGLE"]}')
+            print(f"[WARNING]: ALT_ANGLE={egse_data['ALT_ANGLE']}")
 
     def set_attr(self: LV1gse, name: str, value: Any) -> None:  # noqa: ANN401
         """Add attribute to group 'gse_data'.
