@@ -124,7 +124,7 @@ Environment:
 class Config:
     """Initiate class to hold settings for L0->L1a processing."""
 
-    outdir: Path
+    outdir: Path | None = None
     outfile: str = ""
     debug: bool = False
     dump: bool = False

@@ -83,7 +83,7 @@ class HKtlm:
         hkt.events = copy(self.events)
         return hkt
 
-    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
+    def sel(self: HKtlm, mask: npt.NDArray[bool]) -> HKtlm:
         """Return subset of HKtlm object using a mask array."""
         hkt = HKtlm()
         if self.hdr is not None:
@@ -153,7 +153,7 @@ class HKtlm:
         Parameters
         ----------
         fid :  h5py.File
-           File pointer to a SPEXone level-1a product
+           A HDF5 file pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
 

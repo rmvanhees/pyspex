@@ -14,9 +14,13 @@ from __future__ import annotations
 __all__ = ["CONV_DICT", "HkFlagging", "convert_hk"]
 
 from enum import Enum, IntFlag, auto
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy import ma
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 # - helper functions ------------------------
@@ -237,7 +241,9 @@ class WriteProt(Enum):
 
 
 # - exported functions ----------------------
-CONV_DICT = {
+CONV_DICT: dict[
+    str, dict[str | None, Callable[..., np.ndarray] | None, tuple[int] | None]
+] = {
     "SEQCNT": {"units": None, "func": None, "range": None},
     "TCPKTID": {"units": None, "func": None, "range": None},
     "TCPKTSEQCTRL": {"units": None, "func": None, "range": None},

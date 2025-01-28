@@ -70,7 +70,7 @@ def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
     raise KeyError("REG_FULL_FRAME not equal to 1 or 2")
 
 
-def _digital_offset_(img_hk: np.ndarray) -> np.ndarray:
+def _digital_offset_(img_hk: np.ndarray) -> int | np.ndarray:
     """Return digital offset including ADC offset [count]."""
     buff = img_hk["DET_OFFSET"].astype("i4")
     if np.isscalar(buff):

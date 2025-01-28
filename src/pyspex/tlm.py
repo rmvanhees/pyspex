@@ -38,6 +38,9 @@ from .lv0_lib import dump_hkt, dump_science, read_lv0_data
 if TYPE_CHECKING:
     from dataclasses import dataclass
 
+    import numpy.typing as npt
+
+
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.tlm")
 
@@ -224,7 +227,7 @@ class SPXtlm:
 
     def set_coverage(
         self: SPXtlm,
-        coverage_new: list[dt.datetime, dt.datetime] | None,
+        coverage_new: tuple[dt.datetime, dt.datetime] | None,
         extent: bool = False,
     ) -> None:
         """Set, reset or update the class attribute `coverage`.
@@ -282,7 +285,7 @@ class SPXtlm:
         """Return time_coverage_end."""
         return None if self._coverage is None else self._coverage[1]
 
-    def sel(self: SPXtlm, mask: np.NDArray[bool]) -> SPXtlm:
+    def sel(self: SPXtlm, mask: npt.NDArray[bool]) -> SPXtlm:
         """Return subset of SPXtlm object using a mask array."""
         spx = copy(self)
         spx.set_coverage(None)
@@ -293,17 +296,17 @@ class SPXtlm:
         master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
         if len(indices) == 1:
             spx.set_coverage(
-                [
+                (
                     spx.science.tstamp[0]["dt"],
                     spx.science.tstamp[0]["dt"] + master_cycle,
-                ]
+                )
             )
         else:
             spx.set_coverage(
-                [
+                (
                     spx.science.tstamp[0]["dt"],
                     spx.science.tstamp[-1]["dt"] + master_cycle,
-                ]
+                )
             )
         # select nomhk data within Science time_coverage_range
         hk_tstamps = np.array(
@@ -383,7 +386,7 @@ class SPXtlm:
 
         # set time-coverage
         self.set_coverage(
-            [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+            (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
         )
 
     def from_lv0(
@@ -476,10 +479,10 @@ class SPXtlm:
                 # set time-coverage
                 master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
                 self.set_coverage(
-                    [
+                    (
                         self.science.tstamp["dt"][0],
                         self.science.tstamp["dt"][-1] + master_cycle,
-                    ]
+                    )
                 )
 
         # collected NomHK telemetry data
@@ -510,7 +513,7 @@ class SPXtlm:
 
             # set time-coverage (only, when self._coverage is None)
             self.set_coverage(
-                [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+                (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
             )
 
     def from_l1a(
@@ -553,7 +556,7 @@ class SPXtlm:
                     master_cycle = dt.timedelta(
                         milliseconds=self.science.master_cycle(ii)
                     )
-                    self.set_coverage([tstamp[0], tstamp[-1] + master_cycle])
+                    self.set_coverage((tstamp[0], tstamp[-1] + master_cycle))
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
@@ -561,10 +564,10 @@ class SPXtlm:
                 if self.nomhk.size == 0:
                     return
                 self.set_coverage(
-                    [
+                    (
                         self.nomhk.tstamp[0],
                         self.nomhk.tstamp[-1] + dt.timedelta(seconds=1),
-                    ]
+                    )
                 )
 
     def full(self: SPXtlm) -> SPXtlm:

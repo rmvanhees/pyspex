@@ -198,9 +198,7 @@ def egse_units() -> tuple[str, ...]:
     )
 
 
-def read_egse(
-    egse_file: str, verbose: bool = False
-) -> tuple[np.ndarray, list[str, ...]]:
+def read_egse(egse_file: str, verbose: bool = False) -> tuple[np.ndarray, list[str]]:
     """Read EGSE data (tab separated values) to numpy compound array."""
     with open(egse_file, encoding="ascii") as fid:
         line = None

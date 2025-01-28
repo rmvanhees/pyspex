@@ -25,7 +25,7 @@ def check_input_files(config: dataclass) -> dataclass:
     Parameters
     ----------
     config :  dataclass
-       Dataclass that contains the settings of the L0-L1A processor
+       A dataclass that contains the settings of the L0-L1A processor
 
     Returns
     -------

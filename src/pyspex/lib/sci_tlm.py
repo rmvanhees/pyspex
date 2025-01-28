@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-__all__ = ["SCItlm"]
+__all__ = ["DET_CONSTS", "SCItlm"]
 
 import datetime as dt
 import logging
@@ -104,7 +104,7 @@ class SCItlm:
         sci.images = copy(self.images)
         return sci
 
-    def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
+    def sel(self: SCItlm, mask: npt.NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""
         sci = SCItlm()
         if self.hdr is not None:
@@ -219,7 +219,7 @@ class SCItlm:
         Parameters
         ----------
         fid :  h5py.File
-           File pointer to a SPEXone level-1a product
+           A HDF5 file pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
 
