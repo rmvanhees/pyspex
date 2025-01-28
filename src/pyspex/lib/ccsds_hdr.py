@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2025 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -14,10 +14,14 @@ from __future__ import annotations
 __all__ = ["CCSDShdr"]
 
 import datetime as dt
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .tmtc_def import tmtc_dtype
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 class CCSDShdr:
@@ -347,17 +351,17 @@ class CCSDShdr:
         return self.__dtype
 
     @property
-    def version(self: CCSDShdr) -> int:
+    def version(self: CCSDShdr) -> npt.NDArray[int]:
         """Return zero to indicate that this is a version 1 packet."""
         return (self.__hdr["type"] >> 13) & 0x7
 
     @property
-    def type(self: CCSDShdr) -> int:
+    def type(self: CCSDShdr) -> npt.NDArray[int]:
         """Return zero to indicate that this is a telemetry packet."""
         return (self.__hdr["type"] >> 12) & 0x1
 
     @property
-    def apid(self: CCSDShdr) -> int:
+    def apid(self: CCSDShdr) -> npt.NDArray[int]:
         """Return ApID: an identifier for this telemetry packet.
 
         Notes
@@ -383,7 +387,7 @@ class CCSDShdr:
         return self.__hdr["type"] & 0x7FF
 
     @property
-    def grouping_flag(self: CCSDShdr) -> int:
+    def grouping_flag(self: CCSDShdr) -> npt.NDArray[int]:
         """Data packages can be segmented.
 
         Note:
@@ -399,7 +403,7 @@ class CCSDShdr:
         return (self.__hdr["sequence"] >> 14) & 0x3
 
     @property
-    def sequence(self: CCSDShdr) -> int:
+    def sequence(self: CCSDShdr) -> npt.NDArray[int]:
         """Return the sequence counter.
 
         This counter is incremented with each consecutive packet of a
@@ -408,7 +412,7 @@ class CCSDShdr:
         return self.__hdr["sequence"] & 0x3FFF
 
     @property
-    def packet_size(self: CCSDShdr) -> int:
+    def packet_size(self: CCSDShdr) -> npt.NDArray[int]:
         """Returns the CCSDS packet-length.
 
         Which is equal to the number of bytes in the Secondary header plus
@@ -417,12 +421,12 @@ class CCSDShdr:
         return self.__hdr["length"]
 
     @property
-    def tai_sec(self: CCSDShdr) -> int:
+    def tai_sec(self: CCSDShdr) -> npt.NDArray[int]:
         """Seconds since 1958 (TAI)."""
         return self.__hdr["tai_sec"]
 
     @property
-    def sub_sec(self: CCSDShdr) -> int:
+    def sub_sec(self: CCSDShdr) -> npt.NDArray[int]:
         """Sub-seconds (1 / 2**16)."""
         return self.__hdr["sub_sec"]
 
