@@ -3,7 +3,7 @@
 # This file is part of pyspex
 #    https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2025 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -36,6 +36,7 @@ from enum import IntFlag, auto
 from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
+from typing import ClassVar, Self
 
 from netCDF4 import Dataset, Variable
 import h5py
@@ -169,7 +170,7 @@ EPILOG_HELP = f"""Usage:
 Return codes:
   2      Failed to parse command-line parameters.
   110    One (or more) SPEXone level-0 files not found.
-  115    Failed to generate output directry due to permission error.
+  115    Failed to generate output directory due to permission error.
   121    Input file not recognized as a SPEXone level-0 product.
   122    Corrupted SPEXone level-0 data.
   131    Failed to generate output file due to netCDF4 library issues.
@@ -196,7 +197,7 @@ class Config:
     dump: bool = False
     verbose: int = logging.NOTSET
     compression: bool = False
-    outdir: Path = Path(".").resolve()
+    outdir: Path | None = None
     outfile: str = ""
     processing_version: int = 1
     eclipse: bool | None = None
@@ -205,7 +206,12 @@ class Config:
     l0_format: str = ""
     l0_list: list[Path] = field(default_factory=list)
 
-    def __iter__(self: Config) -> tuple:
+    def __post_init__(self: Config) -> None:
+        """Perform post initialization."""
+        if self.outdir is None:
+            self.outdir = Path(".").resolve()
+
+    def __iter__(self: Config) -> None:
         """Make this class iterable."""
         yield from astuple(self)
 
@@ -256,13 +262,13 @@ def __commandline_settings() -> Config:
         "--eclipse",
         action="store_true",
         default=None,
-        help="assume that measurements are perfomed in eclipse",
+        help="assume that measurements are performed in eclipse",
     )
     group.add_argument(
         "--no_eclipse",
         dest="eclipse",
         action="store_false",
-        help="assume that measurements are not perfomed in eclipse",
+        help="assume that measurements are not performed in eclipse",
     )
     parser.add_argument(
         "--outdir",
@@ -302,17 +308,17 @@ def __yaml_settings(config: dataclass) -> dataclass:
     with open(config.yaml_fl, encoding="ascii") as fid:
         config_yaml = yaml.safe_load(fid)
 
-    if "outdir" in config_yaml and config_yaml["outdir"] is not None:
+    if config_yaml.get("outdir") is not None:
         config.outdir = Path(config_yaml["outdir"])
-    if "outfile" in config_yaml and config_yaml["outfile"]:
+    if config_yaml.get("outfile") is not None:
         config.outfile = config_yaml["outfile"]
-    if "compression" in config_yaml and config_yaml["compression"]:
+    if config_yaml.get("compression", False):
         config.compression = True
-    if "processing_version" in config_yaml and config_yaml["processing_version"] != 1:
+    if config_yaml.get("processing_version", 1) != 1:
         config.processing_version = config_yaml["processing_version"]
-    if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
+    if config_yaml.get("eclipse") is not None:
         config.eclipse = config_yaml["eclipse"]
-    if "hkt_list" in config_yaml and config_yaml["hkt_list"]:
+    if config_yaml.get("hkt_list") is not None:
         if isinstance(config_yaml["hkt_list"], list):
             config.hkt_list = [Path(x) for x in config_yaml["hkt_list"]]
         else:
@@ -321,7 +327,7 @@ def __yaml_settings(config: dataclass) -> dataclass:
                 config.hkt_list = sorted(Path(mypath).glob("*"))
             else:
                 config.hkt_list = sorted(Path(mypath.parent).glob(mypath.name))
-    if "l0_list" in config_yaml and config_yaml["l0_list"]:
+    if config_yaml.get("l0_list") is not None:
         if isinstance(config_yaml["l0_list"], list):
             config.l0_list = [Path(x) for x in config_yaml["l0_list"]]
         else:
@@ -937,7 +943,7 @@ def check_input_files(config: dataclass) -> dataclass:
     Parameters
     ----------
     config :  dataclass
-       dataclass that contains the settings for the L0-1A processing
+       A dataclass instance which contains the settings for the L0-1A processing
 
     Returns
     -------
@@ -1997,13 +2003,6 @@ def tmtc_dtype(apid: int) -> np.dtype:
     numpy.dtype
        Definition of SPEXone telemetry packet.
 
-    Examples
-    --------
-    Usage of `tmtc_dtype`::
-
-    >> from pyspex.lib.tmtc_def import tmtc_dtype
-    >> mps_dtype = tmtc_dtype(0x350)
-
     """
     return np.dtype(__tmtc_def(apid))
 
@@ -2356,7 +2355,7 @@ class L1Aio:
 
     """
 
-    dset_stored = {
+    dset_stored: ClassVar[dict[str, int]] = {
         "/science_data/detector_images": 0,
         "/science_data/detector_telemetry": 0,
         "/image_attributes/binning_table": 0,
@@ -2400,11 +2399,11 @@ class L1Aio:
             if not attr.startswith("__"):
                 yield attr
 
-    def __enter__(self: L1Aio) -> L1Aio:
+    def __enter__(self: L1Aio) -> Self:
         """Initiate the context manager."""
         return self
 
-    def __exit__(self: L1Aio, *args: str) -> bool:
+    def __exit__(self: L1Aio, *args: object) -> bool:
         """Exit the context manager."""
         self.close()
         return False  # any exception is raised by the with statement.
@@ -2469,7 +2468,7 @@ class L1Aio:
     def set_attr(
         self: L1Aio,
         name: str,
-        value: np.scalar | np.ndarray,
+        value: str | np.generic | np.ndarray,
         *,
         ds_name: str | None = None,
     ) -> None:
@@ -2535,14 +2534,14 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: np.scalar | np.ndarray) -> None:
+    def set_dset(self: L1Aio, name: str, value: tuple | np.ndarray) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters
         ----------
         name : str
            Name of level-1A dataset
-        value : scalar or array_like
+        value : array_like
            Value or values to be written
 
         """
@@ -2572,39 +2571,35 @@ class L1Aio:
             "SPEXone level-1A format check [WARNING]:"
             ' size of variable "{:s}" is wrong, only {:d} elements'
         )
-
         # check image datasets
         dim_sz = self.get_dim("number_of_images")
-        res = []
         key_list = [
             x
             for x in self.dset_stored
             if (x.startswith("/science_data") or x.startswith("/image_attributes"))
         ]
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
+        res = np.zeros(len(key_list), dtype=int)
+        for ii, key in enumerate(key_list):
+            res[ii] = self.dset_stored[key]
         if allow_empty:
             indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
-            indx = np.nonzero(res != dim_sz)[0]
+            indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
         # check house-keeping datasets
         dim_sz = self.get_dim("hk_packets")
         key_list = [x for x in self.dset_stored if x.startswith("/engineering_data")]
-        res = []
-        for key in key_list:
-            res.append(self.dset_stored[key])
-        res = np.array(res)
+        res = np.zeros(len(key_list), dtype=int)
+        for ii, key in enumerate(key_list):
+            res[ii] = self.dset_stored[key]
         if allow_empty:
-            indx = np.nonzero((res > 0) & (res != dim_sz))[0]
+            indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
-            indx = np.nonzero(res != dim_sz)[0]
+            indx = (res != dim_sz).nonzero()[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
-
 
 # --------------------------------------------------
 # from .hkt_io import CoverageFlag, HKTio
@@ -2621,7 +2616,7 @@ class CoverageFlag(IntFlag):
     def check(
         cls: CoverageFlag,
         nav_data: xr.Dataset,
-        coverage: list[dt.datetime, dt.datetime],
+        coverage: tuple[dt.datetime, dt.datetime],
     ) -> int:
         """Check coverage time of navigation data."""
         coverage_quality = cls(0)
@@ -2744,7 +2739,7 @@ class HKTio:
             if buff is not None:
                 res = buff if res is None else np.concatenate((res, buff), axis=0)
         if res is None:
-            return ()
+            return (np.array([]),)
 
         ccsds_hk = ()
         for packet in res:
@@ -2808,7 +2803,7 @@ class HKTio:
         self.nav_data = nav
 
     def add_nav(
-        self: HKTio, l1a_file: Path, coverage: list[dt.datetime, dt.datetime]
+        self: HKTio, l1a_file: Path, coverage: tuple[dt.datetime, dt.datetime]
     ) -> None:
         """..."""
         time_range = (
@@ -2870,7 +2865,7 @@ def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bo
     if np.all(mask):
         return np.s_[:]  # read everything
 
-    indx = np.nonzero(mask)[0]
+    indx = mask.nonzero()[0]
     if np.all(np.diff(indx) == 1):
         # perform start-stop indexing
         return np.s_[indx[0] : indx[-1] + 1]
@@ -2938,7 +2933,7 @@ class HKtlm:
         hkt.events = copy(self.events)
         return hkt
 
-    def sel(self: HKtlm, mask: np.NDArray[bool]) -> HKtlm:
+    def sel(self: HKtlm, mask: npt.NDArray[bool]) -> HKtlm:
         """Return subset of HKtlm object using a mask array."""
         hkt = HKtlm()
         if self.hdr is not None:
@@ -3008,7 +3003,7 @@ class HKtlm:
         Parameters
         ----------
         fid :  h5py.File
-           File pointer to a SPEXone level-1a product
+           A HDF5 file pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
 
@@ -3085,7 +3080,7 @@ class SCItlm:
         sci.images = copy(self.images)
         return sci
 
-    def sel(self: SCItlm, mask: np.NDArray[bool]) -> SCItlm:
+    def sel(self: SCItlm, mask: npt.NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""
         sci = SCItlm()
         sci.hdr = self.hdr[mask]
@@ -3197,7 +3192,7 @@ class SCItlm:
         Parameters
         ----------
         fid :  h5py.File
-           File pointer to a SPEXone level-1a product
+           A HDF5 File pointer to a SPEXone level-1a product
         mps_id : int, optional
            Select data performed with MPS equals 'mps_id'
 
@@ -3406,35 +3401,6 @@ class SPXtlm:
                 mps_id: int | None = None) -> None
      - gen_l1a(config: dataclass) -> None
 
-
-    Examples
-    --------
-    Read data from SPEXone level-0 products
-
-    >>> from pyspex.tlm import SPXtlm
-    >>> spx = SPXtlm()
-    >>> spx.from_lv0(list_l0_products, tlm_type='hk')
-    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
-    >>> spx.nomhk.events
-    # return detector images
-    >>> spx.from_lv0(list_l0_products, tlm_type='sci')
-    >>> spx.science.images
-
-    Read data from a SPEXone level-1a product
-
-    >>> from pyspex.tlm import SPXtlm
-    >>> spx = SPXtlm()
-    >>> spx.from_l1a(l1a_product, tlm_type='sci', mps_is=47)
-    >>> spx.science.images
-
-    Read data from a PACE-HKT product
-
-    >>> from pyspex.tlm import SPXtlm
-    >>> spx = SPXtlm()
-    >>> spx.from_hkt(hkt_product)
-    # returns list of TcAccept, TcReject, TcExecute, TcFail and EventRp
-    >>> spx.nomhk.events
-
     """
 
     def __init__(self: SPXtlm) -> None:
@@ -3442,18 +3408,18 @@ class SPXtlm:
         self.mode = "all"
         self.logger = logging.getLogger(__name__)
         self.file_list: list[Path, ...] | None = None
-        self._coverage: list[dt.datetime, dt.datetime] | None = None
+        self._coverage: tuple[dt.datetime, dt.datetime] | None = None
         self.nomhk: HKtlm = HKtlm()
         self.science: SCItlm = SCItlm()
 
     @property
-    def coverage(self: SPXtlm) -> list[dt.datetime, dt.datetime] | None:
+    def coverage(self: SPXtlm) -> tuple[dt.datetime, dt.datetime] | None:
         """Return data time_coverage."""
         return self._coverage
 
     def set_coverage(
         self: SPXtlm,
-        coverage_new: list[dt.datetime, dt.datetime] | None,
+        coverage_new: tuple[dt.datetime, dt.datetime] | None,
         extent: bool = False,
     ) -> None:
         """Set, reset or update the class attribute `coverage`.
@@ -3511,7 +3477,7 @@ class SPXtlm:
         """Return time_coverage_end."""
         return None if self._coverage is None else self._coverage[1]
 
-    def sel(self: SPXtlm, mask: np.NDArray[bool]) -> SPXtlm:
+    def sel(self: SPXtlm, mask: npt.NDArray[bool]) -> SPXtlm:
         """Return subset of SPXtlm object using a mask array."""
         spx = copy(self)
         spx.set_coverage(None)
@@ -3522,17 +3488,17 @@ class SPXtlm:
         master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
         if len(indices) == 1:
             spx.set_coverage(
-                [
+                (
                     spx.science.tstamp[0]["dt"],
                     spx.science.tstamp[0]["dt"] + master_cycle,
-                ]
+                )
             )
         else:
             spx.set_coverage(
-                [
+                (
                     spx.science.tstamp[0]["dt"],
                     spx.science.tstamp[-1]["dt"] + master_cycle,
-                ]
+                )
             )
         # select nomhk data within Science time_coverage_range
         hk_tstamps = np.array(
@@ -3613,7 +3579,7 @@ class SPXtlm:
 
         # set time-coverage
         self.set_coverage(
-            [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+            (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
         )
 
     def from_lv0(
@@ -3706,10 +3672,10 @@ class SPXtlm:
                 # set time-coverage
                 master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
                 self.set_coverage(
-                    [
+                    (
                         self.science.tstamp["dt"][0],
                         self.science.tstamp["dt"][-1] + master_cycle,
-                    ]
+                    )
                 )
 
         # collected NomHK telemetry data
@@ -3740,7 +3706,7 @@ class SPXtlm:
 
             # set time-coverage (only, when self._coverage is None)
             self.set_coverage(
-                [self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1)]
+                (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
             )
 
     def from_l1a(
@@ -3781,16 +3747,16 @@ class SPXtlm:
                         master_cycle = dt.timedelta(
                             milliseconds=self.science.master_cycle(ii)
                         )
-                        self.set_coverage([tstamp[0], tstamp[-1] + master_cycle])
+                        self.set_coverage((tstamp[0], tstamp[-1] + master_cycle))
 
             # collected NomHk telemetry data
             if tlm_type != "sci":
                 self.nomhk.extract_l1a_hk(fid, mps_id)
                 self.set_coverage(
-                    [
+                    (
                         self.nomhk.tstamp[0],
                         self.nomhk.tstamp[-1] + dt.timedelta(seconds=1),
-                    ]
+                    )
                 )
 
     def full(self: SPXtlm) -> SPXtlm:
@@ -3939,7 +3905,7 @@ class SPXtlm:
         ref_date = self.reference_date
         l1a.set_dset(
             "/engineering_data/HK_tlm_time",
-            [(x - ref_date).total_seconds() for x in self.nomhk.tstamp],
+            np.array([(x - ref_date).total_seconds() for x in self.nomhk.tstamp]),
         )
         l1a.set_dset(
             "/engineering_data/temp_detector",
@@ -4000,7 +3966,9 @@ class SPXtlm:
         ref_date = self.reference_date
         l1a.set_dset(
             "/image_attributes/image_time",
-            [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]],
+            np.array(
+                [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]]
+            ),
         )
         l1a.set_dset(
             "/image_attributes/image_ID",
@@ -4052,7 +4020,7 @@ def main() -> int:
 
     # read level 0 data
     # Note that we read as much as possible packages from a file, but stop at
-    # the first occurence of a corrupted data-packet, then the remainder of
+    # the first occurrence of a corrupted data-packet, then the remainder of
     # the file is neglected.
     tlm = None
     with warnings.catch_warnings(record=True) as wrec_list:

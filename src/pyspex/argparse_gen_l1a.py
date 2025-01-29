@@ -139,9 +139,10 @@ class Config:
 
     def __post_init__(self: Config) -> None:
         """Perform post initialization."""
-        self.outdir = Path(".").resolve()
+        if self.outdir is None:
+            self.outdir = Path(".").resolve()
 
-    def __iter__(self: Config) -> tuple:
+    def __iter__(self: Config) -> None:
         """Make this class iterable."""
         yield from astuple(self)
 
@@ -238,17 +239,17 @@ def __yaml_settings(config: dataclass) -> dataclass:
     with open(config.yaml_fl, encoding="ascii") as fid:
         config_yaml = yaml.safe_load(fid)
 
-    if "outdir" in config_yaml and config_yaml["outdir"] is not None:
+    if config_yaml.get("outdir") is not None:
         config.outdir = Path(config_yaml["outdir"])
-    if config_yaml.get("outfile"):
+    if config_yaml.get("outfile") is not None:
         config.outfile = config_yaml["outfile"]
-    if config_yaml.get("compression"):
+    if config_yaml.get("compression", False):
         config.compression = True
-    if "processing_version" in config_yaml and config_yaml["processing_version"] != 1:
+    if config_yaml.get("processing_version", 1) != 1:
         config.processing_version = config_yaml["processing_version"]
-    if "eclipse" in config_yaml and config_yaml["eclipse"] is not None:
+    if config_yaml.get("eclipse") is not None:
         config.eclipse = config_yaml["eclipse"]
-    if config_yaml.get("hkt_list"):
+    if config_yaml.get("hkt_list") is not None:
         if isinstance(config_yaml["hkt_list"], list):
             config.hkt_list = [Path(x) for x in config_yaml["hkt_list"]]
         else:
@@ -257,7 +258,7 @@ def __yaml_settings(config: dataclass) -> dataclass:
                 config.hkt_list = sorted(Path(mypath).glob("*"))
             else:
                 config.hkt_list = sorted(Path(mypath.parent).glob(mypath.name))
-    if config_yaml.get("l0_list"):
+    if config_yaml.get("l0_list") is not None:
         if isinstance(config_yaml["l0_list"], list):
             config.l0_list = [Path(x) for x in config_yaml["l0_list"]]
         else:

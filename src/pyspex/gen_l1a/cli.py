@@ -49,7 +49,7 @@ def main() -> int:
 
     # read level 0 data
     # Note that we read as much as possible packages from a file, but stop at
-    # the first occurence of a corrupted data-packet, then the remainder of
+    # the first occurrence of a corrupted data-packet, then the remainder of
     # the file is neglected.
     tlm = None
     with warnings.catch_warnings(record=True) as wrec_list:
