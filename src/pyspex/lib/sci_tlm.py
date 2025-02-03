@@ -115,6 +115,16 @@ class SCItlm:
             sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
         return sci
 
+    def append(self: SCItlm, sci_tlm: SCItlm) -> SCItlm:
+        """Append one SCItlm object to the current."""
+        self.hdr = sci_tlm.hdr if self.hdr is None else np.append(self.hdr, sci_tlm.hdr)
+        self.tlm = sci_tlm.tlm if self.tlm is None else np.append(self.tlm, sci_tlm.tlm)
+        self.tstamp = (
+            sci_tlm.tstamp if self.tstamp is None
+            else np.append(self.tstamp, sci_tlm.tstamp)
+        )
+        self.images += (sci_tlm.images,)
+
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
 
