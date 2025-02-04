@@ -112,18 +112,19 @@ class SCItlm:
         if self.tlm is not None:
             sci.tlm = self.tlm[mask]
             sci.tstamp = self.tstamp[mask]
-            sci.images = tuple(x for x, y in zip(self.images, mask, strict=True) if y)
+            sci.images = tuple(
+                x for x, y in zip(self.images[0], mask, strict=True) if y
+            )
         return sci
 
-    def append(self: SCItlm, sci_tlm: SCItlm) -> SCItlm:
+    def append(self: SCItlm, sci: SCItlm) -> SCItlm:
         """Append one SCItlm object to the current."""
-        self.hdr = sci_tlm.hdr if self.hdr is None else np.append(self.hdr, sci_tlm.hdr)
-        self.tlm = sci_tlm.tlm if self.tlm is None else np.append(self.tlm, sci_tlm.tlm)
+        self.hdr = sci.hdr if self.hdr is None else np.append(self.hdr, sci.hdr)
+        self.tlm = sci.tlm if self.tlm is None else np.append(self.tlm, sci.tlm)
         self.tstamp = (
-            sci_tlm.tstamp if self.tstamp is None
-            else np.append(self.tstamp, sci_tlm.tstamp)
+            sci.tstamp if self.tstamp is None else np.append(self.tstamp, sci.tstamp)
         )
-        self.images += (sci_tlm.images,)
+        self.images += sci.images
 
     def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
@@ -261,7 +262,7 @@ class SCItlm:
         ]
 
         # read image data
-        self.images = fid["/science_data/detector_images"][data_sel, :]
+        self.images = (fid["/science_data/detector_images"][data_sel, :],)
 
     def adc_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
         """Return ADC gain [Volt]."""
