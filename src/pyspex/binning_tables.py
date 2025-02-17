@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2025 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -14,23 +14,48 @@ from __future__ import annotations
 
 __all__ = ["BinningTables"]
 
-from datetime import UTC, datetime
+import datetime as dt
+import time
 from importlib.resources import files
+from pathlib import Path
+from typing import TYPE_CHECKING, Self
 
+import h5py
 import numpy as np
-
-# pylint: disable=no-name-in-module
-from netCDF4 import Dataset
 
 from .lib import pyspex_version
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
 # - global parameters ------------------------------
-FILL_VALUE = 0xFFFFFFFF  # 0X7FFFFFFF
+# DATA_DIR_CSV = Path("/nfs/SPEXone/share/binning")
+DATA_DIR_CSV = Path("/data/richardh/SPEXone/share/binning")
+
+NAME_BIN_TBL = Path("./binning_tables.nc")
+
+INPUT_BIN_TBL = {
+    20: ("lineskiparrays_EXT_9p8_FM_0.csv", "binning_EXT_9p8_FM_0_add.csv"),
+    24: ("lineskiparrays_EXT_9p8_FM_4.csv", "binning_EXT_9p8_FM_4_add.csv"),
+    29: ("lineskiparrays_EXT_9p8_FM_8.csv", "binning_EXT_9p8_FM_8_add.csv"),
+    50: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_1.csv"),
+    51: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_2.csv"),
+    52: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_3.csv"),
+    53: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_4.csv"),
+    54: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_5.csv"),
+    55: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_6.csv"),
+    56: ("lineskiparrays_160_views.csv", "binning_160_views_add_1.csv"),
+    57: ("lineskiparrays_160_views.csv", "binning_160_views_add_2.csv"),
+    58: ("lineskiparrays_160_views.csv", "binning_160_views_add_3.csv"),
+    59: ("lineskiparrays_160_views.csv", "binning_160_views_add_4.csv"),
+    60: ("lineskiparrays_160_views.csv", "binning_160_views_add_5.csv"),
+}
 
 
-# - local functions --------------------------------
-class BinningTables:
-    """Class to handle SPEXone binning-table definitions.
+# - class BinningCKD -------------------------------
+class BinningCKD:
+    """Class to store the SPEXone binning-table definitions.
 
     Raises
     ------
@@ -39,13 +64,6 @@ class BinningTables:
 
     Notes
     -----
-    Syntax of the file name with SPEXone binning-tables:
-
-          SPX1_CKD_BIN_TBL_<yyyymmddTHHMMSS>_<NNN>.nc
-
-    where yyyymmddTHHMMSS defines the validity start (UTC) and NNN the
-    release number of the file format.
-
     The binning tables as defined on-ground are supposed to be available
     during the whole mission at the same on-board memory location.
     Because these original binning tables are necessary for re-processing
@@ -59,16 +77,161 @@ class BinningTables:
     --------
     # create new file with binning-table definitions::
 
-    > bin_tbl = BinningTables()
-    > bin_tbl.create_if_needed(validity_start)
-    > bin_tbl.add_table(0, lineskip_arr, binning_table)
-    > bin_tbl.add_table(1, lineskip_arr, binning_table)
+    > with BinningCKD(overwrite=True) with bin_ckd:
+    >    bin_ckd.add_tbl_pre_launch()
+    >    bin_ckd.add_tbl_post_launch()
 
+    """
+
+    def __init__(self: BinningCKD, overwrite: bool = False) -> None:
+        """Initialize new file to store SPEXone binning-table."""
+        self.fid = None
+        if NAME_BIN_TBL.is_file() and not overwrite:
+            print("Please use parameter 'overwrite' to replace existing CKD.")
+            return
+
+        fid = h5py.File(NAME_BIN_TBL, "w")
+        fid.attrs["title"] = "SPEXone Level-1 binning-tables"
+        fid.attrs["creator_name"] = "SRON/Earth"
+        fid.attrs["creator_email"] = "SPEXone-MPC@sron.nl"
+        fid.attrs["creator_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
+        fid.attrs["institution"] = "SRON Netherlands Institute for Space Research"
+        fid.attrs["publisher_name"] = "SRON/Earth"
+        fid.attrs["publisher_email"] = "SPEXone-MPC@sron.nl"
+        fid.attrs["publisher_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
+        fid.attrs["project"] = "PACE Project"
+        fid.attrs["conventions"] = "CF-1.10 ACDD-1.3"
+        fid.attrs["keyword_vocabulary"] = (
+            "NASA Global Change Master Directory (GCMD) Science Keywords"
+        )
+        fid.attrs["stdname_vocabulary"] = (
+            "NetCDF Climate and Forecast (CF) Metadata Convention"
+        )
+        fid.attrs["title"] = "PACE SPEXone Level-1A Data"
+        fid.attrs["platform"] = "PACE"
+        fid.attrs["instrument"] = "SPEXone"
+        fid.processing_version = pyspex_version()
+        fid.attrs["date_created"] = (
+            dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat(timespec="seconds")
+        )
+
+        dset = fid.create_dataset("column", dtype="u2", shape=(1024,))
+        dset.make_scale()
+        dset = fid.create_dataset("row", dtype="u2", shape=(1024,))
+        dset.make_scale()
+        self.fid = fid
+
+    def __enter__(self: BinningCKD) -> Self:
+        """Initiate the context manager."""
+        return self
+
+    def __exit__(self: BinningCKD, *args: object) -> bool:
+        """Exit the context manager."""
+        self.close()
+        return False  # any exception is raised by the with statement.
+
+    def close(self: BinningCKD) -> None:
+        """Close resources, after sanity check of SQLite and HDF5 databases."""
+        if self.fid:
+            # print(f"CLOSE HDF5 file: {self.fid.filename}")
+            self.fid.close()
+
+    def __write__(self: BinningCKD, data_dir: Path, group: str | None) -> None:
+        for tbl_id, (line_fl, bin_fl) in INPUT_BIN_TBL.items():
+            lineskip_data = np.loadtxt(data_dir / line_fl, delimiter=",").astype("u1")
+            binning_data = np.loadtxt(data_dir / bin_fl, delimiter=",", dtype="u4")
+            iadd = (data_dir / bin_fl).stem.split("_")[-1]
+            iadd = 1 if iadd == "add" else int(iadd)
+            lineskip_data = lineskip_data[iadd, :]
+            index, count = np.unique(
+                binning_data[lineskip_data == 1, :], return_counts=True
+            )
+            gid = self.fid.create_group(
+                str(Path("/" if group is None else group) / f"Table_{tbl_id:03d}")
+            )
+            gid.attrs["tabel_id"] = tbl_id
+            gid.attrs["REG_BINNING_TABLE_START"] = hex(
+                0x80000000 + 0x400000 * (tbl_id - 1)
+            )
+            gid.attrs["enabled_lines"] = np.uint16(lineskip_data.sum())
+            gid.attrs["flex_binned_pixels"] = np.uint32(index.max() + 1)
+
+            dset = gid.create_dataset("bins", dtype="u2", shape=(count.size,))
+            dset.make_scale()
+
+            dset = gid.create_dataset(
+                "count_table",
+                count.shape,
+                dtype="u2",
+                compression="gzip",
+                compression_opts=1,
+                shuffle=True,
+            )
+            dset.dims[0].attach_scale(gid["bins"])
+            dset.attrs["long_name"] = "number of aggregated pixel readings"
+            dset.attrs["valid_min"] = np.uint16(0)
+            dset.attrs["valid_max"] = np.uint16(count.max())
+            dset[:] = count.astype("u2")
+
+            dset = gid.create_dataset(
+                "lineskip_arr",
+                lineskip_data.shape,
+                dtype="u1",
+                compression="gzip",
+                compression_opts=1,
+                shuffle=True,
+            )
+            dset.dims[0].attach_scale(self.fid["row"])
+            dset.attrs["long_name"] = "lineskip array"
+            dset.attrs["valid_min"] = np.uint8(0)
+            dset.attrs["valid_max"] = np.uint8(1)
+            dset[:] = lineskip_data
+
+            dset = gid.create_dataset(
+                "binning_table",
+                binning_data.shape,
+                dtype="u4",
+                fillvalue=0xFFFFFFFF,
+                chunks=(128, 128),
+                compression="gzip",
+                compression_opts=1,
+                shuffle=True,
+            )
+            dset.dims[0].attach_scale(self.fid["row"])
+            dset.dims[1].attach_scale(self.fid["column"])
+            dset.attrs["long_name"] = "binning table"
+            dset.attrs["valid_min"] = np.uint32(0)
+            dset.attrs["valid_max"] = np.uint32(index.max())
+            dset[:] = binning_data
+
+    def add_tbl_pre_launch(self: BinningCKD) -> None:
+        """Add tables with flexible binning used before launch."""
+        data_dir = DATA_DIR_CSV / "20210208T152000"
+        if not data_dir.is_dir():
+            raise FileNotFoundError(f"can not find folder: {data_dir}")
+        gid = self.fid.create_group("20210208T152000")
+        gid.attrs["validity_date"] = str(np.datetime64("2021-02-08T15:20:00"))
+        self.__write__(data_dir, "20210208T152000")
+
+    def add_tbl_post_launch(self: BinningCKD) -> None:
+        """Add tables with flexible binning used after launch."""
+        data_dir = DATA_DIR_CSV / "20210304T124000"
+        if not data_dir.is_dir():
+            raise FileNotFoundError(f"can not find folder: {data_dir}")
+        self.fid.attrs["validity_date"] = str(np.datetime64("2021-03-04T12:40:00"))
+        self.__write__(data_dir, None)
+
+
+# - class BinningTables ----------------------------
+class BinningTables:
+    """Class to apply the SPEXone binning-tables.
+
+    Examples
+    --------
     # use binning-table '130' to unbin SPEXone detector data::
 
-    > bin_tbl = BinningTables(130)
-    > img_1d = bin_tbl.unbin(img_binned)
-    > img_2d = bin_tbl.to_image(img_1d)
+    > with BinningTables(130) as bin_tbl:
+    >    img_2d = bin_tbl.to_image(img_binned)
 
     """
 
@@ -81,142 +244,133 @@ class BinningTables:
         if not self.bin_tbl.is_file():
             raise FileNotFoundError(f"{self.bin_tbl} not found")
 
-        with Dataset(self.bin_tbl, "r") as fid:
-            if f"Table_{table_id:03d}" not in fid.groups:
+        with h5py.File(self.bin_tbl) as fid:
+            if f"Table_{table_id:03d}" not in fid:
                 raise KeyError(f"Table_{table_id:03d} not defined")
             gid = fid[f"Table_{table_id:03d}"]
-            self.binning_table = gid.variables["binning_table"][:]
-            self.lineskip_arr = gid.variables["lineskip_arr"][:]
-            self.count_table = gid.variables["count_table"][:]
+            self.binning_table = gid["binning_table"][:]
+            self.lineskip_arr = gid["lineskip_arr"][:]
+            self.count_table = gid["count_table"][:]
 
-    def unbin(self: BinningTables, img_binned: np.ndarray) -> np.ndarray:
+    def __enter__(self: BinningCKD) -> Self:
+        """Initiate the context manager."""
+        return self
+
+    def __exit__(self: BinningCKD, *args: object) -> bool:
+        """Exit the context manager."""
+        return False  # any exception is raised by the with statement.
+
+    def _unbin_(self: BinningTables, img_1d: NDArray[float]) -> NDArray[float]:
         """Return detector data corrected for flexible and fixed binning (still 1-D).
 
         Parameters
         ----------
-        img_binned : np.ndarray
-           Binned image data (1D array)
+        img_1d :  NDArray
+           Binned image data (N * 1D array) where N is number of images
 
         Returns
         -------
-        np.ndarray
-           unbinned image data
+        NDArray[float]
+           unbinned image data (N * 1D array)
+
+        Examples
+        --------
+        Let's read 2 executions of measurements with MPS=47 from a SPEXone L1A product:
+
+          > spx = SPXtlm()
+          > spx.from_l1a(l1a_product, tlm_type='sci', mps_id=47)
+          > print(len(spx.science.images), spx.science.images[0].shape)
+          2, (14, 203500)
+          > bin_tbl = BinningTables(spx.science.binning_table())
+          > img_1d = bin_tbl.unbin(spx.science.images)
+          > print(img_1d.shape)
+          (28, 203500)
 
         """
-        img_binned /= 4 * self.count_table
+        img_1d = img_1d.astype(float)
+        img_1d /= 4 * self.count_table
         mask = self.count_table > 5
 
-        if img_binned.ndim == 2:
-            img_binned[:, mask] = np.nan
-            return img_binned
+        if img_1d.ndim == 2:
+            img_1d[:, mask] = np.nan
+            return img_1d
 
-        img_binned[mask] = np.nan
-        return img_binned
+        img_1d[mask] = np.nan
+        return img_1d
 
-    def to_image(self: BinningTables, img_1d: np.ndarray) -> np.ndarray:
+    def to_image(
+        self: BinningTables, img_binned: NDArray | tuple[NDArray], unbin: bool = True
+    ) -> NDArray:
         """Return unbinned detector data.
 
         Parameters
         ----------
-        img_1d : np.ndarray
-           unbinned image data (1-D array)
+        img_binned : NDArray | tuple[NDArray]
+           image data (N * 1-D array)
+        unbin :  bool, default=True
+           return image data as floats and corrected for flexible and fixed binning
 
         Returns
         -------
-        np.ndarray
-           2x2 image (2-D array).
+        NDArray
+           2x2 binned image with shape=(N, 1024, 1024)
 
         """
-        revert = np.full(self.binning_table.shape, np.nan)
+        if isinstance(img_binned, tuple):
+            img_1d = np.concatenate(img_binned, axis=0)
+        else:
+            img_1d = np.asarray(img_binned)
+
+        if unbin:
+            img_1d = self._unbin_(img_1d)
+
         table = self.binning_table[self.lineskip_arr == 1, :].reshape(-1)
-        revert[self.lineskip_arr == 1, :] = img_1d[table].reshape(-1, 1024)
+        if img_1d.ndim == 2:
+            new_shape = (img_1d.shape[0], *self.binning_table.shape)
+            revert = np.full(new_shape, np.nan)
+            revert[:, self.lineskip_arr == 1, :] = img_1d[:, table].reshape(
+                img_1d.shape[0], -1, 1024
+            )
+        else:
+            revert = np.full(self.binning_table.shape, np.nan)
+            revert[self.lineskip_arr == 1, :] = img_1d[table].reshape(-1, 1024)
+
         return revert
 
-    @staticmethod
-    def create_if_needed(validity_start: str, release: int = 1) -> None:
-        """Initialize CKD file for binning tables if not exist.
-
-        Parameters
-        ----------
-        validity_start: str
-           Validity start of the CKD data, as ``yyyymmddTHHMMSS``
-        release :  int, default=1
-           Release number, start at 1
-
-        """
-        # initialize netCDF file with binning tables
-        with Dataset("binning_table.nc", "w") as fid:
-            fid.title = "SPEXone Level-1 binning-tables"
-            fid.Conventions = "CF-1.6"
-            fid.project = "PACE Project"
-            fid.instrument = "SPEXone"
-            fid.institution = "SRON Netherlands Institute for Space Research"
-            fid.processing_version = pyspex_version()
-            fid.validity_start = validity_start + "+00:00"
-            fid.release_number = np.uint16(release)
-            fid.date_created = datetime.now(UTC).isoformat(timespec="seconds")
-
-            fid.createDimension("row", 1024)
-            fid.createDimension("column", 1024)
-
-    def add_table(
+    def to_binned(
         self: BinningTables,
-        table_id: int,
-        lineskip_arr: np.ndarray,
-        binning_table: np.ndarray,
-    ) -> None:
-        """Add a binning table definition to existing file.
+        img_2d: NDArray | tuple[NDArray],
+    ) -> NDArray:
+        """..."""
+        if isinstance(img_2d, tuple):
+            img_2d = np.concatenate(img_2d, axis=0)
+        else:
+            img_2d = np.asarray(img_2d)
+        n_img = img_2d.shape[0]
 
-        Parameters
-        ----------
-        table_id :  int
-           Table identifier (integer between 1 and 255)
-        lineskip_arr :  ndarray
-           Lineskip array definition
-        binning_table :  ndarray
-           Binning table definition
+        buf_1d = np.full((n_img, self.count_table.size), np.nan)
+        uvals, counts = np.unique(self.binning_table, return_counts=True)
 
-        """
-        index, count = np.unique(
-            binning_table[lineskip_arr == 1, :], return_counts=True
+        start_time = time.time()
+        mask = counts == 1
+        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        buf_1d[:, uvals[mask]] = img_2d.reshape(n_img, -1)[:, mask2]
+        print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
+
+        start_time = time.time()
+        mask = counts == 2
+        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        buf_1d[:, uvals[mask]] = np.mean(
+            img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 2), axis=2
         )
+        print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
 
-        with Dataset(self.bin_tbl, "r+") as fid:
-            gid = fid.createGroup(f"/Table_{table_id:03d}")
-            gid.tabel_id = table_id
-            gid.REG_BINNING_TABLE_START = hex(0x80000000 + 0x400000 * (table_id - 1))
-            gid.enabled_lines = np.uint16(lineskip_arr.sum())
-            gid.flex_binned_pixels = np.uint32(index.max() + 1)
-            gid.date_created = datetime.now(UTC).isoformat(timespec="seconds")
+        start_time = time.time()
+        mask = counts == 3
+        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        buf_1d[:, uvals[mask]] = np.mean(
+            img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 3), axis=2
+        )
+        print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
 
-            dset = gid.createVariable(
-                "binning_table",
-                "u4",
-                ("row", "column"),
-                fill_value=FILL_VALUE,
-                chunksizes=(128, 128),
-                zlib=True,
-                complevel=1,
-                shuffle=True,
-            )
-            dset.long_name = "binning table"
-            dset.valid_min = np.uint32(0)
-            dset.valid_max = np.uint32(index.max())
-            dset[:] = binning_table
-
-            dset = gid.createVariable(
-                "lineskip_arr", "u1", ("row",), zlib=True, complevel=1, shuffle=True
-            )
-            dset.long_name = "lineskip array"
-            dset.valid_min = np.uint8(0)
-            dset.valid_max = np.uint8(1)
-            dset[:] = lineskip_arr
-
-            gid.createDimension("bins", count.size)
-            dset = gid.createVariable(
-                "count_table", "u2", ("bins",), zlib=True, complevel=1, shuffle=True
-            )
-            dset.long_name = "number of aggregated pixel readings"
-            dset.valid_min = np.uint16(0)
-            dset.valid_max = np.uint16(count.max())
-            dset[:] = count.astype("u2")
+        return buf_1d
