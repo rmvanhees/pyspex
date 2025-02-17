@@ -198,7 +198,7 @@ class SPXtlm:
 
     >>> from pyspex.tlm import SPXtlm
     >>> spx = SPXtlm()
-    >>> spx.from_l1a(l1a_product, tlm_type='sci', mps_is=47)
+    >>> spx.from_l1a(l1a_product, tlm_type='sci', mps_id=47)
     >>> spx.science.images
 
     Read data from a PACE-HKT product

@@ -235,22 +235,27 @@ class BinningTables:
 
     """
 
-    def __init__(self: BinningTables, table_id: int | None = None) -> None:
+    def __init__(
+        self: BinningTables, table_id: int | None = None, *, pre_launch: bool = False
+    ) -> None:
         """Initialize class attributes."""
-        self.bin_tbl = files("pyspex.data").joinpath("binning_tables.nc")
+        binning_db = files("pyspex.data").joinpath("binning_tables.nc")
         if table_id is None:
             return
 
-        if not self.bin_tbl.is_file():
-            raise FileNotFoundError(f"{self.bin_tbl} not found")
+        if not binning_db.is_file():
+            raise FileNotFoundError(f"{binning_db} not found")
 
-        with h5py.File(self.bin_tbl) as fid:
-            if f"Table_{table_id:03d}" not in fid:
-                raise KeyError(f"Table_{table_id:03d} not defined")
-            gid = fid[f"Table_{table_id:03d}"]
-            self.binning_table = gid["binning_table"][:]
-            self.lineskip_arr = gid["lineskip_arr"][:]
-            self.count_table = gid["count_table"][:]
+        with h5py.File(binning_db) as fid:
+            if pre_launch:
+                ds_name = f"/20210208T152000/Table_{table_id:03d}"
+            else:
+                ds_name = f"Table_{table_id:03d}"
+            if ds_name not in fid:
+                raise KeyError(f"{ds_name} not defined")
+            self.binning_table = fid[f"{ds_name}/binning_table"][:]
+            self.lineskip_arr = fid[f"{ds_name}/lineskip_arr"][:]
+            self.count_table = fid[f"{ds_name}/count_table"][:]
 
     def __enter__(self: BinningCKD) -> Self:
         """Initiate the context manager."""
@@ -260,7 +265,7 @@ class BinningTables:
         """Exit the context manager."""
         return False  # any exception is raised by the with statement.
 
-    def _unbin_(self: BinningTables, img_1d: NDArray[float]) -> NDArray[float]:
+    def _unbin_(self: BinningTables, img_1d: NDArray) -> NDArray[float]:
         """Return detector data corrected for flexible and fixed binning (still 1-D).
 
         Parameters
@@ -288,7 +293,7 @@ class BinningTables:
 
         """
         img_1d = img_1d.astype(float)
-        img_1d /= 4 * self.count_table
+        img_1d /= self.count_table
         mask = self.count_table > 5
 
         if img_1d.ndim == 2:
@@ -308,7 +313,7 @@ class BinningTables:
         img_binned : NDArray | tuple[NDArray]
            image data (N * 1-D array)
         unbin :  bool, default=True
-           return image data as floats and corrected for flexible and fixed binning
+           return image data as floats when corrected for flexible and fixed binning
 
         Returns
         -------
@@ -340,7 +345,7 @@ class BinningTables:
     def to_binned(
         self: BinningTables,
         img_2d: NDArray | tuple[NDArray],
-    ) -> NDArray:
+    ) -> NDArray[np.uint16]:
         """..."""
         if isinstance(img_2d, tuple):
             img_2d = np.concatenate(img_2d, axis=0)
@@ -360,7 +365,7 @@ class BinningTables:
         start_time = time.time()
         mask = counts == 2
         mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
-        buf_1d[:, uvals[mask]] = np.mean(
+        buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 2), axis=2
         )
         print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
@@ -368,9 +373,9 @@ class BinningTables:
         start_time = time.time()
         mask = counts == 3
         mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
-        buf_1d[:, uvals[mask]] = np.mean(
+        buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 3), axis=2
         )
         print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
 
-        return buf_1d
+        return buf_1d.astype("u2")
