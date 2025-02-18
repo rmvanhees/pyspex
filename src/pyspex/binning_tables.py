@@ -369,7 +369,7 @@ class BinningTables:
         fill_value = (
             np.nan
             if np.issubdtype(img_1d.dtype, np.floating)
-            else np.iinfo(img_1d.dtype)
+            else np.iinfo(img_1d.dtype).max
         )
         table = self.binning_table[self.lineskip_arr == 1, :].reshape(-1)
         if img_1d.ndim == 2:
