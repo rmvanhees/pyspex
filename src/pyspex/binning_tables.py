@@ -36,24 +36,6 @@ DATA_DIR_CSV = Path("/data/richardh/SPEXone/share/binning")
 # name of the output file with binning-table definitions
 NAME_BIN_TBL = Path("./binning_tables.nc")
 
-# listing of binning-table ID and names of files with lineskip and flexible binning
-INPUT_BIN_TBL = {
-    20: ("lineskiparrays_EXT_9p8_FM_0.csv", "binning_EXT_9p8_FM_0_add.csv"),
-    24: ("lineskiparrays_EXT_9p8_FM_4.csv", "binning_EXT_9p8_FM_4_add.csv"),
-    29: ("lineskiparrays_EXT_9p8_FM_8.csv", "binning_EXT_9p8_FM_8_add.csv"),
-    50: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_1.csv"),
-    51: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_2.csv"),
-    52: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_3.csv"),
-    53: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_4.csv"),
-    54: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_5.csv"),
-    55: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_6.csv"),
-    56: ("lineskiparrays_160_views.csv", "binning_160_views_add_1.csv"),
-    57: ("lineskiparrays_160_views.csv", "binning_160_views_add_2.csv"),
-    58: ("lineskiparrays_160_views.csv", "binning_160_views_add_3.csv"),
-    59: ("lineskiparrays_160_views.csv", "binning_160_views_add_4.csv"),
-    60: ("lineskiparrays_160_views.csv", "binning_160_views_add_5.csv"),
-}
-
 
 # - class BinningCKD -------------------------------
 class BinningCKD:
@@ -121,7 +103,6 @@ class BinningCKD:
         fid.attrs["date_created"] = (
             dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat(timespec="seconds")
         )
-
         dset = fid.create_dataset("column", dtype="u2", shape=(1024,))
         dset.make_scale()
         dset = fid.create_dataset("row", dtype="u2", shape=(1024,))
@@ -143,6 +124,32 @@ class BinningCKD:
             # print(f"CLOSE HDF5 file: {self.fid.filename}")
             self.fid.close()
 
+    @staticmethod
+    def bin_tbl_defs() -> dict[int, tuple[str, str]]:
+        """Return listing of binning-table definitions.
+
+        Returns
+        -------
+        dict[int, tuple[str, str]]
+            binning-table ID, names of files with lineskip and flexible binning
+        """
+        return {
+            20: ("lineskiparrays_EXT_9p8_FM_0.csv", "binning_EXT_9p8_FM_0_add.csv"),
+            24: ("lineskiparrays_EXT_9p8_FM_4.csv", "binning_EXT_9p8_FM_4_add.csv"),
+            29: ("lineskiparrays_EXT_9p8_FM_8.csv", "binning_EXT_9p8_FM_8_add.csv"),
+            50: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_1.csv"),
+            51: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_2.csv"),
+            52: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_3.csv"),
+            53: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_4.csv"),
+            54: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_5.csv"),
+            55: ("lineskiparrays_170_offs2_2.csv", "binning_170_offs2_2_add_6.csv"),
+            56: ("lineskiparrays_160_views.csv", "binning_160_views_add_1.csv"),
+            57: ("lineskiparrays_160_views.csv", "binning_160_views_add_2.csv"),
+            58: ("lineskiparrays_160_views.csv", "binning_160_views_add_3.csv"),
+            59: ("lineskiparrays_160_views.csv", "binning_160_views_add_4.csv"),
+            60: ("lineskiparrays_160_views.csv", "binning_160_views_add_5.csv"),
+        }
+
     def __write__(self: BinningCKD, data_dir: Path, group: str | None = None) -> None:
         """Write binning-table definition to a HDF5 file.
 
@@ -154,7 +161,7 @@ class BinningCKD:
             root in the HDF5 file where the data will be stored
 
         """
-        for tbl_id, (line_fl, bin_fl) in INPUT_BIN_TBL.items():
+        for tbl_id, (line_fl, bin_fl) in self.bin_tbl_defs().items():
             lineskip_data = np.loadtxt(data_dir / line_fl, delimiter=",").astype("u1")
             binning_data = np.loadtxt(data_dir / bin_fl, delimiter=",", dtype="u4")
             iadd = (data_dir / bin_fl).stem.split("_")[-1]
