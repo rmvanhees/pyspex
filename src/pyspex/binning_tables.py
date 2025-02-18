@@ -283,7 +283,7 @@ class BinningTables:
         with h5py.File(binning_db) as fid:
             if (
                 coverage_start is None
-                or coverage_start > np.datetime("2021-03-04T12:40:00")
+                or coverage_start > np.datetime64("2021-03-04T12:40:00")
             ):
                 ds_name = f"Table_{table_id:03d}"
             else:
