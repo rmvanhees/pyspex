@@ -132,6 +132,7 @@ class BinningCKD:
         -------
         dict[int, tuple[str, str]]
             binning-table ID, names of files with lineskip and flexible binning
+
         """
         return {
             20: ("lineskiparrays_EXT_9p8_FM_0.csv", "binning_EXT_9p8_FM_0_add.csv"),
