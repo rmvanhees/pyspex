@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2025 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -28,12 +28,10 @@ from pyspex.binning_tables import BinningTables
 # --------------------------------------------------
 def binned_to_2x2_image(table_id: int, img_binned: np.ndarray) -> np.ndarray:
     """Convert binned detector data to image (1024, 1024)."""
-    try:
-        bin_ckd = BinningTables()
-    except Exception as exc:
-        raise RuntimeError from exc
+    with BinningTables(table_id) as bin_tbl:
+        res = bin_tbl.to_image(img_binned)
 
-    return bin_ckd.unbin(table_id, img_binned).reshape(1024, 1024)
+    return res
 
 
 # --------------------------------------------------

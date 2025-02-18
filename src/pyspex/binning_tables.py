@@ -33,8 +33,10 @@ if TYPE_CHECKING:
 # DATA_DIR_CSV = Path("/nfs/SPEXone/share/binning")
 DATA_DIR_CSV = Path("/data/richardh/SPEXone/share/binning")
 
+# name of the output file with binning-table definitions
 NAME_BIN_TBL = Path("./binning_tables.nc")
 
+# listing of binning-table ID and names of files with lineskip and flexible binning
 INPUT_BIN_TBL = {
     20: ("lineskiparrays_EXT_9p8_FM_0.csv", "binning_EXT_9p8_FM_0_add.csv"),
     24: ("lineskiparrays_EXT_9p8_FM_4.csv", "binning_EXT_9p8_FM_4_add.csv"),
@@ -57,10 +59,15 @@ INPUT_BIN_TBL = {
 class BinningCKD:
     """Class to store the SPEXone binning-table definitions.
 
+    Parameters
+    ----------
+    overwrite :  bool, default=False
+       Any existing file may be overwritten
+
     Raises
     ------
     FileNotFoundError
-        Directory with SPEXone binning-table files does not exist.
+        Directory with SPEXone binning-table CSV files does not exist.
 
     Notes
     -----
@@ -136,7 +143,17 @@ class BinningCKD:
             # print(f"CLOSE HDF5 file: {self.fid.filename}")
             self.fid.close()
 
-    def __write__(self: BinningCKD, data_dir: Path, group: str | None) -> None:
+    def __write__(self: BinningCKD, data_dir: Path, group: str | None = None) -> None:
+        """Write binning-table definition to a HDF5 file.
+
+        Parameters
+        ----------
+        data_dir :  Path
+            Directory with the binning-table definitions
+        group :  str, optional
+            root in the HDF5 file where the data will be stored
+
+        """
         for tbl_id, (line_fl, bin_fl) in INPUT_BIN_TBL.items():
             lineskip_data = np.loadtxt(data_dir / line_fl, delimiter=",").astype("u1")
             binning_data = np.loadtxt(data_dir / bin_fl, delimiter=",", dtype="u4")
@@ -191,7 +208,7 @@ class BinningCKD:
                 "binning_table",
                 binning_data.shape,
                 dtype="u4",
-                fillvalue=0xFFFFFFFF,
+                fillvalue=np.iinfo("u4").max,
                 chunks=(128, 128),
                 compression="gzip",
                 compression_opts=1,
@@ -219,12 +236,19 @@ class BinningCKD:
         if not data_dir.is_dir():
             raise FileNotFoundError(f"can not find folder: {data_dir}")
         self.fid.attrs["validity_date"] = str(np.datetime64("2021-03-04T12:40:00"))
-        self.__write__(data_dir, None)
+        self.__write__(data_dir)
 
 
 # - class BinningTables ----------------------------
 class BinningTables:
     """Class to apply the SPEXone binning-tables.
+
+    Parameters
+    ----------
+    table_id :  int, optional
+       Binning table ID number between one and 255
+    pre_launch :  bool, default=False
+       Default is to return the table definitions as used after launch
 
     Examples
     --------
@@ -266,17 +290,17 @@ class BinningTables:
         return False  # any exception is raised by the with statement.
 
     def _unbin_(self: BinningTables, img_1d: NDArray) -> NDArray[float]:
-        """Return detector data corrected for flexible and fixed binning (still 1-D).
+        """Return detector data corrected for number of flexible binnings (still 1-D).
 
         Parameters
         ----------
         img_1d :  NDArray
-           Binned image data (N * 1D array) where N is number of images
+           Binned image data (N * 1-D array) where N is number of images
 
         Returns
         -------
         NDArray[float]
-           unbinned image data (N * 1D array)
+           unbinned image data (N * 1-D array)
 
         Examples
         --------
@@ -306,14 +330,14 @@ class BinningTables:
     def to_image(
         self: BinningTables, img_binned: NDArray | tuple[NDArray], unbin: bool = True
     ) -> NDArray:
-        """Return unbinned detector data.
+        """Return 2x2 binned 2-D detector image data.
 
         Parameters
         ----------
         img_binned : NDArray | tuple[NDArray]
            image data (N * 1-D array)
         unbin :  bool, default=True
-           return image data as floats when corrected for flexible and fixed binning
+           return image data as floats corrected for flexible binning
 
         Returns
         -------
@@ -329,42 +353,67 @@ class BinningTables:
         if unbin:
             img_1d = self._unbin_(img_1d)
 
+        fill_value = (
+            np.nan
+            if np.issubdtype(img_1d.dtype, np.floating)
+            else np.iinfo(img_1d.dtype)
+        )
         table = self.binning_table[self.lineskip_arr == 1, :].reshape(-1)
         if img_1d.ndim == 2:
             new_shape = (img_1d.shape[0], *self.binning_table.shape)
-            revert = np.full(new_shape, np.nan)
+            revert = np.full(new_shape, fill_value)
             revert[:, self.lineskip_arr == 1, :] = img_1d[:, table].reshape(
                 img_1d.shape[0], -1, 1024
             )
         else:
-            revert = np.full(self.binning_table.shape, np.nan)
+            revert = np.full(self.binning_table.shape, fill_value)
             revert[self.lineskip_arr == 1, :] = img_1d[table].reshape(-1, 1024)
 
         return revert
 
     def to_binned(
         self: BinningTables,
-        img_2d: NDArray | tuple[NDArray],
+        image: NDArray | tuple[NDArray],
     ) -> NDArray[np.uint16]:
-        """..."""
-        if isinstance(img_2d, tuple):
-            img_2d = np.concatenate(img_2d, axis=0)
+        """Return a 1-D array binned according to the current binning-table.
+
+        Parameters
+        ----------
+        image :  NDArray
+           2-D detector image with shape (N, 1024, 1024) or (N, 2024, 2024)
+
+        Returns
+        -------
+        NDarray[uint16]
+           binned 1-D image data
+
+        """
+        if isinstance(image, tuple):
+            img_2d = np.concatenate(image, axis=0)
         else:
-            img_2d = np.asarray(img_2d)
+            img_2d = np.asarray(image)
         n_img = img_2d.shape[0]
 
+        # perform 2x2 binning
+        if img_2d.shape[1] == img_2d.shape[1] == 2048:
+            img_2d = np.sum(img_2d.reshape(1024, 2, 1024, 2), axis=(1, 3))
+
+        # pylint: disable=no-member
+        binning_table = self.binning_table.reshape(-1)
+
+        # perform flexible binning
         buf_1d = np.full((n_img, self.count_table.size), np.nan)
         uvals, counts = np.unique(self.binning_table, return_counts=True)
 
         start_time = time.time()
         mask = counts == 1
-        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = img_2d.reshape(n_img, -1)[:, mask2]
         print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
 
         start_time = time.time()
         mask = counts == 2
-        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 2), axis=2
         )
@@ -372,10 +421,12 @@ class BinningTables:
 
         start_time = time.time()
         mask = counts == 3
-        mask2 = np.isin(self.binning_table.reshape(-1), uvals[mask])
+        # pylint: disable=no-member
+        mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 3), axis=2
         )
         print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
 
+        # return array with data-type uint16
         return buf_1d.astype("u2")
