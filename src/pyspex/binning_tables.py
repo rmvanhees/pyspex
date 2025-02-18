@@ -255,8 +255,8 @@ class BinningTables:
     ----------
     table_id :  int, optional
        Binning table ID number between one and 255
-    pre_launch :  bool, default=False
-       Default is to return the table definitions as used after launch
+    coverage_start :  np.datetime64, optional
+       Default is to return the table definitions as used after 2021-03-04
 
     Examples
     --------
@@ -268,7 +268,9 @@ class BinningTables:
     """
 
     def __init__(
-        self: BinningTables, table_id: int | None = None, *, pre_launch: bool = False
+        self: BinningTables,
+        table_id: int | None = None, *,
+        coverage_start: np.datetime64 | None = None
     ) -> None:
         """Initialize class attributes."""
         binning_db = files("pyspex.data").joinpath("binning_tables.nc")
@@ -279,10 +281,13 @@ class BinningTables:
             raise FileNotFoundError(f"{binning_db} not found")
 
         with h5py.File(binning_db) as fid:
-            if pre_launch:
-                ds_name = f"/20210208T152000/Table_{table_id:03d}"
-            else:
+            if (
+                coverage_start is None
+                or coverage_start > np.datetime("2021-03-04T12:40:00")
+            ):
                 ds_name = f"Table_{table_id:03d}"
+            else:
+                ds_name = f"/20210208T152000/Table_{table_id:03d}"
             if ds_name not in fid:
                 raise KeyError(f"{ds_name} not defined")
             self.binning_table = fid[f"{ds_name}/binning_table"][:]
