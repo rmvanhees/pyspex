@@ -25,6 +25,7 @@ from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     import datetime as dt
+    from numpy.typing import NDArray
 
 
 # - global parameters -------------------
@@ -35,42 +36,54 @@ ONE_DAY = 24 * 60 * 60
 
 
 # - local functions ---------------------
-def _binning_table_(img_hk: np.ndarray) -> np.ndarray:
+def _binning_table_(img_hk: NDArray) -> NDArray[np.uint8]:
     """Return binning table identifier (zero for full-frame images)."""
     if "REG_FULL_FRAME" not in img_hk.dtype.names:
         module_logger.warning("can not determine binning table identifier")
-        return np.full(len(img_hk), -1, dtype="i1")
+        return np.full(len(img_hk), 0xFF, dtype="u1")
 
-    full_frame = np.unique(img_hk["REG_FULL_FRAME"])
-    if len(full_frame) > 1:
+    # REG_FULL_FRAME:
+    # 0: science = binning (no line skipping)
+    # 1: diagnostic = full frame
+    # 2: science = binning with line skipping
+    uval, counts = np.unique(img_hk["REG_FULL_FRAME"] & 0x3, return_counts=True)
+    if uval.size > 1:
         module_logger.warning("value of REG_FULL_FRAME not unique")
-    full_frame = img_hk["REG_FULL_FRAME"][-1]
+    full_frame = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype('u1')
 
-    cmv_outputmode = np.unique(img_hk["REG_CMV_OUTPUTMODE"])
-    if len(cmv_outputmode) > 1:
+    # REG_CMV_OUTPUTMODE
+    # 0: 16 channels - not used
+    # 1: 8 channels - Science mode
+    # 2: 3 channels - not used
+    # 3: 2 channels - Dignostic mode
+    uval, counts = np.unique(img_hk["REG_CMV_OUTPUTMODE"] & 0x3, return_counts=True)
+    if uval.size > 1:
         module_logger.warning("value of REG_CMV_OUTPUTMODE not unique")
-    cmv_outputmode = img_hk["REG_CMV_OUTPUTMODE"][-1]
+    cmv_outputmode = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype('u1')
 
+    # Diagnostic mode
     if full_frame == 1:
         if cmv_outputmode != 3:
             raise KeyError("Diagnostic mode with REG_CMV_OUTPUTMODE != 3")
-        return np.zeros(len(img_hk), dtype="i1")
+        return np.zeros(len(img_hk), dtype="u1")
 
+    # Science mode
     if full_frame == 2:
         if cmv_outputmode != 1:
             raise KeyError("Science mode with REG_CMV_OUTPUTMODE != 1")
         bin_tbl_start = img_hk["REG_BINNING_TABLE_START"]
-        indx0 = np.nonzero(img_hk["REG_FULL_FRAME"] != 2)[0]
-        if indx0.size > 0:
-            indx2 = np.nonzero(img_hk["REG_FULL_FRAME"] == 2)[0]
-            bin_tbl_start[indx0] = bin_tbl_start[indx2[0]]
-        res = 1 + (bin_tbl_start - 0x80000000) // 0x400000
-        return res & 0xFF
+        res = np.full(len(img_hk), 0xFF, dtype="u1")
+        mask = (
+            ((img_hk["REG_FULL_FRAME"] & 0x3) == 2)
+            & ((img_hk["REG_CMV_OUTPUTMODE"] & 0x3) == 1)
+        )
+        res[mask] = 1 + (bin_tbl_start[mask] - 0x80000000) // 0x400000
+        return res
 
     raise KeyError("REG_FULL_FRAME not equal to 1 or 2")
 
 
-def _digital_offset_(img_hk: np.ndarray) -> int | np.ndarray:
+def _digital_offset_(img_hk: NDArray) -> int | NDArray[np.int32]:
     """Return digital offset including ADC offset [count]."""
     buff = img_hk["DET_OFFSET"].astype("i4")
     if np.isscalar(buff):
@@ -82,12 +95,12 @@ def _digital_offset_(img_hk: np.ndarray) -> int | np.ndarray:
     return buff + 70
 
 
-def _exposure_time_(img_hk: np.ndarray) -> np.ndarray:
+def _exposure_time_(img_hk: NDArray) -> NDArray[float]:
     """Return exposure time in seconds [float]."""
     return 129e-4 * (0.43 * img_hk["DET_FOTLEN"][:] + img_hk["DET_EXPTIME"][:])
 
 
-def _nr_coadditions_(img_hk: np.ndarray) -> np.ndarray:
+def _nr_coadditions_(img_hk: NDArray) -> NDArray[np.uint8]:
     """Return number of coadditions."""
     return img_hk["REG_NCOADDFRAMES"]
 
@@ -224,7 +237,7 @@ class L1Aio:
     def set_attr(
         self: L1Aio,
         name: str,
-        value: np.scalar | np.ndarray,
+        value: np.scalar | NDArray,
         *,
         ds_name: str | None = None,
     ) -> None:
@@ -290,7 +303,7 @@ class L1Aio:
 
         return self.fid[name][:]
 
-    def set_dset(self: L1Aio, name: str, value: np.scalar | np.ndarray) -> None:
+    def set_dset(self: L1Aio, name: str, value: np.scalar | NDArray) -> None:
         """Write data to a netCDF4 variable.
 
         Parameters
@@ -375,17 +388,20 @@ class L1Aio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     def fill_science(
-        self: L1Aio, img_data: np.ndarray, img_hk: np.ndarray, img_id: np.ndarray
+        self: L1Aio,
+        img_data: NDArray[np.uint16],
+        img_hk: NDArray,
+        img_id: NDArray[np.uint16]
     ) -> None:
         """Write Science data and housekeeping telemetry (Science).
 
         Parameters
         ----------
-        img_data : numpy array (uint16)
+        img_data : NDArray[np.uint16]
            Detector image data
-        img_hk : numpy array ()
+        img_hk : NDArray
            Structured array with all Science telemetry parameters
-        img_id : numpy array (uint16)
+        img_id : NDArray[np.uint16]
            Detector frame counter modulo 0x3FFF
 
         Notes
@@ -408,12 +424,12 @@ class L1Aio:
         self.set_dset("/image_attributes/exposure_time", _exposure_time_(img_hk))
         self.set_dset("/image_attributes/nr_coadditions", _nr_coadditions_(img_hk))
 
-    def fill_nomhk(self: L1Aio, nomhk_data: np.ndarray) -> None:
+    def fill_nomhk(self: L1Aio, nomhk_data: NDArray) -> None:
         """Write nominal house-keeping telemetry packets (NomHK).
 
         Parameters
         ----------
-        nomhk_data : numpy array
+        nomhk_data : NDArray
            Structured array with all NomHK telemetry parameters
 
         Notes

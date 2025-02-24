@@ -296,7 +296,7 @@ class SCItlm:
         """Return frame period of detector measurement [ms]."""
         if indx is None:
             res = np.zeros(self.tlm.size, dtype="f8")
-            _mm = self.tlm["REG_FULL_FRAME"] == 2
+            _mm = (self.tlm["REG_FULL_FRAME"] & 0x3) == 2
             # binning mode
             if np.sum(_mm) > 0:
                 res[_mm] = DET_CONSTS["FTI_science"]
@@ -314,7 +314,7 @@ class SCItlm:
             return res
 
         # binning mode
-        if self.tlm["REG_FULL_FRAME"][indx] == 2:
+        if (self.tlm["REG_FULL_FRAME"][indx] & 0x3) == 2:
             return DET_CONSTS["FTI_science"]
 
         # full-frame mode
