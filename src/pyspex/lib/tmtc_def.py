@@ -23,7 +23,7 @@ __all__ = ["tmtc_dtype"]
 import numpy as np
 
 
-def __tmtc_def(apid: int) -> list:
+def __tmtc_def(apid: int) -> list[tuple[str, str]]:
     """Return a list of tuples with the definition os SPEXone telemetry packets.
 
     Parameters

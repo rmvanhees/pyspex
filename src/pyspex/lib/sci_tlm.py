@@ -26,7 +26,7 @@ from .tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     import h5py
-    import numpy.typing as npt
+    from numpy.typing import NDArray
 
 
 # - global parameters -----------------------
@@ -56,7 +56,7 @@ def subsec2musec(sub_sec: int) -> int:
     return int(1e6 * sub_sec / 65536)
 
 
-def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
+def mask2slice(mask: NDArray[bool]) -> None | slice | tuple | NDArray[bool]:
     """Try to slice (faster), instead of boolean indexing (slow)."""
     if np.all(~mask):
         return None
@@ -78,10 +78,10 @@ class SCItlm:
 
     def __init__(self: SCItlm) -> None:
         """Initialize SCItlm object."""
-        self.hdr: np.ndarray | None = None
-        self.tlm: np.ndarray | None = None
-        self.tstamp: np.ndarray | None = None
-        self.images: tuple[np.ndarray, ...] | tuple[()] = ()
+        self.hdr: NDArray | None = None
+        self.tlm: NDArray | None = None
+        self.tstamp: NDArray | None = None
+        self.images: tuple[NDArray, ...] | tuple[()] = ()
 
     def init_attrs(self: SCItlm) -> None:
         """Initialize class attributes."""
@@ -104,7 +104,7 @@ class SCItlm:
         sci.images = copy(self.images)
         return sci
 
-    def sel(self: SCItlm, mask: npt.NDArray[bool]) -> SCItlm:
+    def sel(self: SCItlm, mask: NDArray[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""
         sci = SCItlm()
         if self.hdr is not None:
@@ -126,12 +126,14 @@ class SCItlm:
         )
         self.images += sci.images
 
-    def extract_l0_sci(self: SCItlm, ccsds_sci: tuple, epoch: dt.datetime) -> int:
+    def extract_l0_sci(
+        self: SCItlm, ccsds_sci: tuple[NDArray], epoch: dt.datetime
+    ) -> int:
         """Extract SPEXone level-0 Science-telemetry data.
 
         Parameters
         ----------
-        ccsds_sci :  tuple[np.ndarray, ...]
+        ccsds_sci :  tuple[NDArray, ...]
            SPEXone level-0 Science-telemetry packets
         epoch :  dt.datetime
            Epoch of the telemetry packets (1958 or 1970)
@@ -264,13 +266,13 @@ class SCItlm:
         # read image data
         self.images = (fid["/science_data/detector_images"][data_sel, :],)
 
-    def adc_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
+    def adc_gain(self: SCItlm, indx: int | None = None) -> NDArray[np.int32]:
         """Return ADC gain [Volt]."""
         if indx is None:
             indx = np.s_[:]
         return self.tlm["DET_ADCGAIN"][indx]
 
-    def pga_gain(self: SCItlm, indx: int | None = None) -> np.ndarray:
+    def pga_gain(self: SCItlm, indx: int | None = None) -> NDArray[float]:
         """Return PGA gain [Volt]."""
         if indx is None:
             indx = np.s_[:]
@@ -282,7 +284,7 @@ class SCItlm:
 
         return (1 + 0.2 * reg_pgagain) * 2**reg_pgagainfactor
 
-    def exposure_time(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
+    def exposure_time(self: SCItlm, indx: int | None = None) -> float | NDArray[float]:
         """Return exposure time [ms]."""
         if indx is None:
             indx = np.s_[:]
@@ -290,7 +292,7 @@ class SCItlm:
             0.43 * self.tlm["DET_FOTLEN"][indx] + self.tlm["DET_EXPTIME"][indx]
         )
 
-    def frame_period(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
+    def frame_period(self: SCItlm, indx: int | None = None) -> float | NDArray[float]:
         """Return frame period of detector measurement [ms]."""
         if indx is None:
             res = np.zeros(self.tlm.size, dtype="f8")
@@ -338,7 +340,7 @@ class SCItlm:
         )
         return n_frm * self.frame_period(indx)
 
-    def binning_table(self: SCItlm) -> np.ndarray:
+    def binning_table(self: SCItlm) -> NDArray[np.int8]:
         """Return binning table identifier (zero for full-frame images)."""
         bin_tbl = np.zeros(len(self.tlm), dtype="i1")
         _mm = (self.tlm["IMRLEN"] == FULLFRAME_BYTES) | (self.tlm["IMRLEN"] == 0)
@@ -349,14 +351,14 @@ class SCItlm:
         bin_tbl[~_mm] = 1 + (bin_tbl_start[~_mm] - 0x80000000) // 0x400000
         return bin_tbl
 
-    def digital_offset(self: SCItlm) -> np.ndarray:
+    def digital_offset(self: SCItlm) -> NDArray[np.int32]:
         """Return digital offset including ADC offset [count]."""
         buff = self.tlm["DET_OFFSET"].astype("i4")
         buff[buff >= 8192] -= 16384
 
         return buff + 70
 
-    def convert(self: SCItlm, key: str) -> np.ndarray:
+    def convert(self: SCItlm, key: str) -> NDArray[float]:
         """Convert telemetry parameter to physical units.
 
         Parameters
@@ -366,7 +368,7 @@ class SCItlm:
 
         Returns
         -------
-        np.ndarray
+        NDArray[float]
 
         """
         parm = key.upper()

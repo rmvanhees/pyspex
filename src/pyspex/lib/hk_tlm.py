@@ -26,7 +26,7 @@ from .tmtc_def import tmtc_dtype
 
 if TYPE_CHECKING:
     import h5py
-    import numpy.typing as npt
+    from numpy.typing import NDArray
 
 
 # - helper functions ------------------------
@@ -35,7 +35,7 @@ def subsec2musec(sub_sec: int) -> int:
     return int(1e6 * sub_sec / 65536)
 
 
-def mask2slice(mask: npt.NDArray[bool]) -> None | slice | tuple | npt.NDArray[bool]:
+def mask2slice(mask: NDArray[bool]) -> None | slice | tuple | NDArray[bool]:
     """Try to slice (faster), instead of boolean indexing (slow)."""
     if np.all(~mask):
         return None
@@ -57,10 +57,10 @@ class HKtlm:
 
     def __init__(self: HKtlm) -> None:
         """Initialize HKtlm object."""
-        self.hdr: np.ndarray | None = None
-        self.tlm: np.ndarray | None = None
+        self.hdr: NDArray | None = None
+        self.tlm: NDArray | None = None
         self.tstamp: list[dt.datetime, ...] | list = []
-        self.events: list[np.ndarray, ...] | list = []
+        self.events: list[NDArray, ...] | list = []
 
     def init_attrs(self: HKtlm) -> None:
         """Initialize class attributes."""
@@ -83,7 +83,7 @@ class HKtlm:
         hkt.events = copy(self.events)
         return hkt
 
-    def sel(self: HKtlm, mask: npt.NDArray[bool]) -> HKtlm:
+    def sel(self: HKtlm, mask: NDArray[bool]) -> HKtlm:
         """Return subset of HKtlm object using a mask array."""
         hkt = HKtlm()
         if self.hdr is not None:
@@ -99,7 +99,7 @@ class HKtlm:
 
         Parameters
         ----------
-        ccsds_hk :  tuple[np.ndarray, ...]
+        ccsds_hk :  tuple[NDArray, ...]
            SPEXone level-0 housekeeping telemetry packets
         epoch :  dt.datetime
            Epoch of the telemetry packets (1958 or 1970)
@@ -176,7 +176,7 @@ class HKtlm:
         for sec in dset[data_sel]:
             self.tstamp.append(epoch + dt.timedelta(seconds=sec))
 
-    def convert(self: HKtlm, key: str) -> np.ndarray:
+    def convert(self: HKtlm, key: str) -> NDArray:
         """Convert telemetry parameter to physical units.
 
         Parameters
@@ -186,7 +186,7 @@ class HKtlm:
 
         Returns
         -------
-        np.ndarray
+        NDArray
 
         """
         parm = key.upper()
@@ -198,7 +198,7 @@ class HKtlm:
             raw_data = np.array([x[parm] for x in self.tlm])
         return convert_hk(parm, raw_data)
 
-    def check(self: HKtlm, key: str) -> np.ndarray:
+    def check(self: HKtlm, key: str) -> NDArray:
         """Check of parameter is out-of-range or changed of value."""
         try:
             values = self.convert(key)
