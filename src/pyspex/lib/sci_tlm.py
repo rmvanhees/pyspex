@@ -122,48 +122,37 @@ class SCItlm:
 
         Notes
         -----
-        The methods `vstack` and `vsel` only work for complete measurement
+        The methods `append` and `vsel` only work for complete measurements
         with the same MPS.
 
         """
         sci = SCItlm()
         if self.hdr is not None:
-            sci.hdr = self.hdr[mask, :]
+            sci.hdr = self.hdr[mask]
         if self.tlm is not None:
-            sci.tlm = self.tlm[mask, :]
-            sci.tstamp = self.tstamp[mask, :]
-            sci.images = self.images[mask, :]
-            # tuple(
-            #    x for x, y in zip(self.images, mask, strict=True) if y
-            # )
+            sci.tlm = self.tlm[mask]
+            sci.tstamp = self.tstamp[mask]
+            sci.images = self.images[mask]
         return sci
 
-    def vstack(self: SCItlm, sci: SCItlm) -> None:
+    def append(self: SCItlm, sci: SCItlm) -> None:
         """Append one SCItlm object to the current.
 
         Notes
         -----
-        The methods `vstack` and `vsel` only work for complete measurement
+        The methods `append` and `vsel` only work for complete measurements
         with the same MPS.
 
         """
-        if self.tlm is not None and self.tlm.shape[-1] != sci.tlm.shape[-1]:
-            module_logger.warning(
-                "new record does must match exactly, %d != %d",
-                self.tlm.shape[-1],
-                sci.tlm.shape[-1],
-            )
-            return
-
-        self.hdr = sci.hdr if self.hdr is None else np.vstack((self.hdr, sci.hdr))
-        self.tlm = sci.tlm if self.tlm is None else np.vstack((self.tlm, sci.tlm))
+        self.hdr = sci.hdr if self.hdr is None else np.append(self.hdr, sci.hdr)
+        self.tlm = sci.tlm if self.tlm is None else np.append(self.tlm, sci.tlm)
         self.tstamp = (
-            sci.tstamp if self.tstamp is None else np.vstack((self.tstamp, sci.tstamp))
+            sci.tstamp if self.tstamp is None else np.append(self.tstamp, sci.tstamp)
         )
         self.images = (
-            np.stack(sci.images)
+            sci.images[0]
             if len(self.images) == 0
-            else np.vstack((self.images, sci.images))
+            else np.concatenate((self.images, sci.images[0]))
         )
 
     def extract_l0_sci(
