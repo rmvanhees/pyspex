@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2023-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2023-2025 SRON - Netherlands Institute for Space Research
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -26,7 +26,7 @@ from .tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     import h5py
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
 
 
 # - global parameters -----------------------
@@ -104,7 +104,7 @@ class SCItlm:
         sci.images = copy(self.images)
         return sci
 
-    def sel(self: SCItlm, mask: NDArray[bool]) -> SCItlm:
+    def sel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:
         """Return subset of SCItlm object using a mask array."""
         sci = SCItlm()
         if self.hdr is not None:
@@ -117,14 +117,54 @@ class SCItlm:
             )
         return sci
 
-    def append(self: SCItlm, sci: SCItlm) -> SCItlm:
-        """Append one SCItlm object to the current."""
-        self.hdr = sci.hdr if self.hdr is None else np.append(self.hdr, sci.hdr)
-        self.tlm = sci.tlm if self.tlm is None else np.append(self.tlm, sci.tlm)
+    def vsel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:
+        """Return subset of SCItlm object generated using method vstack.
+
+        Notes
+        -----
+        The methods `vstack` and `vsel` only work for complete measurement
+        with the same MPS.
+
+        """
+        sci = SCItlm()
+        if self.hdr is not None:
+            sci.hdr = self.hdr[mask, :]
+        if self.tlm is not None:
+            sci.tlm = self.tlm[mask, :]
+            sci.tstamp = self.tstamp[mask, :]
+            sci.images = self.images[mask, :]
+            # tuple(
+            #    x for x, y in zip(self.images, mask, strict=True) if y
+            # )
+        return sci
+
+    def vstack(self: SCItlm, sci: SCItlm) -> None:
+        """Append one SCItlm object to the current.
+
+        Notes
+        -----
+        The methods `vstack` and `vsel` only work for complete measurement
+        with the same MPS.
+
+        """
+        if self.tlm is not None and self.tlm.shape[-1] != sci.tlm.shape[-1]:
+            module_logger.warning(
+                "new record does must match exactly, %d != %d",
+                self.tlm.shape[-1],
+                sci.tlm.shape[-1],
+            )
+            return
+
+        self.hdr = sci.hdr if self.hdr is None else np.vstack((self.hdr, sci.hdr))
+        self.tlm = sci.tlm if self.tlm is None else np.vstack((self.tlm, sci.tlm))
         self.tstamp = (
-            sci.tstamp if self.tstamp is None else np.append(self.tstamp, sci.tstamp)
+            sci.tstamp if self.tstamp is None else np.vstack((self.tstamp, sci.tstamp))
         )
-        self.images += sci.images
+        self.images = (
+            np.stack(sci.images)
+            if len(self.images) == 0
+            else np.vstack((self.images, sci.images))
+        )
 
     def extract_l0_sci(
         self: SCItlm, ccsds_sci: tuple[NDArray], epoch: dt.datetime
