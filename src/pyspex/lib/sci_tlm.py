@@ -112,9 +112,7 @@ class SCItlm:
         if self.tlm is not None:
             sci.tlm = self.tlm[mask]
             sci.tstamp = self.tstamp[mask]
-            sci.images = tuple(
-                x for x, y in zip(self.images[0], mask, strict=True) if y
-            )
+            sci.images = (self.images[0][mask, :],)
         return sci
 
     def vsel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:
@@ -132,7 +130,7 @@ class SCItlm:
         if self.tlm is not None:
             sci.tlm = self.tlm[mask]
             sci.tstamp = self.tstamp[mask]
-            sci.images = self.images[mask]
+            sci.images = self.images[mask, :]
         return sci
 
     def append(self: SCItlm, sci: SCItlm) -> None:
