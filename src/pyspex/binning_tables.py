@@ -269,8 +269,9 @@ class BinningTables:
 
     def __init__(
         self: BinningTables,
-        table_id: int | None = None, *,
-        coverage_start: np.datetime64 | None = None
+        table_id: int | None = None,
+        *,
+        coverage_start: np.datetime64 | None = None,
     ) -> None:
         """Initialize class attributes."""
         binning_db = files("pyspex.data").joinpath("binning_tables.nc")
@@ -281,9 +282,8 @@ class BinningTables:
             raise FileNotFoundError(f"{binning_db} not found")
 
         with h5py.File(binning_db) as fid:
-            if (
-                coverage_start is None
-                or coverage_start > np.datetime64("2021-03-04T12:40:00")
+            if coverage_start is None or coverage_start > np.datetime64(
+                "2021-03-04T12:40:00"
             ):
                 ds_name = f"Table_{table_id:03d}"
             else:

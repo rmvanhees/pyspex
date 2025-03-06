@@ -25,6 +25,7 @@ from .lib.tlm_utils import convert_hk
 
 if TYPE_CHECKING:
     import datetime as dt
+
     from numpy.typing import NDArray
 
 
@@ -49,7 +50,7 @@ def _binning_table_(img_hk: NDArray) -> NDArray[np.uint8]:
     uval, counts = np.unique(img_hk["REG_FULL_FRAME"] & 0x3, return_counts=True)
     if uval.size > 1:
         module_logger.warning("value of REG_FULL_FRAME not unique")
-    full_frame = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype('u1')
+    full_frame = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype("u1")
 
     # REG_CMV_OUTPUTMODE
     # 0: 16 channels - not used
@@ -59,7 +60,7 @@ def _binning_table_(img_hk: NDArray) -> NDArray[np.uint8]:
     uval, counts = np.unique(img_hk["REG_CMV_OUTPUTMODE"] & 0x3, return_counts=True)
     if uval.size > 1:
         module_logger.warning("value of REG_CMV_OUTPUTMODE not unique")
-    cmv_outputmode = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype('u1')
+    cmv_outputmode = (uval[0] if uval.size == 1 else uval[counts.argmax()]).astype("u1")
 
     # Diagnostic mode
     if full_frame == 1:
@@ -73,9 +74,8 @@ def _binning_table_(img_hk: NDArray) -> NDArray[np.uint8]:
             raise KeyError("Science mode with REG_CMV_OUTPUTMODE != 1")
         bin_tbl_start = img_hk["REG_BINNING_TABLE_START"]
         res = np.full(len(img_hk), 0xFF, dtype="u1")
-        mask = (
-            ((img_hk["REG_FULL_FRAME"] & 0x3) == 2)
-            & ((img_hk["REG_CMV_OUTPUTMODE"] & 0x3) == 1)
+        mask = ((img_hk["REG_FULL_FRAME"] & 0x3) == 2) & (
+            (img_hk["REG_CMV_OUTPUTMODE"] & 0x3) == 1
         )
         res[mask] = 1 + (bin_tbl_start[mask] - 0x80000000) // 0x400000
         return res
@@ -391,7 +391,7 @@ class L1Aio:
         self: L1Aio,
         img_data: NDArray[np.uint16],
         img_hk: NDArray,
-        img_id: NDArray[np.uint16]
+        img_id: NDArray[np.uint16],
     ) -> None:
         """Write Science data and housekeeping telemetry (Science).
 

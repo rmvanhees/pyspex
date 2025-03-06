@@ -26,13 +26,6 @@ from pyspex.binning_tables import BinningTables
 
 
 # --------------------------------------------------
-def binned_to_2x2_image(table_id: int, img_binned: np.ndarray) -> np.ndarray:
-    """Convert binned detector data to image (1024, 1024)."""
-
-    return res
-
-
-# --------------------------------------------------
 def main() -> None:
     """Create a PDF from a SPEXone Level-1A product."""
     parser = argparse.ArgumentParser(
@@ -114,7 +107,7 @@ def main() -> None:
         for ii in indx:
             if med_table_id > 0:
                 with BinningTables(med_table_id, pre_launch=prelaunch) as bin_tbl:
-                    img_2d = bin_tbl.to_image(images[ii, :]) / 4
+                    img2d = bin_tbl.to_image(images[ii, :]) / 4
             else:
                 if images[ii, :].size != 4194304:
                     continue
