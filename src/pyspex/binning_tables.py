@@ -15,7 +15,6 @@ from __future__ import annotations
 __all__ = ["BinningTables"]
 
 import datetime as dt
-import time
 from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
@@ -30,8 +29,8 @@ if TYPE_CHECKING:
 
 
 # - global parameters ------------------------------
-# DATA_DIR_CSV = Path("/nfs/SPEXone/share/binning")
-DATA_DIR_CSV = Path("/data/richardh/SPEXone/share/binning")
+DATA_DIR_CSV = Path("/nfs/SPEXone/share/binning")
+# DATA_DIR_CSV = Path("/data/richardh/SPEXone/share/binning")
 
 # name of the output file with binning-table definitions
 NAME_BIN_TBL = Path("./binning_tables.nc")
@@ -408,7 +407,7 @@ class BinningTables:
         n_img = img_2d.shape[0]
 
         # perform 2x2 binning
-        if img_2d.shape[1] == img_2d.shape[1] == 2048:
+        if img_2d.shape[1] == img_2d.shape[2] == 2048:
             img_2d = np.sum(img_2d.reshape(1024, 2, 1024, 2), axis=(1, 3))
 
         # pylint: disable=no-member
@@ -418,28 +417,29 @@ class BinningTables:
         buf_1d = np.full((n_img, self.count_table.size), np.nan)
         uvals, counts = np.unique(self.binning_table, return_counts=True)
 
-        start_time = time.time()
+        # start_time = time.time()
         mask = counts == 1
         mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = img_2d.reshape(n_img, -1)[:, mask2]
-        print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
+        # print(f"processing count==1 took: {time.time() - start_time:.3f} sec.")
 
-        start_time = time.time()
+        # start_time = time.time()
         mask = counts == 2
         mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 2), axis=2
         )
-        print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
+        # print(f"processing count==2 took: {time.time() - start_time:.3f} sec.")
 
-        start_time = time.time()
+        # start_time = time.time()
         mask = counts == 3
         # pylint: disable=no-member
         mask2 = np.isin(binning_table, uvals[mask])
         buf_1d[:, uvals[mask]] = np.sum(
             img_2d.reshape(n_img, -1)[:, mask2].reshape(n_img, -1, 3), axis=2
         )
-        print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
+        # print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
 
         # return array with data-type uint16
+        buf_1d[np.isnan(buf_1d)] = 0xFFFF
         return buf_1d.astype("u2")
