@@ -441,5 +441,5 @@ class BinningTables:
         # print(f"processing count==3 took: {time.time() - start_time:.3f} sec.")
 
         # return array with data-type uint16
-        buf_1d[np.isnan(buf_1d)] = 0xFFFF
+        buf_1d[np.isnan(buf_1d)] = np.iinfo("u2").max
         return buf_1d.astype("u2")
