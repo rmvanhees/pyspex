@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2025 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2019-2025 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -83,7 +83,7 @@ class BinningCKD:
         fid.attrs["creator_name"] = "SRON/Earth"
         fid.attrs["creator_email"] = "SPEXone-MPC@sron.nl"
         fid.attrs["creator_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
-        fid.attrs["institution"] = "SRON Netherlands Institute for Space Research"
+        fid.attrs["institution"] = "SRON"
         fid.attrs["publisher_name"] = "SRON/Earth"
         fid.attrs["publisher_email"] = "SPEXone-MPC@sron.nl"
         fid.attrs["publisher_url"] = "https://www.sron.nl/missions-earth/pace-spexone"

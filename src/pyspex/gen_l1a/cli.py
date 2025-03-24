@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2024 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2025 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause

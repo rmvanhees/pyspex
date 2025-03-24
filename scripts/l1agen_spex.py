@@ -3,7 +3,7 @@
 # This file is part of pyspex
 #    https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2025 SRON - Netherlands Institute for Space Research
+# Copyright (c) 2022-2025 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -431,7 +431,7 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
     }
 
     if origin == "SRON":
-        res["institution"] = "SRON Netherlands Institute for Space Research"
+        res["institution"] = "SRON"
         res["creator_name"] = "SRON/Earth"
         res["creator_email"] = "SPEXone-MPC@sron.nl"
         res["creator_url"] = "https://www.sron.nl/missions-earth/pace-spexone"
