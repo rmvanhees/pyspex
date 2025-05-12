@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 name = "pyspex"
 description = "Software package to handle SPEXone Level-0 and Level-1 data"
 readme = "README.md"
-license.file = "LICENSE"
+license = "BSD-3-Clause"
 authors = [
   {name = "Richard van Hees", email = "r.m.van.hees@sron.nl"}
 ]
