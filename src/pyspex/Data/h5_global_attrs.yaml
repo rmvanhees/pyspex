@@ -1,0 +1,34 @@
+# YAML
+#
+# Definition of the Tango L1A global attributes
+#
+# This file is part of tango-l01a:
+#    https://gitlab.sron.nl/esg/Tango/tango-l01a.git
+#
+# Copyright (c) 2025 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+attributes:
+  publisher_name: SRON
+  institution: SRON
+  creator_name: SRON/Earth Science
+  creator_email: Tango-MPC@sron.nl
+  creator_url: https://www.sron.nl/missions-earth/tango
+  publisher_name: SRON/Earth
+  publisher_email: Tango-MPC@sron.nl
+  publisher_url: https://www.sron.nl/missions-earth/tango
+  standard_name_vocabulary: CF Standard Name Table v79
+  # keyword_vocabulary: NASA Global Change Master Directory (GCMD) Science Keywords
+  license:   This work is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/
+  project: Tango Project
+  conventions: CF-1.11 ACDD-1.3
+  title: Tango Carbon level-1A data
+  platform: Tango
+  instrument: Carbon
+  stdname_vocabulary: NetCDF Climate and Forecast (CF) Metadata Convention
+  processing_level: L1A
+  cdm_data_type: granule
+  identifier_product_doi_authority: https://dx.doi.org/
+  identifier_product_doi: TBD

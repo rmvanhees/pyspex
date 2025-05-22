@@ -1,0 +1,269 @@
+# YAML
+#
+# Definition of the SPEXone level-1A product
+#
+# This file is part of pyspex:
+#    https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2025 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+# Define groups
+groups:
+  - engineering_data
+  - image_attributes
+  - navigation_data
+  - processing_control
+  - science_data
+  
+# Define dimensions
+dimensions:
+  number_of_images:
+    _dtype: u2
+    _size: 0
+  samples_per_image:
+    _dtype: u4
+    _size: 0
+  hk_packets:
+    _dtype: u2
+    _size: 0
+  column:
+    _dtype: u2
+    _size: 2048
+  row:
+    _dtype: u2
+    _size: 2048
+  quaternion_elements:
+    _dtype: u2
+    _size: 4
+  vector_elements:
+    _dtype: u2
+    _size: 3
+  /navigation_data/att_time:
+    _dtype: f8
+    _size: 0
+    _FillValue: -32767
+    long_name: Attitude sample time (seconds of day)
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+  /navigation_data/orb_time:
+    _dtype: f8
+    _size: 0
+    _FillValue: -32767
+    long_name: Orbit vector time (seconds of day)
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+  /navigation_data/tilt_time:
+    _dtype: f8
+    _size: 0
+    _FillValue: -32767
+    long_name: Tilt sample time (seconds of day)
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+
+# Define compound datatypes
+compounds:
+  - h5_nomhk_tm.yaml
+  - h5_science_hk.yaml
+
+# Define variables
+#
+# Parameters used by h5py.create_dataset start with an underscore:
+# - required dataset parameters: _dtype, _dims
+# - optional dateset parameters: _compression, _FillValue, _chunks
+# - other parameters are added as datasets attributes 
+variables:
+  # ----- engineering_data -----
+  /engineering_data/HK_tlm_time:
+    _dtype: f8
+    _dims: [hk_packets]
+    _FillValue: -32767
+    long_name: HK telemetry packet time
+    description: ICU packaging time in seconds of day
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 92400
+  /engineering_data/NomHK_telemetry:
+    _dtype: nomhk_dtype
+    _dims: [hk_packets]
+    long_name: SPEXone NomHK telemetry
+    description: An extended subset of the housekeeping parameters at 1 Hz
+  /engineering_data/temp_detector:
+    _dtype: f4
+    _dims: [hk_packets]
+    long_name: Detector temperature
+    comment: TS1 DEM Temperature (nominal)
+    units: degC
+    valid_min: 17.83
+    valid_max: 18.83
+  /engineering_data/temp_housing:
+    _dtype: f4
+    _dims: [hk_packets]
+    long_name: Housekeeping temperature
+    comment: TS2 Housing Temperature (nominal)
+    units: degC
+    valid_min: 19.11
+    valid_max: 20.11
+  /engineering_data/temp_radiator:
+    _dtype: f4
+    _dims: [hk_packets]
+    long_name: Radiator temperature
+    comment: TS3 Radiator Temperature (nominal)
+    units: degC
+    valid_min: -2
+    valid_max: 3
+  # ----- image_attributes -----
+  /image_attributes/image_time:
+    _dtype: f8
+    _dims: [number_of_images]
+    _FillValue: -32767
+    long_name: Image time
+    description: Integration start time in seconds of day
+    calendar: proleptic_gregorian
+    units: seconds since %Y-%m-%d %H:%M:%S
+    valid_min: 0
+    valid_max: 86400 + 6000
+  /image_attributes/timedelta_centre:
+    _dtype: f8
+    _dims: [number_of_images]
+    _FillValue: -32767
+    units: s
+    long_name: Time-delta to centre of integration time
+    description: Add this offset to image-time (MPS specific)
+  /image_attributes/icu_time_sec:
+    _dtype: u4
+    _dims: [number_of_images]
+    _FillValue: 0
+    long_name: ICU time stamp (seconds)
+    description: Science TM parameter ICU_TIME_SEC
+    units: seconds since 1958-01-01 00:00:00 TAI
+    valid_min: 1956528000
+    valid_max: 2493072000
+  /image_attributes/icu_time_subsec:
+    _dtype: u2
+    _dims: [number_of_images]
+    long_name: ICU time stamp (sub-seconds)
+    description: Science TM parameter ICU_TIME_SUBSEC
+    units: 1/65536 seconds
+    valid_min: 0
+    valid_max: 65535
+  /image_attributes/image_id:
+    _dtype: u4
+    _dims: [number_of_images]
+    long_name: Image counter from power-up
+    valid_min: 0
+    valid_max: 2147483647
+  /image_attributes/binning_table:
+    _dtype: u1
+    _dims: [number_of_images]
+    long_name: Binning-table ID
+    valid_max: 0
+    valid_max: 255
+  /image_attributes/nr_coadditions:
+    _dtype: u2
+    _dims: [number_of_images]
+    _FillValue: 0
+    long_name: Number of coadditions
+    units: '1'
+    valid_min: 1
+  /image_attributes/exposure_time:
+    _dtype: f8
+    _dims: [number_of_images]
+    _FillValue: -32767
+    long_name: Exposure time
+    units: s
+  # ----- navigation_data -----
+  /navigation_data/att_quat:
+    _dtype: f4
+    _dims: [/navigation_data/att_time, quaternion_elements]
+    _FillValue: -32767
+    long_name: Attitude quaternions (J2000 to spacecraft)
+    units: seconds
+    valid_min: -1
+    valid_max: 1
+  /navigation_data/att_rate:
+    _dtype: f4
+    _dims: [/navigation_data/att_time, vector_elements]
+    _FillValue: -32767
+    long_name: Attitude angular rates in spacecraft frame
+    units: radians/second
+    valid_min: -0.004
+    valid_max: 0.004
+  /navigation_data/orb_pos:
+    _dtype: f4
+    _dims: [/navigation_data/orb_time, vector_elements]
+    _FillValue: -9999999
+    long_name: Orbit position vectors (ECR)
+    units: meters
+    valid_min: -7200000
+    valid_max: 7200000
+  /navigation_data/orb_vel:
+    _dtype: f4
+    _dims: [/navigation_data/orb_time, vector_elements]
+    _FillValue: -32767
+    long_name: Orbit velocity vectors (ECR)
+    units: meters/second
+    valid_min: -7600
+    valid_max: 7600
+  /navigation_data/orb_lat:
+    _dtype: f4
+    _dims: [/navigation_data/orb_time, vector_elements]
+    _FillValue: -32767
+    long_name: Orbit latitude (degrees North)
+    units: degrees_north
+    valid_min: -90
+    valid_max: 90
+  /navigation_data/orb_lon:
+    _dtype: f4
+    _dims: [/navigation_data/orb_time, vector_elements]
+    _FillValue: -32767
+    long_name: Orbit longitude (degrees East)
+    units: degrees_east
+    valid_min: -180
+    valid_max: 180
+  /navigation_data/orb_alt:
+    _dtype: f4
+    _dims: [/navigation_data/orb_time, vector_elements]
+    _FillValue: -32767
+    long_name: Orbit altitude
+    units: meters
+    valid_min: 670000
+    valid_max: 710000
+  /navigation_data/tilt:
+    _dtype: f4
+    _dims: [/navigation_data/tilt_time]
+    _FillValue: -32767
+    long_name: Tilt angle
+    units: degrees
+    valid_min: -20.1
+    valid_max: 20.1
+  /navigation_data/tilt_flag:
+    _dtype: u1
+    _dims: [/navigation_data/tilt_time]
+    _FillValue: 255
+    long_name: Tilt quality flag
+    flag_values: [0, 1]
+    flag_meanings: Valid Not_initialized
+  # ----- science_data -----
+  /science_data/detector_images:
+    _dtype: u2
+    _dims: [number_of_images, samples_per_image]
+    _FillValue: 65535
+    long_name: Detector pixel values
+    units: counts
+    valid_min: 0
+    valid_max: 65534
+  /science_data/science_hk:
+    _dtype: science_dtype
+    _dims: [number_of_images]
+    long_name: Science telemetry
+    comment: a subset of DemHK and NomHK parameters

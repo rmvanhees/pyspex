@@ -22,7 +22,7 @@ import yaml
 
 def start_logger() -> None:
     """Initialize logger for pyspex."""
-    yaml_fl = files("pyspex.data").joinpath("logger_setup.yaml")
+    yaml_fl = files("pyspex.Data").joinpath("logger_setup.yaml")
     if not yaml_fl.is_file():
         raise FileNotFoundError(f"{yaml_fl} not found")
 

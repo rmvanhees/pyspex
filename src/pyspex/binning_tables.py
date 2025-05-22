@@ -273,7 +273,7 @@ class BinningTables:
         coverage_start: np.datetime64 | None = None,
     ) -> None:
         """Initialize class attributes."""
-        binning_db = files("pyspex.data").joinpath("binning_tables.nc")
+        binning_db = files("pyspex.Data").joinpath("binning_tables.nc")
         if table_id is None:
             return
 
