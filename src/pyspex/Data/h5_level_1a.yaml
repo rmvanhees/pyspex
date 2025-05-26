@@ -168,6 +168,11 @@ variables:
     long_name: Binning-table ID
     valid_max: 0
     valid_max: 255
+  /image_attributes/digital_offset:
+    _dtype: i2
+    _dims: [number_of_images]
+    long_name: Digital offset
+    units: '1'
   /image_attributes/nr_coadditions:
     _dtype: u2
     _dims: [number_of_images]
