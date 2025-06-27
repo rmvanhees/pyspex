@@ -112,7 +112,7 @@ class SCItlm:
         if self.tlm is not None:
             sci.tlm = self.tlm[mask]
             sci.tstamp = self.tstamp[mask]
-            sci.images = (self.images[0][mask, :],)
+            sci.images = tuple(self.images[ii] for ii in mask.nonzero()[0])
         return sci
 
     def vsel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:

@@ -1,43 +1,46 @@
-#!/usr/bin/env python3
 #
-# This file is part of pyspex
-#
-# https://github.com/rmvanhees/pyspex.git
+# This file is part of pyspex:
+#    https://github.com/rmvanhees/pyspex.git
 #
 # Copyright (c) 2022-2025 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
-"""Command-line implementation of spx1_level01a."""
+#
+"""Generate a SPEXone level-1A product (netCDF4 format)."""
 
 from __future__ import annotations
 
 import logging
 import warnings
 
-from pyspex.argparse_gen_l1a import argparse_gen_l1a
-from pyspex.lib.check_input_files import check_input_files
+import numpy as np
+
 from pyspex.lib.logger import start_logger
 from pyspex.lv0_lib import CorruptPacketWarning
 from pyspex.tlm import SPXtlm
 
+from .argparse_gen_l1a import argparse_gen_l1a
+from .l1a import check_input_files, create_l1a, read_hkt_nav
 
+
+# - main function ----------------------------------
 def main() -> int:
     """Execute the main bit of the application."""
     error_code = 0
     warn_code = 0
 
-    # initialize logger
+    # (1) initialize logger
     start_logger()
     logging.captureWarnings(True)
 
-    # parse command-line parameters and YAML file for settings
+    # (2) parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
     logging.getLogger().setLevel(config.verbose)  # first, set the root logger
     logger = logging.getLogger("pyspex.gen_l1a")  # then initiate a descendant
     logger.debug("%s", config)
 
-    # check input files (SEPXone level-0)
+    # (3) check input files (SEPXone level-0)
     try:
         check_input_files(config)
     except FileNotFoundError as exc:
@@ -47,10 +50,7 @@ def main() -> int:
         logger.fatal("%s", exc)
         return 121
 
-    # read level 0 data
-    # Note that we read as much as possible packages from a file, but stop at
-    # the first occurrence of a corrupted data-packet, then the remainder of
-    # the file is neglected.
+    # (4) read level 0 data
     tlm = None
     with warnings.catch_warnings(record=True) as wrec_list:
         warnings.simplefilter("always", category=CorruptPacketWarning)
@@ -76,17 +76,29 @@ def main() -> int:
     if error_code != 0 or config.debug or config.dump:
         return error_code
 
-    # Write Level-1A product.
-    if not config.outdir.is_dir():
-        config.outdir.mkdir(mode=0o755, parents=True)
+    if tlm.science.size > 0:
+        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+        logger.debug("unique Science MPS: %s", mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.isin(tlm.nomhk.tlm["MPS_ID"], mps_list))
+
+    # (5) read navigation data from PACE_HKT products
+    nav_dict = None
+    if config.hkt_list:
+        nav_dict = read_hkt_nav(config.hkt_list)
+
+    # (6) write Level-1A product.
     try:
         if config.eclipse is None or tlm.science.size == 0:
-            tlm.gen_l1a(config)
+            create_l1a(config, tlm, nav_dict)
         elif config.eclipse:
-            tlm.full().gen_l1a(config)
-            tlm.binned().gen_l1a(config)
+            # binned measurements
+            create_l1a(config, tlm.binned(), nav_dict, "binned")
+
+            # full-frame measurements
+            create_l1a(config, tlm.full(), nav_dict, "full")
         else:
-            tlm.binned().gen_l1a(config)
+            # binned measurements
+            create_l1a(config, tlm.binned(), nav_dict, "binned")
     except (KeyError, RuntimeError) as exc:
         # raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)
@@ -100,7 +112,3 @@ def main() -> int:
         error_code = 135
 
     return warn_code if error_code == 0 else error_code
-
-
-if __name__ == "__main__":
-    main()

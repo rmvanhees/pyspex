@@ -294,6 +294,7 @@ class SPXtlm:
         # set Science time_coverage_range
         indices = mask.nonzero()[0]
         master_cycle = dt.timedelta(milliseconds=self.science.master_cycle(-1))
+        spx.set_coverage(None)
         if len(indices) == 1:
             spx.set_coverage(
                 (
