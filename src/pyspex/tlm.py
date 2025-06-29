@@ -16,7 +16,6 @@ __all__ = ["SPXtlm"]
 import datetime as dt
 import logging
 from copy import copy
-from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,9 +26,7 @@ import numpy as np
 from netCDF4 import Dataset
 
 from .hkt_io import HKTio
-from .l1a_io import L1Aio
 from .lib import pyspex_version
-from .lib.attrs_def import attrs_def
 from .lib.hk_tlm import HKtlm
 from .lib.leap_sec import get_leap_seconds
 from .lib.sci_tlm import DET_CONSTS, SCItlm
@@ -178,7 +175,6 @@ class SPXtlm:
      - from_l1a(flname: str | Path,
                 *, tlm_type: str | None = None,
                 mps_id: int | None = None) -> None
-     - gen_l1a(config: dataclass, add_coverage_quality: bool = True) -> None
 
 
     Examples
@@ -604,202 +600,3 @@ class SPXtlm:
         self.logger.debug("Rejected %d full-frame Science images", np.sum(~sci_mask))
 
         return copy(self).sel(sci_mask)
-
-    def gen_l1a(
-        self: SPXtlm,
-        config: dataclass,
-        add_coverage_quality: bool = True,
-    ) -> None:
-        """Generate a SPEXone level-1A product.
-
-        Parameters
-        ----------
-        config :  dataclass
-           Settings for the L0->L1A processing
-        add_coverage_quality :  bool, default=True
-           Add coverage flag of the naviagation data and science data
-
-        """
-        # sanity check
-        if self.science.size == 0 and self.nomhk.size == 0:
-            return
-
-        if self.science.size > 0:
-            mps_list = np.unique(self.science.tlm["MPS_ID"])
-            self.logger.debug("unique Science MPS: %s", mps_list)
-            self.nomhk = self.nomhk.sel(np.isin(self.nomhk.tlm["MPS_ID"], mps_list))
-
-        dims = {
-            "number_of_images": self.science.size,
-            "samples_per_image": (
-                DET_CONSTS["dimRow"]
-                if self.science.size == 0
-                else np.max(self.science.tlm["IMRLEN"]) // 2
-            ),
-            "hk_packets": self.nomhk.size,
-        }
-        l1a_path = get_l1a_filename(config, self.coverage, self.mode)
-        with L1Aio(
-            l1a_path,
-            self.reference_date,
-            dims,
-            compression=config.compression,
-        ) as l1a:
-            self._fill_attrs(l1a, config)
-            l1a.set_attr(
-                "time_coverage_start",
-                self.time_coverage_start.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"
-                ),
-            )
-            l1a.set_attr(
-                "time_coverage_end",
-                self.time_coverage_end.replace(tzinfo=None).isoformat(
-                    timespec="milliseconds"
-                ),
-            )
-            self.logger.debug("(1) initialized level-1A product")
-
-            self._fill_engineering(l1a)
-            self.logger.debug("(2) added engineering data")
-            self._fill_science(l1a, dims["samples_per_image"])
-            self.logger.debug("(3) added science data")
-            self._fill_image_attrs(l1a, config.l0_format)
-            self.logger.debug("(4) added image attributes")
-
-        # add PACE navigation information from HKT products
-        if config.hkt_list:
-            hkt = HKTio(config.hkt_list)
-            hkt.navigation()
-            hkt.add_nav(l1a_path, self.coverage, add_coverage_quality)
-            self.logger.debug("(5) added PACE navigation data")
-
-        # add processor_configuration
-        if config.yaml_fl:
-            add_proc_conf(l1a_path, config.yaml_fl)
-
-        self.logger.info("successfully generated: %s", l1a_path.name)
-
-    def _fill_attrs(self: SPXtlm, l1a: L1Aio, config: dataclass) -> None:
-        """Fill attributes global and in the group '/processing_control'."""
-        inflight = config.l0_format != "raw"
-
-        # fill global attributes
-        dict_attrs = attrs_def(inflight)
-        dict_attrs["product_name"] = l1a.product.name
-        if config.processing_version:
-            dict_attrs["processing_version"] = config.processing_version
-        for key, value in dict_attrs.items():
-            if key.startswith("software"):
-                l1a.set_attr(key, value, ds_name="processing_control")
-            elif value is not None:
-                l1a.set_attr(key, value)
-
-        # fill attributes in the group processing_control
-        l1a.set_attr(
-            "icu_sw_version",
-            f"0x{self.nomhk.tlm['ICUSWVER'][0]:x}",
-            ds_name="processing_control",
-        )
-        for key, value in asdict(config).items():
-            if key in ("l0_list", "hkt_list"):
-                l1a.set_attr(
-                    key,
-                    "" if not value else ",".join([x.name for x in value]),
-                    ds_name="processing_control/input_parameters",
-                )
-            else:
-                l1a.set_attr(
-                    key, f"{value}", ds_name="processing_control/input_parameters"
-                )
-
-    def _fill_engineering(self: SPXtlm, l1a: L1Aio) -> None:
-        """Fill datasets in group '/engineering_data'."""
-        if self.nomhk.size == 0:
-            return
-
-        l1a.set_dset("/engineering_data/NomHK_telemetry", self.nomhk.tlm)
-        ref_date = self.reference_date
-        l1a.set_dset(
-            "/engineering_data/HK_tlm_time",
-            [(x - ref_date).total_seconds() for x in self.nomhk.tstamp],
-        )
-        l1a.set_dset(
-            "/engineering_data/temp_detector",
-            self.nomhk.convert("TS1_DEM_N_T"),
-        )
-        l1a.set_dset(
-            "/engineering_data/temp_housing",
-            self.nomhk.convert("TS2_HOUSING_N_T"),
-        )
-        l1a.set_dset(
-            "/engineering_data/temp_radiator",
-            self.nomhk.convert("TS3_RADIATOR_N_T"),
-        )
-
-    def _fill_science(self: SPXtlm, l1a: L1Aio, samples_per_image: int) -> None:
-        """Fill datasets in group '/science_data'."""
-        if self.science.size == 0:
-            return
-
-        if len(np.unique([img.size for img in self.science.images])) == 1:
-            l1a.set_dset("/science_data/detector_images", self.science.images)
-        else:
-            images = np.zeros((self.science.size, samples_per_image), dtype="u2")
-            for ii, img in enumerate(self.science.images):
-                images[ii, : img.size] = img
-            l1a.set_dset("/science_data/detector_images", images)
-        l1a.set_dset("/science_data/detector_telemetry", self.science.tlm)
-
-    def _fill_image_attrs(self: SPXtlm, l1a: L1Aio, lv0_format: str) -> None:
-        """Fill datasets in group '/image_attributes'."""
-        if self.science.size == 0:
-            return
-
-        l1a.set_dset("/image_attributes/icu_time_sec", self.science.tstamp["tai_sec"])
-        # modify attribute units for non-DSB products
-        if lv0_format != "dsb":
-            # timestamp of 2020-01-01T00:00:00+00:00
-            l1a.set_attr(
-                "valid_min",
-                np.uint32(1577836800),
-                ds_name="/image_attributes/icu_time_sec",
-            )
-            # timestamp of 2024-01-01T00:00:00+00:00
-            l1a.set_attr(
-                "valid_max",
-                np.uint32(1704067200),
-                ds_name="/image_attributes/icu_time_sec",
-            )
-            l1a.set_attr(
-                "units",
-                "seconds since 1970-01-01 00:00:00",
-                ds_name="/image_attributes/icu_time_sec",
-            )
-        l1a.set_dset(
-            "/image_attributes/icu_time_subsec",
-            self.science.tstamp["sub_sec"],
-        )
-        ref_date = self.reference_date
-        l1a.set_dset(
-            "/image_attributes/image_time",
-            [(x - ref_date).total_seconds() for x in self.science.tstamp["dt"]],
-        )
-        l1a.set_dset(
-            "/image_attributes/image_ID",
-            np.bitwise_and(self.science.hdr["sequence"], 0x3FFF),
-        )
-        l1a.set_dset("/image_attributes/binning_table", self.science.binning_table())
-        l1a.set_dset("/image_attributes/digital_offset", self.science.digital_offset())
-        l1a.set_dset(
-            "/image_attributes/exposure_time",
-            self.science.exposure_time() / 1000,
-        )
-        l1a.set_dset(
-            "/image_attributes/nr_coadditions",
-            self.science.tlm["REG_NCOADDFRAMES"],
-        )
-        buff = (
-            self.science.tlm["REG_NCOADDFRAMES"] - 1
-        ) * self.science.frame_period() + self.science.exposure_time()
-        l1a.set_dset("/image_attributes/timedelta_centre", buff / 2000)
