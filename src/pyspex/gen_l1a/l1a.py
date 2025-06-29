@@ -34,14 +34,17 @@ from h5yaml.conf_from_yaml import conf_from_yaml
 from h5yaml.yaml_h5py import H5Yaml
 
 from pyspex.lib import pyspex_version
-from pyspex.tlm import SPXtlm, get_l1a_filename
+from pyspex.tlm import get_l1a_filename
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 
     from numpy.typing import NDArray
-    from pypex.lib.hk_tlm import HKtlm
-    from pypex.lib.sci_tlm import SCItlm
+
+    from pyspex.lib.hk_tlm import HKtlm
+    from pyspex.lib.sci_tlm import SCItlm
+    from pyspex.tlm import SPXtlm
+
 
 # - global parameters ------------------------------
 module_logger = logging.getLogger("pyspex.l1a")
