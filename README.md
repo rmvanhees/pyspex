@@ -1,7 +1,8 @@
 # pySpex
-[![Package Release](https://img.shields.io/pypi/v/pyspex.svg?label=version)](https://github.com/rmvanhees/pyspex/)
-[![Package Status](https://img.shields.io/pypi/status/pyspex.svg?label=status)](https://pypi.org/project/pyspex/)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/pyspex.svg?label=PyPI%20downloads)](https://pypi.org/project/pyspex/)
+[![image](https://img.shields.io/pypi/v/pyspex.svg?label=release)](https://github.com/rmvanhees/pyspex/)
+[![image](https://img.shields.io/pypi/l/pyspex.svg)](https://github.com/rmvanhees/pyspex/LICENSE)
+[![image](https://img.shields.io/pypi/dm/pyspex.svg)](https://pypi.org/project/pyspex/)
+[![image](https://img.shields.io/pypi/status/pyspex.svg?label=status)](https://pypi.org/project/pyspex/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5705691.svg)](https://doi.org/10.5281/zenodo.5705691)
 
 Python package `pyspex` contains software to access SPEXone data.
