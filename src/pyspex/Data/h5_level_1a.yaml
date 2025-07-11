@@ -146,9 +146,10 @@ variables:
     _FillValue: 0
     long_name: ICU time stamp (seconds)
     description: Science TM parameter ICU_TIME_SEC
-    units: seconds since 1958-01-01 00:00:00 TAI
-    valid_min: 1956528000
-    valid_max: 2493072000
+    calendar: tai
+    units: seconds since 1958-01-01 00:00:00
+    valid_min: 1956528000     # 2020
+    valid_max: 2493072000     # 2037
   /image_attributes/icu_time_subsec:
     _dtype: u2
     _dims: [number_of_images]
