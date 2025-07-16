@@ -36,6 +36,7 @@ dependencies = [
   'importlib-resources; python_version < "3.10"',
   'typing-extensions; python_version < "3.11"',
   "h5py>=3.8",
+  "h5yaml>=0.0.5",
   "julian",
   "moniplot>=0.5.8",
   "netCDF4>=1.5.7",
