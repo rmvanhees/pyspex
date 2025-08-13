@@ -38,13 +38,13 @@ from os import environ
 from pathlib import Path, PurePosixPath
 from typing import ClassVar, Self
 
-from netCDF4 import Dataset, Variable
 import h5py
 import julian
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 import yaml
+from netCDF4 import Dataset, Variable
 from numpy import ma
 
 # - global parameters -----------------------
@@ -399,7 +399,6 @@ def attrs_def(inflight: bool = True, origin: str | None = None) -> dict:
         "date_created": dt.datetime.now(dt.timezone.utc)
         .replace(tzinfo=None)
         .isoformat(timespec="milliseconds"),
-
         "license": (
             "https://www.earthdata.nasa.gov/engage/"
             "open-data-services-and-software/data-and-information-policy"
@@ -2601,6 +2600,7 @@ class L1Aio:
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
+
 # --------------------------------------------------
 # from .hkt_io import CoverageFlag, HKTio
 # --------------------------------------------------
@@ -3373,9 +3373,9 @@ def get_l1a_filename(
         "" if config.processing_version == 1 else f".V{config.processing_version:d}"
     )
     return config.outdir / (
-        f'PACE_SPEXONE{subtype}'
-        f'.{coverage[0].strftime("%Y%m%dT%H%M%S"):15s}'
-        f'.L1A{prod_ver}.nc'
+        f"PACE_SPEXONE{subtype}"
+        f".{coverage[0].strftime('%Y%m%dT%H%M%S'):15s}"
+        f".L1A{prod_ver}.nc"
     )
 
 
@@ -3881,7 +3881,7 @@ class SPXtlm:
         # fill attributes in the group processing_control
         l1a.set_attr(
             "icu_sw_version",
-            f'0x{self.nomhk.tlm["ICUSWVER"][0]:x}',
+            f"0x{self.nomhk.tlm['ICUSWVER'][0]:x}",
             ds_name="processing_control",
         )
         for key, value in asdict(config).items():

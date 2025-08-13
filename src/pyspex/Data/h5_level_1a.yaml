@@ -170,7 +170,7 @@ variables:
     _dims: [number_of_images]
     _FillValue: 0xff
     long_name: Binning-table ID
-    valid_max: 0
+    valid_min: 0
     valid_max: 254
   /image_attributes/digital_offset:
     _dtype: i2
