@@ -20,12 +20,14 @@ from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
-import xarray as xr
+from pyxarr import DataArray, Dataset
 
 from .lib.ccsds_hdr import CCSDShdr
 
 if TYPE_CHECKING:
     import datetime as dt
+
+    from numpy.typing import NDArray
 
 # - global parameters -----------------------
 module_logger = logging.getLogger("pyspex.hkt_io")
@@ -48,7 +50,7 @@ class CoverageFlag(IntFlag):
     @classmethod
     def check(
         cls: CoverageFlag,
-        nav_data: xr.Dataset,
+        nav_data: Dataset,
         coverage: list[dt.datetime, dt.datetime],
     ) -> int:
         """Check coverage time of navigation data."""
@@ -112,7 +114,7 @@ class HKTio:
 
     def __init__(self: HKTio, flnames: str | Path | list[Path]) -> None:
         """Initialize access to PACE HKT products."""
-        self.nav_data: xr.Dataset | None = None
+        self.nav_data: Dataset | None = None
         if isinstance(flnames, str | Path):
             self.flnames = [flnames] if isinstance(flnames, Path) else [Path(flnames)]
         else:
@@ -152,7 +154,7 @@ class HKTio:
 
     # ---------- PUBLIC FUNCTIONS ----------
     def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray]:
-        """Get housekeeping telemetry data.
+        """Read housekeeping telemetry data from the HKT products.
 
         Parameters
         ----------
@@ -203,36 +205,52 @@ class HKTio:
 
         return ccsds_hk
 
-    def navigation(self: HKTio) -> None:
-        """..."""
-        if self.nav_data is not None:
-            self.nav_data.close()
-            self.nav_data = None
-
-        nav = None
+    def navigation(self: HKTio) -> dict[str, NDArray]:
+        """Read navigation data from the HKT products."""
+        nav_data = {}
         for hkt_file in self.flnames:
-            if nav is None:
-                nav = xr.open_dataset(hkt_file, group="navigation_data")
-            else:
-                res = ()
-                buff = xr.open_dataset(hkt_file, group="navigation_data")
-                for key, xarr in buff.data_vars.items():
-                    res += (xr.concat((nav[key], buff[key]), dim=xarr.dims[0]),)
-                nav = xr.merge(res, combine_attrs="drop_conflicts")
+            with h5py.File(hkt_file) as fid:
+                gid = fid["/navigation_data"]
+                for key in gid:
+                    data = gid[key][:]
+                    if key.endswidth("_time"):
+                        data = np.datetime64(
+                            gid["att_time"].attrs["units"].decode().split(" ")[-1]
+                        ) + (1e6 * data).astype("timedelta64[us]")
 
-        # fix coordinates
-        if "att_time" in nav.data_vars:
-            nav = nav.rename({"att_records": "att_time"}).set_coords(["att_time"])
-        if "orb_time" in nav.data_vars:
-            nav = nav.rename({"orb_records": "orb_time"}).set_coords(["orb_time"])
-        if "tilt_time" in nav.data_vars:
-            nav = nav.rename({"tilt_records": "tilt_time"}).set_coords(["tilt_time"])
-        # clean-up Dataset attributes
-        for key in list(nav.attrs):
-            del nav.attrs[key]
-        nav.attrs["time_coverage_start"] = str(nav["att_time"].values[0])[:23] + "Z"
-        nav.attrs["time_coverage_end"] = str(nav["att_time"].values[-1])[:23] + "Z"
-        self.nav_data = nav
+                    nav_data[key] = (
+                        data if not nav_data else np.append(nav_data[key], data)
+                    )
+
+        # order data in time
+        if not np.all(nav_data["att_time"][:-1] <= nav_data["att_time"][1:]):
+            indx = np.argsort(nav_data["att_time"])
+            for key in nav_data:
+                if not key.startswith("att_"):
+                    nav_data[key] = nav_data[key][indx, ...]
+
+        if not np.all(nav_data["orb_time"][:-1] <= nav_data["orb_time"][1:]):
+            indx = np.argsort(nav_data["orb_time"])
+            for key in nav_data:
+                if not key.startswith("orb_"):
+                    nav_data[key] = nav_data[key][indx, ...]
+
+        if not np.all(nav_data["tilt_time"][:-1] <= nav_data["tilt_time"][1:]):
+            indx = np.argsort(nav_data["tilt_time"])
+            for key in nav_data:
+                if not key.startswith("tilt"):
+                    nav_data[key] = nav_data[key][indx, ...]
+
+        # add time_coverage
+        nav_data["time_coverage"] = (nav_data["att_time"][0], nav_data["att_time"][-1])
+        return nav_data
+
+    # ToDo: add public method to calculate time_coverage_flag (= coverage_quality)
+    def nav_coverage_flag(
+        self: HKTio, coverage: list[dt.datetime, dt.datetime]
+    ) -> None:
+        """Check completeness of the navigation data."""
+        return
 
     def add_nav(
         self: HKTio,
@@ -275,9 +293,11 @@ class HKTio:
 
         # add coverage-quality flag
         if add_coverage_quality:
-            nav["coverage_quality"] = xr.DataArray(
-                data=CoverageFlag.check(nav, coverage),
+            nav["coverage_quality"] = DataArray(
+                CoverageFlag.check(nav, coverage),
                 name="coverage_quality",
+                dims=(),
+                coords=(),
                 attrs={
                     "long_name": "coverage quality of navigation data",
                     "standard_name": "status_flag",
