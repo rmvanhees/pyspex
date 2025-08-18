@@ -20,13 +20,10 @@ from typing import TYPE_CHECKING
 
 import h5py
 import numpy as np
-from pyxarr import DataArray, Dataset
 
 from .lib.ccsds_hdr import CCSDShdr
 
 if TYPE_CHECKING:
-    import datetime as dt
-
     from numpy.typing import NDArray
 
 # - global parameters -----------------------
@@ -50,28 +47,29 @@ class CoverageFlag(IntFlag):
     @classmethod
     def check(
         cls: CoverageFlag,
-        nav_data: Dataset,
-        coverage: list[dt.datetime, dt.datetime],
+        coverage_nav: tuple[np.datetime64, np.datetime64],
+        coverage_spx: tuple[np.datetime64, np.datetime64],
     ) -> int:
-        """Check coverage time of navigation data."""
+        """Check coverage time of navigation data.
+
+        Parameters
+        ----------
+        coverage_nav: tuple[np.datetime64, np.datetime64]
+           time-coverage of the PACE-HKT data
+        coverage_spx: tuple[np.datetime64, np.datetime64]
+           time-coverage of the SPEXone measurement data
+
+        """
         coverage_quality = cls(0)
-        l1a_time_range = (
-            np.datetime64(coverage[0].replace(tzinfo=None)),
-            np.datetime64(coverage[1].replace(tzinfo=None)),
-        )
-        nav_time_range = (
-            nav_data["att_time"].values[0],
-            nav_data["att_time"].values[-1],
-        )
 
         # check at the start of the data
-        if l1a_time_range[0] < nav_time_range[0]:
+        if coverage_spx[0] < coverage_nav[0]:
             coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
             module_logger.error(
                 "time coverage of navigation data starts after L1A science data"
             )
 
-        diff_coverage = l1a_time_range[0] - nav_time_range[0]
+        diff_coverage = coverage_spx[0] - coverage_nav[0]
         if diff_coverage <= SEVEN_SECONDS:
             coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
             module_logger.warning(
@@ -79,13 +77,13 @@ class CoverageFlag(IntFlag):
             )
 
         # check at the end of the data
-        if l1a_time_range[1] > nav_time_range[1]:
+        if coverage_spx[1] > coverage_nav[1]:
             coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
             module_logger.error(
                 "time coverage of navigation data ends before L1A science data"
             )
 
-        diff_coverage = nav_time_range[1] - l1a_time_range[1]
+        diff_coverage = coverage_nav[1] - coverage_spx[1]
         if diff_coverage <= SEVEN_SECONDS:
             coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
             module_logger.warning(
@@ -114,7 +112,7 @@ class HKTio:
 
     def __init__(self: HKTio, flnames: str | Path | list[Path]) -> None:
         """Initialize access to PACE HKT products."""
-        self.nav_data: Dataset | None = None
+        self.time_coverage = ()
         if isinstance(flnames, str | Path):
             self.flnames = [flnames] if isinstance(flnames, Path) else [Path(flnames)]
         else:
@@ -210,104 +208,80 @@ class HKTio:
         nav_data = {}
         for hkt_file in self.flnames:
             with h5py.File(hkt_file) as fid:
+                # pylint: disable=no-member
                 gid = fid["/navigation_data"]
                 for key in gid:
                     data = gid[key][:]
-                    if key.endswidth("_time"):
+                    if key.endswith("_time"):
                         data = np.datetime64(
-                            gid["att_time"].attrs["units"].decode().split(" ")[-1]
+                            gid["att_time"].attrs["units"].decode().split(" ")[-2]
                         ) + (1e6 * data).astype("timedelta64[us]")
 
                     nav_data[key] = (
-                        data if not nav_data else np.append(nav_data[key], data)
+                        data
+                        if key not in nav_data
+                        else np.append(nav_data[key], data, axis=0)
                     )
 
         # order data in time
         if not np.all(nav_data["att_time"][:-1] <= nav_data["att_time"][1:]):
             indx = np.argsort(nav_data["att_time"])
             for key in nav_data:
-                if not key.startswith("att_"):
+                if key.startswith("att_"):
                     nav_data[key] = nav_data[key][indx, ...]
 
         if not np.all(nav_data["orb_time"][:-1] <= nav_data["orb_time"][1:]):
             indx = np.argsort(nav_data["orb_time"])
             for key in nav_data:
-                if not key.startswith("orb_"):
+                if key.startswith("orb_"):
                     nav_data[key] = nav_data[key][indx, ...]
 
         if not np.all(nav_data["tilt_time"][:-1] <= nav_data["tilt_time"][1:]):
             indx = np.argsort(nav_data["tilt_time"])
             for key in nav_data:
-                if not key.startswith("tilt"):
+                if key.startswith("tilt"):
                     nav_data[key] = nav_data[key][indx, ...]
 
-        # add time_coverage
-        nav_data["time_coverage"] = (nav_data["att_time"][0], nav_data["att_time"][-1])
+        # set time_coverage
+        self.time_coverage = (nav_data["att_time"][0], nav_data["att_time"][-1])
+
         return nav_data
 
-    # ToDo: add public method to calculate time_coverage_flag (= coverage_quality)
-    def nav_coverage_flag(
-        self: HKTio, coverage: list[dt.datetime, dt.datetime]
-    ) -> None:
-        """Check completeness of the navigation data."""
-        return
-
-    def add_nav(
+    def nav_coverage_adjust(
         self: HKTio,
-        l1a_file: Path,
-        coverage: list[dt.datetime, dt.datetime],
-        add_coverage_quality: bool = True,
-    ) -> None:
-        """Add navigation data to SPEXone Level-1A product.
+        nav_data: dict[str, NDArray],
+        coverage_spx: tuple(np.datetime64, np.datetime64),
+    ) -> dict[str, NDArray] | None:
+        """Return navigation data within SPEXone time-coverage extended by 10 sec."""
+        coverage = (coverage_spx[0] - TEN_SECONDS, coverage_spx[1] + TEN_SECONDS)
 
-        Parameters
-        ----------
-        l1a_file :  Path
-           Name of existing SPEXone Level-1A product
-        coverage :  list[dt.datetime, dt.datetime]
-           Time coverage of the science measurements
-        add_coverage_quality :  bool, default=True
-           Add coverage flag of the naviagation data and science data
-
-        """
-        time_range = (
-            np.datetime64(coverage[0].replace(tzinfo=None)) - TEN_SECONDS,
-            np.datetime64(coverage[1].replace(tzinfo=None)) + TEN_SECONDS,
+        att_mask = (nav_data["att_time"] >= coverage[0]) & (
+            nav_data["att_time"] <= coverage[1]
         )
-        att_indx = (
-            (self.nav_data.att_time.values >= time_range[0])
-            & (self.nav_data.att_time.values <= time_range[1])
-        ).nonzero()[0]
-        orb_indx = (
-            (self.nav_data.orb_time.values >= time_range[0])
-            & (self.nav_data.orb_time.values <= time_range[1])
-        ).nonzero()[0]
-        tilt_indx = (
-            (self.nav_data.tilt_time.values >= time_range[0])
-            & (self.nav_data.tilt_time.values <= time_range[1])
-        ).nonzero()[0]
-        nav = self.nav_data.isel(
-            att_time=att_indx, orb_time=orb_indx, tilt_time=tilt_indx
+        orb_mask = (nav_data["orb_time"] >= coverage[0]) & (
+            nav_data["orb_time"] <= coverage[1]
         )
-        self.nav_data.close()
+        tilt_mask = (nav_data["tilt_time"] >= coverage[0]) & (
+            nav_data["tilt_time"] <= coverage[1]
+        )
 
-        # add coverage-quality flag
-        if add_coverage_quality:
-            nav["coverage_quality"] = DataArray(
-                CoverageFlag.check(nav, coverage),
-                name="coverage_quality",
-                dims=(),
-                coords=(),
-                attrs={
-                    "long_name": "coverage quality of navigation data",
-                    "standard_name": "status_flag",
-                    "valid_range": np.array([0, 15], dtype="u2"),
-                    "flag_values": np.array([0, 1, 2, 4, 8], dtype="u2"),
-                    "flag_meanings": (
-                        "good missing-samples too_short_extends no_extend_at_start"
-                        " no_extend_at_end"
-                    ),
-                },
-            )
-        nav.to_netcdf(l1a_file, group="navigation_data", mode="a")
-        nav.close()
+        nav_dict = {}
+        for key, value in nav_data.items():
+            if key.startswith("att_"):
+                nav_dict[key] = value[att_mask, ...]
+            elif key.startswith("orb_"):
+                nav_dict[key] = value[orb_mask, ...]
+            else:
+                nav_dict[key] = value[tilt_mask, ...]
+
+        # update time_coverage
+        self.time_coverage = (nav_data["att_time"][0], nav_data["att_time"][-1])
+
+        return nav_dict
+
+    def nav_coverage_flag(
+        self: HKTio,
+        coverage_spx: tuple(np.datetime64, np.datetime64),
+    ) -> int:
+        """Check completeness of the navigation data."""
+        return CoverageFlag.check(self.time_coverage, coverage_spx)

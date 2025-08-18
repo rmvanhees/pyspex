@@ -132,7 +132,7 @@ variables:
     calendar: proleptic_gregorian
     units: seconds since %Y-%m-%d %H:%M:%S
     valid_min: 0
-    valid_max: 86400 + 6000
+    valid_max: 92400
   /image_attributes/timedelta_centre:
     _dtype: f8
     _dims: [number_of_images]

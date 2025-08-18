@@ -16,12 +16,13 @@ import warnings
 
 import numpy as np
 
+from pyspex.hkt_io import HKTio
 from pyspex.lib.logger import start_logger
 from pyspex.lv0_lib import CorruptPacketWarning
 from pyspex.tlm import SPXtlm
 
 from .argparse_gen_l1a import argparse_gen_l1a
-from .l1a import check_input_files, create_l1a, read_hkt_nav
+from .l1a import check_input_files, create_l1a
 
 
 # - main function ----------------------------------
@@ -84,7 +85,14 @@ def main() -> int:
     # (5) read navigation data from PACE_HKT products
     nav_dict = None
     if config.hkt_list:
-        nav_dict = read_hkt_nav(config.hkt_list)
+        coverage_spx = (
+            tlm.coverage[0].replace(tzinfo=None),
+            tlm.coverage[1].replace(tzinfo=None),
+        )
+        hkt = HKTio(config.hkt_list)
+        nav_dict = hkt.navigation()
+        nav_dict = hkt.nav_coverage_adjust(nav_dict, coverage_spx)
+        nav_dict["coverage_quality"] = hkt.nav_coverage_flag(coverage_spx)
 
     # (6) write Level-1A product.
     try:

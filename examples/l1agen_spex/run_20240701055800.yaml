@@ -5,7 +5,7 @@
 # - PACE_SPEXONE.20240701T055800.L1A.nc
 #
 processing_version: 1
-outdir: L1A
+outdir: /data/richardh/L1A
 eclipse: False
 l0_list:
 - /nfs/SPEXone/ical/archives/spx1_l0/0x12d/2024/07/01/SPX000016243.spx

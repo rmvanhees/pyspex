@@ -11,19 +11,15 @@
 from __future__ import annotations
 
 __all__ = [
-    "CoverageFlag",
     "SpexL1A",
     "check_input_files",
     "create_l1a",
-    "nav_adjust",
-    "read_hkt_nav",
 ]
 
 import datetime as dt
 import logging
 import sys
 from dataclasses import asdict
-from enum import IntFlag, auto
 from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
@@ -39,20 +35,12 @@ from pyspex.tlm import get_l1a_filename
 if TYPE_CHECKING:
     from dataclasses import dataclass
 
-    from numpy.typing import NDArray
-
     from pyspex.lib.hk_tlm import HKtlm
     from pyspex.lib.sci_tlm import SCItlm
     from pyspex.tlm import SPXtlm
 
-
 # - global parameters ------------------------------
 module_logger = logging.getLogger("pyspex.l1a")
-
-# reduce extend of navigation data to
-TEN_SECONDS = np.timedelta64(10, "s")
-# require an extent of navigation data of
-SEVEN_SECONDS = np.timedelta64(7, "s")
 
 
 # - local functions --------------------------------
@@ -117,83 +105,6 @@ def check_input_files(config: dataclass) -> dataclass:
     return config
 
 
-def read_hkt_nav(hkt_list: list[Path]) -> dict[str, NDArray[float]]:
-    """Read navigation data from a list of PACE_HKT files.
-
-    Parameters
-    ----------
-    hkt_list :  list[Path]
-        sorted list of PACE_HKT filenames (netCDF4 format)
-
-    """
-    res = {
-        "/navigation_data/att_time": [],
-        "/navigation_data/att_quat": [],
-        "/navigation_data/att_rate": [],
-        "/navigation_data/orb_time": [],
-        "/navigation_data/orb_pos": [],
-        "/navigation_data/orb_vel": [],
-        "/navigation_data/orb_lat": [],
-        "/navigation_data/orb_lon": [],
-        "/navigation_data/orb_alt": [],
-        "/navigation_data/tilt_time": [],
-        "/navigation_data/tilt": [],
-        "/navigation_data/tilt_flag": [],
-    }
-    if not hkt_list:
-        for key in res:
-            res[key] = np.array([])
-        return res
-
-    for hkt_file in hkt_list:
-        with h5py.File(hkt_file) as fid:
-            for key, value in res.items():
-                if key.endswith("_time"):
-                    midnight = fid[key].attrs["units"].split(b" ")[2].decode()
-                    value.append(
-                        np.datetime64(midnight)
-                        + (1e6 * fid[key][:]).astype("timedelta64[us]")
-                    )
-                else:
-                    value.append(fid[key][:])
-
-    for key in res:
-        res[key] = np.concatenate(res[key])
-
-    return res
-
-
-def nav_adjust(
-    nav_dict: dict[str, NDArray[float]], coverage_in: list[dt.datetime, dt.datetime]
-) -> dict[str, NDArray[float]] | None:
-    """Return navigation data with in time-interval coverage."""
-    coverage = [
-        coverage_in[0].replace(tzinfo=None) - TEN_SECONDS,
-        coverage_in[1].replace(tzinfo=None) + TEN_SECONDS,
-    ]
-
-    att_mask = (nav_dict["/navigation_data/att_time"] >= coverage[0]) & (
-        nav_dict["/navigation_data/att_time"] <= coverage[1]
-    )
-    orb_mask = (nav_dict["/navigation_data/orb_time"] >= coverage[0]) & (
-        nav_dict["/navigation_data/orb_time"] <= coverage[1]
-    )
-    tilt_mask = (nav_dict["/navigation_data/tilt_time"] >= coverage[0]) & (
-        nav_dict["/navigation_data/tilt_time"] <= coverage[1]
-    )
-
-    res = {}
-    for key, value in nav_dict.items():
-        if key.startswith("/navigation_data/att_"):
-            res[key] = value[att_mask] if value.ndim == 1 else value[att_mask, :]
-        elif key.startswith("/navigation_data/orb_"):
-            res[key] = value[orb_mask] if value.ndim == 1 else value[orb_mask, :]
-        else:
-            res[key] = value[tilt_mask] if value.ndim == 1 else value[tilt_mask, :]
-
-    return res
-
-
 def create_l1a(
     config: dataclass,
     tlm: SPXtlm,
@@ -203,11 +114,10 @@ def create_l1a(
     """All calls necessary to generate a SPEXone L1A product."""
     dims_nav = {}
     if config.hkt_list:
-        nav_tmp = nav_adjust(nav_dict, tlm.coverage)
         dims_nav = {
-            "/navigation_data/att_time": nav_tmp["/navigation_data/att_time"].size,
-            "/navigation_data/orb_time": nav_tmp["/navigation_data/orb_time"].size,
-            "/navigation_data/tilt_time": nav_tmp["/navigation_data/tilt_time"].size,
+            "/navigation_data/att_time": nav_dict["att_time"].size,
+            "/navigation_data/orb_time": nav_dict["orb_time"].size,
+            "/navigation_data/tilt_time": nav_dict["tilt_time"].size,
         }
 
     with SpexL1A(
@@ -224,56 +134,7 @@ def create_l1a(
         l1a.write_img_vars(tlm.science)  # before write_hk_vars
         l1a.write_hk_vars(tlm.nomhk)
         if config.hkt_list:
-            l1a.write_nav_vars(nav_tmp)
-
-
-# - class CoverageFlag ----------------------------
-class CoverageFlag(IntFlag):
-    """Define flags for coverage_quality (navigation_data)."""
-
-    MISSING_SAMPLES = auto()
-    TOO_SHORT_EXTENDS = auto()
-    NO_EXTEND_AT_START = auto()
-    NO_EXTEND_AT_END = auto()
-
-    @classmethod
-    def check(
-        cls: CoverageFlag,
-        att_time: NDArray[int],
-        l1a_time_range: list[dt.datetime, dt.datetime],
-    ) -> int:
-        """Check coverage time of navigation data."""
-        coverage_quality = cls(0)
-        nav_time_range = (att_time[0], att_time[-1])
-
-        # check at the start of the data
-        if l1a_time_range[0] < nav_time_range[0]:
-            coverage_quality |= CoverageFlag.NO_EXTEND_AT_START
-            module_logger.error(
-                "time coverage of navigation data starts after L1A science data"
-            )
-
-        diff_coverage = l1a_time_range[0] - nav_time_range[0]
-        if diff_coverage <= SEVEN_SECONDS:
-            coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-            module_logger.warning(
-                "extends of time coverage of navigation data too short",
-            )
-
-        # check at the end of the data
-        if l1a_time_range[1] > nav_time_range[1]:
-            coverage_quality |= CoverageFlag.NO_EXTEND_AT_END
-            module_logger.error(
-                "time coverage of navigation data ends before L1A science data"
-            )
-
-        diff_coverage = nav_time_range[1] - l1a_time_range[1]
-        if diff_coverage <= SEVEN_SECONDS:
-            coverage_quality |= CoverageFlag.TOO_SHORT_EXTENDS
-            module_logger.warning(
-                "extends of time coverage of navigation data too short",
-            )
-        return coverage_quality
+            l1a.write_nav_vars(nav_dict)
 
 
 # - class SpexL1A ---------------------------------
@@ -479,13 +340,14 @@ class SpexL1A(H5Yaml):
         Parameters
         ----------
         nav_dict :  dict[str, NDArray]
-           Dictionary holing all navigation parameters
+           Dictionary holding all navigation parameters
 
         """
         group = "/navigation_data"
 
+        gid = self.fid[group]
         for key, value in nav_dict.items():
-            dset = self.fid[key]
+            dset = gid[key]
             if key.endswith("_time"):
                 if dset.attrs["units"].find("%Y-%m-%d %H:%M:%S") > 0:
                     midnight = value[0].astype("datetime64[D]")
@@ -495,20 +357,12 @@ class SpexL1A(H5Yaml):
                 else:
                     midnight = np.datetime64(dset.attrs["units"].split(" ")[2])
                 dset[:] = (value - midnight).astype(float) / 1e6
+            elif key == "coverage_quality":
+               dset[()] = value
             else:
                 dset[:] = value
 
-        # check coverage of attitude data
-        gid = self.fid[group]
-        gid["coverage_quality"][()] = CoverageFlag.check(
-            nav_dict["/navigation_data/att_time"],
-            (
-                np.datetime64(self.fid.attrs["time_coverage_start"]),
-                np.datetime64(self.fid.attrs["time_coverage_end"]),
-            ),
-        )
-
-        # write or update attutude coverage-time
+        # write or update attitude coverage-time
         midnight = np.datetime64(gid["att_time"].attrs["units"].split(" ")[2])
         gid.attrs["time_coverage_start"] = str(
             midnight + (1e3 * gid["att_time"][0]).astype("timedelta64[ms]")
