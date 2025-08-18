@@ -42,7 +42,6 @@ dependencies = [
   "numpy>=1.19",
   "openpyxl>=3",
   "pyYAML>=6.0",
-  "pyxarr>=0.2",
 ]
 
 [project.scripts]
