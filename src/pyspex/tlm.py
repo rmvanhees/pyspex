@@ -22,9 +22,6 @@ from typing import TYPE_CHECKING
 import h5py
 import numpy as np
 
-# pylint: disable=no-name-in-module
-from netCDF4 import Dataset
-
 from .hkt_io import HKTio
 from .lib import pyspex_version
 from .lib.hk_tlm import HKtlm
@@ -125,33 +122,6 @@ def get_l1a_filename(
         msm_id = msm_id[:-22] + new_date
 
     return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc"
-
-
-def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
-    """Add dataset 'processor_configuration' to an existing L1A product.
-
-    Parameters
-    ----------
-    l1a_file :  Path
-       name of an existing L1A product.
-    yaml_conf :  Path
-       name of the YAML file with the processor settings
-
-    """
-    with Dataset(l1a_file, "r+") as fid:
-        dset = fid.createVariable("processor_configuration", str)
-        dset.comment = (
-            "Configuration parameters used during"
-            " the processor run that produced this file."
-        )
-        dset.markup_language = "YAML"
-        dset[0] = "".join(
-            [
-                s
-                for s in yaml_conf.open(encoding="ascii").readlines()
-                if not (s == "\n" or s.startswith("#"))
-            ]
-        )
 
 
 # - class SPXtlm ----------------------------

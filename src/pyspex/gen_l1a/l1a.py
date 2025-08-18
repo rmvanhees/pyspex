@@ -358,7 +358,7 @@ class SpexL1A(H5Yaml):
                     midnight = np.datetime64(dset.attrs["units"].split(" ")[2])
                 dset[:] = (value - midnight).astype(float) / 1e6
             elif key == "coverage_quality":
-               dset[()] = value
+                dset[()] = value
             else:
                 dset[:] = value
 

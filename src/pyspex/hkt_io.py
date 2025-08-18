@@ -99,7 +99,7 @@ class HKTio:
     Parameters
     ----------
     flnames :  str | Path | list[Path]
-        sorted list of PACE_HKT filenames (netCDF4 format)
+        list of PACE_HKT filenames (netCDF4 format)
 
     Notes
     -----
