@@ -97,10 +97,11 @@ def init_gse_data(fid: h5py.File) -> h5py.Group:
     return gid
 
 
-def byte_to_timestamp(str_date: bytes) -> float:
+def byte_to_timestamp(str_date: str) -> float:
     """Convert a byte-string to a timestamp."""
-    buff = str_date.decode("ascii").strip() + "+00:00"  # date is in UTC
-    return datetime.strptime(buff, "%Y%m%dT%H%M%S.%f%z").timestamp()
+    return datetime.strptime(
+        str_date.strip() + "00+00:00", "%Y%m%dT%H%M%S.%f%z"
+    ).timestamp()
 
 
 def egse_dtype() -> np.dtype:

@@ -68,6 +68,11 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset | None:
         coords={"wavelength": wavelength},
         attrs={"long_name": "radiance", "units": "W/(m^2.sr)"},
     )
+    xar_unc = xr.DataArray(
+        [wsheet["L"][indx].value],
+        coords={"wavelength": wavelength},
+        attrs={"long_name": "combined uncertainty", "units": "W/(m^2.sr)"},
+    )
     wbook.close()
     return xr.Dataset(
         {
@@ -75,6 +80,7 @@ def read_gse_excel(gse_dir: Path, target_cwl: str) -> xr.Dataset | None:
             "wv_std": xar_std,
             "linewidth": xar_lw,
             "signal": xar_sign,
+            "uncertainty": xar_unc,
         }
     )
 

@@ -503,7 +503,9 @@ class CCSDSio:
                 ]
             ),
         )
-        print("[TcAccept]: ", self, packet["TcPacketId"][0], packet["TcSeqControl"][0])
+        # print(
+        # "[TcAccept]: ", self, packet["TcPacketId"][0], packet["TcSeqControl"][0]
+        # )
         return packet
 
     def __rd_tc_execute(self: CCSDSio, _: np.ndarray) -> np.ndarray:
@@ -520,7 +522,9 @@ class CCSDSio:
                 ]
             ),
         )
-        print("[TcExecute]:", self, packet["TcPacketId"][0], packet["TcSeqControl"][0])
+        # print(
+        # "[TcExecute]:", self, packet["TcPacketId"][0], packet["TcSeqControl"][0]
+        # )
         return packet
 
     def __rd_tc_fail(self: CCSDSio, _: np.ndarray) -> np.ndarray:
@@ -540,15 +544,15 @@ class CCSDSio:
                 ]
             ),
         )
-        print(
-            "[TcFail]:   ",
-            self,
-            packet["TcPacketId"][0],
-            packet["TcSeqControl"][0],
-            bin(packet["TcFailCode"][0]),
-            packet["FailParameter1"][0],
-            packet["FailParameter2"][0],
-        )
+        # print(
+        #    "[TcFail]:   ",
+        #    self,
+        #    packet["TcPacketId"][0],
+        #    packet["TcSeqControl"][0],
+        #    bin(packet["TcFailCode"][0]),
+        #    packet["FailParameter1"][0],
+        #    packet["FailParameter2"][0],
+        # )
         return packet
 
     def __rd_tc_reject(self: CCSDSio, _: np.ndarray) -> np.ndarray:
@@ -568,15 +572,15 @@ class CCSDSio:
                 ]
             ),
         )
-        print(
-            "[TcReject]: ",
-            self,
-            packet["TcPacketId"][0],
-            packet["TcSeqControl"][0],
-            bin(packet["TcRejectCode"][0]),
-            packet["RejectParameter1"][0],
-            packet["RejectParameter2"][0],
-        )
+        # print(
+        #    "[TcReject]: ",
+        #    self,
+        #    packet["TcPacketId"][0],
+        #    packet["TcSeqControl"][0],
+        #    bin(packet["TcRejectCode"][0]),
+        #    packet["RejectParameter1"][0],
+        #    packet["RejectParameter2"][0],
+        # )
         return packet
 
     def __rd_other(self: CCSDSio, hdr: np.ndarray) -> np.ndarray | None:

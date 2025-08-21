@@ -165,7 +165,7 @@ def main() -> None:
     packets = ()
     if not args.pdump:
         hk_files = sorted(data_dir.glob(args.msmt_id.name + "_hk.[0-9]"))
-        print(hk_files)
+        # print(hk_files)
 
         with CCSDSio(hk_files) as ccsds:
             while True:
@@ -314,6 +314,10 @@ def main() -> None:
         # write global attributes
         l1a.fill_global_attrs(inflight=False)
         l1a.set_attr("input_files", [Path(x).name for x in sci_files])
+        l1a.set_attr(
+            "time_coverage_start", f"{datetime.fromtimestamp(img_sec[0], UTC)}"
+        )
+        l1a.set_attr("time_coverage_end", f"{datetime.fromtimestamp(img_sec[-1], UTC)}")
 
 
 # --------------------------------------------------
