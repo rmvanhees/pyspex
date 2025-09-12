@@ -103,10 +103,11 @@ def main() -> None:
         med_table_id = np.sort(table_id)[len(table_id) // 2]
 
         # generate pages in quick-look
-        prelaunch = date_start < "2021-03-04T12:40:00"
         for ii in indx:
             if med_table_id > 0:
-                with BinningTables(med_table_id, pre_launch=prelaunch) as bin_tbl:
+                with BinningTables(
+                    med_table_id, coverage_start=np.datetime64(date_start)
+                ) as bin_tbl:
                     img2d = bin_tbl.to_image(images[ii, :]) / 4
             else:
                 if images[ii, :].size != 4194304:
