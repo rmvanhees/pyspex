@@ -97,7 +97,7 @@ def _digital_offset_(img_hk: NDArray) -> int | NDArray[np.int32]:
 
 def _exposure_time_(img_hk: NDArray) -> NDArray[float]:
     """Return exposure time in seconds [float]."""
-    return 129e-4 * (0.43 * img_hk["DET_FOTLEN"][:] + img_hk["DET_EXPTIME"][:])
+    return 1.29e-05 * (0.43 * img_hk["DET_FOTLEN"][:] + img_hk["DET_EXPTIME"][:])
 
 
 def _nr_coadditions_(img_hk: NDArray) -> NDArray[np.uint8]:

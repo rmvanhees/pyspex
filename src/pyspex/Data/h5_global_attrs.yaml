@@ -38,7 +38,7 @@ attrs_nasa:
   publisher_url: https://oceancolor.gsfc.nasa.gov
 
 attrs_sron:
-  institution: SRON
+  institution: SRON Space Research Organisation Netherlands
   creator_name: SRON/Earth
   creator_email: SPEXone-MPC@sron.nl
   creator_url: https://www.sron.nl/missions-earth/pace-spexone"
