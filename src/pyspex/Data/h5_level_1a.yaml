@@ -193,7 +193,7 @@ variables:
     units: s
   # ----- navigation_data -----
   /navigation_data/att_quat:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/att_time, quaternion_elements]
     _FillValue: -32767
     long_name: Attitude quaternions (J2000 to spacecraft)
@@ -201,7 +201,7 @@ variables:
     valid_min: -1
     valid_max: 1
   /navigation_data/att_rate:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/att_time, vector_elements]
     _FillValue: -32767
     long_name: Attitude angular rates in spacecraft frame
@@ -209,7 +209,7 @@ variables:
     valid_min: -0.004
     valid_max: 0.004
   /navigation_data/orb_pos:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/orb_time, vector_elements]
     _FillValue: -9999999
     long_name: Orbit position vectors (ECR)
@@ -217,7 +217,7 @@ variables:
     valid_min: -7200000
     valid_max: 7200000
   /navigation_data/orb_vel:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/orb_time, vector_elements]
     _FillValue: -32767
     long_name: Orbit velocity vectors (ECR)
@@ -225,7 +225,7 @@ variables:
     valid_min: -7600
     valid_max: 7600
   /navigation_data/orb_lat:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/orb_time]
     _FillValue: -32767
     long_name: Orbit latitude (degrees North)
@@ -233,7 +233,7 @@ variables:
     valid_min: -90
     valid_max: 90
   /navigation_data/orb_lon:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/orb_time]
     _FillValue: -32767
     long_name: Orbit longitude (degrees East)
@@ -241,7 +241,7 @@ variables:
     valid_min: -180
     valid_max: 180
   /navigation_data/orb_alt:
-    _dtype: f4
+    _dtype: f8
     _dims: [/navigation_data/orb_time]
     _FillValue: -32767
     long_name: Orbit altitude
@@ -264,7 +264,7 @@ variables:
     flag_values: [0, 1]
     flag_meanings: Valid Not_initialized
   /navigation_data/coverage_quality:
-    _dtype: u8
+    _dtype: u1
     _dims: [scalar]
     long_name: Coverage quality of attitude data
     standard_name: status_flag
