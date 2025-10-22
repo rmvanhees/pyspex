@@ -29,6 +29,7 @@ import argparse
 import datetime as dt
 import logging
 import sys
+import traceback
 import warnings
 from copy import copy
 from dataclasses import asdict, astuple, dataclass, field
@@ -2577,26 +2578,27 @@ class L1Aio:
             for x in self.dset_stored
             if (x.startswith("/science_data") or x.startswith("/image_attributes"))
         ]
-        res = np.zeros(len(key_list), dtype=int)
+        res = np.array([self.dset_stored[key] for key in key_list])
         for ii, key in enumerate(key_list):
             res[ii] = self.dset_stored[key]
         if allow_empty:
             indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
         # check house-keeping datasets
         dim_sz = self.get_dim("hk_packets")
         key_list = [x for x in self.dset_stored if x.startswith("/engineering_data")]
-        res = np.zeros(len(key_list), dtype=int)
-        for ii, key in enumerate(key_list):
-            res[ii] = self.dset_stored[key]
+        res = []
+        for key in key_list:
+            res.append(self.dset_stored[key])
+        res = np.array(res)
         if allow_empty:
             indx = ((res > 0) & (res != dim_sz)).nonzero()[0]
         else:
-            indx = (res != dim_sz).nonzero()[0]
+            indx = np.nonzero(res != dim_sz)[0]
         for ii in indx:
             print(warn_str.format(key_list[ii], res[ii]))
 
@@ -2834,8 +2836,8 @@ class HKTio:
             attrs={
                 "long_name": "Coverage quality of navigation data",
                 "standard_name": "status_flag",
-                "valid_range": np.array([0, 15], dtype="u2"),
-                "flag_values": np.array([0, 1, 2, 4, 8], dtype="u2"),
+                "valid_range": np.array([0, 15], dtype=int),
+                "flag_values": np.array([0, 1, 2, 4, 8], dtype=int),
                 "flag_meanings": (
                     "good missing-samples too_short_extends no_extend_at_start"
                     " no_extend_at_end"
@@ -4059,13 +4061,14 @@ def main() -> int:
         else:
             tlm.binned().gen_l1a(config)
     except (KeyError, RuntimeError) as exc:
+        traceback.print_exc()
         logger.fatal('RuntimeError with "%s"', exc)
         error_code = 131
     except UserWarning as exc:
         logger.warning('navigation data is incomplete: "%s".', exc)
         error_code = 132
     except Exception as exc:
-        # raise RuntimeError from exc
+        traceback.print_exc()
         logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 
