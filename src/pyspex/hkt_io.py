@@ -214,7 +214,7 @@ class HKTio:
                     data = gid[key][:]
                     if key.endswith("_time"):
                         data = np.datetime64(
-                            gid["att_time"].attrs["units"].decode().split(" ")[-2]
+                            gid["att_time"].attrs["units"].decode().split(" ")[2]
                         ) + (1e6 * data).astype("timedelta64[us]")
 
                     nav_data[key] = (
