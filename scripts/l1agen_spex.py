@@ -37,9 +37,10 @@ from enum import IntFlag, auto
 from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
+
 try:
     from typing import ClassVar, Self
-except:
+except ImportError:
     from typing_extensions import ClassVar, Self
 
 import julian
@@ -88,7 +89,7 @@ FULLFRAME_BYTES = 2 * DET_CONSTS["dimFullFrame"]
 # --------------------------------------------------
 def pyspex_version() -> str:
     """Return the software version of the original pyspex code."""
-    return "1.4.15"
+    return "1.4.18"
 
 
 # --------------------------------------------------

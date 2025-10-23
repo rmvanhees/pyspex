@@ -111,7 +111,7 @@ select = [
 ignore = ["D203", "D213"]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/l1agen_spex.py" = ["B905", "UP017"]
+"scripts/l1agen_spex.py" = ["B905", "UP017", "UP035"]
 
 [lint.pydocstyle]
 convention = "pep257"
