@@ -39,7 +39,6 @@ from os import environ
 from pathlib import Path, PurePosixPath
 from typing import ClassVar, Self
 
-import h5py
 import julian
 import numpy as np
 import numpy.typing as npt
@@ -2390,6 +2389,7 @@ class L1Aio:
 
         # initialize level-1A product
         self.fid = init_l1a(product, ref_date, dims, compression)
+
         for key in self.dset_stored:
             self.dset_stored[key] = 0
 
@@ -2692,87 +2692,7 @@ class HKTio:
             if not hkt_fl.is_file():
                 raise FileNotFoundError(f"file {hkt_fl} not found on system")
 
-    @staticmethod
-    def __read_hkt__(hkt_file: Path, instrument: str) -> np.ndarray | None:
-        """Return housekeeping data of a given instrument."""
-        with h5py.File(hkt_file) as fid:
-            gid = fid["housekeeping_data"]
-            if instrument == "spx":
-                ds_name = (
-                    "SPEX_HKT_packets"
-                    if "SPEX_HKT_packets" in gid
-                    else "SPEXone_HKT_packets"
-                )
-            elif instrument == "sc":
-                ds_name = "SC_HKT_packets"
-            elif instrument == "oci":
-                ds_name = "OCI_HKT_packets"
-            elif instrument == "harp":
-                ds_name = (
-                    "HARP_HKT_packets"
-                    if "HARP_HKT_packets" in gid
-                    else "HARP2_HKT_packets"
-                )
-            else:
-                raise KeyError("data of unknown instrument requested")
-
-            res = gid[ds_name][:] if ds_name in gid else None
-
-        return res
-
     # ---------- PUBLIC FUNCTIONS ----------
-    def housekeeping(self: HKTio, instrument: str = "spx") -> tuple[np.ndarray]:
-        """Get housekeeping telemetry data.
-
-        Parameters
-        ----------
-        instrument : {'spx', 'oci', 'harp', 'sc'}, default='spx'
-           name of PACE instrument: 'harp': HARP2, 'oci': OCI,
-           'sc': spacecraft, 'spx': SPEXone.
-
-        Notes
-        -----
-        Current implementation only works for SPEXone.
-
-        """
-        res = None
-        for hkt_file in self.flnames:
-            buff = self.__read_hkt__(hkt_file, instrument)
-            if buff is not None:
-                res = buff if res is None else np.concatenate((res, buff), axis=0)
-        if res is None:
-            return (np.array([]),)
-
-        ccsds_hk = ()
-        for packet in res:
-            try:
-                ccsds_hdr = CCSDShdr()
-                ccsds_hdr.read("raw", packet)
-            except ValueError as exc:
-                module_logger.warning('CCSDS header read error with "%s"', exc)
-                break
-
-            try:
-                dtype_apid = ccsds_hdr.data_dtype
-            except ValueError:
-                print(
-                    f"APID: 0x{ccsds_hdr.apid:x};"
-                    f" Packet Length: {ccsds_hdr.packet_size:d}"
-                )
-                dtype_apid = None
-
-            if dtype_apid is not None:  # all valid APIDs
-                buff = np.frombuffer(packet, count=1, offset=0, dtype=dtype_apid)
-                ccsds_hk += (buff,)
-            else:
-                module_logger.warning(
-                    "package with APID 0x%x and length %d is not implemented",
-                    ccsds_hdr.apid,
-                    ccsds_hdr.packet_size,
-                )
-
-        return ccsds_hk
-
     def navigation(self: HKTio) -> None:
         """..."""
         if self.nav_data is not None:
@@ -2782,10 +2702,14 @@ class HKTio:
         nav = None
         for hkt_file in self.flnames:
             if nav is None:
-                nav = xr.open_dataset(hkt_file, group="navigation_data")
+                nav = xr.open_dataset(
+                    hkt_file, group="navigation_data", decode_timedelta=True
+                )
             else:
                 res = ()
-                buff = xr.open_dataset(hkt_file, group="navigation_data")
+                buff = xr.open_dataset(
+                    hkt_file, group="navigation_data", decode_timedelta=True
+                )
                 for key, xarr in buff.data_vars.items():
                     res += (xr.concat((nav[key], buff[key]), dim=xarr.dims[0]),)
                 nav = xr.merge(res, combine_attrs="drop_conflicts")
@@ -2999,35 +2923,6 @@ class HKtlm:
         self.tlm["HTR3_CALCIVAL"][:] = self.tlm["HTR3_CALCIVAL"].byteswap()
         self.tlm["HTR4_CALCIVAL"][:] = self.tlm["HTR4_CALCIVAL"].byteswap()
 
-    def extract_l1a_hk(self: HKtlm, fid: h5py.File, mps_id: int | None) -> None:
-        """Extract data from SPEXone level-1a housekeeping telemetry packets.
-
-        Parameters
-        ----------
-        fid :  h5py.File
-           A HDF5 file pointer to a SPEXone level-1a product
-        mps_id : int, optional
-           Select data performed with MPS equals 'mps_id'
-
-        """
-        self.init_attrs()
-
-        # pylint: disable=no-member
-        dset = fid["/engineering_data/NomHK_telemetry"]
-        if mps_id is None:
-            data_sel = np.s_[:]
-        else:
-            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
-            if data_sel is None:
-                return
-        self.tlm = dset[data_sel]
-
-        dset = fid["/engineering_data/HK_tlm_time"]
-        ref_date = dset.attrs["units"].decode()[14:] + "+00:00"
-        epoch = dt.datetime.fromisoformat(ref_date)
-        for sec in dset[data_sel]:
-            self.tstamp.append(epoch + dt.timedelta(seconds=sec))
-
     def convert(self: HKtlm, key: str) -> np.ndarray:
         """Convert telemetry parameter to physical units.
 
@@ -3187,46 +3082,6 @@ class SCItlm:
             self.tstamp = self.tstamp[:ii]
 
         return n_frames
-
-    def extract_l1a_sci(self: SCItlm, fid: h5py.File, mps_id: int | None) -> None:
-        """Extract data from SPEXone level-1a Science-telemetry packets.
-
-        Parameters
-        ----------
-        fid :  h5py.File
-           A HDF5 File pointer to a SPEXone level-1a product
-        mps_id : int, optional
-           Select data performed with MPS equals 'mps_id'
-
-        """
-        # pylint: disable=no-member
-        self.init_attrs()
-
-        # read science telemetry
-        dset = fid["/science_data/detector_telemetry"]
-        if mps_id is None:
-            data_sel = np.s_[:]
-        else:
-            data_sel = mask2slice(dset.fields("MPS_ID")[:] == mps_id)
-            if data_sel is None:
-                return
-        self.tlm = fid["/science_data/detector_telemetry"][data_sel]
-
-        # determine time-stamps
-        dset = fid["/image_attributes/image_time"]
-        indx = dset.attrs["units"].decode().find("20")
-        ref_date = dt.datetime.fromisoformat(
-            dset.attrs["units"].decode()[indx:] + "+00:00"
-        )
-        self.tstamp = np.empty(len(dset[data_sel]), dtype=TSTAMP_TYPE)
-        self.tstamp["tai_sec"] = fid["/image_attributes/icu_time_sec"][data_sel]
-        self.tstamp["sub_sec"] = fid["/image_attributes/icu_time_subsec"][data_sel]
-        self.tstamp["dt"] = [
-            ref_date + dt.timedelta(seconds=float(x)) for x in dset[data_sel]
-        ]
-
-        # read image data
-        self.images = fid["/science_data/detector_images"][data_sel, :]
 
     def exposure_time(self: SCItlm, indx: int | None = None) -> float | np.ndarray:
         """Return exposure time [ms]."""
@@ -3515,75 +3370,6 @@ class SPXtlm:
         spx.nomhk = self.nomhk.sel((hk_tstamps >= dt_min) & (hk_tstamps <= dt_max))
         return spx
 
-    def from_hkt(
-        self: SPXtlm,
-        flnames: Path | list[Path],
-        *,
-        instrument: str | None = None,
-        dump: bool = False,
-    ) -> None:
-        """Read telemetry data from PACE HKT product(s).
-
-        Parameters
-        ----------
-        flnames :  Path | list[Path]
-           sorted list of PACE_HKT filenames (netCDF4 format)
-        instrument :  {'spx', 'sc', 'oci', 'harp'}, default='spx'
-           abbreviations for the PACE instruments
-        dump :  bool, default=False
-           dump header information of the telemetry packages @1Hz for
-           debugging purposes
-
-        """
-        self.set_coverage(None)
-        if isinstance(flnames, Path):
-            flnames = [flnames]
-        if instrument is None:
-            instrument = "spx"
-        elif instrument not in ["spx", "sc", "oci", "harp"]:
-            raise KeyError("instrument not in ['spx', 'sc', 'oci', 'harp']")
-
-        self.file_list = flnames
-
-        # check number of telemetry data-packages
-        ccsds_hk = HKTio(flnames).housekeeping(instrument)
-        if not ccsds_hk:
-            return
-
-        # perform dump of telemetry data-packages
-        if dump:
-            dump_hkt(flnames[0].stem + "_hkt.dump", ccsds_hk)
-            return
-
-        # check if TAI timestamp is valid
-        ii = len(ccsds_hk) // 2
-        tai_sec = ccsds_hk[ii]["hdr"]["tai_sec"][0]
-        if tai_sec == 0:
-            return
-
-        # set epoch
-        epoch = dt.datetime(1958, 1, 1, tzinfo=dt.timezone.utc)
-        epoch -= dt.timedelta(seconds=get_leap_seconds(float(tai_sec)))
-        self.nomhk.extract_l0_hk(ccsds_hk, epoch)
-
-        # reject nomHK records before or after a big time-jump
-        _mm = np.diff(self.nomhk.tstamp) > dt.timedelta(days=1)
-        if np.any(_mm):
-            indx = _mm.nonzero()[0]
-            _mm = np.full(self.nomhk.size, True, dtype=bool)
-            _mm[indx[0] + 1 :] = False
-            if np.sum(_mm) < self.nomhk.size // 2:
-                _mm = ~_mm
-            self.logger.warning(
-                "rejected nomHK: %d -> %d", self.nomhk.size, np.sum(_mm)
-            )
-            self.nomhk.sel(_mm)
-
-        # set time-coverage
-        self.set_coverage(
-            (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
-        )
-
     def from_lv0(
         self: SPXtlm,
         flnames: Path | list[Path],
@@ -3710,56 +3496,6 @@ class SPXtlm:
             self.set_coverage(
                 (self.nomhk.tstamp[0], self.nomhk.tstamp[-1] + dt.timedelta(seconds=1))
             )
-
-    def from_l1a(
-        self: SPXtlm,
-        flname: Path,
-        *,
-        tlm_type: str | None = None,
-        mps_id: int | None = None,
-    ) -> None:
-        """Read telemetry data from SPEXone level-1A product.
-
-        Parameters
-        ----------
-        flname :  Path
-           name of one SPEXone level-1A product
-        tlm_type :  {'hk', 'sci', 'all'}, default='all'
-           select type of telemetry packages
-        mps_id :  int, optional
-           select on MPS ID
-
-        """
-        self.set_coverage(None)
-        if tlm_type is None:
-            tlm_type = "all"
-        elif tlm_type not in ["hk", "sci", "all"]:
-            raise KeyError("tlm_type not in ['hk', 'sci', 'all']")
-
-        self.file_list = [flname]
-        with h5py.File(flname) as fid:
-            # collect Science telemetry data
-            if tlm_type != "hk":
-                self.science.extract_l1a_sci(fid, mps_id)
-                if self.science.tstamp is not None:
-                    _mm = self.science.tstamp["tai_sec"] > TSTAMP_MIN
-                    if np.any(_mm):
-                        tstamp = self.science.tstamp["dt"][_mm]
-                        ii = int(np.nonzero(_mm)[0][-1])
-                        master_cycle = dt.timedelta(
-                            milliseconds=self.science.master_cycle(ii)
-                        )
-                        self.set_coverage((tstamp[0], tstamp[-1] + master_cycle))
-
-            # collected NomHk telemetry data
-            if tlm_type != "sci":
-                self.nomhk.extract_l1a_hk(fid, mps_id)
-                self.set_coverage(
-                    (
-                        self.nomhk.tstamp[0],
-                        self.nomhk.tstamp[-1] + dt.timedelta(seconds=1),
-                    )
-                )
 
     def full(self: SPXtlm) -> SPXtlm:
         """Select full-frame measurements."""
