@@ -37,7 +37,10 @@ from enum import IntFlag, auto
 from logging.config import dictConfig
 from os import environ
 from pathlib import Path, PurePosixPath
-from typing import ClassVar, Self
+try:
+    from typing import ClassVar, Self
+except:
+    from typing_extensions import ClassVar, Self
 
 import julian
 import numpy as np
