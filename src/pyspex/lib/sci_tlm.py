@@ -147,18 +147,17 @@ class SCItlm:
         self.tstamp = (
             sci.tstamp if self.tstamp is None else np.append(self.tstamp, sci.tstamp)
         )
+        if isinstance(self.images, tuple) and self.images:
+            self.images = self.images[0]
+
         if isinstance(sci.images, tuple):
-            self.images = (
-                (sci.images[0],)
-                if len(self.images) == 0
-                else (np.concatenate((self.images[0], sci.images[0])),)
-            )
-        else:
-            self.images = (
-                sci.images
-                if len(self.images) == 0
-                else np.concatenate((self.images, sci.images))
-            )
+            sci.images = sci.images[0]
+
+        self.images = (
+            sci.images
+            if len(self.images) == 0
+            else np.concatenate((self.images, sci.images))
+        )
 
     def extract_l0_sci(
         self: SCItlm, ccsds_sci: tuple[NDArray], epoch: dt.datetime
