@@ -81,7 +81,7 @@ class SCItlm:
         self.hdr: NDArray | None = None
         self.tlm: NDArray | None = None
         self.tstamp: NDArray | None = None
-        self.images: tuple[NDArray, ...] | tuple[()] = ()
+        self.images: NDArray[np.uint16] | tuple[NDArray, ...] | tuple[()] = ()
 
     def init_attrs(self: SCItlm) -> None:
         """Initialize class attributes."""
@@ -105,23 +105,14 @@ class SCItlm:
         return sci
 
     def sel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:
-        """Return subset of SCItlm object using a mask array."""
-        sci = SCItlm()
-        if self.hdr is not None:
-            sci.hdr = self.hdr[mask]
-        if self.tlm is not None:
-            sci.tlm = self.tlm[mask]
-            sci.tstamp = self.tstamp[mask]
-            sci.images = tuple(self.images[ii] for ii in mask.nonzero()[0])
-        return sci
+        """Return subset of SCItlm object using a mask array.
 
-    def vsel(self: SCItlm, mask: ArrayLike[bool]) -> SCItlm:
-        """Return subset of SCItlm object generated using method vstack.
-
-        Notes
-        -----
-        The methods `append` and `vsel` only work for complete measurements
-        with the same MPS.
+        Examples
+        --------
+        > spx = SPXtlm()
+        > spx.from_l1a(l1a_prod, tlm_type="sci")
+        > print(spx.science.dtype)
+        > sci_spx = spx.science.sel(mask)
 
         """
         sci = SCItlm()
@@ -130,7 +121,11 @@ class SCItlm:
         if self.tlm is not None:
             sci.tlm = self.tlm[mask]
             sci.tstamp = self.tstamp[mask]
-            sci.images = self.images[0][mask, :]
+            sci.images = (
+                tuple(self.images[ii] for ii in mask.nonzero()[0])
+                if isinstance(self.images, tuple)
+                else self.images[mask, :]
+            )
         return sci
 
     def append(self: SCItlm, sci: SCItlm) -> None:
@@ -297,7 +292,7 @@ class SCItlm:
         ]
 
         # read image data
-        self.images = (fid["/science_data/detector_images"][data_sel, :],)
+        self.images = fid["/science_data/detector_images"][data_sel, :]
 
     def adc_gain(self: SCItlm, indx: int | None = None) -> NDArray[np.int32]:
         """Return ADC gain [Volt]."""
