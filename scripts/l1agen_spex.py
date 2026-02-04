@@ -2080,7 +2080,7 @@ def dump_hkt(flname: str, ccsds_hk: tuple[np.ndarray, ...]) -> None:
                     0x333: msg_333,
                     0x334: msg_334,
                     0x335: msg_335,
-                }.get(ccsds_hdr.apid, None)
+                }.get(ccsds_hdr.apid)
                 msg += "" if method is None else method(buf)
             fp.write(msg + "\n")
 
