@@ -71,9 +71,6 @@ dimensions:
     valid_max: 92400
 
 # Define compound datatypes
-compounds:
-  - h5_nomhk_tm.yaml
-  - h5_science_hk.yaml
 
 # Define variables
 #
