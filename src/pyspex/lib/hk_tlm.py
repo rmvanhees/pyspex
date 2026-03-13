@@ -209,7 +209,7 @@ class HKtlm:
         valid_range = CONV_DICT[key.upper()]["range"]
         if valid_range is None:
             # if no range is provided for key then check where its value has changed
-            res[np.diff(values) != 0] = HkFlagging.CHANGED
+            res[1 + np.diff(values).nonzero()[0]] = HkFlagging.CHANGED
             return res
 
         # flag too small values (value of flag depend on units of parameter)

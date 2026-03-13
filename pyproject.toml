@@ -34,14 +34,14 @@ dynamic = [
 dependencies = [
   "typing-extensions; python_version<'3.11'",
   "h5py>=3.11",
-  "h5yaml>=0.3.0; python_version>='3.10'",
+  "h5yaml>=0.3.2; python_version>='3.10'",
   "julian",
   "netCDF4>=1.7",
   "numpy>=1.26.4",
   "openpyxl>=3.0",
-  "pyxarr>=0.3.0; python_version>='3.10'",
+  "pyxarr>=0.4; python_version>='3.10'",
   "PyYAML>=6.0",
-  "xarray>=2024",
+  "xarray>=2024; python_version<'3.10'",
 ]
 
 [project.scripts]
