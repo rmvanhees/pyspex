@@ -2,7 +2,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2025 SRON
+# Copyright (c) 2019-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -26,10 +26,10 @@ from typing import TYPE_CHECKING, Self
 
 import h5py
 import numpy as np
-from h5yaml.conf_from_yaml import conf_from_yaml
 from h5yaml.yaml_h5 import H5Yaml
 
 from pyspex.lib import pyspex_version
+from pyspex.lib.conf_from_yaml import conf_from_yaml
 from pyspex.tlm import get_l1a_filename
 
 if TYPE_CHECKING:

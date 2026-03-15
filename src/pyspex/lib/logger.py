@@ -1,9 +1,9 @@
 #
-# This file is part of pyspex
+# This file is part of tango-l01a:
 #
-# https://github.com/rmvanhees/pyspex.git
+#    https://gitlab.sron.nl/esg/Tango/tango-l01a.git
 #
-# Copyright (c) 2022-2025 SRON
+# Copyright (c) 2025-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
