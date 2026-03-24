@@ -24,9 +24,8 @@ from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
-import h5py
 import numpy as np
-from h5yaml.yaml_h5 import H5Yaml
+from h5yaml.nc_from_yaml import NcFromYaml
 
 from pyspex.lib import pyspex_version
 from pyspex.lib.conf_from_yaml import conf_from_yaml
@@ -139,7 +138,7 @@ def create_l1a(
 
 # - class SpexL1A ---------------------------------
 # pylint: disable=no-member
-class SpexL1A(H5Yaml):
+class SpexL1A(NcFromYaml):
     """Class to generate a SPEXone level-1A product.
 
     Parameters
@@ -148,8 +147,6 @@ class SpexL1A(H5Yaml):
        Name of the SPEXone level-1A product
     time_coverage :  list[dt.datetime, dt.datetime]
        Time coverage of the measurement data
-    mode :  str, default="w"
-       Support standard modes like 'r+' or 'w' (later is the default)
     dims :  dict[str, int], optional
        Change one or more unlimited dimensions to fixed-size dimensions
        Default of samples_per_image = row * column as defined in the YAML definition
@@ -160,30 +157,27 @@ class SpexL1A(H5Yaml):
         self: SpexL1A,
         l1a_name: Path | str,
         time_coverage: list[dt.datetime, dt.datetime],
-        mode: str = "w",
         *,
         dims: dict[str, int] | None = None,
     ) -> None:
         """Initialize SpexL1A object and create empty SPEXone level-1A product."""
         self.logger = logging.getLogger("pyspex.SpexL1A")
-        self.filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
-
         super().__init__(files("pyspex.Data") / "h5_level_1a.yaml")
+        self.filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
 
         # convert unlimited dimensions to fixed-size dimensions
         if "samples_per_image" not in dims:
             dims["samples_per_image"] = (
-                self.h5_def["dimensions"]["column"]["_size"]
-                * self.h5_def["dimensions"]["row"]["_size"]
+                self.asdict["dimensions"]["column"]["_size"]
+                * self.asdict["dimensions"]["row"]["_size"]
             )
         for key, value in dims.items():
-            if self.h5_def["dimensions"][key]["_size"] == 0:
-                self.h5_def["dimensions"][key]["_size"] = value
+            if self.asdict["dimensions"][key]["_size"] == 0:
+                self.asdict["dimensions"][key]["_size"] = value
 
-        # create empty file and (re-)open file in append mode
-        if mode == "w":
-            self.create(self.filename)
-        self.fid = h5py.File(self.filename, "r+")
+        # create an empty Level-1A product in memory
+        self.fid = self.diskless()
+        self.fid.attrs["product_name"] = self.filename.name
         self.fid.attrs["time_coverage_start"] = (
             time_coverage[0].replace(tzinfo=None).isoformat(timespec="milliseconds")
         )
@@ -203,7 +197,7 @@ class SpexL1A(H5Yaml):
     def close(self: SpexL1A) -> None:
         """Close resources, after sanity check of L1A product."""
         self.add_attrs()
-        self.fid.close()
+        self.to_disk(self.fid, self.filename)
 
     def add_attrs(self: SpexL1A) -> None:
         """Add global attributes to HDF5 product."""
@@ -213,7 +207,6 @@ class SpexL1A(H5Yaml):
             raise RuntimeError from exc
 
         # variable globale attributes
-        self.fid.attrs["product_name"] = self.filename.name
         self.fid.attrs["date_created"] = (
             dt.datetime.now(dt.UTC)
             .replace(tzinfo=None)

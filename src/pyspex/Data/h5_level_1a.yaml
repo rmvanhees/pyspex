@@ -70,8 +70,6 @@ dimensions:
     valid_min: 0
     valid_max: 92400
 
-# Define compound datatypes
-
 # Define variables
 #
 # Parameters used by h5py.create_dataset start with an underscore:
