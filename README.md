@@ -4,6 +4,7 @@
 [![image](https://img.shields.io/pypi/dm/pyspex.svg)](https://pypi.org/project/pyspex/)
 [![image](https://img.shields.io/pypi/status/pyspex.svg?label=status)](https://pypi.org/project/pyspex/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5705691.svg)](https://doi.org/10.5281/zenodo.5705691)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Python package `pyspex` contains software to access SPEXone data.
 This package contains software scripts and classes to:
