@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "pyspex"
-copyright = "2022, SRON"
+Copyright = "2022, SRON"
 author = "Richard van Hees"
 release = metadata.version("pyspex").split("+")[0]
 

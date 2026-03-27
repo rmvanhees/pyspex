@@ -1308,7 +1308,7 @@ def start_logger() -> None:
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": "DEBUG",
                 "formatter": "standard",
-                "filename": "/tmp/warnings.log",
+                "filename": "/tmp/warnings.log",  # noqa: S108
                 "maxBytes": 10485760,
                 "backupCount": 10,
                 "encoding": "utf8",

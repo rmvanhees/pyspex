@@ -43,7 +43,7 @@ def get_table_id(ckd_dir: str, bin_table_name: str) -> str:
         ckd_dir = environ.get("CKD_DIR", ".")
 
     # only read the latest version of the binning-table CKD
-    bin_tables = sorted(list(Path(ckd_dir).glob("SPX1_OCAL_L1A_TBL_*.nc")))
+    bin_tables = sorted(Path(ckd_dir).glob("SPX1_OCAL_L1A_TBL_*.nc"))
     if not bin_tables:
         raise FileNotFoundError("No binning table found")
 
