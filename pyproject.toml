@@ -87,10 +87,10 @@ target-version = "py312"
 preview = false
 select = [
   "D",    # pydocstyle
-  "E",    # pycodestyle
   "F",    # pyflakes
   "I",    # isort
   "N",    # pep8-naming
+  "E",    # pycodestyle
   "W",    # pycodestyle
   "A",    # flake8-builtins
   "ANN",  # flake8-annotations
@@ -103,8 +103,8 @@ select = [
   "Q",    # flake8-quotes
   "S",    # flake8-bandit
   "SIM",  # flake8-simplify
+  "TC",   # flake8-type-checking
   "TID",  # flake8-tidy-imports
-  "TCH",  # flake8-type-checking
   "NPY",  # NumPy-specific
   "PERF", # Perflint
   "RUF",  # Ruff Specific
