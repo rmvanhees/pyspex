@@ -115,7 +115,7 @@ def main() -> int:
         logger.warning('navigation data is incomplete: "%s".', exc)
         error_code = 132
     except Exception as exc:
-        # raise RuntimeError from exc
+        raise RuntimeError from exc
         logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 

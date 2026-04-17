@@ -1,0 +1,130 @@
+# YAML
+#
+# Definition of the field-names of SPEXone NomHK telemetry
+#
+# This file is part of pyspex:
+#    https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2026 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+- Sequence counter
+- TC packet ID
+- TC sequence control counter
+- TC reject code
+- TC fail code
+- TC reject packet ID
+- TC fail packet ID
+- TC accept counter
+- TC reject counter
+- TC execution counter
+- TC fail counter
+- ICU software version
+- ICU system health state
+- ICU mode
+- Status of external PPS
+- Status time Msg
+- Status of ObtSync
+- MPS identifier
+- MPS version
+- Number of Debug events
+- Number of Info/Progress events
+- Number of Warning events
+- Number of Error events
+- Number of Fatal events
+- Previous Boot State
+- Amount of Im0 successful boot counts
+- Amount of Im1 successful boot counts
+- Amount of Im2 successful boot counts
+- Amount of Im3 successful boot counts
+- Number of boot attemps with current image
+- Indicates whether MPS is finished or active
+- Loaded and Current running SW Image
+- Default SW Image
+- SW Image to Load at Next Boot
+- Status of Flash Write protection
+- Cause of Boot
+- TC verification reporting status
+- Spacewire register A (host)
+- Spacewire register B (DEM)
+- Latest generated CRC code
+- Set interval of Science TM packets (ms)
+- Available free space in Science TM buffer
+- Worst case SW execution time
+- Error counter 1 (placeholder)
+- TS1 DEM nominal temperature
+- TS2 housing nominal temperature
+- TS3 radiator nominal temperature
+- TS4 DEM redundant temperature
+- TS5 housing redundant temperature
+- TS6 radiator redundant temperature
+- ICU 5V supply temperature
+- ICU 4V supply temperature
+- ICU Heater G1 supply temperature
+- ICU Heater G2 supply temperature
+- ICU MidBoard temperature
+- ICU MCU-RAM temperature
+- ICU DigV supply temperature
+- ICU 4V bus voltage
+- ICU 3.3V bus voltage
+- ICU 1.2V bus voltage
+- ICU 4V bus current
+- ICU 3.3V bus current
+- ICU 1.2V bus current
+- DEM status flag
+- Dummy field
+- ICU 5V bus voltage
+- ICU 5V bus current
+- DEM spacewire status
+- DEM reset counter
+- Heater group 1 voltage (nominal)
+- Heater group 2 voltage (redundant)
+- Nominal DEM heater current
+- Nominal instrument housing heater current
+- Redundant DEM heater current
+- Redundant instrument housing heater current
+- Nominal DEM heater calculated P value
+- Nominal instrument housing heater calculated P value
+- Redundant DEM heater calculated P value
+- Redundant instrument housing heater calculated P value
+- Nominal DEM heater calculated I value
+- Nominal instrument housing heater calculated I value
+- Redundant DEM heater calculated I value
+- Redundant instrument housing heater calculated I value
+- Nominal DEM heater duty cycle
+- Nominal instrument housing heater duty cycle
+- Redundant DEM heater duty cycle
+- Redundant instrument housing heater duty cycle
+- Led 1 command enable state
+- Led 2 command enable state
+- Led 1 anode voltage
+- Led 1 cathode voltage
+- Led 1 current
+- Led 2 anode voltage
+- Led 2 cathode voltage
+- Led 2 current
+- ADC1 analog Vcc reading
+- ADC1 analog gain reading
+- ADC1 reference reading
+- ADC1 temperature reading
+- ADC1 analog offset reading
+- ADC2 analog Vcc reading
+- ADC2 analog gain reading
+- ADC2 reference reading
+- ADC2 temperature reading
+- ADC2 analog offset reading
+- DEM supply voltage
+- DEM supply current
+- DEM firmware version
+- Dummy field
+- Detector temperature sensor (at DEM)
+- DEM spacewire error register
+- Deserialize and out of sync state
+- Actual OCD state
+- Sticky OCD state
+- Power sense enable
+- EDAC error flags
+- Block number with last EDAC error
+- Counter of loop iterations in the last NomHk interval

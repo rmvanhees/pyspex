@@ -28,7 +28,6 @@ import numpy as np
 from h5yaml.nc_from_yaml import NcFromYaml
 
 from pyspex.lib import pyspex_version
-from pyspex.lib.conf_from_yaml import conf_from_yaml
 from pyspex.tlm import get_l1a_filename
 
 if TYPE_CHECKING:
@@ -162,7 +161,14 @@ class SpexL1A(NcFromYaml):
     ) -> None:
         """Initialize SpexL1A object and create empty SPEXone level-1A product."""
         self.logger = logging.getLogger("pyspex.SpexL1A")
-        super().__init__(files("pyspex.Data") / "h5_level_1a.yaml")
+        super().__init__(
+            [
+                files("pyspex.Data") / "h5_nomhk_tm.yaml",
+                files("pyspex.Data") / "h5_science_tm.yaml",
+                files("pyspex.Data") / "h5_level_1a.yaml",
+                files("pyspex.Data") / "h5_global_attrs.yaml",
+            ]
+        )
         self.filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
 
         # convert unlimited dimensions to fixed-size dimensions
@@ -176,7 +182,8 @@ class SpexL1A(NcFromYaml):
                 self.asdict["dimensions"][key]["_size"] = value
 
         # create an empty Level-1A product in memory
-        self.fid = self.diskless()
+        # self.use_netcdf4()
+        self.fid = self.diskless(str_as_bytes=False)
         self.fid.attrs["product_name"] = self.filename.name
         self.fid.attrs["time_coverage_start"] = (
             time_coverage[0].replace(tzinfo=None).isoformat(timespec="milliseconds")
@@ -196,35 +203,22 @@ class SpexL1A(NcFromYaml):
 
     def close(self: SpexL1A) -> None:
         """Close resources, after sanity check of L1A product."""
-        self.add_attrs()
+        self.__finalize()
         self.to_disk(self.fid, self.filename)
 
-    def add_attrs(self: SpexL1A) -> None:
+    def __finalize(self: SpexL1A) -> None:
         """Add global attributes to HDF5 product."""
-        try:
-            attrs_def = conf_from_yaml(files("pyspex.Data") / "h5_global_attrs.yaml")
-        except RuntimeError as exc:
-            raise RuntimeError from exc
-
         # variable globale attributes
         self.fid.attrs["date_created"] = (
             dt.datetime.now(dt.UTC)
             .replace(tzinfo=None)
             .isoformat(timespec="milliseconds")
         )
-        # constant global attributes
-        for key, value in attrs_def["attrs_global"].items():
-            if key not in self.fid.attrs:
-                self.fid.attrs[key] = value
-        for key, value in attrs_def["attrs_nasa"].items():
-            self.fid.attrs[key] = value
         self.fid.attrs["history"] = " ".join(sys.argv)
 
         gid = self.fid["/processing_control"]
         gid.attrs["software_name"] = Path(sys.argv[0]).name
         gid.attrs["software_version"] = pyspex_version()
-        for key, value in attrs_def["attrs_cntrl"].items():
-            gid.attrs[key] = value
 
     def write_config(self: SpexL1A, config: dataclass) -> None:
         """Write command-line settings to /processing_control/input_parameters."""
@@ -266,6 +260,7 @@ class SpexL1A(NcFromYaml):
         self.fid[f"{group}/temp_detector"][:] = nomhk.convert("TS1_DEM_N_T")
         self.fid[f"{group}/temp_housing"][:] = nomhk.convert("TS2_HOUSING_N_T")
         self.fid[f"{group}/temp_radiator"][:] = nomhk.convert("TS3_RADIATOR_N_T")
+        self.fid.attrs["icu_sw_version"] = f"0x{nomhk.tlm['ICUSWVER'][0]:x}"
         self.logger.debug("wrote data to group: %s.", group)
 
     def write_img_vars(self: SpexL1A, science: SCItlm) -> None:

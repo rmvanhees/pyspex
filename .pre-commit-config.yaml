@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.8
+    rev: v0.15.11
     hooks:
       - id: ruff-check
         args: [ --fix ]
@@ -9,3 +9,5 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+        exclude: h5_level_1a.yaml
+        

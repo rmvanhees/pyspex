@@ -1,0 +1,159 @@
+# YAML
+#
+# Definition of the field-names of SPEXone Science telemetry
+#
+# This file is part of pyspex:
+#    https://github.com/rmvanhees/pyspex.git
+#
+# Copyright (c) 2026 SRON
+#    All Rights Reserved
+#
+# License:  BSD-3-Clause
+#
+- ICU software version
+- MPS identifier
+- MPS version
+- TS1 DEM nominal temperature
+- TS2 housing nominal temperature
+- TS3 radiator nominal temperature
+- TS4 DEM redundant temperature
+- TS5 housing redundant temperature
+- TS6 radiator redundant temperature
+- ICU 5V supply temperature
+- ICU 4V supply temperature
+- ICU Heater G1 supply temperature
+- ICU Heater G2 supply temperature
+- ICU MidBoard temperature
+- ICU MCU-RAM temperature
+- ICU DigV supply temperature
+- ICU 4V bus voltage
+- ICU 3.3V bus voltage
+- ICU 1.2V bus voltage
+- ICU 4V bus current
+- ICU 3.3V bus current
+- ICU 1.2V bus current
+- ICU 5V bus voltage
+- ICU 5V bus current
+- DEM supply voltage
+- DEM supply current
+- Led 1 measured anode voltage
+- Led 1 measured cathode voltage
+- Led 1 measured current
+- Led 2 measured anode voltage
+- Led 2 measured cathode voltage
+- Led 2 measured current
+- ADC1 analog Vcc reading
+- ADC1 reference reading
+- ADC1 temperature reading
+- ADC2 analog Vcc reading
+- ADC2 reference reading
+- ADC2 temperature reading
+- DEM firmware version register
+- DEM co-adding register
+- DEM internal generator register (0=test generator; 1=detector)
+- DEM frame mode register (1=diagnostic; 2=science)
+- Start address of applicable binning table
+- Number of active LVDS channels (1=science (8 ch); 3=diagnostic (2 ch))
+- Dummy field
+- Address of co-adder buffer (intermediate)
+- Address of coadding buffer A (final)
+- Address of coadding buffer B (final)
+- Address of buffer A (binned)
+- Address of buffer B (binned)
+- Address of line-enabling table
+- Detector register 000 content
+- Dummy field
+- Number of rows read-out by sensor
+- Offset in rows (block 1)
+- Offset in rows (block 2)
+- Offset in rows (block 3)
+- Offset in rows (block 4)
+- Offset in rows (block 5)
+- Offset in rows (block 6)
+- Offset in rows (block 7)
+- Offset in rows (block 8)
+- Number of rows read-out by sensor (block 1)
+- Number of rows read-out by sensor (block 2)
+- Number of rows read-out by sensor (block 3)
+- Number of rows read-out by sensor (block 4)
+- Number of rows read-out by sensor (block 5)
+- Number of rows read-out by sensor (block 6)
+- Number of rows read-out by sensor (block 7)
+- Number of rows read-out by sensor (block 8)
+- Number of rows to skip
+- Number of rows to skip
+- Monochrome sensor
+- Image flipping
+- Bits for INTE_SYNC; EXP_DUAL; EXP_EXT
+- LVDS current
+- Exposure time
+- Step size for increasing exposure times
+- 't$_{exp}$ at kneepoint 1 (not used)'
+- 't$_{exp}$ at kneepoint 2 (not used)'
+- Number of slopes (piecewise linear response)
+- Number of frames in multi-frame mode
+- Exposure time (seconds)
+- Step size for increasing exposure times
+- Detector register 062 content
+- Detector register 063 content
+- Detector register 064 content
+- Detector register 065 content
+- Detector register 066 content
+- Detector register 067 content
+- Detector register 068 content
+- Number of frames in multi-frame mode
+- Number of frames grabbed and sent by sensor
+- Number of LVDS interfaces (1=8 ch or 3=2 ch)
+- Frame overhead time
+- Current LVDS receiver
+- Detector register 075 content
+- Detector register 076 content
+- Parameters COL_calib and ADC_calib
+- Training pattern
+- Enable/Disable channels to save power
+- 'I$_{col}$'
+- 'I$_{col_prech}$'
+- 'I$_{ADC}$'
+- 'I$_{amp}$'
+- 'V$_{low1}$'
+- 'V$_{low2}$'
+- 'V$_{low3}$'
+- 'V$_{res_low}$'
+- Detector register 092 content
+- Detector register 093 content
+- 'V$_{prech}$'
+- 'V$_{ref}$'
+- Detector register 000 content
+- Detector register 000 content
+- Voltage first ramp
+- Voltage second ramp
+- Digital offset; dark-level = 70 + Offset
+- Analog gain by PGA (first bit BLACKCOL)
+- Digital gain by ADC
+- Detector register 104 content
+- Detector register 105 content
+- Detector register 106 content
+- Detector register 107 content
+- Detector register 108 content
+- Detector register 109 content
+- Detector register 110 content
+- Bits per pixel (default 10)
+- Bits per pixel (default 10)
+- Status internal PLL
+- PLL input frequency
+- Use or bypass internal PLL
+- Set to 9 in case of 10 bit mode
+- Set to 8 in case of 10 bit mode
+- Dummy
+- Detector register 119 content
+- Detector register 120 content
+- Put first 16 columns to a black reference
+- Detector register 122 content
+- 'V$_{blacksun}$'
+- Detector register 124 content
+- Detector register 125 content
+- Detector temperature sensor (at DEM)
+- Frame Trigger Interval; LSB=0.1 ms (science=667 or 15 Hz)
+- Image data mode (0=DEM; 1=ICU test generator)
+- Dummy field
+- Size of image data in bytes
