@@ -89,39 +89,41 @@ def get_l1a_filename(
         vvvvvvv is the git-hash string of the pyspex repository
 
     """
-    if config.outfile:
-        return config.outdir / config.outfile
+    if not config.outfile:
+        # +++++ in-flight product-name convention +++++
+        if config.l0_format != "raw":
+            subtype = ""
+            if config.eclipse is None:
+                subtype = "_OCAL"
+            elif config.eclipse:
+                subtype = "_CAL" if mode == "full" else "_DARK"
 
-    # +++++ in-flight product-name convention +++++
-    if config.l0_format != "raw":
-        subtype = ""
-        if config.eclipse is None:
-            subtype = "_OCAL"
-        elif config.eclipse:
-            subtype = "_CAL" if mode == "full" else "_DARK"
+            prod_ver = (
+                ""
+                if config.processing_version == 1
+                else f".V{config.processing_version:d}"
+            )
+            config.outfile = (
+                f"PACE_SPEXONE{subtype}"
+                f".{coverage[0].strftime('%Y%m%dT%H%M%S'):15s}"
+                f".L1A{prod_ver}.nc"
+            )
+        else:
+            # +++++ OCAL product-name convention +++++
+            # determine measurement identifier
+            msm_id = config.l0_list[0].stem
+            try:
+                new_date = dt.datetime.strptime(
+                    msm_id[-22:], "%y-%j-%H:%M:%S.%f"
+                ).strftime("%Y%m%dT%H%M%S.%f")
+            except ValueError:
+                pass
+            else:
+                msm_id = msm_id[:-22] + new_date
 
-        prod_ver = (
-            "" if config.processing_version == 1 else f".V{config.processing_version:d}"
-        )
-        return config.outdir / (
-            f"PACE_SPEXONE{subtype}"
-            f".{coverage[0].strftime('%Y%m%dT%H%M%S'):15s}"
-            f".L1A{prod_ver}.nc"
-        )
+            config.outfile = f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc"
 
-    # +++++ OCAL product-name convention +++++
-    # determine measurement identifier
-    msm_id = config.l0_list[0].stem
-    try:
-        new_date = dt.datetime.strptime(msm_id[-22:], "%y-%j-%H:%M:%S.%f").strftime(
-            "%Y%m%dT%H%M%S.%f"
-        )
-    except ValueError:
-        pass
-    else:
-        msm_id = msm_id[:-22] + new_date
-
-    return config.outdir / f"SPX1_OCAL_{msm_id}_L1A_{pyspex_version(githash=True)}.nc"
+    return config.outdir / config.outfile
 
 
 # - class SPXtlm ----------------------------
