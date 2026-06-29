@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 import numpy as np
-from h5yaml.yaml_to_h5 import YamlToH5
+from h5yaml.template_h5 import TemplateH5
 
 from pyspex.lib import pyspex_version
 from pyspex.tlm import get_l1a_filename
@@ -137,7 +137,7 @@ def create_l1a(
 
 # - class SpexL1A ---------------------------------
 # pylint: disable=no-member
-class SpexL1A(YamlToH5):
+class SpexL1A(TemplateH5):
     """Class to generate a SPEXone level-1A product.
 
     Parameters
