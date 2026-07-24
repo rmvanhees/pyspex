@@ -35,7 +35,7 @@ def subsec2musec(sub_sec: int) -> int:
     return int(1e6 * sub_sec / 65536)
 
 
-def mask2slice(mask: NDArray[bool]) -> None | slice | tuple | NDArray[bool]:
+def mask2slice(mask: NDArray[bool]) -> slice | tuple | NDArray[bool] | None:
     """Try to slice (faster), instead of boolean indexing (slow)."""
     if np.all(~mask):
         return None
