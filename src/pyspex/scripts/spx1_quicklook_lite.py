@@ -4,7 +4,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2025 SRON
+# Copyright (c) 2019-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import h5py
@@ -116,7 +116,8 @@ def main() -> None:
             img2d /= sci_hk[ii]["REG_NCOADDFRAMES"]
 
             time_str = (
-                datetime(year=2020, month=1, day=1) + timedelta(seconds=image_time[ii])
+                datetime(year=2020, month=1, day=1, tzinfo=UTC)
+                + timedelta(seconds=image_time[ii])
             ).strftime("%H:%M:%S.%f")
 
             figinfo = FIGinfo()

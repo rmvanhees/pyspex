@@ -3,7 +3,7 @@
 # This file is part of pyspex
 #    https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2025 SRON
+# Copyright (c) 2022-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -213,7 +213,7 @@ class Config:
     def __post_init__(self: Config) -> None:
         """Perform post initialization."""
         if self.outdir is None:
-            self.outdir = Path(".").resolve()
+            self.outdir = Path.cwd()
 
     def __iter__(self: Config) -> None:
         """Make this class iterable."""
@@ -1308,7 +1308,7 @@ def start_logger() -> None:
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": "DEBUG",
                 "formatter": "standard",
-                "filename": "/tmp/warnings.log",  # noqa: S108
+                "filename": "/tmp/warnings.log",
                 "maxBytes": 10485760,
                 "backupCount": 10,
                 "encoding": "utf8",
@@ -2580,7 +2580,7 @@ class L1Aio:
         key_list = [
             x
             for x in self.dset_stored
-            if (x.startswith("/science_data") or x.startswith("/image_attributes"))
+            if x.startswith(("/science_data", "/image_attributes"))
         ]
         res = np.array([self.dset_stored[key] for key in key_list])
         for ii, key in enumerate(key_list):
@@ -3817,8 +3817,8 @@ def main() -> int:
 
 # --------------------------------------------------
 if __name__ == "__main__":
-    mtime_str = dt.datetime.fromtimestamp(Path(__file__).stat().st_mtime).isoformat(
-        sep=" ", timespec="seconds"
-    )
+    mtime_str = dt.datetime.fromtimestamp(
+        Path(__file__).stat().st_mtime, tz=dt.timezone.utc
+    ).isoformat(sep=" ", timespec="seconds")
     print(f"l1agen_spex.py {pyspex_version()} ({mtime_str})\n")
     sys.exit(main())

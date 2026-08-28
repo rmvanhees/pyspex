@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2025 SRON
+# Copyright (c) 2022-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -140,7 +140,7 @@ class Config:
     def __post_init__(self: Config) -> None:
         """Perform post initialization."""
         if self.outdir is None:
-            self.outdir = Path(".").resolve()
+            self.outdir = Path.cwd()
 
     def __iter__(self: Config) -> None:
         """Make this class iterable."""

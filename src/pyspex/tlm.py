@@ -113,9 +113,11 @@ def get_l1a_filename(
             # determine measurement identifier
             msm_id = config.l0_list[0].stem
             try:
-                new_date = dt.datetime.strptime(
-                    msm_id[-22:], "%y-%j-%H:%M:%S.%f"
-                ).strftime("%Y%m%dT%H%M%S.%f")
+                new_date = (
+                    dt.datetime.strptime(msm_id[-22:], "%y-%j-%H:%M:%S.%f")
+                    .astimezone(dt.UTC)
+                    .strftime("%Y%m%dT%H%M%S.%f")
+                )
             except ValueError:
                 pass
             else:

@@ -117,14 +117,13 @@ def create_l1a(
             "/navigation_data/orb_time": nav_dict["orb_time"].size,
             "/navigation_data/tilt_time": nav_dict["tilt_time"].size,
         }
-
     with SpexL1A(
         get_l1a_filename(config, tlm.coverage, mode),
         tlm.coverage,
         dims={
             "hk_packets": tlm.nomhk.size,
             "number_of_images": tlm.science.size,
-            "samples_per_image": np.max([img.size for img in tlm.science.images]),
+            "samples_per_image": max([img.size for img in tlm.science.images]),
         }
         | dims_nav,
     ) as l1a:
@@ -178,7 +177,7 @@ class SpexL1A(TemplateH5):
                 * self.asdict["dimensions"]["row"]["_size"]
             )
         for key, value in dims.items():
-            if self.asdict["dimensions"][key]["_size"] == 0:
+            if self.asdict["dimensions"][key]["_size"] <= 0:
                 self.asdict["dimensions"][key]["_size"] = value
 
         # create an empty Level-1A product in memory

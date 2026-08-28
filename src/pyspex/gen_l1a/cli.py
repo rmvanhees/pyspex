@@ -103,6 +103,7 @@ def main() -> int:
             create_l1a(config, tlm.binned(), nav_dict, "binned")
 
             # full-frame measurements
+            config.outfile = ""
             create_l1a(config, tlm.full(), nav_dict, "full")
         else:
             # binned measurements

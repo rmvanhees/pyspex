@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2025 SRON
+# Copyright (c) 2019-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -362,7 +362,7 @@ class L1Aio:
         key_list = [
             x
             for x in self.dset_stored
-            if (x.startswith("/science_data") or x.startswith("/image_attributes"))
+            if x.startswith("/science_data", "/image_attributes")
         ]
         res = np.array([self.dset_stored[key] for key in key_list])
         if allow_empty:

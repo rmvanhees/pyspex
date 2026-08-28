@@ -261,8 +261,10 @@ def main() -> None:
     # generate name of L1A product
     msm_id = args.msmt_id.name
     try:
-        new_date = datetime.strptime(msm_id[-22:], "%y-%j-%H:%M:%S.%f").strftime(
-            "%Y%m%dT%H%M%S.%f"
+        new_date = (
+            datetime.strptime(msm_id[-22:], "%y-%j-%H:%M:%S.%f")
+            .astimezone(UTC)
+            .strftime("%Y%m%dT%H%M%S.%f")
         )
     except ValueError:
         pass
