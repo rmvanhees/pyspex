@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2019-2025 SRON
+# Copyright (c) 2019-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -98,10 +98,20 @@ def init_gse_data(fid: h5py.File) -> h5py.Group:
 
 
 def byte_to_timestamp(str_date: str) -> float:
-    """Convert a byte-string to a timestamp."""
-    return datetime.strptime(
-        str_date.strip() + "00+00:00", "%Y%m%dT%H%M%S.%f%z"
-    ).timestamp()
+    """Convert a byte-string to a timestamp.
+
+    Parameters
+    ----------
+    str_date : byte
+        date-time string in ISO format with timezone UTC
+
+    Returns
+    -------
+    timestamp :  float
+        Unix timestamp in UTC
+
+    """
+    return datetime.fromisoformat(str_date.strip() + "00+00:00").timestamp()
 
 
 def egse_dtype() -> np.dtype:
@@ -368,8 +378,7 @@ def add_egse_data(args: argparse.Namespace) -> None:
         duration = np.ceil((msmt_stop - msmt_start).total_seconds())
 
     # use the timestamp in the filename to correct ICU time
-    date_str = input_file.split("_")[-1] + "+00:00"
-    msmt_start = datetime.strptime(date_str, "%Y%m%dT%H%M%S.%f%z")
+    msmt_start = datetime.fromisoformat(input_file.split("_")[-1] + "+00:00")
     msmt_start = msmt_start.replace(microsecond=0)
     msmt_stop = msmt_start + timedelta(seconds=int(duration))
     if args.verbose:

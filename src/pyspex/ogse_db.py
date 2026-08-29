@@ -160,8 +160,9 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose: bool = False) -> Data
             Unix timestamp in UTC
 
         """
-        buff = str_date.strip().decode("ascii") + "+01:00"
-        return datetime.strptime(buff, "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
+        return datetime.fromisoformat(
+            str_date.strip().decode("ascii") + "+01:00"
+        ).timestamp()
 
     names = ("timestamp", "spectrum")
     formats = None
@@ -171,6 +172,8 @@ def read_wav_mon(ogse_dir: Path, file_list: list, verbose: bool = False) -> Data
     n_avg = None
 
     for flname in file_list:
+        scalar_t_intg = None
+        scalar_n_avg = None
         with open(ogse_dir / flname, encoding="ascii") as fid:
             while True:
                 line = fid.readline().strip()
@@ -304,18 +307,17 @@ def clock_offset(l1a_file: Path) -> tuple[Any, int | Any, Any]:
             input_file = Path(res[0]).stem.rstrip("_hk")
         # pylint: disable=no-member
         msmt_start = np.datetime64(
-            fid.attrs["time_coverage_start"].decode("ascii").split("+")[0]
+            fid.attrs["time_coverage_start"].decode().split("+")[0]
         )
-        msmt_stop = np.datetime64(
-            fid.attrs["time_coverage_end"].decode("ascii").split("+")[0]
-        )
+        msmt_stop = np.datetime64(fid.attrs["time_coverage_end"].decode().split("+")[0])
 
-    duration = (msmt_stop - msmt_start).astype("timedelta64[s]") + 1
+    duration = (msmt_stop - msmt_start).astype("timedelta64[ms]") + 1
     # print('duration: ', duration)
 
     # use the timestamp in the filename to correct ICU time
-    date_start = datetime.strptime(input_file.split("_")[-1], "%Y%m%dT%H%M%S.%f")
-    msmt_start = np.datetime64(date_start.isoformat()).astype("datetime64[s]")
+    msmt_start = np.datetime64(
+        datetime.fromisoformat(input_file.split("_")[-1])
+    ).astype("datetime64[ms]")
     msmt_stop = msmt_start + duration
     # print('msmt: ', msmt_start, msmt_stop)
 
