@@ -150,24 +150,16 @@ def main() -> None:
         parts = dem_file.name.split("_")
         if len(parts) == 8:
             _id = "_".join(parts[:4])
-            tstamp.append(
-                datetime.strptime(parts[5] + parts[6] + "+00:00", "%Y%m%d%H%M%S.%f%z")
-            )
+            tstamp.append(datetime.fromisoformat(parts[5] + parts[6] + "+00:00"))
         elif len(parts) == 10:
             _id = "_".join(parts[:6])
-            tstamp.append(
-                datetime.strptime(parts[7] + parts[8] + "+00:00", "%Y%m%d%H%M%S.%f%z")
-            )
+            tstamp.append(datetime.fromisoformat(parts[7] + parts[8] + "+00:00"))
         elif len(parts) == 7:
             _id = "_".join(parts[:3])
-            tstamp.append(
-                datetime.strptime(parts[4] + parts[5] + "+00:00", "%Y%m%d%H%M%S.%f%z")
-            )
+            tstamp.append(datetime.fromisoformat(parts[4] + parts[5] + "+00:00"))
         elif len(parts) == 9:
             _id = "_".join(parts[:6])
-            tstamp.append(
-                datetime.strptime(parts[6] + parts[7] + "+00:00", "%Y%m%d%H%M%S.%f%z")
-            )
+            tstamp.append(datetime.fromisoformat(parts[6] + parts[7] + "+00:00"))
         else:
             raise ValueError("Invalid format of data-product name")
 

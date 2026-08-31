@@ -253,8 +253,8 @@ def init_l1a(
     # create/overwrite netCDF4 product
     try:
         rootgrp = Dataset(l1a_flname, "w")
-    except Exception as exc:
-        raise Exception(f"Failed to create netCDF4 file {l1a_flname}") from exc
+    except PermissionError as exc:
+        raise OSError(f"Failed to create netCDF4 file {l1a_flname}") from exc
 
     # - define global dimensions
     _ = rootgrp.createDimension("number_of_images", number_img)

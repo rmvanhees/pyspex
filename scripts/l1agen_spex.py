@@ -1227,8 +1227,8 @@ def init_l1a(
     # create/overwrite netCDF4 product
     try:
         rootgrp = Dataset(l1a_flname, "w")
-    except Exception as exc:
-        raise Exception(f"Failed to create netCDF4 file {l1a_flname}") from exc
+    except PermissionError as exc:
+        raise OSError(f"Failed to create netCDF4 file {l1a_flname}") from exc
 
     # - define global dimensions
     _ = rootgrp.createDimension("number_of_images", number_img)
@@ -3807,7 +3807,7 @@ def main() -> int:
     except UserWarning as exc:
         logger.warning('navigation data is incomplete: "%s".', exc)
         error_code = 132
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         traceback.print_exc()
         logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135

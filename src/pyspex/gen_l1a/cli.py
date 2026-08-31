@@ -2,7 +2,7 @@
 # This file is part of pyspex:
 #    https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2025 SRON
+# Copyright (c) 2022-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 import warnings
 
 import numpy as np
@@ -108,15 +109,15 @@ def main() -> int:
         else:
             # binned measurements
             create_l1a(config, tlm.binned(), nav_dict, "binned")
-    except (KeyError, RuntimeError) as exc:
+    except (KeyError, OSError, RuntimeError) as exc:
         # raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)
         error_code = 131
     except UserWarning as exc:
         logger.warning('navigation data is incomplete: "%s".', exc)
         error_code = 132
-    except Exception as exc:
-        # raise RuntimeError from exc
+    except Exception as exc:  # noqa: BLE001
+        traceback.print_exc()
         logger.fatal('Unexpected exception occurred with "%s".', exc)
         error_code = 135
 
