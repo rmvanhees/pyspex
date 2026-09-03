@@ -2788,22 +2788,6 @@ def subsec2musec(sub_sec: int) -> int:
     return int(1e6 * sub_sec / 65536)
 
 
-def mask2slice(mask: npt.NDArray[bool]) -> slice | tuple | npt.NDArray[bool] | None:
-    """Try to slice (faster), instead of boolean indexing (slow)."""
-    if np.all(~mask):
-        return None
-    if np.all(mask):
-        return np.s_[:]  # read everything
-
-    indx = mask.nonzero()[0]
-    if np.all(np.diff(indx) == 1):
-        # perform start-stop indexing
-        return np.s_[indx[0] : indx[-1] + 1]
-
-    # perform boolean indexing
-    return mask
-
-
 def add_proc_conf(l1a_file: Path, yaml_conf: Path) -> None:
     """Add dataset 'processor_configuration' to an existing L1A product.
 
