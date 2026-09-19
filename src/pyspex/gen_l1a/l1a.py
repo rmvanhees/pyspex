@@ -24,6 +24,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
+import h5py
 import numpy as np
 from h5yaml.template_h5 import TemplateH5
 
@@ -181,8 +182,9 @@ class SpexL1A(TemplateH5):
                 self.asdict["dimensions"][key]["_size"] = value
 
         # create an empty Level-1A product in memory
-        # self.use_netcdf4()
-        self.fid = self.diskless(str_as_bytes=False)
+        # self.fid = self.diskless(str_as_bytes=False)
+        self.create(self.filename, str_as_bytes=False)
+        self.fid = h5py.File(self.filename, "r+")
         self.fid.attrs["product_name"] = self.filename.name
         self.fid.attrs["time_coverage_start"] = (
             time_coverage[0].replace(tzinfo=None).isoformat(timespec="milliseconds")
