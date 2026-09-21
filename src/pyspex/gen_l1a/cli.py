@@ -32,15 +32,15 @@ def main() -> int:
     error_code = 0
     warn_code = 0
 
-    # (1) initialize logger
-    start_logger()
-    logging.captureWarnings(True)
-
-    # (2) parse command-line parameters and YAML file for settings
+    # (1) parse command-line parameters and YAML file for settings
     config = argparse_gen_l1a()
-    logging.getLogger().setLevel(config.verbose)  # first, set the root logger
-    logger = logging.getLogger("pyspex.gen_l1a")  # then initiate a descendant
-    logger.debug("%s", config)
+    if config.verbose == "debug":
+        print(config)
+
+    # (2) initialize logger
+    logging.captureWarnings(True)
+    start_logger(config.verbose.upper())
+    logger = logging.getLogger("spx1_level01a")
 
     # (3) check input files (SEPXone level-0)
     try:
@@ -78,37 +78,60 @@ def main() -> int:
     if error_code != 0 or config.debug or config.dump:
         return error_code
 
-    if tlm.science.size > 0:
-        mps_list = np.unique(tlm.science.tlm["MPS_ID"])
-        logger.debug("unique Science MPS: %s", mps_list)
-        tlm.nomhk = tlm.nomhk.sel(np.isin(tlm.nomhk.tlm["MPS_ID"], mps_list))
+    # (4.1) keep nomhk packages with a MPS_ID present in the science packages
+    hk_mps_list = np.unique(tlm.nomhk.tlm["MPS_ID"])
+    sci_mps_list = np.unique(tlm.science.tlm["MPS_ID"])
+    if not np.array_equal(hk_mps_list, sci_mps_list):
+        logger.info("Science vs nomhk MPS: %s - %s", sci_mps_list, hk_mps_list)
+        tlm.nomhk = tlm.nomhk.sel(np.isin(tlm.nomhk.tlm["MPS_ID"], sci_mps_list))
 
     # (5) read navigation data from PACE_HKT products
-    nav_dict = None
-    if config.hkt_list:
-        coverage_spx = (
-            tlm.coverage[0].replace(tzinfo=None),
-            tlm.coverage[1].replace(tzinfo=None),
-        )
-        hkt = HKTio(config.hkt_list)
+    hkt = HKTio(config.hkt_list) if config.hkt_list else None
+
+    def get_hkt_nav() -> dict | None:
+        """..."""
+        if hkt is None:
+            return None
+
         nav_dict = hkt.navigation()
         nav_dict = hkt.nav_coverage_adjust(nav_dict, coverage_spx)
         nav_dict["coverage_quality"] = hkt.nav_coverage_flag(coverage_spx)
+        return nav_dict
 
     # (6) write Level-1A product.
     try:
         if config.eclipse is None or tlm.science.size == 0:
-            create_l1a(config, tlm, nav_dict)
+            coverage_spx = (
+                tlm.coverage[0].replace(tzinfo=None),
+                tlm.coverage[1].replace(tzinfo=None),
+            )
+            create_l1a(config, tlm, get_hkt_nav())
         elif config.eclipse:
             # binned measurements
-            create_l1a(config, tlm.binned(), nav_dict, "binned")
+            tlm0 = tlm.binned()
+            coverage_spx = (
+                tlm0.coverage[0].replace(tzinfo=None),
+                tlm0.coverage[1].replace(tzinfo=None),
+            )
+            create_l1a(config, tlm0, get_hkt_nav(), "binned")
+            del tlm0
 
             # full-frame measurements
             config.outfile = ""
-            create_l1a(config, tlm.full(), nav_dict, "full")
+            tlm = tlm.full()
+            coverage_spx = (
+                tlm.coverage[0].replace(tzinfo=None),
+                tlm.coverage[1].replace(tzinfo=None),
+            )
+            create_l1a(config, tlm, get_hkt_nav(), "full")
         else:
             # binned measurements
-            create_l1a(config, tlm.binned(), nav_dict, "binned")
+            tlm = tlm.binned()
+            coverage_spx = (
+                tlm.coverage[0].replace(tzinfo=None),
+                tlm.coverage[1].replace(tzinfo=None),
+            )
+            create_l1a(config, tlm, get_hkt_nav(), "binned")
     except (KeyError, OSError, RuntimeError) as exc:
         # raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)

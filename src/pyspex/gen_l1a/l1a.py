@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from pyspex.tlm import SPXtlm
 
 # - global parameters ------------------------------
-module_logger = logging.getLogger("pyspex.l1a")
 
 
 # - local functions --------------------------------
@@ -109,7 +108,18 @@ def create_l1a(
     nav_dict: dict | None,
     mode: str | None = None,
 ) -> None:
-    """All calls necessary to generate a SPEXone L1A product."""
+    """All calls necessary to generate a SPEXone L1A product.
+
+    Parameters
+    ----------
+    config :  dataclass
+       Settings for the L0->l1A processing
+    tlm :  SPXtlm
+       SPEXone telemetry data packages
+    nav_dict :  dict, optional
+       PACE navigration parameters
+
+    """
     dims_nav = {}
     if config.hkt_list:
         dims_nav = {
@@ -123,9 +133,10 @@ def create_l1a(
         dims={
             "hk_packets": tlm.nomhk.size,
             "number_of_images": tlm.science.size,
-            "samples_per_image": max([img.size for img in tlm.science.images]),
+            "samples_per_image": max(img.size for img in tlm.science.images),
         }
         | dims_nav,
+        mode=mode,
     ) as l1a:
         l1a.write_config(config)
         l1a.write_img_vars(tlm.science)  # before write_hk_vars
@@ -148,6 +159,9 @@ class SpexL1A(TemplateH5):
     dims :  dict[str, int], optional
        Change one or more unlimited dimensions to fixed-size dimensions
        Default of samples_per_image = row * column as defined in the YAML definition
+    mode :  {'binned', 'full'} | None, default=None
+       Select telemetry data with diagnostic data (full frame) or binned data, or
+       perform no data selection (default)
 
     """
 
@@ -157,9 +171,9 @@ class SpexL1A(TemplateH5):
         time_coverage: list[dt.datetime, dt.datetime],
         *,
         dims: dict[str, int] | None = None,
+        mode: str | None = None,
     ) -> None:
         """Initialize SpexL1A object and create empty SPEXone level-1A product."""
-        self.logger = logging.getLogger("pyspex.SpexL1A")
         super().__init__(
             [
                 files("pyspex.Data") / "h5_nomhk_tm.yaml",
@@ -168,7 +182,9 @@ class SpexL1A(TemplateH5):
                 files("pyspex.Data") / "h5_global_attrs.yaml",
             ]
         )
+        self.logger = logging.getLogger("pyspex.gen_l1a.SpexL1A")
         self.filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
+        self.mode = mode
 
         # convert unlimited dimensions to fixed-size dimensions
         if "samples_per_image" not in dims:
@@ -306,16 +322,17 @@ class SpexL1A(TemplateH5):
 
         group = "/science_data"
         self.fid[f"{group}/science_hk"][:] = science.tlm
-        if len(np.unique([img.size for img in science.images])) == 1:
-            images = science.images
+        img_sizes, indices = np.unique(
+            [img.size for img in science.images], return_inverse=True
+        )
+        if len(img_sizes) != 1:
+            for ii, img_sz in enumerate(img_sizes):
+                _mm = indices == ii
+                self.fid[f"{group}/detector_images"][_mm, :img_sz] = tuple(
+                    img for img in science.images if img.size == img_sz
+                )
         else:
-            nj_max = 0
-            for img in science.images:
-                nj_max = max(nj_max, img.size)
-            images = np.full((science.size, nj_max), np.iinfo("u2").max)
-            for ii, img in enumerate(science.images):
-                images[ii, : img.size] = img
-        self.fid[f"{group}/detector_images"][:] = images
+            self.fid[f"{group}/detector_images"][:] = science.images
         self.logger.debug("wrote data to group: %s.", group)
 
     def write_nav_vars(

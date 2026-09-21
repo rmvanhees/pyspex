@@ -3,7 +3,7 @@
 #
 # https://github.com/rmvanhees/pyspex.git
 #
-# Copyright (c) 2022-2025 SRON
+# Copyright (c) 2022-2026 SRON
 #    All Rights Reserved
 #
 # License:  BSD-3-Clause
@@ -554,9 +554,9 @@ class SPXtlm:
             return SPXtlm()  # return empy object
         if np.all(sci_mask):
             return self  # return original object
-        self.logger.debug("Rejected %d binned Science images", np.sum(~sci_mask))
 
-        return copy(self).sel(sci_mask)
+        self.logger.info("Rejected %d binned Science images", np.sum(~sci_mask))
+        return self.sel(sci_mask)
 
     def binned(self: SPXtlm) -> SPXtlm:
         """Select binned images from data."""
@@ -571,6 +571,7 @@ class SPXtlm:
             return SPXtlm()  # return empy object
         if np.all(sci_mask):
             return self  # return original object
-        self.logger.debug("Rejected %d full-frame Science images", np.sum(~sci_mask))
 
-        return copy(self).sel(sci_mask)
+        self.logger.info("Rejected %d full-frame Science images", np.sum(~sci_mask))
+        # return copy(self).sel(sci_mask)
+        return self.sel(sci_mask)

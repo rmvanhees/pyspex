@@ -14,7 +14,6 @@ from __future__ import annotations
 __all__ = ["argparse_gen_l1a"]
 
 import argparse
-import logging
 import sys
 from dataclasses import astuple, dataclass, field
 from pathlib import Path
@@ -128,7 +127,7 @@ class Config:
     outfile: str = ""
     debug: bool = False
     dump: bool = False
-    verbose: int = logging.NOTSET
+    verbose: str = "NOTSET"
     compression: bool = False
     processing_version: int = 1
     eclipse: bool | None = None
@@ -150,19 +149,6 @@ class Config:
 def __commandline_settings() -> Config:
     """Parse command-line parameters."""
 
-    class NumericLevel(argparse.Action):
-        """Store verbosity level of the logger as a numeric value."""
-
-        def __call__(
-            self: NumericLevel,
-            parser_local: argparse.ArgumentParser,
-            namespace: argparse.Namespace,
-            values: str,
-            option_string: str | None = None,
-        ) -> None:
-            numeric_level = getattr(logging, values.upper(), None)
-            setattr(namespace, self.dest, numeric_level)
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description="Generate PACE level-1A product from SPEXone level-0 data.",
@@ -183,8 +169,7 @@ def __commandline_settings() -> Config:
         "--verbose",
         nargs="?",
         const="info",
-        default=logging.WARNING,
-        action=NumericLevel,
+        default="warning",
         choices=("debug", "info", "warning", "error"),
         help='set verbosity level, default is "warning"',
     )
