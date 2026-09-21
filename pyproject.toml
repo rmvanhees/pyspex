@@ -63,6 +63,7 @@ Documentation = "https://pyspex.readthedocs.io/en/stable/"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
+   "PACE_*.nc",
    "src/pyspex/data/*.xls",
 ]
 
