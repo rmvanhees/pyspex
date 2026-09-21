@@ -291,7 +291,7 @@ variables:
     _dtype: u2
     _dims: [number_of_images, samples_per_image]
     _chunks: [1, -1]
-    _FillValue: 0
+    _FillValue: 65535
     long_name: Detector pixel values
     units: counts
     valid_min: 0

@@ -221,7 +221,8 @@ class SpexL1A(TemplateH5):
     def close(self: SpexL1A) -> None:
         """Close resources, after sanity check of L1A product."""
         self.__finalize()
-        self.to_disk(self.fid, self.filename)
+        # self.to_disk(self.fid, self.filename)
+        self.fid.close()
 
     def __finalize(self: SpexL1A) -> None:
         """Add global attributes to HDF5 product."""
