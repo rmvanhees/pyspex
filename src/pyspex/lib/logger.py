@@ -20,8 +20,15 @@ from logging.config import dictConfig
 import yaml
 
 
-def start_logger() -> None:
-    """Initialize logger for pyspex."""
+def start_logger(level: str | None = None) -> None:
+    """Initialize logger for pyspex.
+
+    Parameters
+    ----------
+    level :  {"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"}, optional
+       set verbosity level of the console logging
+
+    """
     yaml_fl = files("pyspex.Data").joinpath("logger_setup.yaml")
     if not yaml_fl.is_file():
         raise FileNotFoundError(f"{yaml_fl} not found")
@@ -31,5 +38,10 @@ def start_logger() -> None:
             config_data = yaml.safe_load(fid)
         except yaml.YAMLError as exc:
             raise RuntimeError("failed to read YAML file") from exc
+
+    if level is not None and level in ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"]:
+        config_data["handlers"]["console"]["level"] = level
+        config_data["loggers"]["root"]["level"] = level
+        config_data["loggers"]["pyspex"]["level"] = level
 
     dictConfig(config_data)
