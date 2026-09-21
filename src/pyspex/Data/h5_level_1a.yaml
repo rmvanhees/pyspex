@@ -81,6 +81,7 @@ variables:
   /engineering_data/HK_tlm_time:
     _dtype: f8
     _dims: [hk_packets]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: HK telemetry packet time
     description: ICU packaging time in seconds of day
@@ -91,12 +92,14 @@ variables:
   /engineering_data/NomHK_telemetry:
     _dtype: nomhk_dtype
     _dims: [hk_packets]
+    _chunks: contiguous
     long_name: SPEXone NomHK telemetry
     description: An extended subset of the housekeeping parameters at 1 Hz
     field_names: !inc h5_nomhk_names.yaml
   /engineering_data/temp_detector:
     _dtype: f4
     _dims: [hk_packets]
+    _chunks: contiguous
     long_name: Detector temperature
     comment: TS1 DEM Temperature (nominal)
     units: degC
@@ -105,6 +108,7 @@ variables:
   /engineering_data/temp_housing:
     _dtype: f4
     _dims: [hk_packets]
+    _chunks: contiguous
     long_name: Housekeeping temperature
     comment: TS2 Housing Temperature (nominal)
     units: degC
@@ -113,6 +117,7 @@ variables:
   /engineering_data/temp_radiator:
     _dtype: f4
     _dims: [hk_packets]
+    _chunks: contiguous
     long_name: Radiator temperature
     comment: TS3 Radiator Temperature (nominal)
     units: degC
@@ -122,6 +127,7 @@ variables:
   /image_attributes/image_time:
     _dtype: f8
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: Image time
     description: Integration start time in seconds of day
@@ -132,6 +138,7 @@ variables:
   /image_attributes/timedelta_centre:
     _dtype: f8
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: -32767
     units: s
     long_name: Time-delta to centre of integration time
@@ -139,6 +146,7 @@ variables:
   /image_attributes/icu_time_sec:
     _dtype: u4
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: 0
     long_name: ICU time stamp (seconds)
     description: Science TM parameter ICU_TIME_SEC
@@ -149,6 +157,7 @@ variables:
   /image_attributes/icu_time_subsec:
     _dtype: u2
     _dims: [number_of_images]
+    _chunks: contiguous
     long_name: ICU time stamp (sub-seconds)
     description: Science TM parameter ICU_TIME_SUBSEC
     units: 1/65536 seconds
@@ -157,6 +166,7 @@ variables:
   /image_attributes/image_id:
     _dtype: u4
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: 0xffffffff
     long_name: Image counter from power-up
     valid_min: 0
@@ -164,6 +174,7 @@ variables:
   /image_attributes/binning_table:
     _dtype: u1
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: 0xff
     long_name: Binning-table ID
     valid_min: 0
@@ -171,12 +182,14 @@ variables:
   /image_attributes/digital_offset:
     _dtype: i2
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: 0
     long_name: Digital offset
     units: '1'
   /image_attributes/nr_coadditions:
     _dtype: u2
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: 0
     long_name: Number of coadditions
     units: '1'
@@ -184,6 +197,7 @@ variables:
   /image_attributes/exposure_time:
     _dtype: f8
     _dims: [number_of_images]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: Exposure time
     units: s
@@ -277,7 +291,7 @@ variables:
     _dtype: u2
     _dims: [number_of_images, samples_per_image]
     _chunks: [1, -1]
-    _FillValue: 65535
+    _FillValue: 0
     long_name: Detector pixel values
     units: counts
     valid_min: 0
@@ -285,6 +299,7 @@ variables:
   /science_data/science_hk:
     _dtype: science_dtype
     _dims: [number_of_images]
+    _chunks: contiguous
     long_name: Science telemetry
     description: a subset of DemHK and NomHK parameters
     field_names: !inc h5_science_names.yaml
