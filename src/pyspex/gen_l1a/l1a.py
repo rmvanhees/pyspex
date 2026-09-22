@@ -107,7 +107,6 @@ def create_l1a(
     config: dataclass,
     tlm: SPXtlm,
     nav_dict: dict | None,
-    mode: str | None = None,
 ) -> None:
     """All calls necessary to generate a SPEXone L1A product.
 
@@ -129,7 +128,7 @@ def create_l1a(
             "/navigation_data/tilt_time": nav_dict["tilt_time"].size,
         }
     with SpexL1A(
-        get_l1a_filename(config, tlm.coverage, mode),
+        get_l1a_filename(config, tlm.coverage, tlm.mode),
         tlm.coverage,
         dims={
             "hk_packets": tlm.nomhk.size,
@@ -137,7 +136,6 @@ def create_l1a(
             "samples_per_image": max(img.size for img in tlm.science.images),
         }
         | dims_nav,
-        mode=mode,
     ) as l1a:
         l1a.write_config(config)
         l1a.write_img_vars(tlm.science)  # before write_hk_vars
@@ -160,9 +158,6 @@ class SpexL1A(TemplateH5):
     dims :  dict[str, int], optional
        Change one or more unlimited dimensions to fixed-size dimensions
        Default of samples_per_image = row * column as defined in the YAML definition
-    mode :  {'binned', 'full'} | None, default=None
-       Select telemetry data with diagnostic data (full frame) or binned data, or
-       perform no data selection (default)
 
     """
 
@@ -172,7 +167,6 @@ class SpexL1A(TemplateH5):
         time_coverage: list[dt.datetime, dt.datetime],
         *,
         dims: dict[str, int] | None = None,
-        mode: str | None = None,
     ) -> None:
         """Initialize SpexL1A object and create empty SPEXone level-1A product."""
         super().__init__(
@@ -185,7 +179,6 @@ class SpexL1A(TemplateH5):
         )
         self.logger = logging.getLogger("pyspex.gen_l1a.SpexL1A")
         self.filename = l1a_name if isinstance(l1a_name, Path) else Path(l1a_name)
-        self.mode = mode
 
         # convert unlimited dimensions to fixed-size dimensions
         if "samples_per_image" not in dims:
@@ -223,6 +216,7 @@ class SpexL1A(TemplateH5):
         self.__finalize()
         # self.to_disk(self.fid, self.filename)
         self.fid.close()
+        self.logger.info("successfully generated: %s", self.filename.name)
 
     def __finalize(self: SpexL1A) -> None:
         """Add global attributes to HDF5 product."""
@@ -324,7 +318,7 @@ class SpexL1A(TemplateH5):
         self.logger.debug("wrote data to group: %s.", group)
 
         group = "/science_data"
-        self.fid[f"{group}/science_hk"][:] = science.tlm
+        self.fid[f"{group}/detector_telemetry"][:] = science.tlm
         img_sizes, indices = np.unique(
             [img.size for img in science.images], return_inverse=True
         )

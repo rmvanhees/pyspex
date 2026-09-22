@@ -40,7 +40,7 @@ def main() -> int:
     # (2) initialize logger
     logging.captureWarnings(True)
     start_logger(config.verbose.upper())
-    logger = logging.getLogger("spx1_level01a")
+    logger = logging.getLogger("pyspex.spx1_level01a")
 
     # (3) check input files (SEPXone level-0)
     try:
@@ -82,7 +82,7 @@ def main() -> int:
     hk_mps_list = np.unique(tlm.nomhk.tlm["MPS_ID"])
     sci_mps_list = np.unique(tlm.science.tlm["MPS_ID"])
     if not np.array_equal(hk_mps_list, sci_mps_list):
-        logger.info("Science vs nomhk MPS: %s - %s", sci_mps_list, hk_mps_list)
+        logger.debug("Science vs nomhk MPS: %s - %s", sci_mps_list, hk_mps_list)
         tlm.nomhk = tlm.nomhk.sel(np.isin(tlm.nomhk.tlm["MPS_ID"], sci_mps_list))
 
     # (5) read navigation data from PACE_HKT products
@@ -113,7 +113,7 @@ def main() -> int:
                 tlm0.coverage[0].replace(tzinfo=None),
                 tlm0.coverage[1].replace(tzinfo=None),
             )
-            create_l1a(config, tlm0, get_hkt_nav(), "binned")
+            create_l1a(config, tlm0, get_hkt_nav())
             del tlm0
 
             # full-frame measurements
@@ -123,7 +123,7 @@ def main() -> int:
                 tlm.coverage[0].replace(tzinfo=None),
                 tlm.coverage[1].replace(tzinfo=None),
             )
-            create_l1a(config, tlm, get_hkt_nav(), "full")
+            create_l1a(config, tlm, get_hkt_nav())
         else:
             # binned measurements
             tlm = tlm.binned()
@@ -131,7 +131,7 @@ def main() -> int:
                 tlm.coverage[0].replace(tzinfo=None),
                 tlm.coverage[1].replace(tzinfo=None),
             )
-            create_l1a(config, tlm, get_hkt_nav(), "binned")
+            create_l1a(config, tlm, get_hkt_nav())
     except (KeyError, OSError, RuntimeError) as exc:
         # raise RuntimeError from exc
         logger.fatal('RuntimeError with "%s"', exc)
