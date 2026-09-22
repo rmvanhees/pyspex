@@ -41,7 +41,7 @@ def start_logger(level: str | None = None) -> None:
 
     if level is not None and level in ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"]:
         config_data["handlers"]["console"]["level"] = level
-        config_data["loggers"]["root"]["level"] = level
+        # config_data["loggers"]["root"]["level"] = level
         config_data["loggers"]["pyspex"]["level"] = level
 
     dictConfig(config_data)
