@@ -1308,7 +1308,7 @@ def start_logger() -> None:
                 "class": "logging.handlers.RotatingFileHandler",
                 "level": "DEBUG",
                 "formatter": "standard",
-                "filename": "/tmp/warnings.log",
+                "filename": "/tmp/l1agen_spex.log",
                 "maxBytes": 10485760,
                 "backupCount": 10,
                 "encoding": "utf8",
@@ -2558,7 +2558,7 @@ class L1Aio:
         elif var_name not in self.fid.variables:
             raise KeyError(f"dataset {name} not in level-1A product")
 
-        self.fid[name][...] = value
+        self.fid[name][:] = value
         self.dset_stored[name] += 1 if value.shape == () else value.shape[0]
 
     # - L1A specific functions ------------------------
@@ -3251,7 +3251,7 @@ class SPXtlm:
     def __init__(self: SPXtlm) -> None:
         """Initialize SPXtlm object."""
         self.mode = "all"
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("pyspex.SPXtlm")
         self.file_list: list[Path, ...] | None = None
         self._coverage: tuple[dt.datetime, dt.datetime] | None = None
         self.nomhk: HKtlm = HKtlm()
