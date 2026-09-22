@@ -53,7 +53,7 @@
 - Set interval of Science TM packets (ms)
 - Available free space in Science TM buffer
 - Worst case SW execution time
-- Error counter 1 (placeholder)
+- Error counter (placeholder)
 - TS1 DEM nominal temperature
 - TS2 housing nominal temperature
 - TS3 radiator nominal temperature

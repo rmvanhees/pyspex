@@ -30,18 +30,12 @@ dimensions:
   hk_packets:
     _dtype: u2
     _size: 0
-#  column:
-#    _dtype: u2
-#    _size: &COL_SZ 2048
-#  row:
-#    _dtype: u2
-#    _size: &ROW_SZ 2048
   quaternion_elements:
     _dtype: u2
-    _size: &QUAT_SZ 4
+    _size: 4
   vector_elements:
     _dtype: u2
-    _size: &VEC_SZ 3
+    _size: 3
   /navigation_data/att_time:
     _dtype: f8
     _size: 0
@@ -205,7 +199,7 @@ variables:
   /navigation_data/att_quat:
     _dtype: f8
     _dims: [att_time, quaternion_elements]
-    _chunks: [256, *QUAT_SZ]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: Attitude quaternions (J2000 to spacecraft)
     units: seconds
@@ -214,7 +208,7 @@ variables:
   /navigation_data/att_rate:
     _dtype: f8
     _dims: [att_time, vector_elements]
-    _chunks: [256, *VEC_SZ]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: Attitude angular rates in spacecraft frame
     units: radians/second
@@ -223,7 +217,7 @@ variables:
   /navigation_data/orb_pos:
     _dtype: f8
     _dims: [orb_time, vector_elements]
-    _chunks: [256, *VEC_SZ]
+    _chunks: contiguous
     _FillValue: -9999999
     long_name: Orbit position vectors (ECR)
     units: meters
@@ -232,7 +226,7 @@ variables:
   /navigation_data/orb_vel:
     _dtype: f8
     _dims: [orb_time, vector_elements]
-    _chunks: [256, *VEC_SZ]
+    _chunks: contiguous
     _FillValue: -32767
     long_name: Orbit velocity vectors (ECR)
     units: meters/second
@@ -296,7 +290,7 @@ variables:
     units: counts
     valid_min: 0
     valid_max: 65534
-  /science_data/science_hk:
+  /science_data/detector_telemetry:
     _dtype: science_dtype
     _dims: [number_of_images]
     _chunks: contiguous
