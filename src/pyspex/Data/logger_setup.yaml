@@ -46,6 +46,10 @@ loggers:
     level: WARNING
     handlers: [console, file]
     propagate: False
+  fsspec:
+    level: WARNING
+    handlers: [console]
+    propagate: False
   h5py:
     level: WARNING
     handlers: [console]
