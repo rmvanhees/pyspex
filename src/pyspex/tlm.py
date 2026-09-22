@@ -183,8 +183,8 @@ class SPXtlm:
 
     def __init__(self: SPXtlm) -> None:
         """Initialize SPXtlm object."""
-        self.mode = "all"
-        self.logger = logging.getLogger(__name__)
+        self.mode = None
+        self.logger = logging.getLogger("pyspex.SPXtlm")
         self.file_list: list[Path] | None = None
         self._coverage: list[dt.datetime, dt.datetime] | None = None
         self.nomhk: HKtlm = HKtlm()
@@ -555,7 +555,7 @@ class SPXtlm:
         if np.all(sci_mask):
             return self  # return original object
 
-        self.logger.info("Rejected %d binned Science images", np.sum(~sci_mask))
+        self.logger.debug("Rejected %d binned Science images", np.sum(~sci_mask))
         return self.sel(sci_mask)
 
     def binned(self: SPXtlm) -> SPXtlm:
@@ -572,6 +572,6 @@ class SPXtlm:
         if np.all(sci_mask):
             return self  # return original object
 
-        self.logger.info("Rejected %d full-frame Science images", np.sum(~sci_mask))
+        self.logger.debug("Rejected %d full-frame Science images", np.sum(~sci_mask))
         # return copy(self).sel(sci_mask)
         return self.sel(sci_mask)
