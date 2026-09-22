@@ -3801,8 +3801,10 @@ def main() -> int:
 
 # --------------------------------------------------
 if __name__ == "__main__":
-    mtime_str = dt.datetime.fromtimestamp(
-        Path(__file__).stat().st_mtime, tz=dt.timezone.utc
-    ).isoformat(sep=" ", timespec="seconds")
+    mtime_str = (
+        dt.datetime.fromtimestamp(Path(__file__).stat().st_mtime, tz=dt.timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat(sep=" ", timespec="seconds")
+    )
     print(f"l1agen_spex.py {pyspex_version()} ({mtime_str})\n")
     sys.exit(main())
