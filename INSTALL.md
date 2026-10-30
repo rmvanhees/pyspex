@@ -59,7 +59,7 @@ You can install pyspex once you have satisfied the requirements listed above.
 Run at the top of the source tree:
 
 	pip install [--user] .
-	
+
 or
 
     python3 -m build

@@ -54,4 +54,3 @@ and wheels. Then you can install `pyspex` as follows::
 
   python3 -m build
   pip3 install dist/pyspex-<version>.whl [--user]
-

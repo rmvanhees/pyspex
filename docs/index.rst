@@ -11,7 +11,7 @@ This package contains software scripts and classes to:
 
   * Read data in CCSDS format from the SPEXone instrument and write the data
     in Level-1A format.
-    
+
   * Read Level-0 data from the SPEXone after integration on the PACE platform
     and write the data in Level-1A in-flight products (science or calibration).
 
@@ -28,7 +28,7 @@ For more information on PACE mission visit:
   * https://pace.oceansciences.org/mission.htm
 
 For more information on SPEXone instrument visit:
-  
+
   * https://www.sron.nl/earth-instrument-development/spex/spexone
 
   * https://pace.oceansciences.org/spexone.htm
@@ -47,7 +47,7 @@ Tools
 -----
 
 .. autosummary::
-   
+
 .. toctree::
 
    tools

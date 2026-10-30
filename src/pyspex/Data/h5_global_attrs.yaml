@@ -39,4 +39,3 @@ attrs_groups:
   /processing_control/software_description: SPEXone L0-L1A processor (SRON)
   /processing_control/software_url: https://github.com/rmvanhees/pyspex
   /processing_control/software_doi: https://doi.org/10.5281/zenodo.5705691
-  

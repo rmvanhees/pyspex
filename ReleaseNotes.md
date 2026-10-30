@@ -34,7 +34,7 @@
 ## L1A processing configuration
 
  * L0->L1A configuration file:
-   * usage of keyword `file_version` is obsolete 
+   * usage of keyword `file_version` is obsolete
    * the data type of keyword `processing_version` is changed from str to int
 
 ## File format changes
@@ -45,5 +45,5 @@
  * Added field `MPS_ACT_STATUS` in the telemetry data
  * Global attributes updated
    * dropped the timezone offset from the date/time fields, since UTC is implicit
-   * added DOI of the SPEXone L1A product 
+   * added DOI of the SPEXone L1A product
  * Added group `/processing_control` providing `input_parameters`

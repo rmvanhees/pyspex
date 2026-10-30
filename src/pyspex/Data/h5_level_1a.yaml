@@ -18,7 +18,7 @@ groups:
   - processing_control
   - processing_control/input_parameters
   - science_data
-  
+
 # Define dimensions
 dimensions:
   number_of_images:
@@ -69,7 +69,7 @@ dimensions:
 # Parameters used by h5py.create_dataset start with an underscore:
 # - required dataset parameters: _dtype, _dims
 # - optional dateset parameters: _compression, _FillValue, _chunks
-# - other parameters are added as datasets attributes 
+# - other parameters are added as datasets attributes
 variables:
   # ----- engineering_data -----
   /engineering_data/HK_tlm_time:
